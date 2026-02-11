@@ -1,0 +1,41 @@
+# =========================
+# Node / TypeScript
+# =========================
+node_modules/
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+
+# Build output
+dist/
+build/
+out/
+
+# Coverage reports
+coverage/
+
+# Vite / Vitest cache
+.vite/
+.vitest/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Env files
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# TypeScript incremental build
+*.tsbuildinfo
+
+# Optional: local temp files
+*.tmp
+*.bak
