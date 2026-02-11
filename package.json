@@ -9,10 +9,13 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "ci": "npm run build && npm run test:coverage",
     "lint": "node -e \"console.log('Add ESLint if desired')\""
   },
   "devDependencies": {
     "typescript": "^5.5.4",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8"
   }
 }

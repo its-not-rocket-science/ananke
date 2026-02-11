@@ -3,6 +3,8 @@ import { SCALE, q, clampQ, qMul, mulDiv } from "./units";
 import type { ChannelMask } from "./channels";
 import { DamageChannel, channelMask } from "./channels";
 import type { IndividualAttributes } from "./types";
+import type { BodyRegion } from "./sim/body";
+import { ALL_REGIONS, DEFAULT_REGION_WEIGHTS, weightedMean01 } from "./sim/body";
 
 export type ItemId = string;
 
@@ -10,22 +12,44 @@ export interface ItemBase {
   id: ItemId;
   name: string;
   mass_kg: I32;
-  bulk: Q; // 1.0 ~ handy; higher = awkward
+  bulk: Q;
+}
+
+export interface WeaponDamageProfile {
+  surfaceFrac: Q;
+  internalFrac: Q;
+  structuralFrac: Q;
+
+  bleedFactor: Q;
+  penetrationBias: Q;
 }
 
 export interface Weapon extends ItemBase {
   kind: "weapon";
   reach_m?: I32;
-  handlingMul?: Q; // affects control (<=1.0 usually)
+  handlingMul?: Q;
   readyTime_s?: I32;
+
   strikeEffectiveMassFrac?: Q;
   strikeSpeedMul?: Q;
+
+  damage: WeaponDamageProfile;
 }
+
+export type CoverageByRegion = Partial<Record<BodyRegion, Q>>;
 
 export interface Armour extends ItemBase {
   kind: "armour";
+
   protects: ChannelMask;
-  protectedDamageMul: Q; // multiplier for damage in protected channels
+
+  coverageByRegion: CoverageByRegion;
+
+  resist_J: I32;
+  protectedDamageMul: Q;
+
+  channelResistMul?: Partial<Record<DamageChannel, Q>>;
+
   mobilityMul?: Q;
   fatigueMul?: Q;
 }
@@ -39,6 +63,8 @@ export type Item = Weapon | Armour | Gear;
 export interface Loadout {
   items: Item[];
 }
+
+/* ------------------ Encumbrance ------------------ */
 
 export interface EncumbranceTotals {
   carriedMass_kg: I32;
@@ -62,8 +88,8 @@ export interface EncumbrancePenalties {
 }
 
 export interface CarryRules {
-  capacityFactor: Q;     // k where capacityMass ≈ (k*peakForce/g)
-  bulkToMassFactor: Q;   // bulk contributes to encumbrance
+  capacityFactor: Q;
+  bulkToMassFactor: Q;
 }
 
 export const DEFAULT_CARRY_RULES: CarryRules = {
@@ -98,10 +124,7 @@ export function computeLoadoutTotals(loadout: Loadout, armourIsWorn = true): Enc
 }
 
 export function deriveCarryCapacityMass_kg(a: IndividualAttributes, rules: CarryRules = DEFAULT_CARRY_RULES): I32 {
-  // kgScaled ≈ peakForce(N) * k / g
-  // Use g ≈ 9.81 (in milli-units 9810) for deterministic integer maths.
-  // peakForce_N is scaled by SCALE.N.
-  const peakForceScaled = a.performance.peakForce_N; // SCALE.N
+  const peakForceScaled = a.performance.peakForce_N;
   const numerator = BigInt(peakForceScaled) * BigInt(SCALE.kg) * BigInt(rules.capacityFactor);
   const denom = BigInt(SCALE.N) * BigInt(SCALE.Q) * 9810n;
   const kgScaled = Number(numerator / denom);
@@ -142,16 +165,7 @@ function encumbranceCurve(r: Q, a: IndividualAttributes): EncumbrancePenalties {
   const controlMul = piecewiseMul(r, q(1.0), q(0.96), q(0.88), q(0.75));
   const stabilityMul = piecewiseMul(r, q(1.0), q(0.94), q(0.82), q(0.65));
 
-  return {
-    speedMul,
-    accelMul,
-    jumpMul,
-    energyDemandMul,
-    controlMul,
-    stabilityMul,
-    encumbranceRatio: r,
-    overloaded,
-  };
+  return { speedMul, accelMul, jumpMul, energyDemandMul, controlMul, stabilityMul, encumbranceRatio: r, overloaded };
 }
 
 function piecewiseMul(r: Q, a: Q, b: Q, c: Q, d: Q): Q {
@@ -169,11 +183,27 @@ function piecewiseMul(r: Q, a: Q, b: Q, c: Q, d: Q): Q {
   return d;
 }
 
+/* ------------------ Armour aggregation ------------------ */
+
 export interface ProtectionProfile {
   protects: ChannelMask;
+
+  coverageByRegion: Record<BodyRegion, Q>;
+  coverageOverall: Q;
+
+  resist_J: I32;
+
   protectedDamageMul: Q;
   mobilityMul: Q;
   fatigueMul: Q;
+
+  channelResistMul: Partial<Record<DamageChannel, Q>>;
+}
+
+function emptyCoverage(): Record<BodyRegion, Q> {
+  const out: any = {};
+  for (const r of ALL_REGIONS) out[r] = q(0);
+  return out;
 }
 
 export function deriveArmourProfile(loadout: Loadout): ProtectionProfile {
@@ -183,20 +213,55 @@ export function deriveArmourProfile(loadout: Loadout): ProtectionProfile {
   let mobilityMul = q(1.0);
   let fatigueMul = q(1.0);
 
+  const coverageByRegion = emptyCoverage();
+  let resist_J = 0;
+
+  const channelResistMul: Partial<Record<DamageChannel, Q>> = {};
+
   for (const it of items) {
     if (it.kind !== "armour") continue;
+
     protects |= it.protects;
     protectedMul = qMul(protectedMul, it.protectedDamageMul);
     mobilityMul = qMul(mobilityMul, it.mobilityMul ?? q(1.0));
     fatigueMul = qMul(fatigueMul, it.fatigueMul ?? q(1.0));
+
+    for (const r of ALL_REGIONS) {
+      const c = it.coverageByRegion[r] ?? q(0);
+      const oneMinus = q(1.0) - c;
+      coverageByRegion[r] = (q(1.0) - qMul(q(1.0) - coverageByRegion[r], oneMinus)) as Q;
+    }
+
+    resist_J += it.resist_J;
+
+    if (it.channelResistMul) {
+      for (const k of Object.keys(it.channelResistMul)) {
+        const ch = Number(k) as DamageChannel;
+        const mul = it.channelResistMul[ch]!;
+        channelResistMul[ch] = channelResistMul[ch] ? qMul(channelResistMul[ch]!, mul) : mul;
+      }
+    }
   }
 
   return {
     protects,
+    coverageByRegion: coverageByRegion as any,
+    coverageOverall: weightedMean01(coverageByRegion as any, DEFAULT_REGION_WEIGHTS),
+    resist_J: Math.max(0, resist_J),
     protectedDamageMul: clampQ(protectedMul, q(0.05), q(1.0)),
     mobilityMul: clampQ(mobilityMul, q(0.30), q(1.0)),
     fatigueMul: clampQ(fatigueMul, q(0.80), q(3.0)),
+    channelResistMul,
   };
+}
+
+export function findWeapon(loadout: Loadout, weaponId?: string): Weapon | null {
+  const weapons = loadout.items
+    .filter((x): x is Weapon => x.kind === "weapon")
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  if (weapons.length === 0) return null;
+  if (!weaponId) return weapons[0]!;
+  return weapons.find(w => w.id === weaponId) ?? weapons[0]!;
 }
 
 export const STARTER_WEAPONS: Weapon[] = [
@@ -210,6 +275,13 @@ export const STARTER_WEAPONS: Weapon[] = [
     handlingMul: q(0.95),
     strikeEffectiveMassFrac: q(0.18),
     strikeSpeedMul: q(0.95),
+    damage: {
+      surfaceFrac: q(0.35),
+      internalFrac: q(0.20),
+      structuralFrac: q(0.45),
+      bleedFactor: q(0.25),
+      penetrationBias: q(0.10),
+    },
   },
   {
     id: "wpn_knife",
@@ -221,6 +293,13 @@ export const STARTER_WEAPONS: Weapon[] = [
     handlingMul: q(1.0),
     strikeEffectiveMassFrac: q(0.10),
     strikeSpeedMul: q(1.05),
+    damage: {
+      surfaceFrac: q(0.30),
+      internalFrac: q(0.60),
+      structuralFrac: q(0.10),
+      bleedFactor: q(0.95),
+      penetrationBias: q(0.85),
+    },
   },
 ];
 
@@ -231,8 +310,18 @@ export const STARTER_ARMOUR: Armour[] = [
     name: "Leather armour",
     mass_kg: Math.round(6.0 * SCALE.kg),
     bulk: q(1.6),
-    protects: channelMask(DamageChannel.Kinetic),
+    protects: channelMask(DamageChannel.Kinetic, DamageChannel.Thermal),
+    coverageByRegion: {
+      head: q(0.10),
+      torso: q(0.70),
+      leftArm: q(0.45),
+      rightArm: q(0.45),
+      leftLeg: q(0.25),
+      rightLeg: q(0.25),
+    },
+    resist_J: 150,
     protectedDamageMul: q(0.85),
+    channelResistMul: { [DamageChannel.Thermal]: q(1.10) },
     mobilityMul: q(0.95),
     fatigueMul: q(1.08),
   },
@@ -243,6 +332,15 @@ export const STARTER_ARMOUR: Armour[] = [
     mass_kg: Math.round(10.0 * SCALE.kg),
     bulk: q(1.9),
     protects: channelMask(DamageChannel.Kinetic),
+    coverageByRegion: {
+      head: q(0.05),
+      torso: q(0.78),
+      leftArm: q(0.55),
+      rightArm: q(0.55),
+      leftLeg: q(0.20),
+      rightLeg: q(0.20),
+    },
+    resist_J: 350,
     protectedDamageMul: q(0.75),
     mobilityMul: q(0.90),
     fatigueMul: q(1.15),

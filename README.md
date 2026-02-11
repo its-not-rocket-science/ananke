@@ -1,38 +1,112 @@
 # Ananke
+![CI](../../actions/workflows/ci.yml/badge.svg)
 
-A deterministic, lockstep-friendly core for simulation-first RPGs using **SI units** stored as **fixed-point integers**.
-It provides:
+**Ananke** is a deterministic, lockstep-friendly simulation kernel for physics-first RPGs and combat systems using **SI units** stored as **fixed-point integers**.
 
-- Fixed-point unit system (`src/units.ts`) using deterministic `bigint` mul/div
-- Deterministic seeded RNG (`src/rng.ts`)
-- Trait tags and channel applicability (`src/traits.ts`, `src/channels.ts`)
-- Biology-agnostic individual attributes: actuation / structure / power conversion / reserve energy / control / resilience
-- Deterministic individual generator (baseline humans + example robot archetype)
-- Weapons, armour, encumbrance rules (mass + bulk) and penalties
-- Unit tests with Vitest (`test/`)
+It models entities using real physical quantities rather than abstract hit points.
 
-## Quick start
+Designed for:
+- simulation-first RPGs  
+- tactical combat engines  
+- scientific / speculative biology modelling  
+- deterministic multiplayer  
+
+---
+
+# Core design goals
+
+- Deterministic lockstep safe
+- Fixed-point SI units
+- Biology-agnostic anatomy
+- Physics-derived combat
+- Extensible from prehistoric → space age
+- Portable TypeScript core
+
+---
+
+# Current capabilities
+
+## Deterministic simulation kernel
+- Fixed timestep simulation
+- Seeded deterministic RNG
+- Lockstep-safe command processing
+- Stable entity ordering
+
+## Units & maths
+- Fixed-point SI unit system (`src/units.ts`)
+- Deterministic integer arithmetic
+- No floating-point drift
+
+## Entity modelling
+Biology-agnostic attribute system:
+
+- actuation capacity (force/power)
+- structural integrity
+- energy reserve
+- control & coordination
+- resilience & recovery
+
+Supports:
+- humans
+- robots
+- exotic/alien morphologies
+
+## Anatomy & injury system
+Per-region modelling:
+
+- head
+- torso
+- left/right arms
+- left/right legs
+
+Each region tracks:
+- surface damage
+- internal damage
+- structural damage
+- bleeding rate
+
+Global:
+- shock
+- fluid loss
+- consciousness
+
+## Combat physics
+- impact energy from mass + velocity
+- weapon effective mass
+- penetration & armour resistance
+- bleeding from trauma
+- attack cooldown & timing
+- block / parry / hit resolution
+- deterministic RNG for outcomes
+
+## Armour system
+- per-region coverage
+- channel protection (kinetic, thermal, chemical, electrical)
+- penetration resistance
+- mobility & fatigue penalties
+
+## Systemic hazards
+Distributed by region:
+
+- fire (limbs more exposed)
+- corrosives
+- electrical exposure
+- suffocation
+
+Armour reduces systemic dose per region.
+
+## Encumbrance
+Mass + bulk:
+- affects speed
+- acceleration
+- energy use
+- control
+
+---
+
+# Quick start
 
 ```bash
 npm i
 npm test
 npm run build
-```
-
-## Determinism notes
-
-- Avoid `Math.random()` and floating point for authoritative simulation.
-- Consume RNG in a fixed order.
-- Avoid iterating over unordered map keys for gameplay logic.
-- Use fixed timestep and stable ordering of entity updates.
-
-## Layout
-
-- `src/units.ts` fixed-point units and deterministic arithmetic
-- `src/rng.ts` deterministic PRNG
-- `src/archetypes.ts` baseline templates
-- `src/generate.ts` deterministic individual generation
-- `src/traits.ts` trait tags, channel masks, and attribute modifications
-- `src/equipment.ts` weapons/armour definitions and encumbrance rules
-- `src/derive.ts` derived movement/strike calculations and penalties
-- `src/lod.ts` scaffolding for entity → squad → formation aggregation
