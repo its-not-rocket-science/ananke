@@ -35,7 +35,7 @@ export function makeRng(seed: U32, scaleQ: number) {
     u32: r.nextU32,
     q01: () => {
       const x = r.nextU32();
-      return Math.trunc((x / 0x1_0000_0000) * scaleQ);
+      return Math.min(scaleQ - 1, Math.trunc((x / 0x1_0000_0000) * scaleQ));
     },
   };
 }

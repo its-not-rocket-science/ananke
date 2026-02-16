@@ -130,6 +130,7 @@ export function applyTraitsToAttributes(a: IndividualAttributes, traits: TraitId
 
     for (let i = 0; i < path.length - 1; i++) {
       const k = path[i]!;      // assert not undefined
+      if (!k || !obj[k]) throw new Error(`Invalid trait path: ${path.join('.')}`);
       obj = obj[k];
     }
 

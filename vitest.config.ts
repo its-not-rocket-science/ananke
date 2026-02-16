@@ -14,7 +14,8 @@ export default defineConfig({
         "src/types.ts",
         "src/sim/entity.ts",
         "src/sim/world.ts",
-        "src/sim/tick.ts"
+        "src/sim/tick.ts",
+        "src/sim/ai/types.ts"
       ]
     }
   },

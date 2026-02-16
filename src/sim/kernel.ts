@@ -6,25 +6,58 @@ import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units";
 import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive";
 import { DamageChannel } from "../channels";
 import { deriveArmourProfile, findWeapon, type Weapon } from "../equipment";
+import { deriveFunctionalState } from "./impairment";
+import { TUNING, type SimulationTuning } from "./tuning";
 import { buildTraitProfile } from "../traits";
 
 import { integratePos, type Vec3, v3 } from "./vec3";
 import { defaultIntent } from "./intent";
 import { defaultAction } from "./action";
-import { eventSeed, normaliseDirCheapQ, dotDirQ, resolveHit, type HitArea } from "./combat";
-import { regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body";
-import type { BodyRegion } from "./body";
+import { resolveHit, type HitArea } from "./combat";
+import { normaliseDirCheapQ, dotDirQ } from "./vec3";
+import { eventSeed } from "./seeds";
+import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body";
 import { totalBleedingRate, regionKOFactor } from "./injury";
+import { WorldIndex, buildWorldIndex } from "./indexing";
+import { buildSpatialIndex, queryNearbyIds, type SpatialIndex } from "./spatial";
+import { type ImpactEvent, sortEventsDeterministic } from "./events";
+
+import { parryLeverageQ } from "./combat";
+
+import { pickNearestEnemyInReach } from "./formation";
+import { isMeleeLaneOccludedByFriendly } from "./occlusion";
+import { applyFrontageCap } from "./frontage";
+
+import { type DensityField, computeDensityField } from "./density";
+import { stepPushAndRepulsion } from "./push";
 
 export const TICK_HZ = 20;
 export const DT_S: I32 = to.s(1 / TICK_HZ);
 
 export interface KernelContext {
   tractionCoeff: Q;
+  tuning?: SimulationTuning;
+  cellSize_m?: I32; // fixed-point metres; default 4m
+  density?: DensityField;
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
+  const tuning = ctx.tuning ?? TUNING.tactical;
   world.entities.sort((a, b) => a.id - b.id);
+
+  const index = buildWorldIndex(world);
+
+  const cellSize_m = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
+  const spatial = buildSpatialIndex(world, cellSize_m);
+
+  const density = computeDensityField(world, index, spatial, {
+    personalRadius_m: Math.trunc(0.45 * SCALE.m),
+    maxNeighbours: 12,
+    crowdingAt: 6,
+  });
+  ctx.density = density;
+
+  const impacts: ImpactEvent[] = [];
 
   for (const e of world.entities) {
     if (!(e as any).intent) (e as any).intent = defaultIntent();
@@ -34,11 +67,15 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   for (const e of world.entities) {
     e.action.attackCooldownTicks = Math.max(0, e.action.attackCooldownTicks - 1);
     e.action.defenceCooldownTicks = Math.max(0, e.action.defenceCooldownTicks - 1);
+    e.condition.standBlockedTicks = Math.max(0, e.condition.standBlockedTicks - 1);
+    e.condition.unconsciousTicks = Math.max(0, e.condition.unconsciousTicks - 1);
   }
 
   for (const e of world.entities) {
     if (e.injury.dead) continue;
     applyCommands(e, cmds.get(e.id) ?? []);
+    applyFunctionalGating(world, e, tuning);
+    applyStandAndKO(world, e, tuning);
   }
 
   for (const e of world.entities) {
@@ -48,13 +85,69 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
   for (const e of world.entities) {
     if (e.injury.dead) continue;
-    stepMovement(e, ctx);
+    stepMovement(world, e, ctx, tuning);
   }
+  const spatialAfterMove = buildSpatialIndex(world, cellSize_m);
+
+  stepPushAndRepulsion(world, index, spatialAfterMove, {
+    personalRadius_m: Math.trunc(0.45 * SCALE.m),
+    repelAccel_mps2: Math.trunc(1.5 * SCALE.mps2),
+    pushTransfer: q(0.35),
+    maxNeighbours: 10,
+  });
 
   for (const e of world.entities) {
     if (e.injury.dead) continue;
     const commands = cmds.get(e.id) ?? [];
-    for (const c of commands) if (c.kind === "attack") resolveAttack(world, e, c);
+    for (const c of commands) {
+      if (c.kind === "attack") {
+        resolveAttack(world, e, c, tuning, index, impacts, spatial);
+      } else if (c.kind === "attackNearest") {
+        const wpn = findWeapon(e.loadout, c.weaponId);
+        if (!wpn) continue;
+
+        const reach_m = wpn.reach_m ?? Math.trunc(e.attributes.morphology.stature_m * 0.45);
+        const target = pickNearestEnemyInReach(
+          e,
+          index,
+          spatial,
+          {
+            reach_m,
+            buffer_m: Math.trunc(0.8 * SCALE.m),
+            maxTargets: 12,
+            requireFrontArc: tuning.realism !== "arcade",
+            minDotQ: tuning.realism === "sim" ? q(0.20) : q(0.0),
+          }
+        );
+        if (!target) continue;
+
+        // Convert to ordinary attack command
+        const attackCmd: AttackCommand = {
+          kind: "attack",
+          targetId: target.id,
+          ...(c.weaponId !== undefined ? { weaponId: c.weaponId } : {}),
+          ...(c.intensity !== undefined ? { intensity: c.intensity } : {}),
+          ...(c.mode !== undefined ? { mode: c.mode } : {}),
+        };
+
+        resolveAttack(world, e, attackCmd, tuning, index, impacts, spatialAfterMove);
+      }
+    }
+  }
+
+  let finalImpacts = impacts;
+
+  if (tuning.realism !== "arcade") {
+    finalImpacts = applyFrontageCap(impacts, index, { maxEngagersPerTarget: tuning.realism === "sim" ? 2 : 3 });
+  }
+
+  sortEventsDeterministic(finalImpacts);
+
+  for (const ev of impacts) {
+    const target = index.byId.get(ev.targetId);
+    if (!target || target.injury.dead) continue;
+
+    applyImpactToInjury(target, ev.wpn, ev.energy_J, ev.region, ev.protectedByArmour);
   }
 
   for (const e of world.entities) {
@@ -67,6 +160,36 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   world.tick += 1;
 }
 
+function applyFunctionalGating(world: WorldState, e: Entity, tuning: SimulationTuning): void {
+  const func = deriveFunctionalState(e, tuning);
+
+  // incapacity gates voluntary actions
+  if (!func.canAct) {
+    e.intent.defence = { mode: "none", intensity: q(0) };
+    e.intent.move = { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" };
+    // keep prone if already, and prefer prone for non-acting entities in tactical/sim
+    if (tuning.realism !== "arcade") e.condition.prone = true;
+    return;
+  }
+
+  // forced prone if cannot stand (tactical/sim)
+  if (!func.canStand && tuning.realism !== "arcade") e.condition.prone = true;
+
+  // hard limb disable hooks (tactical/sim)
+  if (tuning.realism !== "arcade") {
+    const armsOut = func.leftArmDisabled && func.rightArmDisabled;
+    if (armsOut && (e.intent.defence.mode === "block" || e.intent.defence.mode === "parry")) {
+      e.intent.defence = { mode: "none", intensity: q(0) };
+    }
+
+    const legsOut = func.leftLegDisabled && func.rightLegDisabled;
+    if (legsOut && e.intent.move.mode === "sprint") {
+      // no sprinting with both legs disabled
+      e.intent.move = { ...e.intent.move, mode: "walk" };
+    }
+  }
+}
+
 function applyCommands(e: Entity, commands: readonly Command[]): void {
   e.intent.defence = { mode: "none", intensity: q(0) };
 
@@ -77,24 +200,130 @@ function applyCommands(e: Entity, commands: readonly Command[]): void {
   }
 }
 
-function stepMovement(e: Entity, ctx: KernelContext): void {
+function applyStandAndKO(world: WorldState, e: Entity, tuning: SimulationTuning): void {
+  // KO: if below threshold, go unconscious (but do NOT mark dead)
+  const wasUnconscious = e.condition.unconsciousTicks > 0;
+
+  if (e.injury.consciousness <= tuning.unconsciousThreshold) {
+    if (!wasUnconscious) {
+      e.condition.unconsciousTicks = tuning.unconsciousBaseTicks;
+      e.condition.prone = true;
+      e.intent.defence = { mode: "none", intensity: q(0) };
+      e.intent.move = { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" };
+
+      // SIM: drop weapons
+      if (tuning.dropWeaponsOnUnconscious) {
+        e.loadout.items = e.loadout.items.filter(it => it.kind !== "weapon");
+      }
+    } else {
+      // keep them down
+      e.condition.prone = true;
+    }
+  }
+
+  // If unconscious, cannot act/stand
+  if (e.condition.unconsciousTicks > 0) {
+    e.intent.defence = { mode: "none", intensity: q(0) };
+    e.intent.move = { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" };
+    e.condition.prone = true;
+    return;
+  }
+
+  // Standing rules: if player wants to stand but is blocked, force prone
+  if (!e.intent.prone && e.condition.prone) {
+    if (tuning.realism === "arcade") {
+      e.condition.prone = false;
+      return;
+    }
+
+    if (e.condition.standBlockedTicks > 0) {
+      e.condition.prone = true;
+      return;
+    }
+
+    // Compute stand-up time based on leg damage + shock + fatigue + encumbrance
+    const func = deriveFunctionalState(e, tuning);
+    const slow = (SCALE.Q - func.mobilityMul) as any; // 0..1
+    const extra = Math.trunc((slow * tuning.standUpMaxExtraTicks) / SCALE.Q);
+    const ticks = tuning.standUpBaseTicks + extra;
+
+    e.condition.standBlockedTicks = Math.max(1, ticks);
+    e.condition.prone = true;
+    e.intent.prone = true; // reflect forced state
+  }
+}
+
+function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: SimulationTuning): void {
   const caps = deriveMovementCaps(e.attributes, e.loadout, { tractionCoeff: ctx.tractionCoeff });
+  const func = deriveFunctionalState(e, tuning);
+
+  // Capability gating
+  if (!func.canAct) {
+    // unconscious/otherwise incapable: no voluntary movement
+    e.intent.move = { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" };
+  }
+  if (!func.canStand) {
+    // force prone if unable to stand (tactical/sim)
+    if (tuning.realism !== "arcade") e.condition.prone = true;
+  }
+
+
+  if (e.condition.unconsciousTicks > 0) {
+    e.velocity_mps = v3(0, 0, 0);
+    return;
+  }
 
   const vmax_mps = caps.maxSprintSpeed_mps;
   const amax_mps2 = caps.maxAcceleration_mps2;
 
-  const controlMul = clampQ(q(1.0) - qMul(q(0.7), e.condition.stunned), q(0.1), q(1.0));
-  const mobilityMul = e.condition.prone ? q(0.25) : q(1.0);
+  const controlMulBase = clampQ(q(1.0) - qMul(q(0.7), e.condition.stunned), q(0.1), q(1.0));
+  let mobilityMulBase = e.condition.prone ? q(0.25) : q(1.0);
 
-  const effVmax = mulDiv(vmax_mps, qMul(controlMul, mobilityMul) as number, SCALE.Q);
-  const effAmax = mulDiv(amax_mps2, qMul(controlMul, mobilityMul) as number, SCALE.Q);
+  // crawl tuning
+  if (e.condition.prone && e.condition.unconsciousTicks === 0 && tuning.realism !== "arcade") {
+    mobilityMulBase = qMul(mobilityMulBase, q(0.20)); // crawling is slow
+  }
+  
+  // impairment affects control and mobility
+  const controlMul = qMul(controlMulBase, func.coordinationMul);
+  const mobilityMul = qMul(mobilityMulBase, func.mobilityMul);
+  const crowd = ctx.density?.crowdingQ.get(e.id) ?? 0;
+  const crowdMul = clampQ(q(1.0) - qMul(q(0.65), crowd as any), q(0.25), q(1.0));
 
-  const modeMul = e.intent.move.mode === "walk" ? q(0.40) : e.intent.move.mode === "run" ? q(0.70) : q(1.0);
+  const baseMul = qMul(qMul(controlMul, mobilityMul), crowdMul);
+
+  const effVmax = mulDiv(vmax_mps, baseMul, SCALE.Q);
+  const effAmax = mulDiv(amax_mps2, baseMul, SCALE.Q);
+
+  let modeMul =
+    e.intent.move.mode === "walk" ? q(0.40) :
+    e.intent.move.mode === "run"  ? q(0.70) : q(1.0);
+
+  if (e.condition.prone && tuning.realism !== "arcade") {
+    // cannot sprint while prone
+    if (e.intent.move.mode === "sprint") modeMul = q(0.40);
+  }
 
   const dir = normaliseDirCheapQ(e.intent.move.dir);
   const intensity = clampQ(e.intent.move.intensity, 0, SCALE.Q);
 
-  const vTargetMag = mulDiv(mulDiv(effVmax, intensity as number, SCALE.Q), modeMul as number, SCALE.Q);
+  // Sim-only: stumble/fall risk when sprinting with impaired mobility/coordination
+  if (tuning.realism === "sim" && intensity > 0 && e.intent.move.mode === "sprint" && !e.condition.prone) {
+    const instability = (SCALE.Q - qMul(func.mobilityMul, func.coordinationMul)) as any;
+    const chance = clampQ(tuning.stumbleBaseChance + qMul(instability, q(0.05)), q(0), q(0.25));
+    if (chance > 0) {
+      const seed = eventSeed(world.seed, world.tick, e.id, 0, 0xF411);
+      const roll = (seed % SCALE.Q) as any;
+      if (roll < chance) {
+        e.condition.prone = true;
+        // a small deterministic shock spike
+        e.injury.shock = clampQ(e.injury.shock + q(0.02), 0, SCALE.Q);
+      }
+    }
+  }
+
+
+  const vTargetMag = mulDiv(mulDiv(effVmax, intensity, SCALE.Q), modeMul, SCALE.Q);
   const targetVel = scaleDirToSpeed(dir, vTargetMag);
 
   e.velocity_mps = accelToward(e.velocity_mps, targetVel, effAmax);
@@ -128,12 +357,18 @@ function clampI32(x: number, lo: number, hi: number): number {
 }
 
 /* ------------------ Combat ------------------ */
-
-function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand): void {
+function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand, tuning: SimulationTuning, index: WorldIndex, impacts: ImpactEvent[], spatial: SpatialIndex): void {
   if (attacker.action.attackCooldownTicks > 0) return;
 
-  const target = world.entities.find(e => e.id === cmd.targetId);
+  const target = index.byId.get(cmd.targetId);
   if (!target || target.injury.dead) return;
+
+  const effTuning = ((world as any).__tuning as SimulationTuning | undefined) ?? tuning;
+
+  const funcA = deriveFunctionalState(attacker, effTuning);
+  const funcB = deriveFunctionalState(target, effTuning);
+
+  if (!funcA.canAct) return;
 
   const wpn = findWeapon(attacker.loadout, cmd.weaponId);
   if (!wpn) return;
@@ -147,13 +382,26 @@ function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand):
   const reach2 = BigInt(reach_m) * BigInt(reach_m);
   if (dist2 > reach2) return;
 
+  if (tuning.realism !== "arcade") {
+    const blocked = isMeleeLaneOccludedByFriendly(
+      attacker,
+      target,
+      index,
+      spatial,
+      { laneRadius_m: Math.trunc(0.35 * SCALE.m) }
+    );
+    if (blocked) return;
+  }
+
   const dirToTarget = normaliseDirCheapQ({ x: dx, y: dy, z: dz });
 
   const readyTime_s = wpn.readyTime_s ?? to.s(0.6);
   attacker.action.attackCooldownTicks = Math.max(1, Math.trunc((readyTime_s * TICK_HZ) / SCALE.s));
 
-  const attackSkill = clampQ(qMul(attacker.attributes.control.controlQuality, attacker.attributes.control.fineControl), q(0.05), q(0.99));
-  const defenceSkill = clampQ(qMul(target.attributes.control.controlQuality, target.attributes.control.stability), q(0.05), q(0.99));
+  const attackSkillBase = clampQ(qMul(attacker.attributes.control.controlQuality, attacker.attributes.control.fineControl), q(0.05), q(0.99));
+  const attackSkill = clampQ(qMul(attackSkillBase, qMul(funcA.coordinationMul, funcA.manipulationMul)), q(0.01), q(0.99));
+  const defenceSkillBase = clampQ(qMul(target.attributes.control.controlQuality, target.attributes.control.stability), q(0.05), q(0.99));
+  const defenceSkill = clampQ(qMul(defenceSkillBase, qMul(funcB.coordinationMul, funcB.mobilityMul)), q(0.01), q(0.99));
   const geomDot = dotDirQ(attacker.action.facingDirQ, dirToTarget);
 
   const seed = eventSeed(world.seed, world.tick, attacker.id, target.id, 0xA11AC);
@@ -163,7 +411,22 @@ function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand):
   const sideBit = (eventSeed(world.seed, world.tick, attacker.id, target.id, 0x51DE) & 1) as 0 | 1;
   const region = regionFromHit(res.area, sideBit);
 
-  const intensity = clampQ(cmd.intensity ?? q(1.0), q(0.1), q(1.0));
+
+  const baseIntensity = clampQ(cmd.intensity ?? q(1.0), q(0.1), q(1.0));
+  const handling = wpn.handlingMul ?? q(1.0);
+
+  const handlingPenalty = clampQ(
+    q(1.0) - qMul(q(0.18), (handling - SCALE.Q) as any),
+    q(0.70),
+    q(1.0)
+  );
+
+  const intensity = clampQ(
+    qMul(baseIntensity, qMul(funcA.manipulationMul, handlingPenalty)),
+    q(0.1),
+    q(1.0)
+  );
+
   const P = attacker.attributes.performance.peakPower_W;
   const base = clampI32(Math.trunc((P * SCALE.mps) / 200), Math.trunc(2 * SCALE.mps), Math.trunc(12 * SCALE.mps));
 
@@ -174,14 +437,14 @@ function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand):
   const vStrike = mulDiv(
     mulDiv(
       mulDiv(
-        mulDiv(base, wMul as number, SCALE.Q),
-        cMul as number,
+        mulDiv(base, wMul, SCALE.Q),
+        cMul,
         SCALE.Q
       ),
-      intensity as number,
+      intensity,
       SCALE.Q
     ),
-    qualMul as number,
+    qualMul,
     SCALE.Q
   );
 
@@ -193,11 +456,35 @@ function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand):
     z: (attacker.velocity_mps.z - target.velocity_mps.z) + vStrikeVec.z,
   };
 
-  const energy_J = impactEnergy_J(attacker, wpn, rel);
+  const energy_J = mulDiv((impactEnergy_J(attacker, wpn, rel)) as any, funcA.manipulationMul as any, SCALE.Q);
 
   let mitigated = energy_J;
-  if (res.blocked) mitigated = Math.trunc(mitigated * 0.40);
-  if (res.parried) mitigated = Math.trunc(mitigated * 0.25);
+
+  if (res.blocked || res.parried) {
+    const leverage = parryLeverageQ(wpn, attacker);
+    const handed = (wpn.handedness ?? "oneHand") === "twoHand" ? q(1.10) : q(1.0);
+    const defenceMul = qMul(leverage, handed);
+
+    if (res.blocked) {
+      const m = clampQ(
+        q(0.40) - qMul(q(0.12), (defenceMul - SCALE.Q) as any),
+        q(0.25),
+        q(0.60)
+      );
+      mitigated = mulDiv(mitigated, m, SCALE.Q);
+    }
+
+    if (res.parried) {
+      const m = clampQ(
+        q(0.25) - qMul(q(0.15), (defenceMul - SCALE.Q) as any),
+        q(0.10),
+        q(0.45)
+      );
+      mitigated = mulDiv(mitigated, m, SCALE.Q);
+    }
+  }
+
+  
 
   const armour = deriveArmourProfile(target.loadout);
   const KINETIC_MASK = 1 << DamageChannel.Kinetic;
@@ -208,7 +495,16 @@ function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand):
     ? applyKineticArmourPenetration(mitigated, armour.resist_J, armour.protectedDamageMul)
     : mitigated;
 
-  applyImpactToInjury(target, wpn, finalEnergy, region, protectedByArmour);
+  impacts.push({
+    kind: "impact",
+    attackerId: attacker.id,
+    targetId: target.id,
+    region,
+    energy_J: finalEnergy,
+    protectedByArmour,
+    weaponId: wpn.id,
+    wpn,
+  });
 }
 
 function armourCoversHit(world: WorldState, coverage: Q, aId: number, bId: number): boolean {
@@ -221,12 +517,12 @@ function armourCoversHit(world: WorldState, coverage: Q, aId: number, bId: numbe
 
 function applyKineticArmourPenetration(energy_J: number, resist_J: number, postMul: Q): number {
   const remaining = Math.max(0, energy_J - Math.max(0, resist_J));
-  return mulDiv(remaining, postMul as number, SCALE.Q);
+  return mulDiv(remaining, postMul, SCALE.Q);
 }
 
 function impactEnergy_J(attacker: Entity, wpn: Weapon, relVel_mps: Vec3): number {
   const frac = wpn.strikeEffectiveMassFrac ?? q(0.10);
-  const bodyEffMass = mulDiv(attacker.attributes.morphology.mass_kg, frac as number, SCALE.Q);
+  const bodyEffMass = mulDiv(attacker.attributes.morphology.mass_kg, frac, SCALE.Q);
   const mEff = wpn.mass_kg + bodyEffMass;
 
   const vx = BigInt(relVel_mps.x);
@@ -260,9 +556,9 @@ function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, regi
   const surfFrac = clampQ(wpn.damage.surfaceFrac - qMul(bias, q(0.12)), q(0.05), q(0.95));
   const intFrac = clampQ(wpn.damage.internalFrac + qMul(bias, q(0.12)), q(0.05), q(0.95));
 
-  const surfInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(qMul(surfFrac, areaSurf), armourShift) as number, SURF_J * SCALE.Q));
-  const intInc  = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(intFrac, areaInt) as number, INT_J * SCALE.Q));
-  const strInc  = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(wpn.damage.structuralFrac, areaStr) as number, STR_J * SCALE.Q));
+  const surfInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(qMul(surfFrac, areaSurf), armourShift), SURF_J * SCALE.Q));
+  const intInc  = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(intFrac, areaInt), INT_J * SCALE.Q));
+  const strInc  = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(wpn.damage.structuralFrac, areaStr), STR_J * SCALE.Q));
 
   target.injury.byRegion[region].surfaceDamage = clampQ(target.injury.byRegion[region].surfaceDamage + surfInc, 0, SCALE.Q);
   target.injury.byRegion[region].internalDamage = clampQ(target.injury.byRegion[region].internalDamage + intInc, 0, SCALE.Q);

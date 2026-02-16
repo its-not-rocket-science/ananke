@@ -52,7 +52,11 @@ export const sqrtQ = (xQ: Q): Q => {
   const x = BigInt(Math.max(1, xQ));
   const X = x * BigInt(SCALE.Q);
   let r = BigInt(SCALE.Q);
-  for (let i = 0; i < 10; i++) r = (r + X / r) / 2n;
+  for (let i = 0; i < 10; i++) {
+    const rNew = (r + X / r) / 2n;
+    if (rNew === r) break;  // Converged
+    r = rNew;
+  }
   return Number(r);
 };
 
@@ -63,7 +67,10 @@ export const cbrtQ = (xQ: Q): Q => {
   for (let i = 0; i < 12; i++) {
     const r2 = r * r;
     r = (2n * r + X / r2) / 3n;
-    if (r <= 0n) { r = 1n; break; }
+    if (r <= 0n) {
+      r = 1n;
+      break;
+    }
   }
   return Number(r);
 };

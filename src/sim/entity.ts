@@ -5,11 +5,12 @@ import type { TraitId } from "../traits";
 import type { Vec3 } from "./vec3";
 import type { ConditionState } from "./condition";
 import type { InjuryState } from "./injury";
-import type { IntentState } from "./intent";
+import type { IntentState, AIState } from "./intent";
 import type { ActionState } from "./action";
 
 export interface Entity {
   id: number;
+  teamId: number;
 
   attributes: IndividualAttributes;
   energy: EnergyState;
@@ -25,4 +26,6 @@ export interface Entity {
 
   condition: ConditionState;
   injury: InjuryState;
+
+  ai?: AIState;
 }

@@ -16,3 +16,13 @@ export * from "./sim/injury";
 export * from "./sim/entity";
 export * from "./sim/commands";
 export * from "./sim/kernel";
+export * from "./sim/intent";
+
+export * from "./sim/action";
+export * from "./sim/combat";
+export * from "./sim/body";
+export * from "./sim/impairment";
+export * from "./sim/world";
+
+export * from "./sim/indexing";
+

@@ -2,6 +2,11 @@ import { SCALE, q, qMul, clampQ, mulDiv, type Q } from "../units";
 import { makeRng } from "../rng";
 import type { Vec3 } from "./vec3";
 
+import type { Entity } from "./entity";
+import { Weapon } from "../equipment";
+
+import { eventSeed } from "./seeds";
+
 export type HitArea = "head" | "torso" | "arm" | "leg";
 
 export interface HitResolution {
@@ -12,12 +17,29 @@ export interface HitResolution {
   parried: boolean;
 }
 
-export function eventSeed(worldSeed: number, tick: number, aId: number, bId: number, salt: number): number {
-  let x = (worldSeed ^ (tick * 0x9E3779B1) ^ (aId * 0x85EBCA77) ^ (bId * 0xC2B2AE3D) ^ salt) >>> 0;
-  x ^= x >>> 16; x = Math.imul(x, 0x7FEB352D) >>> 0;
-  x ^= x >>> 15; x = Math.imul(x, 0x846CA68B) >>> 0;
-  x ^= x >>> 16;
-  return x >>> 0;
+function weaponMomentArm_m(wpn: Weapon, attacker: Entity): number {
+  const reach = wpn.reach_m ?? Math.trunc(attacker.attributes.morphology.stature_m * 0.45);
+  return wpn.momentArm_m ?? Math.trunc(reach * 0.55);
+}
+
+export function parryLeverageQ(wpn: Weapon, attacker: Entity): Q {
+  const arm = weaponMomentArm_m(wpn, attacker);
+
+  // reference ~0.6m human sword lever
+  const ref = Math.trunc(0.6 * SCALE.m);
+
+  const ratio = clampQ(
+    mulDiv(arm * SCALE.Q, 1, ref) as any,
+    q(0.5),
+    q(1.8)
+  );
+
+  // compress into sane band
+  return clampQ(
+    q(0.70) + qMul(ratio, q(0.30)),
+    q(0.80),
+    q(1.20)
+  );
 }
 
 export function chooseArea(r01: Q): HitArea {
@@ -25,17 +47,6 @@ export function chooseArea(r01: Q): HitArea {
   if (r01 < q(0.62)) return "torso";
   if (r01 < q(0.82)) return "arm";
   return "leg";
-}
-
-export function normaliseDirCheapQ(d: Vec3): Vec3 {
-  const ax = Math.abs(d.x), ay = Math.abs(d.y), az = Math.abs(d.z);
-  const m = Math.max(1, ax, ay, az);
-  return { x: mulDiv(d.x, SCALE.Q, m), y: mulDiv(d.y, SCALE.Q, m), z: mulDiv(d.z, SCALE.Q, m) };
-}
-
-export function dotDirQ(a: Vec3, b: Vec3): Q {
-  const d = mulDiv(a.x, b.x, SCALE.Q) + mulDiv(a.y, b.y, SCALE.Q) + mulDiv(a.z, b.z, SCALE.Q);
-  return Math.max(-SCALE.Q, Math.min(SCALE.Q, d)) as Q;
 }
 
 export function resolveHit(
@@ -48,18 +59,18 @@ export function resolveHit(
 ): HitResolution {
   const rng = makeRng(seedU32, SCALE.Q);
 
-  const geom = clampQ(q(1.05) - mulDiv(geometryDotQ as number, q(0.10) as number, SCALE.Q) as any, q(0.85), q(1.20));
+  const geom = clampQ(q(1.05) - mulDiv(geometryDotQ, q(0.10), SCALE.Q) as any, q(0.85), q(1.20));
   const atk = qMul(attackSkill, geom);
 
   const diff = (atk - defenceSkill) as Q;
-  const p = clampQ(q(0.55) + mulDiv(diff as number, q(0.35) as number, SCALE.Q) as any, q(0.10), q(0.95));
+  const p = clampQ(q(0.55) + mulDiv(diff, q(0.35), SCALE.Q) as any, q(0.10), q(0.95));
 
   const roll = rng.q01();
   const hit = roll < p;
 
   const area = chooseArea(rng.q01());
 
-  const quality = clampQ(qMul(atk, q(0.60) + mulDiv((p - roll) as number, q(0.40) as number, SCALE.Q) as any), q(0.05), q(0.99));
+  const quality = clampQ(qMul(atk, q(0.60) + mulDiv((p - roll), q(0.40), SCALE.Q) as any), q(0.05), q(0.99));
 
   let blocked = false;
   let parried = false;
@@ -81,3 +92,4 @@ export function resolveHit(
 
   return { hit, area, hitQuality: quality, blocked, parried };
 }
+

@@ -12,6 +12,10 @@ export interface ConditionState {
   stunned: Q;             // control disruption intensity
 
   prone: boolean;
+
+  // deterministic incapacity timers (ticks)
+  standBlockedTicks: number;   // cannot stand while > 0
+  unconsciousTicks: number;    // unconscious while > 0
 }
 
 export const defaultCondition = (): ConditionState => ({
@@ -22,4 +26,6 @@ export const defaultCondition = (): ConditionState => ({
   suffocation: q(0),
   stunned: q(0),
   prone: false,
+  standBlockedTicks: 0,
+  unconsciousTicks: 0,
 });

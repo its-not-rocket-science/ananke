@@ -39,10 +39,33 @@ export const defaultInjury = (): InjuryState => {
   };
 };
 
+export type DamageType = 'surfaceDamage' | 'internalDamage' | 'structuralDamage' | 'bleedingRate';
+
+function totalRegionDamage(i: InjuryState, type: DamageType): Q {
+  const r = i.byRegion;
+  return clampQ(
+    (r.head[type] + r.torso[type] + r.leftArm[type] + 
+     r.rightArm[type] + r.leftLeg[type] + r.rightLeg[type]) as any,
+    0, 6 * SCALE.Q
+  );
+}
+
+export function totalSurfaceDamage(i: InjuryState): Q {
+  return totalRegionDamage(i, 'surfaceDamage');
+}
+
+export function totalInternalDamage(i: InjuryState): Q {
+  return totalRegionDamage(i, 'internalDamage');
+}
+
+export function totalStructuralDamage(i: InjuryState): Q {
+  return totalRegionDamage(i, 'structuralDamage');
+}
+
+// If this name already exists in injury.ts, DO NOT duplicate it.
+// Either keep your existing export, or replace it with this implementation.
 export function totalBleedingRate(i: InjuryState): Q {
-  let acc = 0;
-  for (const r of ALL_REGIONS) acc += i.byRegion[r].bleedingRate;
-  return clampQ(acc as any, 0, q(1.0));
+  return totalRegionDamage(i, 'bleedingRate');
 }
 
 export function regionKOFactor(i: InjuryState): Q {

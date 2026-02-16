@@ -55,40 +55,41 @@ export function aggregateSquad(members: IndividualAttributes[]): SquadAggregate 
   }
 
   const div = (x: number) => Math.trunc(x / n);
+  const divQ = (x: number): Q => Math.trunc(x / n) as Q;
 
   const mean: IndividualAttributes = {
     morphology: {
       stature_m: div(sum.morphology.stature_m),
       mass_kg: div(sum.morphology.mass_kg),
       actuatorMass_kg: div(sum.morphology.actuatorMass_kg),
-      actuatorScale: div(sum.morphology.actuatorScale) as any,
-      structureScale: div(sum.morphology.structureScale) as any,
-      reachScale: div(sum.morphology.reachScale) as any,
+      actuatorScale: divQ(sum.morphology.actuatorScale),
+      structureScale: divQ(sum.morphology.structureScale),
+      reachScale: divQ(sum.morphology.reachScale),
     },
     performance: {
       peakForce_N: div(sum.performance.peakForce_N),
       peakPower_W: div(sum.performance.peakPower_W),
       continuousPower_W: div(sum.performance.continuousPower_W),
       reserveEnergy_J: div(sum.performance.reserveEnergy_J),
-      conversionEfficiency: div(sum.performance.conversionEfficiency) as any,
+      conversionEfficiency: divQ(sum.performance.conversionEfficiency),
     },
     control: {
-      controlQuality: div(sum.control.controlQuality) as any,
-      reactionTime_s: div(sum.control.reactionTime_s),
-      stability: div(sum.control.stability) as any,
-      fineControl: div(sum.control.fineControl) as any,
+      controlQuality: divQ(sum.control.controlQuality),
+      reactionTime_s: divQ(sum.control.reactionTime_s),
+      stability: divQ(sum.control.stability),
+      fineControl: div(sum.control.fineControl),
     },
     resilience: {
-      surfaceIntegrity: div(sum.resilience.surfaceIntegrity) as any,
-      bulkIntegrity: div(sum.resilience.bulkIntegrity) as any,
-      structureIntegrity: div(sum.resilience.structureIntegrity) as any,
-      distressTolerance: div(sum.resilience.distressTolerance) as any,
-      shockTolerance: div(sum.resilience.shockTolerance) as any,
-      concussionTolerance: div(sum.resilience.concussionTolerance) as any,
-      heatTolerance: div(sum.resilience.heatTolerance) as any,
-      coldTolerance: div(sum.resilience.coldTolerance) as any,
-      fatigueRate: div(sum.resilience.fatigueRate) as any,
-      recoveryRate: div(sum.resilience.recoveryRate) as any,
+      surfaceIntegrity: divQ(sum.resilience.surfaceIntegrity) ,
+      bulkIntegrity: divQ(sum.resilience.bulkIntegrity) ,
+      structureIntegrity: divQ(sum.resilience.structureIntegrity) ,
+      distressTolerance: divQ(sum.resilience.distressTolerance) ,
+      shockTolerance: divQ(sum.resilience.shockTolerance) ,
+      concussionTolerance: divQ(sum.resilience.concussionTolerance) ,
+      heatTolerance: divQ(sum.resilience.heatTolerance) ,
+      coldTolerance: divQ(sum.resilience.coldTolerance) ,
+      fatigueRate: divQ(sum.resilience.fatigueRate) ,
+      recoveryRate: div(sum.resilience.recoveryRate),
     },
   };
 

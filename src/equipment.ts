@@ -24,6 +24,8 @@ export interface WeaponDamageProfile {
   penetrationBias: Q;
 }
 
+export type Handedness = "oneHand" | "twoHand" | "mounted" | "natural";
+
 export interface Weapon extends ItemBase {
   kind: "weapon";
   reach_m?: I32;
@@ -34,6 +36,14 @@ export interface Weapon extends ItemBase {
   strikeSpeedMul?: Q;
 
   damage: WeaponDamageProfile;
+
+  handedness?: Handedness;
+
+  /** Lever advantage (m). Used for parry/block effectiveness and control. */
+  momentArm_m?: number;
+
+  /** how tiring it is to wield (dimensionless Q multiplier). */
+  handlingLoadMul?: Q;
 }
 
 export type CoverageByRegion = Partial<Record<BodyRegion, Q>>;
@@ -98,14 +108,12 @@ export const DEFAULT_CARRY_RULES: CarryRules = {
 };
 
 export function computeLoadoutTotals(loadout: Loadout, armourIsWorn = true): EncumbranceTotals {
-  const items = [...loadout.items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-
   let mass = 0;
   let bulk = 0;
   let wornMass = 0;
   let wornBulk = 0;
 
-  for (const it of items) {
+  for (const it of loadout.items) {
     mass += it.mass_kg;
     bulk = (bulk + it.bulk) | 0;
     if (armourIsWorn && it.kind === "armour") {
@@ -173,12 +181,12 @@ function piecewiseMul(r: Q, a: Q, b: Q, c: Q, d: Q): Q {
 
   if (r <= r05) return a;
   if (r <= r10) {
-    const t = mulDiv((r - r05) as number, SCALE.Q, (r10 - r05) as number) as Q;
-    return (a + mulDiv((b - a) as number, t as number, SCALE.Q)) as Q;
+    const t = mulDiv((r - r05), SCALE.Q, (r10 - r05)) as Q;
+    return (a + mulDiv((b - a), t, SCALE.Q)) as Q;
   }
   if (r <= r15) {
-    const t = mulDiv((r - r10) as number, SCALE.Q, (r15 - r10) as number) as Q;
-    return (b + mulDiv((c - b) as number, t as number, SCALE.Q)) as Q;
+    const t = mulDiv((r - r10), SCALE.Q, (r15 - r10)) as Q;
+    return (b + mulDiv((c - b), t, SCALE.Q)) as Q;
   }
   return d;
 }
@@ -257,13 +265,28 @@ export function deriveArmourProfile(loadout: Loadout): ProtectionProfile {
 
 export function findWeapon(loadout: Loadout, weaponId?: string): Weapon | null {
   const weapons = loadout.items
-    .filter((x): x is Weapon => x.kind === "weapon")
-    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    .filter((x): x is Weapon => x.kind === "weapon");
   if (weapons.length === 0) return null;
   if (!weaponId) return weapons[0]!;
   return weapons.find(w => w.id === weaponId) ?? weapons[0]!;
 }
 
+export function deriveWeaponHandling(
+  w: Weapon,
+  ownerStature_m: number
+): {
+  handedness: Handedness;
+  momentArm_m: number;
+  handlingLoadMul: Q;
+} {
+  const reach = w.reach_m ?? Math.trunc(ownerStature_m * 0.45);
+
+  return {
+    handedness: w.handedness ?? "oneHand",
+    momentArm_m: w.momentArm_m ?? Math.trunc(reach * 0.55),
+    handlingLoadMul: w.handlingLoadMul ?? q(1.0),
+  };
+}
 export const STARTER_WEAPONS: Weapon[] = [
   {
     id: "wpn_club",
@@ -272,7 +295,9 @@ export const STARTER_WEAPONS: Weapon[] = [
     mass_kg: Math.round(1.2 * SCALE.kg),
     bulk: q(1.4),
     reach_m: Math.round(0.7 * SCALE.m),
-    handlingMul: q(0.95),
+    handedness: "oneHand",
+    momentArm_m: Math.round(0.45 * SCALE.m),
+    handlingMul: q(1.10),
     strikeEffectiveMassFrac: q(0.18),
     strikeSpeedMul: q(0.95),
     damage: {
@@ -290,7 +315,9 @@ export const STARTER_WEAPONS: Weapon[] = [
     mass_kg: Math.round(0.3 * SCALE.kg),
     bulk: q(1.1),
     reach_m: Math.round(0.2 * SCALE.m),
-    handlingMul: q(1.0),
+    handedness: "oneHand",
+    momentArm_m: Math.round(0.18 * SCALE.m),
+    handlingMul: q(0.85),
     strikeEffectiveMassFrac: q(0.10),
     strikeSpeedMul: q(1.05),
     damage: {

@@ -6,7 +6,8 @@ export type Command =
   | MoveCommand
   | SetProneCommand
   | DefendCommand
-  | AttackCommand;
+  | AttackCommand
+  | AttackNearestCommand;
 
 export interface MoveCommand {
   kind: "move";
@@ -40,5 +41,12 @@ export const noMove = (): MoveCommand => ({
   intensity: q(0),
   mode: "walk",
 });
+
+export interface AttackNearestCommand {
+  kind: "attackNearest";
+  weaponId?: string;
+  intensity?: Q;
+  mode?: "strike";
+}
 
 export type CommandMap = Map<number, readonly Command[]>;

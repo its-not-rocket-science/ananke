@@ -1,3 +1,23 @@
+/*
+Morphology scaling philosophy:
+
+We intentionally damp size → strength scaling.
+
+Real biology:
+- strength ∝ cross-section (~mass^(2/3))
+- mass ∝ volume
+- energy cost grows faster than usable force
+
+Gameplay:
+- prevents giants from dominating
+- keeps small entities viable
+- allows cross-species balance
+
+Therefore:
+Most morphology scaling uses PARTIAL influence
+(~20–35% of raw geometric scaling)
+*/
+
 import type { IndividualAttributes } from "./types";
 import type { Archetype } from "./archetypes";
 import { makeRng } from "./rng";
@@ -5,7 +25,7 @@ import { Q, SCALE, clampQ, q, qMul, mulDiv } from "./units";
 import { triSym, mulFromVariation, skewUp } from "./dist";
 
 function applyMultI32(base: number, multQ: Q): number {
-  return mulDiv(base, multQ as number, SCALE.Q);
+  return mulDiv(base, multQ, SCALE.Q);
 }
 
 function clampI32(x: number, lo: number, hi: number): number {
@@ -24,10 +44,42 @@ export function generateIndividual(seedU32: number, arch: Archetype): Individual
 
   const reachMult = mulFromVariation(triSym(rng), arch.reachVar);
 
-  const sizeComposite = qMul(sqrtNear1Q(statureMult), sqrtNear1Q(massMult));
-
   const actuatorScaleBase = mulFromVariation(triSym(rng), arch.actuatorScaleVar);
-  const actuatorScale = clampQ(qMul(actuatorScaleBase, (SCALE.Q + ((sizeComposite - SCALE.Q) >>> 2)) as Q), q(0.6), q(1.8));
+  
+  // Combine stature + mass into a single “size composite”.
+// We use sqrt scaling to avoid extreme linear growth:
+//  - doubling mass should NOT double strength directly
+//  - tall + heavy should scale sub-linearly
+const sizeComposite = qMul(
+  sqrtNear1Q(statureMult),
+  sqrtNear1Q(massMult)
+);
+
+/*
+Actuator scaling rule:
+
+We do NOT apply full sizeComposite directly to force/power.
+Instead we apply only ~25% of size deviation from baseline.
+
+Why:
+- Prevent giant entities becoming absurdly strong
+- Prevent small entities becoming unusably weak
+- Maintain cross-species balance
+- Keep simulation numerically stable
+
+Formula:
+effectiveScale = 1 + (sizeComposite - 1) * 0.25
+
+The >>> 2 below = divide by 4 = 25% contribution.
+*/
+const actuatorScale = clampQ(
+  qMul(
+    actuatorScaleBase,
+    (SCALE.Q + ((sizeComposite - SCALE.Q) >>> 2)) as Q
+  ),
+  q(0.6),  // lower bound: still functional
+  q(1.8)   // upper bound: avoid runaway strength
+);
 
   const structureScaleBase = mulFromVariation(triSym(rng), arch.structureScaleVar);
   const structureScale = clampQ(qMul(structureScaleBase, (SCALE.Q + ((sizeComposite - SCALE.Q) >>> 3)) as Q), q(0.7), q(2.0));
@@ -38,11 +90,11 @@ export function generateIndividual(seedU32: number, arch: Archetype): Individual
   const actuatorFracVar = mulFromVariation(triSym(rng), arch.actuatorMassVar);
   const actuatorFrac = clampQ(qMul(arch.actuatorMassFrac, actuatorFracVar), q(0.15), q(0.70));
 
-  const actuatorMass_kg_raw = mulDiv(mass_kg, actuatorFrac as number, SCALE.Q);
+  const actuatorMass_kg_raw = mulDiv(mass_kg, actuatorFrac, SCALE.Q);
   const actuatorMass_kg = clampI32(
     actuatorMass_kg_raw,
-    mulDiv(mass_kg, q(0.15) as number, SCALE.Q),
-    mulDiv(mass_kg, q(0.70) as number, SCALE.Q),
+    mulDiv(mass_kg, q(0.15), SCALE.Q),
+    mulDiv(mass_kg, q(0.70), SCALE.Q),
   );
 
   const forceRand = mulFromVariation(triSym(rng), arch.peakForceVar);

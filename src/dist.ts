@@ -15,7 +15,7 @@ export function triSym(rng: RngLike): Q {
 }
 
 export function mulFromVariation(variationSym: Q, amplitude: Q): Q {
-  const delta = mulDiv(variationSym as number, amplitude as number, SCALE.Q);
+  const delta = mulDiv(variationSym, amplitude, SCALE.Q);
   return clampQ((SCALE.Q + delta) as Q, 0, 3 * SCALE.Q);
 }
 
