@@ -1,5 +1,5 @@
-import type { AttackCommand, DefendCommand } from "./commands";
-import { q, type Q } from "../units";
+import type { AttackCommand, DefendCommand } from "./commands.js";
+import { q, type Q } from "../units.js";
 
 export function makeAttackCommand(
   targetId: number,
@@ -11,6 +11,7 @@ export function makeAttackCommand(
 ): AttackCommand {
   return {
     kind: "attack",
+    mode: "strike",
     targetId,
     ...(opts.weaponId !== undefined ? { weaponId: opts.weaponId } : {}),
     ...(opts.intensity !== undefined ? { intensity: opts.intensity } : {}),

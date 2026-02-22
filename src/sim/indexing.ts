@@ -1,5 +1,5 @@
-import type { WorldState } from "./world";
-import type { Entity } from "./entity";
+import type { WorldState } from "./world.js";
+import type { Entity } from "./entity.js";
 
 export interface WorldIndex {
     byId: Map<number, Entity>;

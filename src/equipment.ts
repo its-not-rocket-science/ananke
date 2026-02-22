@@ -1,10 +1,10 @@
-import type { I32, Q } from "./units";
-import { SCALE, q, clampQ, qMul, mulDiv } from "./units";
-import type { ChannelMask } from "./channels";
-import { DamageChannel, channelMask } from "./channels";
-import type { IndividualAttributes } from "./types";
-import type { BodyRegion } from "./sim/body";
-import { ALL_REGIONS, DEFAULT_REGION_WEIGHTS, weightedMean01 } from "./sim/body";
+import type { I32, Q } from "./units.js";
+import { SCALE, q, clampQ, qMul, mulDiv } from "./units.js";
+import type { ChannelMask } from "./channels.js";
+import { DamageChannel, channelMask } from "./channels.js";
+import type { IndividualAttributes } from "./types.js";
+import type { BodyRegion } from "./sim/body.js";
+import { ALL_REGIONS, DEFAULT_REGION_WEIGHTS, weightedMean01 } from "./sim/body.js";
 
 export type ItemId = string;
 
@@ -46,6 +46,24 @@ export interface Weapon extends ItemBase {
   handlingLoadMul?: Q;
 }
 
+export interface Shield extends ItemBase {
+  kind: "shield";
+
+  // defensive physics
+  coverageQ: Q;            // chance to interpose when blocking (0..1)
+  blockResist_J: number;   // energy absorbed before passing through
+  deflectQ: Q;             // proportion of remaining energy deflected (0..1)
+
+  // geometry
+  arcDeg: number;          // e.g., 120° front arc
+  regions: BodyRegion[];   // which regions it can cover (typically torso/arm/head)
+
+  // penalties
+  manipulationMul: Q;
+  mobilityMul: Q;
+  fatigueMul: Q;
+}
+
 export type CoverageByRegion = Partial<Record<BodyRegion, Q>>;
 
 export interface Armour extends ItemBase {
@@ -68,8 +86,7 @@ export interface Gear extends ItemBase {
   kind: "gear";
 }
 
-export type Item = Weapon | Armour | Gear;
-
+export type Item = Weapon | Armour | Gear | Shield;
 export interface Loadout {
   items: Item[];
 }
@@ -271,6 +288,11 @@ export function findWeapon(loadout: Loadout, weaponId?: string): Weapon | null {
   return weapons.find(w => w.id === weaponId) ?? weapons[0]!;
 }
 
+
+export function findShield(loadout: Loadout): any {
+  return loadout.items.find(item => item?.kind === "shield");
+}
+
 export function deriveWeaponHandling(
   w: Weapon,
   ownerStature_m: number
@@ -371,5 +393,23 @@ export const STARTER_ARMOUR: Armour[] = [
     protectedDamageMul: q(0.75),
     mobilityMul: q(0.90),
     fatigueMul: q(1.15),
+  },
+];
+
+export const STARTER_SHIELDS: Shield[] = [
+  {
+    id: "shd_small",
+    kind: "shield",
+    name: "Small shield",
+    mass_kg: Math.round(3.0 * SCALE.kg),
+    bulk: q(1.2),
+    coverageQ: q(0.65),
+    blockResist_J: 120,
+    deflectQ: q(0.30),
+    arcDeg: 90,
+    regions: ["torso", "leftArm", "rightArm"],
+    manipulationMul: q(0.95),
+    mobilityMul: q(0.98),
+    fatigueMul: q(1.05),
   },
 ];

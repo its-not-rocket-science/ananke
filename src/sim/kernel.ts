@@ -1,35 +1,38 @@
-import type { WorldState } from "./world";
-import type { Entity } from "./entity";
-import type { CommandMap, Command, AttackCommand } from "./commands";
+import type { WorldState } from "./world.js";
+import type { Entity } from "./entity.js";
+import type { CommandMap, Command, AttackCommand } from "./commands.js";
 
-import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units";
-import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive";
-import { DamageChannel } from "../channels";
-import { deriveArmourProfile, findWeapon, type Weapon } from "../equipment";
-import { deriveFunctionalState } from "./impairment";
-import { TUNING, type SimulationTuning } from "./tuning";
-import { buildTraitProfile } from "../traits";
+import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
+import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive.js";
+import { DamageChannel } from "../channels.js";
+import { deriveArmourProfile, findWeapon, findShield, type Weapon } from "../equipment.js";
+import { deriveFunctionalState } from "./impairment.js";
+import { TUNING, type SimulationTuning } from "./tuning.js";
+import { buildTraitProfile } from "../traits.js";
 
-import { integratePos, type Vec3, v3 } from "./vec3";
-import { defaultIntent } from "./intent";
-import { defaultAction } from "./action";
-import { resolveHit, type HitArea } from "./combat";
-import { normaliseDirCheapQ, dotDirQ } from "./vec3";
-import { eventSeed } from "./seeds";
-import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body";
-import { totalBleedingRate, regionKOFactor } from "./injury";
-import { WorldIndex, buildWorldIndex } from "./indexing";
-import { buildSpatialIndex, queryNearbyIds, type SpatialIndex } from "./spatial";
-import { type ImpactEvent, sortEventsDeterministic } from "./events";
+import { integratePos, type Vec3, v3 } from "./vec3.js";
+import { defaultIntent } from "./intent.js";
+import { defaultAction } from "./action.js";
+import { resolveHit, shieldCovers, type HitArea } from "./combat.js";
+import { normaliseDirCheapQ, dotDirQ } from "./vec3.js";
+import { eventSeed } from "./seeds.js";
+import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body.js";
+import { totalBleedingRate, regionKOFactor } from "./injury.js";
+import { WorldIndex, buildWorldIndex } from "./indexing.js";
+import { buildSpatialIndex, type SpatialIndex } from "./spatial.js";
+import { type ImpactEvent, sortEventsDeterministic } from "./events.js";
 
-import { parryLeverageQ } from "./combat";
+import { parryLeverageQ } from "./combat.js";
 
-import { pickNearestEnemyInReach } from "./formation";
-import { isMeleeLaneOccludedByFriendly } from "./occlusion";
-import { applyFrontageCap } from "./frontage";
+import { pickNearestEnemyInReach } from "./formation.js";
+import { isMeleeLaneOccludedByFriendly } from "./occlusion.js";
+import { applyFrontageCap } from "./frontage.js";
 
-import { type DensityField, computeDensityField } from "./density";
-import { stepPushAndRepulsion } from "./push";
+import { type DensityField, computeDensityField } from "./density.js";
+import { stepPushAndRepulsion } from "./push.js";
+
+import { type TraceSink, nullTrace } from "./trace.js";
+import { TraceKinds } from "./kinds.js";
 
 export const TICK_HZ = 20;
 export const DT_S: I32 = to.s(1 / TICK_HZ);
@@ -39,10 +42,15 @@ export interface KernelContext {
   tuning?: SimulationTuning;
   cellSize_m?: I32; // fixed-point metres; default 4m
   density?: DensityField;
+
+  trace?: TraceSink;
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
   const tuning = ctx.tuning ?? TUNING.tactical;
+
+  const trace = ctx.trace ?? nullTrace;
+
   world.entities.sort((a, b) => a.id - b.id);
 
   const index = buildWorldIndex(world);
@@ -73,9 +81,12 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
   for (const e of world.entities) {
     if (e.injury.dead) continue;
+
     applyCommands(e, cmds.get(e.id) ?? []);
     applyFunctionalGating(world, e, tuning);
     applyStandAndKO(world, e, tuning);
+
+    trace.onEvent({ kind: TraceKinds.Intent, tick: world.tick, entityId: e.id, intent: e.intent });
   }
 
   for (const e of world.entities) {
@@ -85,7 +96,10 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
   for (const e of world.entities) {
     if (e.injury.dead) continue;
+
     stepMovement(world, e, ctx, tuning);
+
+    trace.onEvent({ kind: TraceKinds.Move, tick: world.tick, entityId: e.id, pos: e.position_m, vel: e.velocity_mps });
   }
   const spatialAfterMove = buildSpatialIndex(world, cellSize_m);
 
@@ -96,12 +110,13 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     maxNeighbours: 10,
   });
 
+
   for (const e of world.entities) {
     if (e.injury.dead) continue;
     const commands = cmds.get(e.id) ?? [];
     for (const c of commands) {
       if (c.kind === "attack") {
-        resolveAttack(world, e, c, tuning, index, impacts, spatial);
+        resolveAttack(world, e, c, tuning, index, impacts, spatial, trace);
       } else if (c.kind === "attackNearest") {
         const wpn = findWeapon(e.loadout, c.weaponId);
         if (!wpn) continue;
@@ -125,12 +140,26 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
         const attackCmd: AttackCommand = {
           kind: "attack",
           targetId: target.id,
+          mode: c.mode,
           ...(c.weaponId !== undefined ? { weaponId: c.weaponId } : {}),
           ...(c.intensity !== undefined ? { intensity: c.intensity } : {}),
-          ...(c.mode !== undefined ? { mode: c.mode } : {}),
         };
 
-        resolveAttack(world, e, attackCmd, tuning, index, impacts, spatialAfterMove);
+        resolveAttack(world, e, attackCmd, tuning, index, impacts, spatialAfterMove, trace);
+      } else if (c.kind === "grapple") {
+        const target = index.byId.get(c.targetId);
+        if (!target || target.injury.dead) continue;
+
+        // Phase 7A: trace-only stub for now (no mechanics yet)
+        trace.onEvent({
+          kind: TraceKinds.Grapple,
+          tick: world.tick,
+          attackerId: e.id,
+          targetId: target.id,
+          phase: "start",
+        });
+
+        // TODO: implement grapple state + resolution
       }
     }
   }
@@ -143,20 +172,46 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
   sortEventsDeterministic(finalImpacts);
 
-  for (const ev of impacts) {
+  for (const ev of finalImpacts) {
     const target = index.byId.get(ev.targetId);
     if (!target || target.injury.dead) continue;
 
     applyImpactToInjury(target, ev.wpn, ev.energy_J, ev.region, ev.protectedByArmour);
+
+    trace.onEvent({
+      kind: TraceKinds.Attack,
+      tick: world.tick,
+      attackerId: ev.attackerId,
+      targetId: ev.targetId,
+      region: ev.region,
+      energy_J: ev.energy_J,
+      blocked: ev.blocked,
+      parried: ev.parried,
+      shieldBlocked: ev.shieldBlocked,
+      armoured: ev.protectedByArmour,
+      hitQuality: ev.hitQuality,
+    });
   }
 
   for (const e of world.entities) {
     if (e.injury.dead) continue;
+
     stepConditionsToInjury(world, e);
     stepInjuryProgression(e);
     stepEnergy(e, ctx);
+
+    trace.onEvent({
+      kind: TraceKinds.Injury,
+      tick: world.tick,
+      entityId: e.id,
+      dead: e.injury.dead,
+      shockQ: e.injury.shock,
+      fluidLossQ: e.injury.fluidLoss,
+      consciousnessQ: e.injury.consciousness,
+    });
   }
 
+  trace.onEvent({ kind: TraceKinds.TickEnd, tick: world.tick });
   world.tick += 1;
 }
 
@@ -283,7 +338,7 @@ function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: 
   if (e.condition.prone && e.condition.unconsciousTicks === 0 && tuning.realism !== "arcade") {
     mobilityMulBase = qMul(mobilityMulBase, q(0.20)); // crawling is slow
   }
-  
+
   // impairment affects control and mobility
   const controlMul = qMul(controlMulBase, func.coordinationMul);
   const mobilityMul = qMul(mobilityMulBase, func.mobilityMul);
@@ -297,7 +352,7 @@ function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: 
 
   let modeMul =
     e.intent.move.mode === "walk" ? q(0.40) :
-    e.intent.move.mode === "run"  ? q(0.70) : q(1.0);
+      e.intent.move.mode === "run" ? q(0.70) : q(1.0);
 
   if (e.condition.prone && tuning.realism !== "arcade") {
     // cannot sprint while prone
@@ -357,16 +412,22 @@ function clampI32(x: number, lo: number, hi: number): number {
 }
 
 /* ------------------ Combat ------------------ */
-function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand, tuning: SimulationTuning, index: WorldIndex, impacts: ImpactEvent[], spatial: SpatialIndex): void {
+function resolveAttack(world: WorldState,
+  attacker: Entity,
+  cmd: AttackCommand,
+  tuning: SimulationTuning,
+  index: WorldIndex,
+  impacts: ImpactEvent[],
+  spatial: SpatialIndex,
+  trace: TraceSink
+): void {
   if (attacker.action.attackCooldownTicks > 0) return;
 
   const target = index.byId.get(cmd.targetId);
   if (!target || target.injury.dead) return;
 
-  const effTuning = ((world as any).__tuning as SimulationTuning | undefined) ?? tuning;
-
-  const funcA = deriveFunctionalState(attacker, effTuning);
-  const funcB = deriveFunctionalState(target, effTuning);
+  const funcA = deriveFunctionalState(attacker, tuning);
+  const funcB = deriveFunctionalState(target, tuning);
 
   if (!funcA.canAct) return;
 
@@ -406,6 +467,27 @@ function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand, 
 
   const seed = eventSeed(world.seed, world.tick, attacker.id, target.id, 0xA11AC);
   const res = resolveHit(seed, attackSkill, defenceSkill, geomDot, target.intent.defence.mode, target.intent.defence.intensity);
+  const defenderBlocking = (target.intent.defence.mode === "block"); // or cmd-derived if you do that elsewhere
+  const shield = findShield(target.loadout);
+  const shieldBlocked =
+    res.hit &&
+    res.blocked &&
+    defenderBlocking &&
+    !!shield &&
+    shieldCovers(shield, res.area);
+
+  trace.onEvent({
+    kind: TraceKinds.AttackAttempt,
+    tick: world.tick,
+    attackerId: attacker.id,
+    targetId: target.id,
+    hit: res.hit,
+    blocked: res.blocked,
+    parried: res.parried,
+    hitQuality: res.hitQuality,
+    area: res.area,
+  });
+
   if (!res.hit) return;
 
   const sideBit = (eventSeed(world.seed, world.tick, attacker.id, target.id, 0x51DE) & 1) as 0 | 1;
@@ -482,9 +564,16 @@ function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand, 
       );
       mitigated = mulDiv(mitigated, m, SCALE.Q);
     }
-  }
 
-  
+    if (res.shieldBlocked) {
+      const m = clampQ(
+        q(0.35) - qMul(q(0.10), (defenceMul - SCALE.Q) as any),
+        q(0.20),
+        q(0.55)
+      );
+      mitigated = mulDiv(mitigated, m, SCALE.Q);
+    }
+  }
 
   const armour = deriveArmourProfile(target.loadout);
   const KINETIC_MASK = 1 << DamageChannel.Kinetic;
@@ -504,6 +593,10 @@ function resolveAttack(world: WorldState, attacker: Entity, cmd: AttackCommand, 
     protectedByArmour,
     weaponId: wpn.id,
     wpn,
+    blocked: res.blocked,
+    parried: res.parried,
+    hitQuality: clampQ(res.hitQuality, q(0.05), q(1.0)),
+    shieldBlocked,
   });
 }
 
@@ -557,8 +650,8 @@ function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, regi
   const intFrac = clampQ(wpn.damage.internalFrac + qMul(bias, q(0.12)), q(0.05), q(0.95));
 
   const surfInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(qMul(surfFrac, areaSurf), armourShift), SURF_J * SCALE.Q));
-  const intInc  = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(intFrac, areaInt), INT_J * SCALE.Q));
-  const strInc  = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(wpn.damage.structuralFrac, areaStr), STR_J * SCALE.Q));
+  const intInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(intFrac, areaInt), INT_J * SCALE.Q));
+  const strInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(wpn.damage.structuralFrac, areaStr), STR_J * SCALE.Q));
 
   target.injury.byRegion[region].surfaceDamage = clampQ(target.injury.byRegion[region].surfaceDamage + surfInc, 0, SCALE.Q);
   target.injury.byRegion[region].internalDamage = clampQ(target.injury.byRegion[region].internalDamage + intInc, 0, SCALE.Q);
@@ -595,7 +688,10 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
           rightLeg: q(0.13),
         };
       case DamageChannel.Chemical:
-        // Corrosives/aerosols: more even, but torso still prominent.
+        // Chemical/corrosive aerosols: more even, but torso still prominent.
+        // Note: condition.corrosiveExposure feeds this channel — Chemical and
+        // Corrosive are unified here. DamageChannel.Corrosive is reserved for
+        // future liquid-contact mechanics with a distinct distribution profile.
         return {
           head: q(0.16),
           torso: q(0.36),
@@ -603,6 +699,16 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
           rightArm: q(0.12),
           leftLeg: q(0.12),
           rightLeg: q(0.12),
+        };
+      case DamageChannel.Radiation:
+        // Penetrating radiation: roughly proportional to mass (torso dominant).
+        return {
+          head: q(0.12),
+          torso: q(0.52),
+          leftArm: q(0.09),
+          rightArm: q(0.09),
+          leftLeg: q(0.09),
+          rightLeg: q(0.09),
         };
       case DamageChannel.Electrical:
         // Conductive contact often through extremities.
@@ -655,6 +761,7 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
   const fireBy = distribute(DamageChannel.Thermal, e.condition.onFire);
   const corrBy = distribute(DamageChannel.Chemical, e.condition.corrosiveExposure);
   const elecBy = distribute(DamageChannel.Electrical, e.condition.electricalOverload);
+  const radBy = distribute(DamageChannel.Radiation, e.condition.radiation);
 
   // Suffocation is global rather than surface-localised.
   const suff = (() => {
@@ -677,11 +784,17 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
   const SUFF_SHOCK_PER_TICK = q(0.0015);
   const ELEC_INTERNAL_PER_TICK = q(0.0010);
   const ELEC_STUNNED_RISE = q(0.0200);
+  // Radiation: primary effect is internal cellular damage accumulating slowly.
+  // Rate calibrated so continuous exposure at q(1.0) reaches ~50% internal
+  // damage on the torso (highest-weight region) after ~250 ticks (12.5 s).
+  const RAD_INTERNAL_PER_TICK = q(0.0008);
+  const RAD_SHOCK_PER_TICK = q(0.0003);
 
   for (const r of ALL_REGIONS) {
     const fire = applyDoseToRegion(DamageChannel.Thermal, r, fireBy[r]);
     const corr = applyDoseToRegion(DamageChannel.Chemical, r, corrBy[r]);
     const elec = applyDoseToRegion(DamageChannel.Electrical, r, elecBy[r]);
+    const rad = applyDoseToRegion(DamageChannel.Radiation, r, radBy[r]);
 
     if (fire > 0) {
       e.injury.byRegion[r].surfaceDamage = clampQ(e.injury.byRegion[r].surfaceDamage + qMul(fire, FIRE_SURFACE_PER_TICK), 0, SCALE.Q);
@@ -694,6 +807,10 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
     if (elec > 0) {
       e.injury.byRegion[r].internalDamage = clampQ(e.injury.byRegion[r].internalDamage + qMul(elec, ELEC_INTERNAL_PER_TICK), 0, SCALE.Q);
       e.condition.stunned = clampQ(e.condition.stunned + qMul(elec, ELEC_STUNNED_RISE), 0, SCALE.Q);
+    }
+    if (rad > 0) {
+      e.injury.byRegion[r].internalDamage = clampQ(e.injury.byRegion[r].internalDamage + qMul(rad, RAD_INTERNAL_PER_TICK), 0, SCALE.Q);
+      e.injury.shock = clampQ(e.injury.shock + qMul(rad, RAD_SHOCK_PER_TICK), 0, SCALE.Q);
     }
   }
 
@@ -716,7 +833,7 @@ function regionSalt(region: BodyRegion): number {
 function stepInjuryProgression(e: Entity): void {
   if (e.injury.dead) return;
 
-    const bleedRate = totalBleedingRate(e.injury);
+  const bleedRate = totalBleedingRate(e.injury);
   const bleedThisTick = Math.trunc((bleedRate * DT_S) / SCALE.s) as any;
   e.injury.fluidLoss = clampQ(e.injury.fluidLoss + bleedThisTick, 0, SCALE.Q);
 
@@ -730,7 +847,7 @@ function stepInjuryProgression(e: Entity): void {
   );
 
   const CONSC_LOSS_FROM_SHOCK = q(0.0100);
-  const CONSC_LOSS_FROM_SUFF  = q(0.0200);
+  const CONSC_LOSS_FROM_SUFF = q(0.0200);
 
   const loss = clampQ(qMul(e.injury.shock, CONSC_LOSS_FROM_SHOCK) + qMul(e.condition.suffocation, CONSC_LOSS_FROM_SUFF) + qMul(regionKOFactor(e.injury), q(0.0100)), 0, SCALE.Q);
   e.injury.consciousness = clampQ(e.injury.consciousness - loss, 0, SCALE.Q);

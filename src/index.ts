@@ -1,28 +1,32 @@
-export * from "./units";
-export * from "./rng";
-export * from "./dist";
-export * from "./types";
-export * from "./channels";
-export * from "./traits";
-export * from "./archetypes";
-export * from "./generate";
-export * from "./equipment";
-export * from "./derive";
-export * from "./lod";
+export * from "./units.js";
+export * from "./rng.js";
+export * from "./dist.js";
+export * from "./types.js";
+export * from "./channels.js";
+export * from "./traits.js";
+export * from "./archetypes.js";
+export * from "./generate.js";
+export * from "./equipment.js";
+export * from "./derive.js";
+export * from "./lod.js";
 
-export * from "./sim/vec3";
-export * from "./sim/condition";
-export * from "./sim/injury";
-export * from "./sim/entity";
-export * from "./sim/commands";
-export * from "./sim/kernel";
-export * from "./sim/intent";
+export * from "./sim/vec3.js";
+export * from "./sim/condition.js";
+export * from "./sim/injury.js";
+export * from "./sim/entity.js";
+export * from "./sim/commands.js";
+export * from "./sim/kernel.js";
+export * from "./sim/intent.js";
 
-export * from "./sim/action";
-export * from "./sim/combat";
-export * from "./sim/body";
-export * from "./sim/impairment";
-export * from "./sim/world";
+export * from "./sim/action.js";
+export * from "./sim/combat.js";
+export * from "./sim/body.js";
+export * from "./sim/impairment.js";
+export * from "./sim/world.js";
 
-export * from "./sim/indexing";
+export * from "./sim/indexing.js";
 
+export * from "./sim/tuning.js";
+export * from "./sim/trace.js";
+
+export * from "./sim/testing.js";

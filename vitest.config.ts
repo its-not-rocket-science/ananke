@@ -16,7 +16,13 @@ export default defineConfig({
         "src/sim/world.ts",
         "src/sim/tick.ts",
         "src/sim/ai/types.ts"
-      ]
+      ],
+      thresholds: {
+        statements: 90,
+        branches: 80,
+        functions: 85,
+        lines: 90,
+      }
     }
   },
 });

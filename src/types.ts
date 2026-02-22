@@ -1,4 +1,4 @@
-import type { I32, Q } from "./units";
+import type { I32, Q } from "./units.js";
 
 export interface Morphology {
   stature_m: I32;

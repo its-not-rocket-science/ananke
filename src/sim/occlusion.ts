@@ -1,9 +1,9 @@
-import type { Entity } from "./entity";
-import type { WorldIndex } from "./indexing";
-import type { SpatialIndex } from "./spatial";
-import { queryNearbyIds } from "./spatial";
-import { SCALE } from "../units";
-import { isEnemy } from "./team";
+import type { Entity } from "./entity.js";
+import type { WorldIndex } from "./indexing.js";
+import type { SpatialIndex } from "./spatial.js";
+import { queryNearbyIds } from "./spatial.js";
+import { SCALE } from "../units.js";
+import { isEnemy } from "./team.js";
 
 export interface OcclusionQuery {
   laneRadius_m: number;   // fixed-point metres (corridor half-width)
@@ -40,6 +40,7 @@ export function isMeleeLaneOccludedByFriendly(
   const searchR = halfDist + laneR;
 
   const ids = queryNearbyIds(spatial, { x: mx, y: my, z: mz }, searchR);
+  ids.sort((a, b) => a - b);
 
   // Check for any friendly that lies between attacker and target AND within lane radius of the segment
   for (const id of ids) {

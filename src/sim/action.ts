@@ -1,4 +1,4 @@
-import type { I32 } from "../units";
+import type { I32 } from "../units.js";
 
 export interface ActionState {
   attackCooldownTicks: I32;

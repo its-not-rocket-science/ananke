@@ -1,9 +1,9 @@
-import type { Entity } from "../entity";
-import type { WorldIndex } from "../indexing";
-import type { SpatialIndex } from "../spatial";
-import { queryNearbyIds } from "../spatial";
-import { isEnemy } from "../team";
-import { SCALE } from "../../units";
+import type { Entity } from "../entity.js";
+import type { WorldIndex } from "../indexing.js";
+import type { SpatialIndex } from "../spatial.js";
+import { queryNearbyIds } from "../spatial.js";
+import { isEnemy } from "../team.js";
+import { SCALE } from "../../units.js";
 
 export interface Perception {
   enemies: Entity[];
@@ -18,6 +18,7 @@ export function perceiveLocal(
   maxCount = 24
 ): Perception {
   const ids = queryNearbyIds(spatial, self.position_m, radius_m);
+  ids.sort((a, b) => a - b);
 
   const enemies: Entity[] = [];
   const allies: Entity[] = [];

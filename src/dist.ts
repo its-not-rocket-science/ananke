@@ -1,4 +1,4 @@
-import { Q, SCALE, clampQ, mulDiv, qMul } from "./units";
+import { Q, SCALE, clampQ, mulDiv, qMul } from "./units.js";
 
 export interface RngLike {
   q01(): Q; // 0..SCALE.Q-1

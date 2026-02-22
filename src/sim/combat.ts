@@ -1,13 +1,11 @@
-import { SCALE, q, qMul, clampQ, mulDiv, type Q } from "../units";
-import { makeRng } from "../rng";
-import type { Vec3 } from "./vec3";
+import { SCALE, q, qMul, clampQ, mulDiv, type Q } from "../units.js";
+import { makeRng } from "../rng.js";
 
-import type { Entity } from "./entity";
-import { Weapon } from "../equipment";
+import type { Entity } from "./entity.js";
+import { type Weapon, type Shield, type Loadout } from "../equipment.js";
+import { type HitArea } from "./kinds.js";
 
-import { eventSeed } from "./seeds";
-
-export type HitArea = "head" | "torso" | "arm" | "leg";
+export type { HitArea };
 
 export interface HitResolution {
   hit: boolean;
@@ -15,6 +13,7 @@ export interface HitResolution {
   hitQuality: Q; // 0..1
   blocked: boolean;
   parried: boolean;
+  shieldBlocked: boolean;
 }
 
 function weaponMomentArm_m(wpn: Weapon, attacker: Entity): number {
@@ -28,6 +27,11 @@ export function parryLeverageQ(wpn: Weapon, attacker: Entity): Q {
   // reference ~0.6m human sword lever
   const ref = Math.trunc(0.6 * SCALE.m);
 
+  // Clamp the raw ratio so extreme weapons stay in a sane band.
+  // ratio ∈ [0.5, 1.8] → formula ∈ [0.85, 1.24] → final clamp ∈ [0.85, 1.20].
+  // Note: the lower bound of q(0.85) is derived from the formula minimum
+  // (q(0.70) + qMul(q(0.5), q(0.30)) = 0.85), so it is intentionally tighter
+  // than the old q(0.80) which was unreachable.
   const ratio = clampQ(
     mulDiv(arm * SCALE.Q, 1, ref) as any,
     q(0.5),
@@ -37,7 +41,7 @@ export function parryLeverageQ(wpn: Weapon, attacker: Entity): Q {
   // compress into sane band
   return clampQ(
     q(0.70) + qMul(ratio, q(0.30)),
-    q(0.80),
+    q(0.85), // minimum reachable value given ratio ≥ 0.5
     q(1.20)
   );
 }
@@ -70,7 +74,11 @@ export function resolveHit(
 
   const area = chooseArea(rng.q01());
 
-  const quality = clampQ(qMul(atk, q(0.60) + mulDiv((p - roll), q(0.40), SCALE.Q) as any), q(0.05), q(0.99));
+  // Quality measures how cleanly the attack landed. It is only meaningful
+  // when hit === true; set to 0 on a miss so callers can't accidentally use it.
+  const quality = hit
+    ? clampQ(qMul(atk, q(0.60) + mulDiv((p - roll), q(0.40), SCALE.Q) as any), q(0.05), q(0.99))
+    : q(0);
 
   let blocked = false;
   let parried = false;
@@ -86,10 +94,24 @@ export function resolveHit(
       parried = rng.q01() < pp;
     } else if (defenceMode === "dodge") {
       const pd = clampQ(qMul(d, q(0.65)), q(0.05), q(0.80));
-      if (rng.q01() < pd) return { hit: false, area, hitQuality: quality, blocked: false, parried: false };
+      if (rng.q01() < pd) return { hit: false, area, hitQuality: quality, blocked: false, parried: false, shieldBlocked: false };
     }
   }
 
-  return { hit, area, hitQuality: quality, blocked, parried };
+  return { hit, area, hitQuality: quality, blocked, parried, shieldBlocked: false };
 }
 
+function isShield(item: unknown): item is Shield {
+  // cheap “A” that makes “B” easy later
+  return (item as any)?.kind === "shield";
+}
+
+
+/** Returns true if `shield` covers `area`. Accepts the shield item so that
+ *  future item variants (buckler, kite, tower) can override coverage by
+ *  checking item tags rather than hard-coding areas here. */
+export function shieldCovers(shield: Shield, area: HitArea): boolean {
+  // Explicit coverage list; extend when adding shield variants.
+  const covered: HitArea[] = (shield as any).covers ?? ["torso", "head"];
+  return covered.includes(area);
+}

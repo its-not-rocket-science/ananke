@@ -1,6 +1,6 @@
-import type { ImpactEvent } from "./events";
-import type { WorldIndex } from "./indexing";
-import type { Entity } from "./entity";
+import type { ImpactEvent } from "./events.js";
+import type { WorldIndex } from "./indexing.js";
+import type { Entity } from "./entity.js";
 
 export interface FrontageRules {
   maxEngagersPerTarget: number;

@@ -1,8 +1,8 @@
-import type { Q } from "../units";
-import { q, clampQ, SCALE, qMul } from "../units";
-import type { Entity } from "./entity";
-import type { SimulationTuning } from "./tuning";
-import { TUNING } from "./tuning";
+import type { Q } from "../units.js";
+import { q, clampQ, SCALE, qMul } from "../units.js";
+import type { Entity } from "./entity.js";
+import type { SimulationTuning } from "./tuning.js";
+import { TUNING } from "./tuning.js";
 
 export interface FunctionalState {
   mobilityMul: Q;

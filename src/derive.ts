@@ -1,7 +1,7 @@
-import { Q, SCALE, q, clampQ, qMul, mulDiv, cbrtQ, sqrtQ, G_mps2 } from "./units";
-import type { IndividualAttributes, EnergyState } from "./types";
-import type { Loadout } from "./equipment";
-import { computeEncumbrance, deriveArmourProfile, type CarryRules, DEFAULT_CARRY_RULES } from "./equipment";
+import { Q, SCALE, q, clampQ, qMul, mulDiv, cbrtQ, sqrtQ, G_mps2 } from "./units.js";
+import type { IndividualAttributes, EnergyState } from "./types.js";
+import type { Loadout } from "./equipment.js";
+import { computeEncumbrance, deriveArmourProfile, type CarryRules, DEFAULT_CARRY_RULES } from "./equipment.js";
 
 export interface MovementCaps {
   maxSprintSpeed_mps: number;

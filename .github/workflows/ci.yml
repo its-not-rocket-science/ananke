@@ -2,17 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: ["main", "master"]
 
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node-version: [20, 22]
+        node-version: ["20.x", "22.x"]
 
     steps:
       - name: Checkout
@@ -27,17 +27,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm test
-
-      - name: Run coverage
-        run: npm run test:coverage
+      - name: Type check
+        run: tsc --noEmit -p tsconfig.build.json
 
       - name: Build
         run: npm run build
 
+      - name: Test with coverage
+        run: npm run test:coverage
+
       - name: Upload coverage report
-        if: matrix.node-version == 20
+        if: matrix.node-version == '20.x'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report

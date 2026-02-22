@@ -1,7 +1,7 @@
-import type { Q } from "../units";
-import { q, clampQ, SCALE, qMul } from "../units";
-import type { BodyRegion } from "./body";
-import { ALL_REGIONS } from "./body";
+import type { Q } from "../units.js";
+import { q, clampQ, SCALE, qMul } from "../units.js";
+import type { BodyRegion } from "./body.js";
+import { ALL_REGIONS } from "./body.js";
 
 export interface RegionInjury {
   surfaceDamage: Q;     // 0..1

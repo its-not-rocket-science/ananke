@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { mkHumanoidEntity, mkWorld } from "./helpers/entities";
+import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { q, SCALE } from "../src/units";
 import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";

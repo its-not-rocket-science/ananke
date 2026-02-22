@@ -1,9 +1,9 @@
-import type { WorldState } from "../world";
-import type { CommandMap } from "../commands";
-import type { WorldIndex } from "../indexing";
-import type { SpatialIndex } from "../spatial";
-import type { AIPolicy } from "./types";
-import { decideCommandsForEntity } from "./decide";
+import type { WorldState } from "../world.js";
+import type { CommandMap } from "../commands.js";
+import type { WorldIndex } from "../indexing.js";
+import type { SpatialIndex } from "../spatial.js";
+import type { AIPolicy } from "./types.js";
+import { decideCommandsForEntity } from "./decide.js";
 
 export function buildAICommands(
   world: WorldState,

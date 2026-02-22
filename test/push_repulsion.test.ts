@@ -6,7 +6,7 @@ import type { CommandMap } from "../src/sim/commands";
 import { q, SCALE } from "../src/units";
 import { TUNING } from "../src/sim/tuning";
 
-import { mkHumanoidEntity, mkWorld } from "./helpers/entities";
+import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 
 
 test("push/repulsion produces separating velocities for overlapping entities", () => {

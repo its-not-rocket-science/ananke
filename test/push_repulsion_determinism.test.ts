@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { mkHumanoidEntity, mkWorld } from "./helpers/entities";
+import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { q, SCALE } from "../src/units";
 import type { CommandMap } from "../src/sim/commands";
 import { stepWorld } from "../src/sim/kernel";

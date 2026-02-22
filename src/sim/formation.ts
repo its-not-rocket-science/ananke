@@ -1,10 +1,10 @@
-import type { Entity } from "./entity";
-import type { WorldIndex } from "./indexing";
-import type { SpatialIndex } from "./spatial";
-import { queryNearbyIds } from "./spatial";
-import { isEnemy } from "./team";
-import { dotDirQ, normaliseDirCheapQ } from "./vec3"; // wherever you keep these
-import { SCALE } from "../units";
+import type { Entity } from "./entity.js";
+import type { WorldIndex } from "./indexing.js";
+import type { SpatialIndex } from "./spatial.js";
+import { queryNearbyIds } from "./spatial.js";
+import { isEnemy } from "./team.js";
+import { dotDirQ, normaliseDirCheapQ } from "./vec3.js"; // wherever you keep these
+import { SCALE } from "../units.js";
 
 export interface EngagementQuery {
   reach_m: number;          // fixed-point metres
@@ -22,6 +22,7 @@ export function pickNearestEnemyInReach(
 ): Entity | undefined {
   const radius_m = q.reach_m + q.buffer_m;
   const ids = queryNearbyIds(spatial, attacker.position_m, radius_m);
+  ids.sort((a, b) => a - b);
 
   // Collect candidates
   const cand: Entity[] = [];

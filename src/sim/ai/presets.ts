@@ -1,6 +1,6 @@
-import { q } from "../../units";
-import type { AIPolicy } from "./types";
-import { SCALE } from "../../units";
+import { q } from "../../units.js";
+import type { AIPolicy } from "./types.js";
+import { SCALE } from "../../units.js";
 
 export const AI_PRESETS: Record<string, AIPolicy> = {
   lineInfantry: {

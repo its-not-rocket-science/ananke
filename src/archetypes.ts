@@ -1,4 +1,4 @@
-import { q, to, type Q, type I32 } from "./units";
+import { q, to, type Q, type I32 } from "./units.js";
 
 export interface Archetype {
   stature_m: I32;

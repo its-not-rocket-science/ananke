@@ -1,5 +1,5 @@
-import type { IndividualAttributes } from "./types";
-import { q, type Q } from "./units";
+import type { IndividualAttributes } from "./types.js";
+import { q, type Q } from "./units.js";
 
 export interface SquadAggregate {
   count: number;

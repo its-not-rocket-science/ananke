@@ -6,7 +6,7 @@ import { v3 } from "../src/sim/vec3";
 import type { CommandMap } from "../src/sim/commands";
 import { TUNING } from "../src/sim/tuning";
 
-import { mkWorld } from "./helpers/entities";
+import { mkWorld } from "../src/sim/testing";
 
 test("tactical/sim: severe leg damage forces prone; arcade does not", () => {
   const worldTac = mkWorld(10, { items: [] });

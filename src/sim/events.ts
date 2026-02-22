@@ -1,5 +1,6 @@
-import type { BodyRegion } from "./body";
-import type { Weapon } from "../equipment";
+import type { BodyRegion } from "./body.js";
+import type { Weapon } from "../equipment.js";
+import type { Q } from "../units.js";
 
 export interface ImpactEvent {
   kind: "impact";
@@ -8,8 +9,12 @@ export interface ImpactEvent {
   region: BodyRegion;
   energy_J: number;
   protectedByArmour: boolean;
+  blocked: boolean;
+  parried: boolean;
   weaponId: string;
   wpn: Weapon;
+  hitQuality: Q;
+  shieldBlocked: boolean;
 }
 
 export function sortEventsDeterministic<T extends { attackerId: number; targetId: number }>(ev: T[]): void {

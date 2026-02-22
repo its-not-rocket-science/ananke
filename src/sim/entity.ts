@@ -1,12 +1,20 @@
-import type { IndividualAttributes, EnergyState } from "../types";
-import type { Loadout } from "../equipment";
-import type { TraitId } from "../traits";
+import type { IndividualAttributes, EnergyState } from "../types.js";
+import type { Loadout } from "../equipment.js";
+import type { TraitId } from "../traits.js";
 
-import type { Vec3 } from "./vec3";
-import type { ConditionState } from "./condition";
-import type { InjuryState } from "./injury";
-import type { IntentState, AIState } from "./intent";
-import type { ActionState } from "./action";
+import type { Vec3 } from "./vec3.js";
+import type { ConditionState } from "./condition.js";
+import type { InjuryState } from "./injury.js";
+import type { IntentState, AIState } from "./intent.js";
+import type { ActionState } from "./action.js";
+
+import { Q } from "../units.js";
+
+export interface GrappleState {
+  holdingTargetId: number;   // 0 if none
+  heldByIds: number[];       // sorted ascending for determinism
+  gripQ: Q;                  // 0..1
+}
 
 export interface Entity {
   id: number;
@@ -26,6 +34,8 @@ export interface Entity {
 
   condition: ConditionState;
   injury: InjuryState;
+
+  grapple: GrappleState;
 
   ai?: AIState;
 }

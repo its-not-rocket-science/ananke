@@ -1,9 +1,9 @@
-import type { WorldState } from "./world";
-import type { SpatialIndex } from "./spatial";
-import type { WorldIndex } from "./indexing";
-import { queryNearbyIds } from "./spatial";
-import { SCALE, clampQ, q } from "../units";
-import type { Q } from "../units";
+import type { WorldState } from "./world.js";
+import type { SpatialIndex } from "./spatial.js";
+import type { WorldIndex } from "./indexing.js";
+import { queryNearbyIds } from "./spatial.js";
+import { SCALE, clampQ, q } from "../units.js";
+import type { Q } from "../units.js";
 
 /** Per-entity crowding metrics (0..1 Q). */
 export interface DensityField {
@@ -29,6 +29,7 @@ export function computeDensityField(
     if (e.injury.dead) continue;
 
     const ids = queryNearbyIds(spatial, e.position_m, R);
+    ids.sort((a, b) => a - b);
     let n = 0;
     for (const id of ids) {
       if (id === e.id) continue;

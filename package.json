@@ -1,5 +1,5 @@
 {
-  "name": "si-lockstep-engine",
+  "name": "ananke",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "ci": "npm run build && npm run test:coverage",
-    "lint": "node -e \"console.log('Add ESLint if desired')\""
+    "lint": "node -e \"console.log('Add ESLint if desired')\"",
+    "run:demo": "node dist/tools/run-demo.js"
   },
   "devDependencies": {
     "typescript": "^5.5.4",

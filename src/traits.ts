@@ -1,6 +1,6 @@
-import { DamageChannel, type ChannelMask, channelMask } from "./channels";
-import { Q, SCALE, clampQ, q, qMul } from "./units";
-import type { IndividualAttributes } from "./types";
+import { DamageChannel, type ChannelMask, channelMask } from "./channels.js";
+import { Q, SCALE, clampQ, q, qMul } from "./units.js";
+import type { IndividualAttributes } from "./types.js";
 
 export type TraitId =
   | "sealed"

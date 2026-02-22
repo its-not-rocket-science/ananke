@@ -1,6 +1,6 @@
-import { SCALE, type I32 } from "../units";
-import { mulDiv } from "../units";
-import type { Q } from "../units";
+import { SCALE, type I32 } from "../units.js";
+import { mulDiv } from "../units.js";
+import type { Q } from "../units.js";
 
 export interface Vec3 {
   x: I32; // fixed metres (SCALE.m)

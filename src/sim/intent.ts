@@ -1,15 +1,16 @@
-import type { Q } from "../units";
-import { q } from "../units";
-import type { Vec3 } from "./vec3";
+import type { Q } from "../units.js";
+import { q } from "../units.js";
+import { DefenceMode, DefenceModes, MoveMode, MoveModes } from "./kinds.js";
+import type { Vec3 } from "./vec3.js";
 
 export interface MoveIntent {
   dir: Vec3;
   intensity: Q; // 0..1
-  mode: "walk" | "run" | "sprint";
+  mode: MoveMode;
 }
 
 export interface DefenceIntent {
-  mode: "none" | "block" | "parry" | "dodge";
+  mode: DefenceMode;
   intensity: Q; // 0..1
 }
 
@@ -27,7 +28,8 @@ export interface AIState {
 }
 
 export const defaultIntent = (): IntentState => ({
-  move: { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" },
-  defence: { mode: "none", intensity: q(0) },
+  move: { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: MoveModes.Walk },
+  defence: { mode: DefenceModes.None, intensity: q(0) },
+  
   prone: false,
 });

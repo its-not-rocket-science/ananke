@@ -1,5 +1,5 @@
-import type { Q } from "../units";
-import { q } from "../units";
+import type { Q } from "../units.js";
+import { q } from "../units.js";
 
 export interface ConditionState {
   // Intensities are 0..1 in Q unless otherwise noted

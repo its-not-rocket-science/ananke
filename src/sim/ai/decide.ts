@@ -1,13 +1,13 @@
-import type { Entity } from "../entity";
-import type { WorldState } from "../world";
-import type { WorldIndex } from "../indexing";
-import type { SpatialIndex } from "../spatial";
-import type { Command } from "../commands";
-import { q, clampQ, SCALE } from "../../units";
-import { pickTarget, updateFocus } from "./targeting";
-import type { AIPolicy } from "./types";
-import { findWeapon } from "../../equipment";
-import { v3, normaliseDirCheapQ } from "../vec3";
+import type { Entity } from "../entity.js";
+import type { WorldState } from "../world.js";
+import type { WorldIndex } from "../indexing.js";
+import type { SpatialIndex } from "../spatial.js";
+import type { Command } from "../commands.js";
+import { q, clampQ, SCALE } from "../../units.js";
+import { pickTarget, updateFocus } from "./targeting.js";
+import type { AIPolicy } from "./types.js";
+import { findWeapon } from "../../equipment.js";
+import { v3, normaliseDirCheapQ } from "../vec3.js";
 
 type DefenceMode = "none" | "block" | "parry" | "dodge";
 

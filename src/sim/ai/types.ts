@@ -1,4 +1,4 @@
-import type { Q } from "../../units";
+import type { Q } from "../../units.js";
 
 export type AIArchetype = "skirmisher" | "lineInfantry" | "berserker" | "defender";
 

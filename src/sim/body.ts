@@ -1,6 +1,6 @@
-import type { Q } from "../units";
-import { q, SCALE } from "../units";
-import type { HitArea } from "./combat";
+import type { Q } from "../units.js";
+import { q, SCALE } from "../units.js";
+import type { HitArea } from "./combat.js";
 
 export type BodyRegion =
   | "head"

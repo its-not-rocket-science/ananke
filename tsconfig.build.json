@@ -1,5 +1,29 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src"],
-  "exclude": ["test", "dist", "node_modules"]
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+
+    "rewriteRelativeImportExtensions": true,
+
+    "types": [],
+    "skipLibCheck": true,
+    "noEmitOnError": true
+  },
+  "include": ["src/**/*", "tools/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
 }

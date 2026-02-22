@@ -8,7 +8,7 @@ import type { CommandMap } from "../src/sim/commands";
 import { stepWorld } from "../src/sim/kernel";
 import type { WorldState } from "../src/sim/world";
 
-import { mkHumanoidEntity, mkWorld } from "./helpers/entities";
+import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 
 const CLUB_ID = "wpn_club";
 

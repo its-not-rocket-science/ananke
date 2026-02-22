@@ -1,10 +1,10 @@
-import type { Entity } from "../entity";
-import type { WorldIndex } from "../indexing";
-import type { SpatialIndex } from "../spatial";
-import { perceiveLocal } from "./perception";
-import type { AIPolicy } from "./types";
-import { SCALE } from "../../units";
-import { eventSeed } from "../seeds";
+import type { Entity } from "../entity.js";
+import type { WorldIndex } from "../indexing.js";
+import type { SpatialIndex } from "../spatial.js";
+import { perceiveLocal } from "./perception.js";
+import type { AIPolicy } from "./types.js";
+import { SCALE } from "../../units.js";
+import { eventSeed } from "../seeds.js";
 
 export function pickTarget(
   worldSeed: number,

@@ -5,13 +5,14 @@ import { q } from "../src/units";
 
 test("makeAttackCommand omits undefined optionals (exactOptionalPropertyTypes safe)", () => {
   const a = makeAttackCommand(10);
-  expect(a).toEqual({ kind: "attack", targetId: 10 });
+  expect(a).toEqual({ kind: "attack", targetId: 10, mode: "strike" });
 
   const b = makeAttackCommand(11, { weaponId: "wpn_knife", intensity: q(0.5) });
   expect(b.kind).toBe("attack");
   expect(b.targetId).toBe(11);
   expect(b.weaponId).toBe("wpn_knife");
   expect(b.intensity).toBe(q(0.5));
+  expect(b.mode).toBe("strike");
 });
 
 

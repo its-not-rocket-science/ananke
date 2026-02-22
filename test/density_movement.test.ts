@@ -7,7 +7,7 @@ import { v3 } from "../src/sim/vec3";
 import { q, SCALE } from "../src/units";
 import { TUNING } from "../src/sim/tuning";
 
-import { mkHumanoidEntity, mkWorld } from "./helpers/entities";
+import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 
 
 function displacementX(world: WorldState, id: number): number {

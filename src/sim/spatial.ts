@@ -1,7 +1,7 @@
-import { SCALE } from "../units";
-import type { Vec3 } from "./vec3";
-import type { WorldState } from "./world";
-import type { Entity } from "./entity";
+import { SCALE } from "../units.js";
+import type { Vec3 } from "./vec3.js";
+import type { WorldState } from "./world.js";
+import type { Entity } from "./entity.js";
 
 export interface SpatialIndex {
   cell_m: number; // fixed-point metres (same scale as position_m)
@@ -46,7 +46,7 @@ export function buildSpatialIndex(world: WorldState, cellSize_m: number): Spatia
   return { cell_m, cells };
 }
 
-export function queryNearbyIds(index: SpatialIndex, pos: Vec3, radius_m: number): number[] {
+export function queryNearbyIds(index: SpatialIndex, pos: Vec3, radius_m: number, maxCount?: number): number[] {
   const cell_m = index.cell_m;
   const r = Math.max(0, radius_m);
 
@@ -62,7 +62,10 @@ export function queryNearbyIds(index: SpatialIndex, pos: Vec3, radius_m: number)
       const ids = index.cells.get(key);
       if (!ids) continue;
       // already sorted
-      for (const id of ids) out.push(id);
+      for (const id of ids) {
+        out.push(id);
+        if (maxCount !== undefined && out.length >= maxCount) break;
+      }
     }
   }
 

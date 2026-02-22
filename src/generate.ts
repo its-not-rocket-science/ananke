@@ -18,11 +18,11 @@ Most morphology scaling uses PARTIAL influence
 (~20–35% of raw geometric scaling)
 */
 
-import type { IndividualAttributes } from "./types";
-import type { Archetype } from "./archetypes";
-import { makeRng } from "./rng";
-import { Q, SCALE, clampQ, q, qMul, mulDiv } from "./units";
-import { triSym, mulFromVariation, skewUp } from "./dist";
+import type { IndividualAttributes } from "./types.js";
+import type { Archetype } from "./archetypes.js";
+import { makeRng } from "./rng.js";
+import { Q, SCALE, clampQ, q, qMul, mulDiv } from "./units.js";
+import { triSym, mulFromVariation, skewUp } from "./dist.js";
 
 function applyMultI32(base: number, multQ: Q): number {
   return mulDiv(base, multQ, SCALE.Q);
