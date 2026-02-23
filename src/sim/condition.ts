@@ -33,4 +33,5 @@ export const defaultCondition = (): ConditionState => ({
   pinned: false,
   standBlockedTicks: 0,
   unconsciousTicks: 0,
+  suppressedTicks: 0,
 });

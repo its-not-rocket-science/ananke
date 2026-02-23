@@ -1002,7 +1002,7 @@ function resolveShoot(
     shooterId: shooter.id,
     targetId: target.id,
     hit,
-    region: hitRegion,
+    ...(hitRegion !== undefined ? { region: hitRegion } : {}),
     distance_m: dist_m,
     energyAtImpact_J: energy_J,
     suppressed,
