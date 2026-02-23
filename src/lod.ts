@@ -1,5 +1,6 @@
 import type { IndividualAttributes } from "./types.js";
 import { q, type Q } from "./units.js";
+import { DEFAULT_PERCEPTION } from "./sim/sensory.js";
 
 export interface SquadAggregate {
   count: number;
@@ -91,6 +92,9 @@ export function aggregateSquad(members: IndividualAttributes[]): SquadAggregate 
       fatigueRate: divQ(sum.resilience.fatigueRate) ,
       recoveryRate: div(sum.resilience.recoveryRate),
     },
+    // Perception is a species characteristic, not averaged across individuals.
+    // Use DEFAULT_PERCEPTION as a neutral aggregate placeholder.
+    perception: DEFAULT_PERCEPTION,
   };
 
   return { count: n, mean, cohesion: q(0.75), training: q(0.65) };

@@ -71,7 +71,7 @@ describe("pickTarget", () => {
     const { self, enemy, world, index, spatial } = makeSetup();
 
     // Establish focus with an active cooldown
-    self.ai = { focusTargetId: enemy.id, retargetCooldownTicks: 5 };
+    self.ai = { focusTargetId: enemy.id, retargetCooldownTicks: 5, decisionCooldownTicks: 0 };
 
     const target = pickTarget(world.seed, world.tick, self, index, spatial, LOOSE_POLICY);
     expect(target?.id).toBe(enemy.id);
@@ -88,7 +88,7 @@ describe("pickTarget", () => {
     const spatial = buildSpatialIndex(world, CELL_SIZE);
 
     // Focus on enemy1 but cooldown is zero → should retarget to nearest
-    self.ai = { focusTargetId: enemy1.id, retargetCooldownTicks: 0 };
+    self.ai = { focusTargetId: enemy1.id, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
 
     const target = pickTarget(world.seed, world.tick, self, index, spatial, LOOSE_POLICY);
     expect(target?.id).toBe(enemy2.id);
@@ -102,7 +102,7 @@ describe("pickTarget", () => {
 
     // Focus is on dead enemy
     enemy.injury.dead = true;
-    self.ai = { focusTargetId: enemy.id, retargetCooldownTicks: 10 };
+    self.ai = { focusTargetId: enemy.id, retargetCooldownTicks: 10, decisionCooldownTicks: 0 };
 
     const target = pickTarget(world.seed, world.tick, self, index, buildSpatialIndex(world, CELL_SIZE), LOOSE_POLICY);
     expect(target?.id).toBe(enemy2.id);
@@ -116,7 +116,7 @@ describe("pickTarget", () => {
 
     // Cooldown is zero but stickiness is q(0.9999) — sweep seeds to verify
     // stickiness retains focus at least some of the time (deterministic)
-    self.ai = { focusTargetId: enemy.id, retargetCooldownTicks: 0 };
+    self.ai = { focusTargetId: enemy.id, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
 
     let retained = 0;
     for (let tick = 0; tick < 30; tick++) {
@@ -135,7 +135,7 @@ describe("pickTarget", () => {
     const world  = mkWorld(99, [self, enemy1, enemy2]);
     const index  = buildWorldIndex(world);
 
-    self.ai = { focusTargetId: enemy1.id, retargetCooldownTicks: 0 };
+    self.ai = { focusTargetId: enemy1.id, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
 
     let switched = 0;
     for (let tick = 0; tick < 30; tick++) {
@@ -163,7 +163,7 @@ describe("updateFocus", () => {
 
   test("clears focus and cooldown when target is undefined", () => {
     const self = mkHumanoidEntity(1, 1, 0, 0);
-    self.ai = { focusTargetId: 99, retargetCooldownTicks: 5 };
+    self.ai = { focusTargetId: 99, retargetCooldownTicks: 5, decisionCooldownTicks: 0 };
 
     updateFocus(self, undefined, LOOSE_POLICY);
 
