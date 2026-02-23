@@ -368,6 +368,27 @@ export const STARTER_WEAPONS: Weapon[] = [
       penetrationBias: q(0.85),
     },
   },
+  {
+    id: "wpn_longsword",
+    kind: "weapon",
+    name: "Longsword",
+    mass_kg: Math.round(1.5 * SCALE.kg),
+    bulk: q(1.5),
+    reach_m: Math.round(0.90 * SCALE.m),
+    handedness: "twoHand",
+    momentArm_m: Math.round(0.55 * SCALE.m),
+    handlingMul: q(1.05),
+    strikeEffectiveMassFrac: q(0.06),
+    strikeSpeedMul: q(0.85),
+    readyTime_s: to.s(0.75),
+    damage: {
+      surfaceFrac: q(0.35),
+      internalFrac: q(0.45),
+      structuralFrac: q(0.20),
+      bleedFactor: q(0.70),
+      penetrationBias: q(0.40),
+    },
+  },
 ];
 
 export const STARTER_ARMOUR: Armour[] = [

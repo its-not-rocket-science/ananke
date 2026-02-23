@@ -30,6 +30,7 @@ export const TraceKinds = {
   WeaponBind: "weaponBind",          // Phase 2C
   WeaponBindBreak: "weaponBindBreak", // Phase 2C
   ProjectileHit: "projectileHit",    // Phase 3
+  MoraleRoute: "moraleRoute",         // Phase 5
 } as const;
 
 export type TraceKind = typeof TraceKinds[keyof typeof TraceKinds];

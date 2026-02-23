@@ -86,6 +86,12 @@ export type TraceEvent =
       distance_m: I32;
       energyAtImpact_J: number;
       suppressed: boolean;
+    }
+  | {
+      kind: typeof TraceKinds.MoraleRoute;    // Phase 5
+      tick: number;
+      entityId: number;
+      fearQ: Q;
     };
 
 export interface TraceSink {

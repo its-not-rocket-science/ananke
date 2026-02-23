@@ -58,12 +58,21 @@ Normalized to [q(0.05), q(0.95)] via linear map [q(0.02), q(1.80)] → [q(0.05),
 ### Backwards Compatibility
 kernel.ts initializes grapple/pinned fields for old entities at tick start.
 
-## Phase 2B/C: Still TODO
-- Per-action stamina costs (strike=50J, block=30J)
-- Exhaustion collapse (prone when reserve=0)
-- Weapon bind on parry
-- Miss recovery time extension (by weapon mass)
-- Reach dominance penalty
+## Phase 2B/C: COMPLETE
+Phases 2A/B/C, 3, 4, 5, 6 all complete. See ROADMAP for details.
+
+## Demo Tool: tools/run-demo.ts (WORKING)
+Two scenarios: Melee brawl (2v2), Ranged engagement (archer vs infantry through mud).
+AI-driven commands via decideCommandsForEntity each tick.
+
+## Combat Bug Fixes Applied
+- `resolveAttack` velocity cap: body relative velocity capped at 2 m/s (APPROACH_CAP)
+  to prevent sprint-speed body collisions from dominating weapon strike energy.
+  Without cap, two sprinting entities at knife range would produce 864J strikes.
+- `stepMoraleForEntity` outnumbered fix: changed `nearbyEnemyCount > nearbyAllyCount`
+  to `nearbyEnemyCount > nearbyAllyCount + 1` (include self in friendly count).
+  Without fix, every entity in a 2v2 was "outnumbered" → fear accumulated to routing threshold in 150+ ticks.
+- Added `wpn_longsword` to STARTER_WEAPONS (id="wpn_longsword", reach=0.9m, twoHand, 1.5kg)
 
 ## Architecture Patterns
 - Pair-based determinism: eventSeed(worldSeed, tick, idA, idB, salt)

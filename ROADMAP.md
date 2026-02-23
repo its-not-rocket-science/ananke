@@ -415,6 +415,41 @@ Pain intensity (derived from injury type and `distressTolerance`) creates an act
 probability. High pain can prevent attack initiation even when the entity is physically capable.
 Resolved deterministically via seeded RNG.
 
+### Phase 5 enhancements (deferred)
+
+**Caliber-based suppression fear** — `FEAR_PER_SUPPRESSION_TICK` is currently constant.
+Add `suppressionFearMul: Q` to `RangedWeapon` (q(1.0) for sling, q(3.0) for musket).
+Store as `condition.suppressionFearMul: Q` alongside `suppressedTicks`; multiply in
+`stepMoraleForEntity`. Requires a weapon data pass to assign caliber-appropriate values.
+
+**Fear memory and diminishing returns** — repeated ally deaths in quick succession lose
+psychological impact. Add `condition.recentAllyDeaths: number` and `lastAllyDeathTick: number`.
+Apply a diminishing multiplier: first death = full weight, subsequent deaths in the same 5 s
+window scale by `max(0.4, 1.0 - 0.15 × priorDeaths)`. Requires two new condition fields.
+
+**Leader and standard-bearer auras** — entities with `TRAIT_LEADER` or `TRAIT_STANDARD_BEARER`
+traits reduce fear accumulation for nearby allies each tick (fear reduced as additional decay term,
+~q(0.015) per leader, ~q(0.010) per banner within 20 m radius). Requires trait constants and
+an extra `queryNearbyIds` pass in `stepMoraleForEntity`.
+
+**Panic action variety** — instead of always fleeing, routing entities may freeze (return `[]`)
+or surrender (drop weapons, go prone) based on a seeded roll weighted by `distressTolerance`.
+Requires a "captive/surrendered" state flag in `ConditionState`.
+
+**Rally mechanic** — when fear drops below the routing threshold after routing, add a short
+`condition.rallyCooldownTicks` that suppresses attacks (similar to hesitant state but
+post-route recovery). Prevents instant aggression flips after brief respite.
+
+**Formation cohesion bonus** — when Phase 6 formation system exists, allies in the same
+formation unit provide a higher cohesion bonus than unaffiliated allies. Extend
+`fearDecayPerTick` to accept a `formationAllyCount` argument with a separate coefficient
+(e.g., q(0.004) per formation ally vs q(0.002) for non-formation).
+
+**Entity archetype fear response** — add `fearResponse: "flight" | "freeze" | "berserk"` to
+`IndividualAttributes` (or archetype). Undead/automata use "berserk" (ignore fear entirely);
+animals use "flight" (faster onset). Requires archetype expansion and a fear-response switch
+in `decideCommandsForEntity`.
+
 ---
 
 ## Phase 6 — Large-Scale Simulation
@@ -428,7 +463,10 @@ Resolved deterministically via seeded RNG.
 
 ### Battlefield systems
 
-- Terrain friction: surface type modifies `tractionCoeff` (mud, ice, slopes)
+- **Terrain friction (complete):** `src/sim/terrain.ts` — `TerrainGrid` (sparse map of cell → SurfaceType),
+  `SURFACE_TRACTION`, `SURFACE_SPEED_MUL`, `tractionAtPosition`, `speedMulAtPosition`, `buildTerrainGrid`.
+  `KernelContext.terrainGrid?: TerrainGrid`. `stepMovement` looks up per-cell traction and speed multiplier.
+  Surface types: `normal | mud | ice | slope_up | slope_down`. Speed muls: mud=0.60×, ice=0.45×, slope_up=0.75×, slope_down=1.10×.
 - Elevation: height differential modifies reach, projectile range, and escape routes
 - Obstacles: impassable and partial-cover cells (cover reduces effective target area fraction)
 - Choke points: frontage cap derived geometrically from map data

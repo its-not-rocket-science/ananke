@@ -3,12 +3,13 @@ import type { WorldState } from "../world.js";
 import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import type { Command } from "../commands.js";
-import { q, clampQ, SCALE } from "../../units.js";
+import { q, clampQ, qMul, SCALE } from "../../units.js";
 import { pickTarget, updateFocus } from "./targeting.js";
 import type { AIPolicy } from "./types.js";
 import { findWeapon } from "../../equipment.js";
 import { v3, normaliseDirCheapQ } from "../vec3.js";
 import { DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
+import { isRouting, moraleThreshold } from "../morale.js";
 
 // Local constant — avoids circular dependency with kernel.ts which exports TICK_HZ.
 const TICK_HZ = 20;
@@ -41,6 +42,31 @@ export function decideCommandsForEntity(
   const perc = (self.attributes as any).perception ?? DEFAULT_PERCEPTION;
   const latencyTicks = Math.max(1, Math.trunc((perc.decisionLatency_s * TICK_HZ) / SCALE.s));
   self.ai.decisionCooldownTicks = latencyTicks;
+
+  // Phase 5: morale states — routing flees; hesitant suppresses attacks
+  const fearQ = (self.condition as any).fearQ ?? q(0);
+  const distressTol = self.attributes.resilience.distressTolerance;
+  // Hesitant: >70 % of morale threshold but not yet routing — refuse to initiate attacks
+  const isHesitant = !isRouting(fearQ, distressTol) &&
+    fearQ >= qMul(moraleThreshold(distressTol), q(0.70));
+
+  if (isRouting(fearQ, distressTol)) {
+    const nearestThreat = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
+    if (nearestThreat) {
+      const fdx = self.position_m.x - nearestThreat.position_m.x;
+      const fdy = self.position_m.y - nearestThreat.position_m.y;
+      return [
+        { kind: "defend", mode: "none" as DefenceMode, intensity: q(0) },
+        {
+          kind: "move",
+          dir: normaliseDirCheapQ(v3(fdx !== 0 || fdy !== 0 ? fdx : 1, fdy, 0)),
+          intensity: q(1.0),
+          mode: "sprint",
+        },
+      ];
+    }
+    return [{ kind: "defend", mode: "none" as DefenceMode, intensity: q(0) }];
+  }
 
   const target = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
   updateFocus(self, target, policy);
@@ -101,9 +127,9 @@ export function decideCommandsForEntity(
     });
   }
 
-  // attack when within engage range (explicit targetId, deterministic)
+  // attack when within engage range — hesitant entities hold back
   const weapon = findWeapon(self.loadout, undefined);
-  if (weapon) {
+  if (weapon && !isHesitant) {
     const reach = weapon.reach_m ?? Math.trunc(self.attributes.morphology.stature_m * 0.45);
     if (distApprox <= reach + Math.trunc(0.25 * SCALE.m)) {
       cmds.push({

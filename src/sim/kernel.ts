@@ -19,7 +19,7 @@ import { eventSeed } from "./seeds.js";
 import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body.js";
 import { totalBleedingRate, regionKOFactor } from "./injury.js";
 import { WorldIndex, buildWorldIndex } from "./indexing.js";
-import { buildSpatialIndex, type SpatialIndex } from "./spatial.js";
+import { buildSpatialIndex, queryNearbyIds, type SpatialIndex } from "./spatial.js";
 import { type ImpactEvent, sortEventsDeterministic } from "./events.js";
 
 import { parryLeverageQ } from "./combat.js";
@@ -29,11 +29,23 @@ import { isMeleeLaneOccludedByFriendly } from "./occlusion.js";
 import { applyFrontageCap } from "./frontage.js";
 
 import { type DensityField, computeDensityField } from "./density.js";
+import { type TerrainGrid, tractionAtPosition, speedMulAtPosition } from "./terrain.js";
 import { stepPushAndRepulsion } from "./push.js";
 
 import { type TraceSink, nullTrace } from "./trace.js";
 import { TraceKinds } from "./kinds.js";
 import { type SensoryEnvironment, DEFAULT_SENSORY_ENV, DEFAULT_PERCEPTION, canDetect } from "./sensory.js";
+import {
+  FEAR_PER_SUPPRESSION_TICK,
+  FEAR_FOR_ALLY_DEATH,
+  FEAR_INJURY_MUL,
+  FEAR_OUTNUMBERED,
+  FEAR_SURPRISE,
+  FEAR_ROUTING_CASCADE,
+  fearDecayPerTick,
+  isRouting,
+  painBlocksAction,
+} from "./morale.js";
 
 import {
   resolveGrappleAttempt,
@@ -75,6 +87,9 @@ export interface KernelContext {
 
   /** Phase 4: ambient sensory conditions. Defaults to DEFAULT_SENSORY_ENV (full daylight, clear). */
   sensoryEnv?: SensoryEnvironment;
+
+  /** Phase 6: per-cell terrain grid. When provided, traction is looked up by entity position. */
+  terrainGrid?: TerrainGrid;
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
@@ -123,6 +138,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     if (!(e.attributes as any).perception) (e.attributes as any).perception = DEFAULT_PERCEPTION;
     if (!e.ai) e.ai = { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
     else if ((e.ai as any).decisionCooldownTicks === undefined) (e.ai as any).decisionCooldownTicks = 0;
+    // Phase 5: fear / morale
+    if ((e.condition as any).fearQ === undefined) (e.condition as any).fearQ = q(0);
   }
 
   for (const e of world.entities) {
@@ -239,6 +256,9 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
   sortEventsDeterministic(finalImpacts);
 
+  // Phase 5: snapshot alive set before impacts are applied (used by morale step to detect ally deaths)
+  const aliveBeforeTick = new Set(world.entities.filter(e => !e.injury.dead).map(e => e.id));
+
   for (const ev of finalImpacts) {
     const target = index.byId.get(ev.targetId);
     if (!target || target.injury.dead) continue;
@@ -260,13 +280,27 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     });
   }
 
+  // Phase 5: precompute routing fraction per team for routing cascade check
+  const teamAliveCount = new Map<number, number>();
+  const teamRoutingCount = new Map<number, number>();
   for (const e of world.entities) {
     if (e.injury.dead) continue;
+    teamAliveCount.set(e.teamId, (teamAliveCount.get(e.teamId) ?? 0) + 1);
+    if (isRouting(e.condition.fearQ, e.attributes.resilience.distressTolerance)) {
+      teamRoutingCount.set(e.teamId, (teamRoutingCount.get(e.teamId) ?? 0) + 1);
+    }
+  }
+  const teamRoutingFrac = new Map<number, number>();
+  for (const [teamId, alive] of teamAliveCount) {
+    teamRoutingFrac.set(teamId, alive > 0 ? (teamRoutingCount.get(teamId) ?? 0) / alive : 0);
+  }
 
+  // Injury progression and energy — must complete for ALL entities before morale runs
+  for (const e of world.entities) {
+    if (e.injury.dead) continue;
     stepConditionsToInjury(world, e);
     stepInjuryProgression(e);
     stepEnergy(e, ctx);
-
     trace.onEvent({
       kind: TraceKinds.Injury,
       tick: world.tick,
@@ -276,6 +310,12 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
       fluidLossQ: e.injury.fluidLoss,
       consciousnessQ: e.injury.consciousness,
     });
+  }
+
+  // Phase 5: morale step — runs after all deaths from this tick are determined
+  for (const e of world.entities) {
+    if (e.injury.dead) continue;
+    stepMoraleForEntity(world, e, index, spatialAfterMove, aliveBeforeTick, teamRoutingFrac, trace);
   }
 
   trace.onEvent({ kind: TraceKinds.TickEnd, tick: world.tick });
@@ -389,7 +429,9 @@ function applyStandAndKO(world: WorldState, e: Entity, tuning: SimulationTuning)
 }
 
 function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: SimulationTuning): void {
-  const caps = deriveMovementCaps(e.attributes, e.loadout, { tractionCoeff: ctx.tractionCoeff });
+  const cellSize = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
+  const traction = tractionAtPosition(ctx.terrainGrid, cellSize, e.position_m.x, e.position_m.y, ctx.tractionCoeff);
+  const caps = deriveMovementCaps(e.attributes, e.loadout, { tractionCoeff: traction });
   const func = deriveFunctionalState(e, tuning);
 
   // Capability gating
@@ -425,7 +467,8 @@ function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: 
   const crowd = ctx.density?.crowdingQ.get(e.id) ?? 0;
   const crowdMul = clampQ(q(1.0) - qMul(q(0.65), crowd as any), q(0.25), q(1.0));
 
-  const baseMul = qMul(qMul(controlMul, mobilityMul), crowdMul);
+  const terrainSpeedMul = speedMulAtPosition(ctx.terrainGrid, cellSize, e.position_m.x, e.position_m.y);
+  const baseMul = qMul(qMul(qMul(controlMul, mobilityMul), crowdMul), terrainSpeedMul);
 
   const effVmax = mulDiv(vmax_mps, baseMul, SCALE.Q);
   const effAmax = mulDiv(amax_mps2, baseMul, SCALE.Q);
@@ -513,6 +556,12 @@ function resolveAttack(world: WorldState,
 
   if (!funcA.canAct) return;
 
+  // Phase 5: pain-induced action suppression (tactical/sim only)
+  if (tuning.realism !== "arcade") {
+    const painSeed = eventSeed(world.seed, world.tick, attacker.id, target.id, 0xA77A2);
+    if (painBlocksAction(painSeed, attacker.injury.shock, attacker.attributes.resilience.distressTolerance)) return;
+  }
+
   const wpn = findWeapon(attacker.loadout, cmd.weaponId);
   if (!wpn) return;
 
@@ -581,6 +630,8 @@ function resolveAttack(world: WorldState,
     if (detectionQ <= 0) {
       // Full surprise: defender has no defence
       defenceIntensityEffective = q(0);
+      // Phase 5: fear spike from being attacked without warning
+      target.condition.fearQ = clampQ(target.condition.fearQ + FEAR_SURPRISE, 0, SCALE.Q);
     } else if (detectionQ < q(0.8)) {
       // Partial surprise: scale defence intensity by detection quality
       defenceIntensityEffective = qMul(defenceIntensityEffective, detectionQ);
@@ -670,10 +721,17 @@ function resolveAttack(world: WorldState,
 
   const vStrikeVec = scaleDirToSpeed(dirToTarget, vStrike);
 
+  // Clamp body-movement contribution to strike energy. Combatants decelerate before a controlled
+  // swing; pure sprint-on-sprint kinetic energy should not dominate. Cap at 2 m/s relative.
+  const APPROACH_CAP: I32 = Math.trunc(2.0 * SCALE.mps);
+  const bodyRelX = clampI32(attacker.velocity_mps.x - target.velocity_mps.x, -APPROACH_CAP, APPROACH_CAP);
+  const bodyRelY = clampI32(attacker.velocity_mps.y - target.velocity_mps.y, -APPROACH_CAP, APPROACH_CAP);
+  const bodyRelZ = clampI32(attacker.velocity_mps.z - target.velocity_mps.z, -APPROACH_CAP, APPROACH_CAP);
+
   const rel = {
-    x: (attacker.velocity_mps.x - target.velocity_mps.x) + vStrikeVec.x,
-    y: (attacker.velocity_mps.y - target.velocity_mps.y) + vStrikeVec.y,
-    z: (attacker.velocity_mps.z - target.velocity_mps.z) + vStrikeVec.z,
+    x: bodyRelX + vStrikeVec.x,
+    y: bodyRelY + vStrikeVec.y,
+    z: bodyRelZ + vStrikeVec.z,
   };
 
   // Phase 2C: two-handed leverage bonus — only when both arms are functional and no off-hand item
@@ -1316,6 +1374,83 @@ function stepInjuryProgression(e: Entity): void {
     e.injury.dead = true;
     e.injury.consciousness = 0;
     e.velocity_mps = v3(0, 0, 0);
+  }
+}
+
+/* ── Phase 5: morale step ─────────────────────────────────────────────────── */
+
+/**
+ * Per-entity morale update — accumulates fear from all sources and applies decay.
+ * Emits a MoraleRoute trace event whenever the entity crosses the routing threshold.
+ */
+function stepMoraleForEntity(
+  world: WorldState,
+  e: Entity,
+  index: WorldIndex,
+  spatial: SpatialIndex,
+  aliveBeforeTick: Set<number>,
+  teamRoutingFrac: Map<number, number>,
+  trace: TraceSink,
+): void {
+  if (e.injury.dead) return;
+
+  const distressTol = e.attributes.resilience.distressTolerance;
+  const MORALE_RADIUS_m = Math.trunc(30 * SCALE.m); // 30 m awareness radius
+
+  const nearbyIds = queryNearbyIds(spatial, e.position_m, MORALE_RADIUS_m);
+
+  let nearbyAllyCount = 0;
+  let nearbyEnemyCount = 0;
+  let allyDeathsThisTick = 0;
+
+  for (const nId of nearbyIds) {
+    if (nId === e.id) continue;
+    const neighbor = index.byId.get(nId);
+    if (!neighbor) continue;
+
+    if (neighbor.teamId === e.teamId) {
+      if (!neighbor.injury.dead) {
+        nearbyAllyCount++;
+      } else if (aliveBeforeTick.has(nId)) {
+        allyDeathsThisTick++;
+      }
+    } else if (!neighbor.injury.dead) {
+      nearbyEnemyCount++;
+    }
+  }
+
+  const wasRouting = isRouting(e.condition.fearQ, distressTol);
+  let fearQ = e.condition.fearQ;
+
+  // 1. Suppression ticks add fear per tick
+  if (e.condition.suppressedTicks > 0) {
+    fearQ = clampQ(fearQ + FEAR_PER_SUPPRESSION_TICK, 0, SCALE.Q);
+  }
+  // 2. Ally deaths this tick
+  if (allyDeathsThisTick > 0) {
+    fearQ = clampQ(fearQ + allyDeathsThisTick * FEAR_FOR_ALLY_DEATH, 0, SCALE.Q);
+  }
+  // 3. Self-injury (shock accumulation) adds fear per tick
+  fearQ = clampQ(fearQ + qMul(e.injury.shock, FEAR_INJURY_MUL), 0, SCALE.Q);
+  // 4. Being outnumbered by visible enemies adds fear per tick
+  // Include self in friendly count: entity + its allies vs enemies.
+  if (nearbyEnemyCount > nearbyAllyCount + 1) {
+    fearQ = clampQ(fearQ + FEAR_OUTNUMBERED, 0, SCALE.Q);
+  }
+  // 5. Routing cascade: more than half the team is already routing
+  if ((teamRoutingFrac.get(e.teamId) ?? 0) > 0.50) {
+    fearQ = clampQ(fearQ + FEAR_ROUTING_CASCADE, 0, SCALE.Q);
+  }
+
+  // Fear decay — faster with high tolerance and nearby allies (cohesion)
+  fearQ = clampQ(fearQ - fearDecayPerTick(distressTol, nearbyAllyCount), 0, SCALE.Q);
+
+  e.condition.fearQ = fearQ;
+
+  // Emit trace when routing state crosses threshold
+  const nowRouting = isRouting(fearQ, distressTol);
+  if (nowRouting !== wasRouting) {
+    trace.onEvent({ kind: TraceKinds.MoraleRoute, tick: world.tick, entityId: e.id, fearQ });
   }
 }
 

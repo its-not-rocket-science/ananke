@@ -69,6 +69,10 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
   // Phase 3: suppression from near-miss ranged fire
   const suppressedQ: Q = ((e.condition as any).suppressedTicks ?? 0) > 0 ? SCALE.Q : 0;
 
+  // Phase 5: fear impairs coordination and fine control
+  // At routing threshold (~q(0.65) for average human) → ~10% penalty on each multiplier.
+  const fearQ: Q = (e.condition as any).fearQ ?? q(0);
+
   // Phase 2B: exhaustion signal — penalty ramps in below 15 % of baseline reserve.
   // exhaustionQ = 0 when reserve ≥ 15 %, up to 1 when reserve = 0.
   const EXHAUSTION_THRESHOLD: I32 = q(0.15); // 15 % of baseline (2 000 fixed-point = q(0.20) would be 4000/20000)
@@ -109,6 +113,7 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
     [pinnedQ, q(0.60)],      // pinned: severely restricted manipulation
     [heldQ,   q(0.20)],      // held:   moderate restriction
     [exhaustionQ, q(0.25)],  // exhaustion: up to -25 % at full depletion
+    [fearQ,   q(0.15)],      // Phase 5: fear tremors: up to -15 % at max fear
   );
 
   const coordinationMul = applyImpairmentsClamped(
@@ -121,6 +126,7 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
     [concLoss, q(0.35)],
     [exhaustionQ, q(0.20)],  // exhaustion: up to -20 % at full depletion
     [suppressedQ, q(0.10)],  // Phase 3: suppression: -10 % while suppressed
+    [fearQ,       q(0.15)],  // Phase 5: fear: up to -15 % at max fear
   );
 
   const staminaMul = applyImpairmentsClamped(
