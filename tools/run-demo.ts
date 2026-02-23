@@ -223,7 +223,7 @@ function scenarioRanged(): void {
     for (const e of world.entities) {
       if (e.injury.dead) continue;
       const policy = e.teamId === 1 ? AI_PRESETS["skirmisher"]! : AI_PRESETS["lineInfantry"]!;
-      const entityCmds = decideCommandsForEntity(world, index, spatial, e, policy);
+      const entityCmds = decideCommandsForEntity(world, index, spatial, e, policy, undefined, undefined, cellSize);
       if (entityCmds.length > 0) cmds.set(e.id, [...entityCmds]);
     }
 

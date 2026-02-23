@@ -29,7 +29,13 @@ import { isMeleeLaneOccludedByFriendly } from "./occlusion.js";
 import { applyFrontageCap } from "./frontage.js";
 
 import { type DensityField, computeDensityField } from "./density.js";
-import { type TerrainGrid, tractionAtPosition, speedMulAtPosition } from "./terrain.js";
+import {
+  type TerrainGrid, tractionAtPosition, speedMulAtPosition,
+  type ObstacleGrid, type ElevationGrid,
+  coverFractionAtPosition, elevationAtPosition,
+  type SlopeGrid, slopeAtPosition,
+  type HazardGrid, type HazardCell, terrainKey,
+} from "./terrain.js";
 import { stepPushAndRepulsion } from "./push.js";
 
 import { type TraceSink, nullTrace } from "./trace.js";
@@ -90,6 +96,18 @@ export interface KernelContext {
 
   /** Phase 6: per-cell terrain grid. When provided, traction is looked up by entity position. */
   terrainGrid?: TerrainGrid;
+
+  /** Phase 6: impassable and partial-cover cells.  q(1.0) = fully impassable; q(0.5) = 50% cover. */
+  obstacleGrid?: ObstacleGrid;
+
+  /** Phase 6: height above ground level per cell (SCALE.m units). Affects melee reach and projectile range. */
+  elevationGrid?: ElevationGrid;
+
+  /** Phase 6: per-cell slope direction and grade.  Modifies effective sprint speed. */
+  slopeGrid?: SlopeGrid;
+
+  /** Phase 6: dynamic hazard cells (fire, radiation, poison_gas). Damage applied per tick. */
+  hazardGrid?: HazardGrid;
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
@@ -187,6 +205,11 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   }
   const spatialAfterMove = buildSpatialIndex(world, cellSize_m);
 
+  // Phase 6: hazard damage — applied after movement so entities in hazard cells take damage each tick.
+  if (ctx.hazardGrid) {
+    stepHazardEffects(world.entities, ctx.hazardGrid, cellSize_m);
+  }
+
   stepPushAndRepulsion(world, index, spatialAfterMove, {
     personalRadius_m: Math.trunc(0.45 * SCALE.m),
     repelAccel_mps2: Math.trunc(1.5 * SCALE.mps2),
@@ -200,7 +223,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     const commands = cmds.get(e.id) ?? [];
     for (const c of commands) {
       if (c.kind === "attack") {
-        resolveAttack(world, e, c, tuning, index, impacts, spatial, trace);
+        resolveAttack(world, e, c, tuning, index, impacts, spatial, trace, ctx);
       } else if (c.kind === "attackNearest") {
         const wpn = findWeapon(e.loadout, c.weaponId);
         if (!wpn) continue;
@@ -229,7 +252,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
           ...(c.intensity !== undefined ? { intensity: c.intensity } : {}),
         };
 
-        resolveAttack(world, e, attackCmd, tuning, index, impacts, spatialAfterMove, trace);
+        resolveAttack(world, e, attackCmd, tuning, index, impacts, spatialAfterMove, trace, ctx);
       } else if (c.kind === "grapple") {
         resolveGrappleCommand(world, e, c as GrappleCommand, tuning, index, impacts, trace);
       } else if (c.kind === "breakGrapple") {
@@ -237,7 +260,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
       } else if (c.kind === "breakBind") {
         resolveBreakBind(world, e, (c as BreakBindCommand).intensity, index, trace);
       } else if (c.kind === "shoot") {
-        resolveShoot(world, e, c as ShootCommand, tuning, index, impacts, trace);
+        resolveShoot(world, e, c as ShootCommand, tuning, index, impacts, trace, ctx);
       }
     }
   }
@@ -315,7 +338,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   // Phase 5: morale step — runs after all deaths from this tick are determined
   for (const e of world.entities) {
     if (e.injury.dead) continue;
-    stepMoraleForEntity(world, e, index, spatialAfterMove, aliveBeforeTick, teamRoutingFrac, trace);
+    stepMoraleForEntity(world, e, index, spatialAfterMove, aliveBeforeTick, teamRoutingFrac, trace, ctx);
   }
 
   trace.onEvent({ kind: TraceKinds.TickEnd, tick: world.tick });
@@ -468,7 +491,17 @@ function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: 
   const crowdMul = clampQ(q(1.0) - qMul(q(0.65), crowd as any), q(0.25), q(1.0));
 
   const terrainSpeedMul = speedMulAtPosition(ctx.terrainGrid, cellSize, e.position_m.x, e.position_m.y);
-  const baseMul = qMul(qMul(qMul(controlMul, mobilityMul), crowdMul), terrainSpeedMul);
+
+  // Phase 6: slope direction adjusts effective speed.
+  // uphill: −25% per grade unit, clamped [50%,95%]; downhill: +10% per grade unit, clamped [100%,120%].
+  const slope = slopeAtPosition(ctx.slopeGrid, cellSize, e.position_m.x, e.position_m.y);
+  const slopeMul: Q = slope
+    ? slope.type === "uphill"
+      ? clampQ((SCALE.Q - qMul(slope.grade, q(0.25))) as Q, q(0.50), q(0.95))
+      : clampQ((SCALE.Q + qMul(slope.grade, q(0.10))) as Q, q(1.0), q(1.20)) as Q
+    : SCALE.Q as Q;
+
+  const baseMul = qMul(qMul(qMul(qMul(controlMul, mobilityMul), crowdMul), terrainSpeedMul), slopeMul);
 
   const effVmax = mulDiv(vmax_mps, baseMul, SCALE.Q);
   const effAmax = mulDiv(amax_mps2, baseMul, SCALE.Q);
@@ -506,7 +539,17 @@ function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: 
 
   e.velocity_mps = accelToward(e.velocity_mps, targetVel, effAmax);
   e.velocity_mps = clampSpeed(e.velocity_mps, effVmax);
-  e.position_m = integratePos(e.position_m, e.velocity_mps, DT_S);
+
+  // Phase 6: obstacle blocking — impassable cells (coverFraction = q(1.0)) prevent entry.
+  const nextPos = integratePos(e.position_m, e.velocity_mps, DT_S);
+  if (ctx.obstacleGrid) {
+    const cov = coverFractionAtPosition(ctx.obstacleGrid, cellSize, nextPos.x, nextPos.y);
+    if (cov >= SCALE.Q) {
+      e.velocity_mps = v3(0, 0, 0);
+      return;
+    }
+  }
+  e.position_m = nextPos;
 }
 
 function scaleDirToSpeed(dirQ: Vec3, speed_mps: I32): Vec3 {
@@ -542,7 +585,8 @@ function resolveAttack(world: WorldState,
   index: WorldIndex,
   impacts: ImpactEvent[],
   spatial: SpatialIndex,
-  trace: TraceSink
+  trace: TraceSink,
+  ctx: KernelContext,
 ): void {
   if (attacker.action.attackCooldownTicks > 0) return;
   // Phase 2C: weapon bind gate — cannot attack while weapons are locked
@@ -570,7 +614,13 @@ function resolveAttack(world: WorldState,
   const dy = target.position_m.y - attacker.position_m.y;
   const dz = target.position_m.z - attacker.position_m.z;
 
-  const dist2 = BigInt(dx) * BigInt(dx) + BigInt(dy) * BigInt(dy) + BigInt(dz) * BigInt(dz);
+  // Phase 6: elevation differential adds to vertical separation in the reach check.
+  const cellSizeA = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
+  const elevA = elevationAtPosition(ctx.elevationGrid, cellSizeA, attacker.position_m.x, attacker.position_m.y);
+  const elevT = elevationAtPosition(ctx.elevationGrid, cellSizeA, target.position_m.x, target.position_m.y);
+  const dzWithElev = dz + (elevT - elevA);
+
+  const dist2 = BigInt(dx) * BigInt(dx) + BigInt(dy) * BigInt(dy) + BigInt(dzWithElev) * BigInt(dzWithElev);
   const reach2 = BigInt(reach_m) * BigInt(reach_m);
   if (dist2 > reach2) return;
 
@@ -611,6 +661,17 @@ function resolveAttack(world: WorldState,
     if (tgtWpn) {
       const tgtReach_m = tgtWpn.reach_m ?? Math.trunc(target.attributes.morphology.stature_m * 0.45);
       attackSkill = clampQ(qMul(attackSkill, reachDomPenaltyQ(reach_m, tgtReach_m)), q(0.01), q(0.99));
+    }
+  }
+
+  // Phase 6: elevation advantage — higher ground boosts attack skill (tactical/sim only).
+  // Threshold is 0.5 m so the effect is achievable at practical melee ranges.
+  if (tuning.realism !== "arcade") {
+    const elevDiff = elevA - elevT; // positive = attacker is higher
+    if (elevDiff > to.m(0.5)) {
+      // +5% per metre above 0.5 m threshold, capped at +10%
+      const bonus = clampQ(mulDiv(elevDiff - to.m(0.5), q(0.05), to.m(1)), q(0), q(0.10));
+      attackSkill = clampQ(qMul(attackSkill, (SCALE.Q + bonus) as Q), q(0.01), q(0.99));
     }
   }
 
@@ -961,6 +1022,7 @@ function resolveShoot(
   index: WorldIndex,
   impacts: ImpactEvent[],
   trace: TraceSink,
+  ctx: KernelContext,
 ): void {
   if (shooter.action.shootCooldownTicks > 0) return;
 
@@ -973,10 +1035,13 @@ function resolveShoot(
   const funcA = deriveFunctionalState(shooter, tuning);
   if (!funcA.canAct) return;
 
-  // 3D range (SCALE.m units)
+  // 3D range (SCALE.m units); Phase 6: elevation differential lengthens the flight path.
   const dx = BigInt(target.position_m.x - shooter.position_m.x);
   const dy = BigInt(target.position_m.y - shooter.position_m.y);
-  const dz = BigInt(target.position_m.z - shooter.position_m.z);
+  const cellSizeRS = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
+  const elevSh = elevationAtPosition(ctx.elevationGrid, cellSizeRS, shooter.position_m.x, shooter.position_m.y);
+  const elevTg = elevationAtPosition(ctx.elevationGrid, cellSizeRS, target.position_m.x, target.position_m.y);
+  const dz = BigInt(target.position_m.z - shooter.position_m.z + (elevTg - elevSh));
   const dist_m = Number(isqrtBig(dx * dx + dy * dy + dz * dz));
 
   const intensity = clampQ(cmd.intensity ?? q(1.0), q(0.1), q(1.0));
@@ -1000,8 +1065,15 @@ function resolveShoot(
   );
   const gRadius_m = groupingRadius_m(adjDisp, dist_m);
 
-  // Body half-width: ~20% of stature (≈0.35m for 1.75m human)
-  const bodyHalfWidth_m = mulDiv(shooter.attributes.morphology.stature_m, 2000, SCALE.Q);
+  // Body half-width: ~20% of stature (≈0.35m for 1.75m human).
+  // Phase 6: cover fraction reduces effective target width → harder to hit.
+  const rawHalfWidth_m = mulDiv(shooter.attributes.morphology.stature_m, 2000, SCALE.Q);
+  const cover = ctx.obstacleGrid
+    ? coverFractionAtPosition(ctx.obstacleGrid, cellSizeRS, target.position_m.x, target.position_m.y)
+    : 0;
+  const bodyHalfWidth_m = cover > 0
+    ? mulDiv(rawHalfWidth_m, Math.max(0, SCALE.Q - cover), SCALE.Q)
+    : rawHalfWidth_m;
 
   // Deterministic hit roll (salt 0xD15A)
   const dispSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15A);
@@ -1391,6 +1463,7 @@ function stepMoraleForEntity(
   aliveBeforeTick: Set<number>,
   teamRoutingFrac: Map<number, number>,
   trace: TraceSink,
+  ctx: KernelContext,
 ): void {
   if (e.injury.dead) return;
 
@@ -1445,12 +1518,57 @@ function stepMoraleForEntity(
   // Fear decay — faster with high tolerance and nearby allies (cohesion)
   fearQ = clampQ(fearQ - fearDecayPerTick(distressTol, nearbyAllyCount), 0, SCALE.Q);
 
+  // Phase 6: cover provides a psychological safety bonus
+  const moraleCellSize = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
+  const coverForMorale = ctx.obstacleGrid
+    ? coverFractionAtPosition(ctx.obstacleGrid, moraleCellSize, e.position_m.x, e.position_m.y)
+    : 0;
+  if (coverForMorale > q(0.5)) {
+    fearQ = clampQ(fearQ - q(0.01), 0, SCALE.Q);
+  }
+
   e.condition.fearQ = fearQ;
 
   // Emit trace when routing state crosses threshold
   const nowRouting = isRouting(fearQ, distressTol);
   if (nowRouting !== wasRouting) {
     trace.onEvent({ kind: TraceKinds.MoraleRoute, tick: world.tick, entityId: e.id, fearQ });
+  }
+}
+
+function applyHazardDamage(e: Entity, hazard: HazardCell): void {
+  const torso = e.injury.byRegion["torso"];
+  if (!torso) return;
+  const intensity = hazard.intensity;
+  if (hazard.type === "fire") {
+    torso.surfaceDamage = clampQ(torso.surfaceDamage + qMul(intensity, q(0.003)), 0, SCALE.Q);
+    e.injury.shock = clampQ(e.injury.shock + qMul(intensity, q(0.005)), 0, SCALE.Q);
+  } else if (hazard.type === "radiation") {
+    torso.internalDamage = clampQ(torso.internalDamage + qMul(intensity, q(0.004)), 0, SCALE.Q);
+  } else if (hazard.type === "poison_gas") {
+    torso.internalDamage = clampQ(torso.internalDamage + qMul(intensity, q(0.002)), 0, SCALE.Q);
+    e.injury.consciousness = clampQ(e.injury.consciousness - qMul(intensity, q(0.003)), 0, SCALE.Q);
+  }
+}
+
+function stepHazardEffects(entities: Entity[], grid: HazardGrid, cellSize_m: I32): void {
+  const cs = Math.max(1, cellSize_m);
+  for (const e of entities) {
+    if (e.injury.dead) continue;
+    const cx = Math.trunc(e.position_m.x / cs);
+    const cy = Math.trunc(e.position_m.y / cs);
+    const key = terrainKey(cx, cy);
+    const hazard = grid.get(key);
+    if (!hazard) continue;
+    if (hazard.intensity > 0) {
+      applyHazardDamage(e, hazard);
+    }
+    if (hazard.duration_ticks > 0) {
+      hazard.duration_ticks -= 1;
+      if (hazard.duration_ticks === 0) {
+        grid.delete(key);
+      }
+    }
   }
 }
 

@@ -3,13 +3,14 @@ import type { WorldState } from "../world.js";
 import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import type { Command } from "../commands.js";
-import { q, clampQ, qMul, SCALE } from "../../units.js";
+import { q, clampQ, qMul, SCALE, type I32 } from "../../units.js";
 import { pickTarget, updateFocus } from "./targeting.js";
 import type { AIPolicy } from "./types.js";
 import { findWeapon } from "../../equipment.js";
 import { v3, normaliseDirCheapQ } from "../vec3.js";
 import { DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
 import { isRouting, moraleThreshold } from "../morale.js";
+import { type ObstacleGrid, coverFractionAtPosition, terrainKey } from "../terrain.js";
 
 // Local constant — avoids circular dependency with kernel.ts which exports TICK_HZ.
 const TICK_HZ = 20;
@@ -23,6 +24,8 @@ export function decideCommandsForEntity(
   self: Entity,
   policy: AIPolicy,
   env: SensoryEnvironment = DEFAULT_SENSORY_ENV,
+  obstacleGrid?: ObstacleGrid,
+  cellSize_m?: I32,
 ): readonly Command[] {
   if (self.injury.dead) return [];
 
@@ -111,12 +114,34 @@ export function decideCommandsForEntity(
   if (distApprox > want) { dirX = dx; dirY = dy; }
   else if (distApprox < policy.retreatRange_m) { dirX = -dx; dirY = -dy; }
 
+  let moveMode: "sprint" | "run" | "walk" = distApprox > engage ? "sprint" : "run";
+
+  // Phase 6: cover-seeking — if exposed to enemies with no cover, move toward the best adjacent cell.
+  const aiCellSize = cellSize_m ?? Math.trunc(4 * SCALE.m);
+  const selfCoverQ = obstacleGrid
+    ? coverFractionAtPosition(obstacleGrid, aiCellSize, self.position_m.x, self.position_m.y)
+    : 0;
+  if (selfCoverQ < q(0.3) && !isRouting(fearQ, distressTol)) {
+    const enemyCount = world.entities.filter(
+      en => en.teamId !== self.teamId && !en.injury.dead &&
+        approxDist(en.position_m.x - self.position_m.x, en.position_m.y - self.position_m.y) < Math.trunc(30 * SCALE.m),
+    ).length;
+    if (enemyCount > 0) {
+      const coverDir = findBestCoverDir(self, obstacleGrid, aiCellSize);
+      if (coverDir) {
+        dirX = coverDir.x;
+        dirY = coverDir.y;
+        moveMode = "run";
+      }
+    }
+  }
+
   if (dirX !== 0 || dirY !== 0) {
     cmds.push({
       kind: "move",
       dir: normaliseDirCheapQ(v3(dirX, dirY, 0)),
       intensity: q(1.0),
-      mode: distApprox > engage ? "sprint" : "run",
+      mode: moveMode,
     });
   } else {
     cmds.push({
@@ -157,4 +182,39 @@ function approxDist(dx: number, dy: number): number {
   const adx = dx < 0 ? -dx : dx;
   const ady = dy < 0 ? -dy : dy;
   return adx > ady ? adx + (ady >> 1) : ady + (adx >> 1);
+}
+
+/**
+ * Scan the 8 adjacent cells and return a direction toward the one with the highest
+ * cover fraction that is better than the current cell (and not impassable).
+ * Returns undefined if already at the local cover maximum.
+ */
+function findBestCoverDir(
+  self: Entity,
+  grid: ObstacleGrid | undefined,
+  cellSize_m: I32,
+): { x: number; y: number; z: number } | undefined {
+  if (!grid) return undefined;
+  const cs = Math.max(1, cellSize_m);
+  const cx = Math.trunc(self.position_m.x / cs);
+  const cy = Math.trunc(self.position_m.y / cs);
+  const currentCover = grid.get(terrainKey(cx, cy)) ?? 0;
+
+  let bestCover = currentCover;
+  let bestDx = 0, bestDy = 0;
+  for (let ddx = -1; ddx <= 1; ddx++) {
+    for (let ddy = -1; ddy <= 1; ddy++) {
+      if (ddx === 0 && ddy === 0) continue;
+      const frac = grid.get(terrainKey(cx + ddx, cy + ddy)) ?? 0;
+      // Prefer higher cover but skip impassable cells (q(1.0) = SCALE.Q)
+      if (frac > bestCover && frac < SCALE.Q) {
+        bestCover = frac;
+        bestDx = ddx;
+        bestDy = ddy;
+      }
+    }
+  }
+
+  if (bestDx === 0 && bestDy === 0) return undefined;
+  return { x: bestDx, y: bestDy, z: 0 };
 }

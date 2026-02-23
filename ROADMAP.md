@@ -387,7 +387,7 @@ quality). `pickTarget` uses the entity's own horizon instead of a hardcoded 6m r
 
 ---
 
-## Phase 5 — Morale and Psychological State
+## Phase 5 — Morale and Psychological State (complete)
 
 ### Fear accumulation
 
@@ -467,9 +467,29 @@ in `decideCommandsForEntity`.
   `SURFACE_TRACTION`, `SURFACE_SPEED_MUL`, `tractionAtPosition`, `speedMulAtPosition`, `buildTerrainGrid`.
   `KernelContext.terrainGrid?: TerrainGrid`. `stepMovement` looks up per-cell traction and speed multiplier.
   Surface types: `normal | mud | ice | slope_up | slope_down`. Speed muls: mud=0.60×, ice=0.45×, slope_up=0.75×, slope_down=1.10×.
-- Elevation: height differential modifies reach, projectile range, and escape routes
-- Obstacles: impassable and partial-cover cells (cover reduces effective target area fraction)
-- Choke points: frontage cap derived geometrically from map data
+- **Obstacles and cover (complete):** `ObstacleGrid` (sparse map of cell → Q cover fraction). Full cover (q(1.0))
+  blocks movement; partial cover reduces effective target half-width in hit determination (`effectiveHalfWidth_m =
+  bodyHalfWidth_m × (1 − coverFraction)`). `coverFractionAtPosition`, `buildObstacleGrid`.
+- **Elevation (complete):** `ElevationGrid` (sparse map of cell → height in fixed-point metres). Elevation
+  differential added to 3D reach check in melee; 3D range used for projectile drag calculation.
+  `elevationAtPosition`, `buildElevationGrid`. `KernelContext.elevationGrid?: ElevationGrid`.
+- **Slope direction (complete):** `SlopeGrid` (sparse map of cell → `SlopeInfo { type: "uphill"|"downhill"; grade: Q }`).
+  Speed multiplier: uphill → `clampQ(1 − grade × 0.25, 0.50, 0.95)`; downhill → `clampQ(1 + grade × 0.10, 1.0, 1.20)`.
+  `slopeAtPosition`, `buildSlopeGrid`. `KernelContext.slopeGrid?: SlopeGrid`.
+- **Dynamic terrain hazards (complete):** `HazardGrid` (sparse `Map<string, HazardCell>` where
+  `HazardCell = { type: "fire"|"radiation"|"poison_gas"; intensity: Q; duration_ticks: number }`).
+  Fire → torso surface damage + shock; radiation → torso internal damage; poison gas → torso internal + consciousness loss.
+  Cells with `duration_ticks > 0` burn down each tick and are removed at zero; `duration_ticks = 0` is permanent.
+  `stepHazardEffects` called after movement each tick. `buildHazardGrid`. `KernelContext.hazardGrid?: HazardGrid`.
+- **Cover morale bonus (complete):** `stepMoraleForEntity` applies −q(0.01) fear/tick when entity occupies
+  a cell with cover fraction > q(0.5). Requires `KernelContext.obstacleGrid`.
+- **Elevation melee advantage (complete):** When attacker elevation exceeds target elevation by > 0.5 m,
+  `attackSkill` receives a bonus `clampQ((elevDiff − 0.5 m) × 0.05 / 1 m, 0, q(0.10))`. Active in
+  tactical and sim realism modes only.
+- **AI cover-seeking (complete):** `decideCommandsForEntity` accepts `obstacleGrid?` and `cellSize_m?`.
+  When self cover < q(0.3) and enemies are nearby, `findBestCoverDir` scans 8 adjacent cells and directs
+  entity toward the highest non-impassable cover cell at "run" mode.
+- Choke points: frontage cap derived geometrically from map data (planned)
 
 ### Scenario tools
 

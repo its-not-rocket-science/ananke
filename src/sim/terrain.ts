@@ -116,3 +116,128 @@ export function speedMulAtPosition(
 export function buildTerrainGrid(cells: Record<string, SurfaceType>): TerrainGrid {
   return new Map(Object.entries(cells));
 }
+
+// ─── Obstacles ────────────────────────────────────────────────────────────────
+
+/**
+ * Sparse obstacle / cover grid.  Q value = cover fraction (0 = no cover, q(1.0) = impassable).
+ * Partial cover (e.g. q(0.50)) halves the effective target body-width used in hit determination,
+ * making the target harder to shoot.  Full hard cover (q(1.0)) blocks movement and direct fire.
+ */
+export type ObstacleGrid = Map<string, Q>;
+
+/**
+ * Look up cover fraction at a world position.
+ * Returns 0 (no cover) if the grid is absent or the cell has no entry.
+ */
+export function coverFractionAtPosition(
+  grid: ObstacleGrid | undefined,
+  cellSize_m: I32,
+  pos_x: I32,
+  pos_y: I32,
+): Q {
+  if (!grid || grid.size === 0) return 0 as Q;
+  const cs = Math.max(1, cellSize_m);
+  const cx = Math.trunc(pos_x / cs);
+  const cy = Math.trunc(pos_y / cs);
+  return (grid.get(terrainKey(cx, cy)) ?? 0) as Q;
+}
+
+/**
+ * Convenience: build an ObstacleGrid from a record of "cx,cy" → cover fraction Q.
+ * Use q(1.0) for impassable walls; fractional values for partial cover.
+ */
+export function buildObstacleGrid(cells: Record<string, Q>): ObstacleGrid {
+  return new Map(Object.entries(cells));
+}
+
+// ─── Elevation ────────────────────────────────────────────────────────────────
+
+/**
+ * Sparse elevation grid.  Values are heights in SCALE.m units above the ground plane
+ * (e.g. `to.m(2)` = 2 m high ground).  Height differentials are added to the vertical
+ * separation when computing 3D reach (melee) and projectile range (ranged).
+ */
+export type ElevationGrid = Map<string, I32>;
+
+/**
+ * Look up elevation (height in SCALE.m units) at a world position.
+ * Returns 0 (ground level) if the grid is absent or the cell has no entry.
+ */
+export function elevationAtPosition(
+  grid: ElevationGrid | undefined,
+  cellSize_m: I32,
+  pos_x: I32,
+  pos_y: I32,
+): I32 {
+  if (!grid || grid.size === 0) return 0;
+  const cs = Math.max(1, cellSize_m);
+  const cx = Math.trunc(pos_x / cs);
+  const cy = Math.trunc(pos_y / cs);
+  return grid.get(terrainKey(cx, cy)) ?? 0;
+}
+
+/**
+ * Convenience: build an ElevationGrid from a record of "cx,cy" → height (SCALE.m units).
+ */
+export function buildElevationGrid(cells: Record<string, I32>): ElevationGrid {
+  return new Map(Object.entries(cells));
+}
+
+// ─── Slopes ───────────────────────────────────────────────────────────────────
+
+/**
+ * Slope descriptor per cell.
+ * `grade` is a Q fraction where q(0) = flat and q(1.0) = maximum steepness.
+ */
+export interface SlopeInfo {
+  type: "uphill" | "downhill";
+  grade: Q;
+}
+
+/** Sparse slope grid.  Keys are "cx,cy" cell-index strings. */
+export type SlopeGrid = Map<string, SlopeInfo>;
+
+/**
+ * Look up slope info at a world position.
+ * Returns undefined if the grid is absent or the cell has no entry.
+ */
+export function slopeAtPosition(
+  grid: SlopeGrid | undefined,
+  cellSize_m: I32,
+  pos_x: I32,
+  pos_y: I32,
+): SlopeInfo | undefined {
+  if (!grid || grid.size === 0) return undefined;
+  const cs = Math.max(1, cellSize_m);
+  const cx = Math.trunc(pos_x / cs);
+  const cy = Math.trunc(pos_y / cs);
+  return grid.get(terrainKey(cx, cy));
+}
+
+/** Convenience: build a SlopeGrid from a record of "cx,cy" → SlopeInfo. */
+export function buildSlopeGrid(cells: Record<string, SlopeInfo>): SlopeGrid {
+  return new Map(Object.entries(cells));
+}
+
+// ─── Hazards ──────────────────────────────────────────────────────────────────
+
+/**
+ * Dynamic hazard cell.
+ * `intensity` ∈ [0, q(1.0)] scales per-tick damage.
+ * `duration_ticks`: 0 = permanent; >0 is decremented each tick and the cell is
+ * removed when it reaches 0.
+ */
+export interface HazardCell {
+  type: "fire" | "radiation" | "poison_gas";
+  intensity: Q;
+  duration_ticks: number;
+}
+
+/** Sparse hazard grid.  Keys are "cx,cy" cell-index strings. */
+export type HazardGrid = Map<string, HazardCell>;
+
+/** Convenience: build a HazardGrid from a record of "cx,cy" → HazardCell. */
+export function buildHazardGrid(cells: Record<string, HazardCell>): HazardGrid {
+  return new Map(Object.entries(cells));
+}
