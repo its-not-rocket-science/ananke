@@ -1,5 +1,16 @@
 import type { I32, Q } from "./units.js";
 
+// Phase 4: sensory and cognitive attributes
+export interface Perception {
+  visionRange_m: I32;       // maximum reliable visual range (SCALE.m units)
+  visionArcDeg: number;     // horizontal FoV in degrees (1–360)
+  halfArcCosQ: Q;           // cos(visionArcDeg/2) pre-computed in Q for sim path
+  hearingRange_m: I32;      // omnidirectional acoustic detection range (SCALE.m units)
+  decisionLatency_s: I32;   // minimum time between plan revisions (SCALE.s units)
+  attentionDepth: number;   // max simultaneously tracked entities (integer)
+  threatHorizon_m: I32;     // range at which threats are meaningfully processed (SCALE.m units)
+}
+
 export interface Morphology {
   stature_m: I32;
   mass_kg: I32;
@@ -45,6 +56,7 @@ export interface IndividualAttributes {
   performance: Performance;
   control: Control;
   resilience: Resilience;
+  perception: Perception;
 }
 
 export interface EnergyState {

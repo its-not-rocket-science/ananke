@@ -4,6 +4,14 @@ export interface Archetype {
   stature_m: I32;
   mass_kg: I32;
 
+  // Phase 4: perception (deterministic, no variance — species characteristic)
+  visionRange_m: I32;
+  visionArcDeg: number;
+  hearingRange_m: I32;
+  decisionLatency_s: I32;
+  attentionDepth: number;
+  threatHorizon_m: I32;
+
   statureVar: Q;
   massVar: Q;
 
@@ -58,6 +66,13 @@ export const HUMAN_BASE: Archetype = {
   stature_m: to.m(1.75),
   mass_kg: to.kg(75.0),
 
+  visionRange_m: to.m(200),       // ~200m reliable visual identification
+  visionArcDeg: 120,              // ~120° binocular forward arc
+  hearingRange_m: to.m(50),       // ~50m reliable sound detection
+  decisionLatency_s: to.s(0.5),  // ~500ms to revise tactical plan
+  attentionDepth: 4,              // track up to 4 threats simultaneously
+  threatHorizon_m: to.m(40),      // process threats within 40m
+
   statureVar: q(0.08),
   massVar: q(0.18),
 
@@ -111,6 +126,13 @@ export const HUMAN_BASE: Archetype = {
 export const SERVICE_ROBOT: Archetype = {
   stature_m: to.m(1.60),
   mass_kg: to.kg(55),
+
+  visionRange_m: to.m(500),       // sensor suite: longer visual range
+  visionArcDeg: 360,              // omnidirectional cameras
+  hearingRange_m: to.m(100),      // acoustic arrays
+  decisionLatency_s: to.s(0.05), // 50ms: near-instant decision cycle
+  attentionDepth: 16,             // broad multi-target tracking
+  threatHorizon_m: to.m(150),     // process threats within 150m
 
   statureVar: q(0.03),
   massVar: q(0.06),

@@ -25,6 +25,8 @@ export interface AIState {
   focusTargetId: number; // 0 = none
   // cooldown to prevent retargeting every tick
   retargetCooldownTicks: number;
+  // Phase 4: decision latency — ticks remaining before plan revision allowed
+  decisionCooldownTicks: number;
 }
 
 export const defaultIntent = (): IntentState => ({

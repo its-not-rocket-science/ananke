@@ -337,41 +337,53 @@ Energy weapons deliver damage via the Thermal or Radiation channel:
 
 ---
 
-## Phase 4 — Perception and Cognition
+## Phase 4 — Perception and Cognition (complete)
 
 Goal: entities model their environment, not just react to it.
 
+**Implemented:**
+
 ### Sensory model
 
-Entities have species-appropriate sensory capabilities:
+Entities have species-appropriate sensory capabilities stored in `IndividualAttributes.perception`:
 
 - `visionRange_m`: maximum reliable visual range (metres)
-- `visionArcDeg`: field of view (degrees; most species < 360)
-- `hearingRange_m`: threat detection by sound (metres)
-- Additional modalities (TBD): smell range, vibration sensitivity, electromagnetic sense for alien species
+- `visionArcDeg`: field of view (degrees; 120° human, 360° robot)
+- `halfArcCosQ`: pre-computed cos(arc/2) for O(1) sim-path arc checks
+- `hearingRange_m`: omnidirectional acoustic detection range (metres)
 
-Sensory range modifiers: darkness, cover, smoke, noise environment. Each is a dimensionless
-multiplier on base range.
+Sensory range modifiers in `SensoryEnvironment` (default: daylight/clear/quiet):
+- `lightMul`: vision multiplier (darkness, dim light)
+- `smokeMul`: vision multiplier (fog, smoke, dust)
+- `noiseMul`: hearing range multiplier
+
+`canDetect(observer, subject, env)` returns Q: `q(1.0)` = fully seen, `q(0.4)` = heard only, `q(0)` = undetected.
 
 ### Cognitive model
 
 Implements the cognitive attributes defined in Phase 0:
 
-- `decisionLatency_s`: minimum time between tactical plan revisions (seconds)
-- `attentionDepth`: maximum simultaneously tracked entities (integer)
-- `threatHorizon_m`: range at which threats are integrated into decisions (metres)
-- `learningRate`: multiplier on skill acquisition (relevant to Phase 7, dimensionless)
+- `decisionLatency_s`: minimum time between tactical plan revisions (500ms human, 50ms robot)
+- `attentionDepth`: maximum simultaneously tracked threats (4 human, 16 robot)
+- `threatHorizon_m`: perception and targeting radius (40m human, 150m robot)
+
+`decisionCooldownTicks` in `AIState` enforces the latency: `decideCommandsForEntity` returns
+`[]` while cooling, allowing the previous intent to persist unchanged.
 
 ### Threat prioritisation
 
-Target selection weighted by proximity (metres), estimated threat level (derived from observed
-weapon, relative size, behaviour), and focus stickiness (decays over time, scaled by attentionDepth).
+`perceiveLocal` filters by both `threatHorizon_m` (spatial radius) and `canDetect` (sensory
+quality). `pickTarget` uses the entity's own horizon instead of a hardcoded 6m radius.
+`attentionDepth` caps the number of simultaneously tracked entities.
 
 ### Surprise mechanics
 
-An entity outside the observer's field of view or sensory range can attack without triggering
-defensive response. Full surprise eliminates defensive reaction for one attack. Partial surprise
-(peripheral detection) degrades defence intensity proportionally.
+`resolveAttack` calls `canDetect(target, attacker, env)`:
+- `≥ q(0.8)` — no surprise; full defensive intensity
+- `< q(0.8)` — partial surprise; `defenceIntensityEffective` scaled by detection quality
+- `= q(0)` — full surprise; defence eliminated for that attack
+
+`sensoryEnv` is passed into `stepWorld` via `KernelContext.sensoryEnv` (defaults to daylight/clear).
 
 ---
 

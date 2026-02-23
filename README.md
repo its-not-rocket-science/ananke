@@ -74,9 +74,10 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 3 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+**Phase 4 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
 ranged and projectile combat, injury, environmental hazards, movement physics, formation
-basics, and deterministic AI scaffolding.
+basics, deterministic AI scaffolding, and perception/cognition (sensory model, decision
+latency, surprise mechanics).
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -216,6 +217,18 @@ Every entity is built from four attribute groups, all in SI units.
 | `coldTolerance` | Q | Cold hazard resistance (0–1) |
 | `fatigueRate` | Q | Fatigue accumulation rate multiplier |
 | `recoveryRate` | Q | Recovery rate multiplier |
+
+### Perception (Phase 4)
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `visionRange_m` | m | Maximum reliable visual detection range |
+| `visionArcDeg` | degrees | Horizontal field of view (120° human, 360° robot) |
+| `halfArcCosQ` | Q | cos(visionArcDeg/2) pre-computed for fast sim-path arc checks |
+| `hearingRange_m` | m | Omnidirectional acoustic detection range |
+| `decisionLatency_s` | s | Minimum time between plan revisions (500ms human, 50ms robot) |
+| `attentionDepth` | integer | Maximum simultaneously tracked threats |
+| `threatHorizon_m` | m | Range at which threats are integrated into decisions |
 
 ### Individual variation
 
@@ -379,18 +392,23 @@ To maintain lockstep safety:
 
 ---
 
-## AI scaffolding
+## AI and Perception
 
-Deterministic AI modules:
+Deterministic AI modules (Phase 4):
 
-- `perception.ts` — perceiveLocal(): nearby enemy and ally detection
-- `targeting.ts` — pickTarget(), updateFocus(): focus stickiness and retarget cooldown
-- `decide.ts` — decideCommandsForEntity(): behaviour presets
-- `presets.ts` — AI_PRESETS: lineInfantry, skirmisher
-- `system.ts` — buildAICommands(): full AI pass over world
+- `sensory.ts` — `canDetect()`: vision arc, hearing range, environmental multipliers
+- `perception.ts` — `perceiveLocal()`: sensory-filtered enemy and ally detection
+- `targeting.ts` — `pickTarget()`, `updateFocus()`: horizon-limited, focus stickiness
+- `decide.ts` — `decideCommandsForEntity()`: behaviour presets with decision latency
+- `presets.ts` — `AI_PRESETS`: lineInfantry, skirmisher
+- `system.ts` — `buildAICommands()`: full AI pass over world
 
-Ready for expansion. Phase 4 (Perception and Cognition) adds sensory modelling and cognitive
-latency attributes.
+**Decision latency**: entities re-plan at most once every `decisionLatency_s` seconds
+(10 ticks for humans, 1 tick for robots). Between plans, previous intent persists.
+
+**Surprise mechanics**: `canDetect(defender, attacker, env)` returns detection quality Q.
+If attacker is outside defender's FoV (< q(0.8)), defensive intensity is scaled
+proportionally. Full surprise (q(0)) eliminates defensive reaction entirely.
 
 ---
 
@@ -399,7 +417,7 @@ latency attributes.
 ```
 src/
   units.ts          Fixed-point SI unit system and arithmetic helpers
-  types.ts          Core attribute interfaces (Morphology, Performance, Control, Resilience)
+  types.ts          Core attribute interfaces (Morphology, Performance, Control, Resilience, Perception)
   channels.ts       DamageChannel enum and bitmask helpers
   traits.ts         Entity trait definitions and attribute multiplier application
   archetypes.ts     Reference archetype baselines (HUMAN_BASE, SERVICE_ROBOT)
@@ -437,12 +455,14 @@ src/
     tuning.ts           SimulationTuning presets (arcade, tactical, sim)
     testing.ts          mkHumanoidEntity(), mkWorld() test helpers
 
+    sensory.ts          canDetect(), SensoryEnvironment — vision arc + hearing + env modifiers
+
     ai/
       types.ts      AIPolicy interface
       presets.ts    AI_PRESETS (lineInfantry, skirmisher)
-      perception.ts perceiveLocal() — nearby enemy and ally detection
-      targeting.ts  pickTarget(), updateFocus()
-      decide.ts     decideCommandsForEntity()
+      perception.ts perceiveLocal() — sensory-filtered enemy and ally detection
+      targeting.ts  pickTarget(), updateFocus() — horizon-limited target selection
+      decide.ts     decideCommandsForEntity() — with decision latency cooldown
       system.ts     buildAICommands() — full AI pass over world
 
 test/              Vitest test suite (one file per feature area)

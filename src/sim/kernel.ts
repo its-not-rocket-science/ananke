@@ -33,6 +33,7 @@ import { stepPushAndRepulsion } from "./push.js";
 
 import { type TraceSink, nullTrace } from "./trace.js";
 import { TraceKinds } from "./kinds.js";
+import { type SensoryEnvironment, DEFAULT_SENSORY_ENV, DEFAULT_PERCEPTION, canDetect } from "./sensory.js";
 
 import {
   resolveGrappleAttempt,
@@ -71,12 +72,19 @@ export interface KernelContext {
   density?: DensityField;
 
   trace?: TraceSink;
+
+  /** Phase 4: ambient sensory conditions. Defaults to DEFAULT_SENSORY_ENV (full daylight, clear). */
+  sensoryEnv?: SensoryEnvironment;
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
   const tuning = ctx.tuning ?? TUNING.tactical;
 
   const trace = ctx.trace ?? nullTrace;
+
+  // Phase 4: attach sensory environment to world for use in resolveAttack / resolveShoot.
+  // WorldState is a plain data object; we use a type-cast side-channel to avoid widening the type.
+  (world as any).__sensoryEnv = ctx.sensoryEnv ?? DEFAULT_SENSORY_ENV;
 
   world.entities.sort((a, b) => a.id - b.id);
 
@@ -111,6 +119,10 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     // Phase 3: ranged combat fields
     if ((e as any).action.shootCooldownTicks === undefined) (e as any).action.shootCooldownTicks = 0;
     if ((e as any).condition.suppressedTicks === undefined) (e as any).condition.suppressedTicks = 0;
+    // Phase 4: perception defaults and decision latency
+    if (!(e.attributes as any).perception) (e.attributes as any).perception = DEFAULT_PERCEPTION;
+    if (!e.ai) e.ai = { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
+    else if ((e.ai as any).decisionCooldownTicks === undefined) (e.ai as any).decisionCooldownTicks = 0;
   }
 
   for (const e of world.entities) {
@@ -557,9 +569,23 @@ function resolveAttack(world: WorldState,
   const defenceModeEffective = target.action.weaponBindPartnerId !== 0
     ? ("none" as const)
     : target.intent.defence.mode;
-  const defenceIntensityEffective = target.action.weaponBindPartnerId !== 0
+  let defenceIntensityEffective = target.action.weaponBindPartnerId !== 0
     ? q(0)
     : target.intent.defence.intensity;
+
+  // Phase 4: surprise mechanics — if the defender cannot perceive the attacker,
+  // their defensive response is reduced or eliminated.
+  if (tuning.realism !== "arcade") {
+    const sEnv = (world as any).__sensoryEnv as SensoryEnvironment | undefined ?? DEFAULT_SENSORY_ENV;
+    const detectionQ = canDetect(target, attacker, sEnv);
+    if (detectionQ <= 0) {
+      // Full surprise: defender has no defence
+      defenceIntensityEffective = q(0);
+    } else if (detectionQ < q(0.8)) {
+      // Partial surprise: scale defence intensity by detection quality
+      defenceIntensityEffective = qMul(defenceIntensityEffective, detectionQ);
+    }
+  }
 
   // Phase 2C: reach dominance on defence — parrying with a shorter weapon is harder.
   if (tuning.realism !== "arcade" && defenceModeEffective === "parry" && !grappling) {

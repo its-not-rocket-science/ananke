@@ -5,6 +5,7 @@ import { perceiveLocal } from "./perception.js";
 import type { AIPolicy } from "./types.js";
 import { SCALE } from "../../units.js";
 import { eventSeed } from "../seeds.js";
+import { DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
 
 export function pickTarget(
   worldSeed: number,
@@ -12,16 +13,21 @@ export function pickTarget(
   self: Entity,
   index: WorldIndex,
   spatial: SpatialIndex,
-  policy: AIPolicy
+  policy: AIPolicy,
+  env: SensoryEnvironment = DEFAULT_SENSORY_ENV,
 ): Entity | undefined {
-  const ai = self.ai ?? { focusTargetId: 0, retargetCooldownTicks: 0 };
+  const ai = self.ai ?? { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
 
   const focused = ai.focusTargetId !== 0 ? index.byId.get(ai.focusTargetId) : undefined;
 
   // keep focus if still valid and cooldown active
   if (focused && !focused.injury.dead && ai.retargetCooldownTicks > 0) return focused;
 
-  const p = perceiveLocal(self, index, spatial, Math.trunc(6 * SCALE.m), 24);
+  // Phase 4: use entity's own threat horizon as perception radius
+  const perc = (self.attributes as any).perception ?? DEFAULT_PERCEPTION;
+  const perceptionRadius = perc.threatHorizon_m;
+
+  const p = perceiveLocal(self, index, spatial, perceptionRadius, perc.attentionDepth, env);
   if (p.enemies.length === 0) return undefined;
 
   // Stickiness: prefer keeping previous target if present and alive
@@ -36,7 +42,7 @@ export function pickTarget(
 }
 
 export function updateFocus(self: Entity, target: Entity | undefined, policy: AIPolicy): void {
-  if (!self.ai) self.ai = { focusTargetId: 0, retargetCooldownTicks: 0 };
+  if (!self.ai) self.ai = { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
 
   if (!target) {
     self.ai.focusTargetId = 0;

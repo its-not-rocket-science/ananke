@@ -3,21 +3,30 @@ import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import { queryNearbyIds } from "../spatial.js";
 import { isEnemy } from "../team.js";
-import { SCALE } from "../../units.js";
+import { SCALE, q } from "../../units.js";
+import { canDetect, DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
 
-export interface Perception {
+export interface LocalPerception {
   enemies: Entity[];
   allies: Entity[];
 }
+
+/** @deprecated Use LocalPerception */
+export type Perception = LocalPerception;
 
 export function perceiveLocal(
   self: Entity,
   index: WorldIndex,
   spatial: SpatialIndex,
   radius_m: number,
-  maxCount = 24
-): Perception {
-  const ids = queryNearbyIds(spatial, self.position_m, radius_m);
+  maxCount = 24,
+  env: SensoryEnvironment = DEFAULT_SENSORY_ENV,
+): LocalPerception {
+  const perc = (self.attributes as any).perception ?? DEFAULT_PERCEPTION;
+  // Use the threat horizon as the spatial query radius if it is smaller than the requested radius.
+  const effectiveRadius = Math.min(radius_m, perc.threatHorizon_m);
+
+  const ids = queryNearbyIds(spatial, self.position_m, effectiveRadius);
   ids.sort((a, b) => a - b);
 
   const enemies: Entity[] = [];
@@ -27,6 +36,10 @@ export function perceiveLocal(
     if (id === self.id) continue;
     const e = index.byId.get(id);
     if (!e || e.injury.dead) continue;
+
+    // Phase 4: filter by sensory detection
+    const detQ = canDetect(self, e, env);
+    if (detQ <= q(0)) continue;
 
     if (isEnemy(self, e)) enemies.push(e);
     else allies.push(e);

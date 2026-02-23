@@ -8,6 +8,10 @@ import { pickTarget, updateFocus } from "./targeting.js";
 import type { AIPolicy } from "./types.js";
 import { findWeapon } from "../../equipment.js";
 import { v3, normaliseDirCheapQ } from "../vec3.js";
+import { DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
+
+// Local constant — avoids circular dependency with kernel.ts which exports TICK_HZ.
+const TICK_HZ = 20;
 
 type DefenceMode = "none" | "block" | "parry" | "dodge";
 
@@ -16,15 +20,29 @@ export function decideCommandsForEntity(
   index: WorldIndex,
   spatial: SpatialIndex,
   self: Entity,
-  policy: AIPolicy
+  policy: AIPolicy,
+  env: SensoryEnvironment = DEFAULT_SENSORY_ENV,
 ): readonly Command[] {
   if (self.injury.dead) return [];
 
-  // tick down AI cooldown
-  if (!self.ai) self.ai = { focusTargetId: 0, retargetCooldownTicks: 0 };
+  // tick down AI cooldowns
+  if (!self.ai) self.ai = { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
+  if ((self.ai as any).decisionCooldownTicks === undefined) (self.ai as any).decisionCooldownTicks = 0;
   self.ai.retargetCooldownTicks = Math.max(0, self.ai.retargetCooldownTicks - 1);
+  self.ai.decisionCooldownTicks = Math.max(0, self.ai.decisionCooldownTicks - 1);
 
-  const target = pickTarget(world.seed, world.tick, self, index, spatial, policy);
+  // Phase 4: decision latency — while cooling down, skip replanning and repeat current intent.
+  if (self.ai.decisionCooldownTicks > 0) {
+    // Emit the same defend and move as last tick (intent is already set from previous tick).
+    return [];
+  }
+
+  // Charge latency for next decision cycle
+  const perc = (self.attributes as any).perception ?? DEFAULT_PERCEPTION;
+  const latencyTicks = Math.max(1, Math.trunc((perc.decisionLatency_s * TICK_HZ) / SCALE.s));
+  self.ai.decisionCooldownTicks = latencyTicks;
+
+  const target = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
   updateFocus(self, target, policy);
 
   // Default defend

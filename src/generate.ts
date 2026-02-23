@@ -24,6 +24,12 @@ import { makeRng } from "./rng.js";
 import { Q, SCALE, clampQ, q, qMul, mulDiv } from "./units.js";
 import { triSym, mulFromVariation, skewUp } from "./dist.js";
 
+// Math.cos is allowed here: generation path, not simulation path.
+function halfArcCosQ(arcDeg: number): Q {
+  const halfRad = (arcDeg / 2) * (Math.PI / 180);
+  return Math.round(Math.cos(halfRad) * SCALE.Q) as Q;
+}
+
 function applyMultI32(base: number, multQ: Q): number {
   return mulDiv(base, multQ, SCALE.Q);
 }
@@ -175,6 +181,15 @@ const actuatorScale = clampQ(
       coldTolerance,
       fatigueRate,
       recoveryRate,
+    },
+    perception: {
+      visionRange_m: arch.visionRange_m,
+      visionArcDeg: arch.visionArcDeg,
+      halfArcCosQ: halfArcCosQ(arch.visionArcDeg),
+      hearingRange_m: arch.hearingRange_m,
+      decisionLatency_s: arch.decisionLatency_s,
+      attentionDepth: arch.attentionDepth,
+      threatHorizon_m: arch.threatHorizon_m,
     },
   };
 }
