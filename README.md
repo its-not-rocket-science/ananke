@@ -74,8 +74,8 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 1 complete.** Melee combat, injury, environmental hazards, movement physics,
-formation basics, and deterministic AI scaffolding.
+**Phase 2 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+injury, environmental hazards, movement physics, formation basics, and deterministic AI scaffolding.
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -285,9 +285,22 @@ Impact energy derived from:
 - Weapon effective mass (kg)
 - Relative velocity (m/s) from attacker's `peakPower_W` and `continuousPower_W`
 - Leverage: parry leverage from weapon moment arm (N·m)
+- Two-handed grip: 1.12× energy bonus when both arms are free
 
 Converted to surface, internal, and structural injury proportional to penetration profile.
 Bleeding rate increases proportionally to internal damage severity.
+
+### Weapon dynamics
+
+- **Reach dominance**: shorter weapon is penalised in both attack and parry against a longer one
+- **Miss recovery**: missed strikes add extra cooldown ticks proportional to weapon angular momentum (mass × reach)
+- **Weapon bind**: successful parry with heavy weapons can lock both weapons; requires a strength contest (`breakBind`) to escape
+- **Grappling**: strength+mass+technique contest; positions (standing/pinned/prone), throws, chokes, joint locks
+
+### Stamina
+
+Actions cost energy (joules). When reserve falls below 15% of baseline, functional penalties
+ramp in. At zero reserve the entity collapses prone and loses all active defence.
 
 ---
 
@@ -372,31 +385,33 @@ src/
   derive.ts         Movement caps and energy/fatigue derived from attributes and loadout
 
   sim/
-    kernel.ts       stepWorld() — main simulation entry point
-    entity.ts       Entity type (all mutable simulation state)
-    world.ts        WorldState type
-    kinds.ts        CommandKind, TraceKind, MoveMode, DefenceMode enums
-    body.ts         BodyRegion type, region weights, hit-to-region mapping
-    injury.ts       InjuryState, per-region damage, bleeding rate helpers
-    condition.ts    ConditionState (fire, radiation, suffocation, stun, prone, etc.)
-    impairment.ts   deriveFunctionalState() — damage to mobility and manipulation penalties
-    combat.ts       resolveHit(), parryLeverageQ(), shield helpers
-    events.ts       ImpactEvent type, deterministic sort
-    seeds.ts        Deterministic per-event seed derivation
-    formation.ts    pickNearestEnemyInReach()
-    frontage.ts     applyFrontageCap() — limits engagers per target
-    occlusion.ts    isMeleeLaneOccludedByFriendly()
-    density.ts      computeDensityField() — crowd slowdown
-    push.ts         stepPushAndRepulsion() — entity separation
-    spatial.ts      Grid spatial index and neighbour queries
-    indexing.ts     buildWorldIndex() — O(1) id-to-entity lookup
-    vec3.ts         Fixed-point 3D vector maths
-    team.ts         isEnemy() helper
-    intent.ts       IntentState defaults
-    action.ts       ActionState defaults
-    trace.ts        TraceSink interface and nullTrace
-    tuning.ts       SimulationTuning presets (arcade, tactical, sim)
-    testing.ts      mkHumanoidEntity(), mkWorld() test helpers
+    kernel.ts           stepWorld() — main simulation entry point
+    entity.ts           Entity type (all mutable simulation state)
+    world.ts            WorldState type
+    kinds.ts            CommandKind, TraceKind, MoveMode, DefenceMode enums
+    body.ts             BodyRegion type, region weights, hit-to-region mapping
+    injury.ts           InjuryState, per-region damage, bleeding rate helpers
+    condition.ts        ConditionState (fire, radiation, suffocation, stun, prone, etc.)
+    impairment.ts       deriveFunctionalState() — damage to mobility and manipulation penalties
+    combat.ts           resolveHit(), parryLeverageQ(), shield helpers
+    grapple.ts          Grapple resolution: score, positions, throw/choke/joint-lock
+    weapon_dynamics.ts  Reach dominance, two-handed bonus, miss recovery, weapon bind/break
+    events.ts           ImpactEvent type, deterministic sort
+    seeds.ts            Deterministic per-event seed derivation
+    formation.ts        pickNearestEnemyInReach()
+    frontage.ts         applyFrontageCap() — limits engagers per target
+    occlusion.ts        isMeleeLaneOccludedByFriendly()
+    density.ts          computeDensityField() — crowd slowdown
+    push.ts             stepPushAndRepulsion() — entity separation
+    spatial.ts          Grid spatial index and neighbour queries
+    indexing.ts         buildWorldIndex() — O(1) id-to-entity lookup
+    vec3.ts             Fixed-point 3D vector maths
+    team.ts             isEnemy() helper
+    intent.ts           IntentState defaults
+    action.ts           ActionState defaults
+    trace.ts            TraceSink interface and nullTrace
+    tuning.ts           SimulationTuning presets (arcade, tactical, sim)
+    testing.ts          mkHumanoidEntity(), mkWorld() test helpers
 
     ai/
       types.ts      AIPolicy interface

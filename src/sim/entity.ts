@@ -10,10 +10,13 @@ import type { ActionState } from "./action.js";
 
 import { Q } from "../units.js";
 
+export type GrapplePosition = "standing" | "prone" | "pinned";
+
 export interface GrappleState {
   holdingTargetId: number;   // 0 if none
   heldByIds: number[];       // sorted ascending for determinism
   gripQ: Q;                  // 0..1
+  position: GrapplePosition; // Phase 2A: positional control
 }
 
 export interface Entity {

@@ -12,6 +12,7 @@ export interface ConditionState {
   stunned: Q;             // control disruption intensity
 
   prone: boolean;
+  pinned: boolean;             // Phase 2A: grapple-pinned (cannot stand or act freely)
 
   // deterministic incapacity timers (ticks)
   standBlockedTicks: number;   // cannot stand while > 0
@@ -26,6 +27,7 @@ export const defaultCondition = (): ConditionState => ({
   suffocation: q(0),
   stunned: q(0),
   prone: false,
+  pinned: false,
   standBlockedTicks: 0,
   unconsciousTicks: 0,
 });

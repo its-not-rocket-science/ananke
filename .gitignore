@@ -39,3 +39,7 @@ Thumbs.db
 # Optional: local temp files
 *.tmp
 *.bak
+
+# Tools
+CLAUDE.md
+.claude/

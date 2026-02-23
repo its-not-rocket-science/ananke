@@ -1,6 +1,6 @@
 import type { WorldState } from "./world.js";
 import type { Entity } from "./entity.js";
-import type { CommandMap, Command, AttackCommand } from "./commands.js";
+import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand } from "./commands.js";
 
 import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
 import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive.js";
@@ -33,6 +33,24 @@ import { stepPushAndRepulsion } from "./push.js";
 
 import { type TraceSink, nullTrace } from "./trace.js";
 import { TraceKinds } from "./kinds.js";
+
+import {
+  resolveGrappleAttempt,
+  resolveGrappleThrow,
+  resolveGrappleChoke,
+  resolveGrappleJointLock,
+  resolveBreakGrapple,
+  stepGrappleTick,
+} from "./grapple.js";
+
+import {
+  reachDomPenaltyQ,
+  twoHandedAttackBonusQ,
+  missRecoveryTicks,
+  bindChanceQ,
+  bindDurationTicks,
+  breakBindContestQ,
+} from "./weapon_dynamics.js";
 
 export const TICK_HZ = 20;
 export const DT_S: I32 = to.s(1 / TICK_HZ);
@@ -70,13 +88,36 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   for (const e of world.entities) {
     if (!(e as any).intent) (e as any).intent = defaultIntent();
     if (!(e as any).action) (e as any).action = defaultAction();
+    // Phase 2A: default new fields on entities created before this phase
+    if (!(e as any).grapple) {
+      (e as any).grapple = { holdingTargetId: 0, heldByIds: [], gripQ: q(0), position: "standing" };
+    } else if ((e as any).grapple.position === undefined) {
+      (e as any).grapple.position = "standing";
+    }
+    if ((e as any).action.grappleCooldownTicks === undefined) (e as any).action.grappleCooldownTicks = 0;
+    if ((e as any).condition?.pinned === undefined) (e as any).condition.pinned = false;
+    // Phase 2C: default weapon bind fields
+    if ((e as any).action.weaponBindPartnerId === undefined) (e as any).action.weaponBindPartnerId = 0;
+    if ((e as any).action.weaponBindTicks === undefined) (e as any).action.weaponBindTicks = 0;
   }
 
   for (const e of world.entities) {
     e.action.attackCooldownTicks = Math.max(0, e.action.attackCooldownTicks - 1);
     e.action.defenceCooldownTicks = Math.max(0, e.action.defenceCooldownTicks - 1);
+    e.action.grappleCooldownTicks = Math.max(0, e.action.grappleCooldownTicks - 1);
     e.condition.standBlockedTicks = Math.max(0, e.condition.standBlockedTicks - 1);
     e.condition.unconsciousTicks = Math.max(0, e.condition.unconsciousTicks - 1);
+    // Phase 2C: weapon bind decay — emit trace only from the smaller-ID entity to avoid duplicates
+    if (e.action.weaponBindTicks > 0) {
+      e.action.weaponBindTicks = Math.max(0, e.action.weaponBindTicks - 1);
+      if (e.action.weaponBindTicks === 0) {
+        const partnerId = e.action.weaponBindPartnerId;
+        e.action.weaponBindPartnerId = 0;
+        if (partnerId !== 0 && e.id < partnerId) {
+          trace.onEvent({ kind: TraceKinds.WeaponBindBreak, tick: world.tick, entityId: e.id, partnerId, reason: "timeout" });
+        }
+      }
+    }
   }
 
   for (const e of world.entities) {
@@ -147,21 +188,19 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
         resolveAttack(world, e, attackCmd, tuning, index, impacts, spatialAfterMove, trace);
       } else if (c.kind === "grapple") {
-        const target = index.byId.get(c.targetId);
-        if (!target || target.injury.dead) continue;
-
-        // Phase 7A: trace-only stub for now (no mechanics yet)
-        trace.onEvent({
-          kind: TraceKinds.Grapple,
-          tick: world.tick,
-          attackerId: e.id,
-          targetId: target.id,
-          phase: "start",
-        });
-
-        // TODO: implement grapple state + resolution
+        resolveGrappleCommand(world, e, c as GrappleCommand, tuning, index, impacts, trace);
+      } else if (c.kind === "breakGrapple") {
+        resolveBreakGrapple(world, e, (c as BreakGrappleCommand).intensity, tuning, index, trace);
+      } else if (c.kind === "breakBind") {
+        resolveBreakBind(world, e, (c as BreakBindCommand).intensity, index, trace);
       }
     }
+  }
+
+  // Phase 2A: per-tick grapple maintenance (stamina drain, grip decay, auto-release)
+  for (const e of world.entities) {
+    if (e.injury.dead) continue;
+    stepGrappleTick(world, e, index);
   }
 
   let finalImpacts = impacts;
@@ -225,6 +264,19 @@ function applyFunctionalGating(world: WorldState, e: Entity, tuning: SimulationT
     // keep prone if already, and prefer prone for non-acting entities in tactical/sim
     if (tuning.realism !== "arcade") e.condition.prone = true;
     return;
+  }
+
+  // Phase 2A: pinned entities cannot use normal defence (only breakGrapple applies)
+  if (e.condition.pinned && tuning.realism !== "arcade") {
+    e.intent.defence = { mode: "none", intensity: q(0) };
+    e.condition.prone = true;
+  }
+
+  // Phase 2B: exhaustion collapse — when reserve is fully depleted, entity
+  // cannot maintain posture or active defence (tactical/sim only).
+  if (e.energy.reserveEnergy_J <= 0 && tuning.realism !== "arcade") {
+    e.condition.prone = true;
+    e.intent.defence = { mode: "none", intensity: q(0) };
   }
 
   // forced prone if cannot stand (tactical/sim)
@@ -422,6 +474,8 @@ function resolveAttack(world: WorldState,
   trace: TraceSink
 ): void {
   if (attacker.action.attackCooldownTicks > 0) return;
+  // Phase 2C: weapon bind gate — cannot attack while weapons are locked
+  if (attacker.action.weaponBindPartnerId !== 0) return;
 
   const target = index.byId.get(cmd.targetId);
   if (!target || target.injury.dead) return;
@@ -459,14 +513,49 @@ function resolveAttack(world: WorldState,
   const readyTime_s = wpn.readyTime_s ?? to.s(0.6);
   attacker.action.attackCooldownTicks = Math.max(1, Math.trunc((readyTime_s * TICK_HZ) / SCALE.s));
 
+  // Phase 2B: deduct strike stamina cost (always — attacker expends effort whether hit or miss)
+  const clampedIntensity = clampQ(cmd.intensity ?? q(1.0), q(0.1), q(1.0));
+  attacker.energy.reserveEnergy_J = Math.max(
+    0,
+    attacker.energy.reserveEnergy_J - strikeCost_J(attacker, clampedIntensity)
+  );
+
   const attackSkillBase = clampQ(qMul(attacker.attributes.control.controlQuality, attacker.attributes.control.fineControl), q(0.05), q(0.99));
-  const attackSkill = clampQ(qMul(attackSkillBase, qMul(funcA.coordinationMul, funcA.manipulationMul)), q(0.01), q(0.99));
+  let attackSkill = clampQ(qMul(attackSkillBase, qMul(funcA.coordinationMul, funcA.manipulationMul)), q(0.01), q(0.99));
   const defenceSkillBase = clampQ(qMul(target.attributes.control.controlQuality, target.attributes.control.stability), q(0.05), q(0.99));
-  const defenceSkill = clampQ(qMul(defenceSkillBase, qMul(funcB.coordinationMul, funcB.mobilityMul)), q(0.01), q(0.99));
+  let defenceSkill = clampQ(qMul(defenceSkillBase, qMul(funcB.coordinationMul, funcB.mobilityMul)), q(0.01), q(0.99));
   const geomDot = dotDirQ(attacker.action.facingDirQ, dirToTarget);
 
+  // Phase 2C: reach dominance — short weapon penalised vs longer weapon in open combat.
+  // Does not apply when attacker is grappling target (close contact negates reach), or target is prone.
+  const grappling = attacker.grapple.holdingTargetId === target.id;
+  if (tuning.realism !== "arcade" && !target.condition.prone && !grappling) {
+    const tgtWpn = findWeapon(target.loadout);
+    if (tgtWpn) {
+      const tgtReach_m = tgtWpn.reach_m ?? Math.trunc(target.attributes.morphology.stature_m * 0.45);
+      attackSkill = clampQ(qMul(attackSkill, reachDomPenaltyQ(reach_m, tgtReach_m)), q(0.01), q(0.99));
+    }
+  }
+
+  // Phase 2C: weapon bind also prevents the defender from parrying/blocking with their weapon
+  const defenceModeEffective = target.action.weaponBindPartnerId !== 0
+    ? ("none" as const)
+    : target.intent.defence.mode;
+  const defenceIntensityEffective = target.action.weaponBindPartnerId !== 0
+    ? q(0)
+    : target.intent.defence.intensity;
+
+  // Phase 2C: reach dominance on defence — parrying with a shorter weapon is harder.
+  if (tuning.realism !== "arcade" && defenceModeEffective === "parry" && !grappling) {
+    const defWpnReach = findWeapon(target.loadout);
+    if (defWpnReach) {
+      const defReach = defWpnReach.reach_m ?? Math.trunc(target.attributes.morphology.stature_m * 0.45);
+      defenceSkill = clampQ(qMul(defenceSkill, reachDomPenaltyQ(defReach, reach_m)), q(0.01), q(0.99));
+    }
+  }
+
   const seed = eventSeed(world.seed, world.tick, attacker.id, target.id, 0xA11AC);
-  const res = resolveHit(seed, attackSkill, defenceSkill, geomDot, target.intent.defence.mode, target.intent.defence.intensity);
+  const res = resolveHit(seed, attackSkill, defenceSkill, geomDot, defenceModeEffective, defenceIntensityEffective);
   const defenderBlocking = (target.intent.defence.mode === "block"); // or cmd-derived if you do that elsewhere
   const shield = findShield(target.loadout);
   const shieldBlocked =
@@ -488,7 +577,14 @@ function resolveAttack(world: WorldState,
     area: res.area,
   });
 
-  if (!res.hit) return;
+  if (!res.hit) {
+    // Phase 2C: miss recovery — extend cooldown by weapon angular momentum, scaled by swing intensity.
+    // A full-power swing that misses leaves the attacker more committed than a light probe.
+    attacker.action.attackCooldownTicks += Math.trunc(
+      mulDiv(missRecoveryTicks(wpn), clampedIntensity, SCALE.Q)
+    );
+    return;
+  }
 
   const sideBit = (eventSeed(world.seed, world.tick, attacker.id, target.id, 0x51DE) & 1) as 0 | 1;
   const region = regionFromHit(res.area, sideBit);
@@ -538,11 +634,25 @@ function resolveAttack(world: WorldState,
     z: (attacker.velocity_mps.z - target.velocity_mps.z) + vStrikeVec.z,
   };
 
-  const energy_J = mulDiv((impactEnergy_J(attacker, wpn, rel)) as any, funcA.manipulationMul as any, SCALE.Q);
+  // Phase 2C: two-handed leverage bonus — only when both arms are functional and no off-hand item
+  const hasOffHand = attacker.loadout.items.some(it => it.kind === "shield") ||
+    attacker.loadout.items.filter(it => it.kind === "weapon").length > 1;
+  const twoHandBonus = twoHandedAttackBonusQ(wpn, funcA.leftArmDisabled, funcA.rightArmDisabled, hasOffHand);
+  const energy_J = mulDiv(
+    mulDiv((impactEnergy_J(attacker, wpn, rel)) as any, funcA.manipulationMul as any, SCALE.Q),
+    twoHandBonus,
+    SCALE.Q,
+  );
 
   let mitigated = energy_J;
 
   if (res.blocked || res.parried) {
+    // Phase 2B: deduct defence stamina cost from the defender
+    target.energy.reserveEnergy_J = Math.max(
+      0,
+      target.energy.reserveEnergy_J - defenceCost_J(target)
+    );
+
     const leverage = parryLeverageQ(wpn, attacker);
     const handed = (wpn.handedness ?? "oneHand") === "twoHand" ? q(1.10) : q(1.0);
     const defenceMul = qMul(leverage, handed);
@@ -563,6 +673,36 @@ function resolveAttack(world: WorldState,
         q(0.45)
       );
       mitigated = mulDiv(mitigated, m, SCALE.Q);
+
+      // Phase 2C: weapon bind on parry — weapons may lock, requiring both to disengage
+      if (tuning.realism !== "arcade"
+        && attacker.action.weaponBindPartnerId === 0
+        && target.action.weaponBindPartnerId === 0) {
+        const defWpn = findWeapon(target.loadout);
+        if (defWpn) {
+          const bindSeed = eventSeed(world.seed, world.tick, attacker.id, target.id, 0xB1DE);
+          const bindRoll = (bindSeed % SCALE.Q) as Q;
+          const bChanceBase = bindChanceQ(wpn, defWpn);
+          // Phase 2C improvement #4: fatigue increases bind chance — tired fighters lose weapon control
+          const avgFatigue = ((attacker.energy.fatigue + target.energy.fatigue) >>> 1) as Q;
+          const fatigueMod = (SCALE.Q + qMul(avgFatigue, q(0.20))) as Q;  // 1.0..1.20
+          const bChance = clampQ(qMul(bChanceBase, fatigueMod), q(0), q(0.45));
+          if (bindRoll < bChance) {
+            const dur = bindDurationTicks(wpn, defWpn);
+            attacker.action.weaponBindPartnerId = target.id;
+            attacker.action.weaponBindTicks = dur;
+            target.action.weaponBindPartnerId = attacker.id;
+            target.action.weaponBindTicks = dur;
+            trace.onEvent({
+              kind: TraceKinds.WeaponBind,
+              tick: world.tick,
+              attackerId: attacker.id,
+              targetId: target.id,
+              durationTicks: dur,
+            });
+          }
+        }
+      }
     }
 
     if (res.shieldBlocked) {
@@ -598,6 +738,133 @@ function resolveAttack(world: WorldState,
     hitQuality: clampQ(res.hitQuality, q(0.05), q(1.0)),
     shieldBlocked,
   });
+}
+
+/* ------------------ Grapple command dispatch (Phase 2A) ------------------ */
+function resolveGrappleCommand(
+  world: WorldState,
+  e: Entity,
+  c: GrappleCommand,
+  tuning: SimulationTuning,
+  index: WorldIndex,
+  impacts: ImpactEvent[],
+  trace: TraceSink,
+): void {
+  const target = index.byId.get(c.targetId);
+  if (!target || target.injury.dead) return;
+
+  const mode = c.mode ?? "grapple";
+
+  if (mode === "grapple") {
+    if (e.grapple.holdingTargetId === 0 || e.grapple.holdingTargetId !== c.targetId) {
+      // Attempt new grapple
+      resolveGrappleAttempt(world, e, target, c.intensity, tuning, impacts, trace);
+    } else {
+      // Already holding — tick trace (stepGrappleTick handles maintenance)
+      trace.onEvent({
+        kind: TraceKinds.Grapple,
+        tick: world.tick, attackerId: e.id, targetId: target.id,
+        phase: "tick", strengthQ: e.grapple.gripQ,
+      });
+    }
+  } else if (mode === "throw") {
+    resolveGrappleThrow(world, e, target, c.intensity, tuning, impacts, trace);
+  } else if (mode === "choke") {
+    resolveGrappleChoke(e, target, c.intensity, tuning);
+  } else if (mode === "jointLock") {
+    resolveGrappleJointLock(world, e, target, c.intensity, tuning, impacts);
+  }
+}
+
+/* ------------------ Weapon bind breaking (Phase 2C) ------------------ */
+
+/**
+ * Resolve an active breakBind command.
+ *
+ * The entity attempts to disengage their weapon from the bind.
+ * A seeded torque contest (peakForce × momentArm) determines the outcome.
+ * On success: bind clears for both; the loser takes a brief stun (q(0.05)).
+ * On failure: bind persists; no effect.
+ *
+ * The bind always clears if the partner entity is dead or no longer present.
+ */
+function resolveBreakBind(
+  world: WorldState,
+  e: Entity,
+  intensity: Q,
+  index: WorldIndex,
+  trace: TraceSink,
+): void {
+  if (e.action.weaponBindPartnerId === 0) return;  // not bound
+
+  const partner = index.byId.get(e.action.weaponBindPartnerId);
+  if (!partner || partner.injury.dead) {
+    // Partner gone — trivially clear
+    e.action.weaponBindPartnerId = 0;
+    e.action.weaponBindTicks = 0;
+    return;
+  }
+
+  const breakerWpn = findWeapon(e.loadout);
+  const holderWpn  = findWeapon(partner.loadout);
+  const breakerArm = breakerWpn?.momentArm_m ?? Math.trunc(0.55 * SCALE.m);
+  const holderArm  = holderWpn?.momentArm_m  ?? Math.trunc(0.55 * SCALE.m);
+
+  // Win probability, scaled by command intensity (half-hearted attempt is less likely to succeed)
+  const baseWinQ = breakBindContestQ(
+    e.attributes.performance.peakForce_N,
+    partner.attributes.performance.peakForce_N,
+    breakerArm,
+    holderArm,
+  );
+  const winQ = clampQ(qMul(baseWinQ, intensity), q(0.05), q(0.95));
+
+  const breakSeed = eventSeed(world.seed, world.tick, e.id, partner.id, 0xBB1D);
+  const breakRoll = (breakSeed % SCALE.Q) as Q;
+
+  if (breakRoll < winQ) {
+    // Success: clear bind for both; loser takes a brief stun
+    partner.condition.stunned = clampQ(partner.condition.stunned + q(0.05), 0, SCALE.Q);
+
+    e.action.weaponBindPartnerId = 0;
+    e.action.weaponBindTicks = 0;
+    partner.action.weaponBindPartnerId = 0;
+    partner.action.weaponBindTicks = 0;
+
+    trace.onEvent({
+      kind: TraceKinds.WeaponBindBreak,
+      tick: world.tick,
+      entityId: e.id,
+      partnerId: partner.id,
+      reason: "forced",
+    });
+  }
+  // On failure: bind persists; no trace (silence is the signal)
+}
+
+// ---- Phase 2B: per-action stamina cost helpers ----
+
+/**
+ * Energy cost (J) for a melee strike at a given intensity.
+ * Modelled as a ~40 ms burst at peak power:
+ *   cost = peakPower_W × 0.04 × intensity
+ * Calibration: 1200 W × 0.04 = 48 J ≈ 50 J reference.
+ * Minimum 5 J to avoid zero cost on very weak entities.
+ */
+function strikeCost_J(attacker: Entity, intensity: Q): I32 {
+  const base = Math.max(20, mulDiv(attacker.attributes.performance.peakPower_W, 4, 100));
+  return Math.max(5, mulDiv(base, intensity, SCALE.Q));
+}
+
+/**
+ * Energy cost (J) of an active melee defence (block or parry).
+ * Modelled as a ~25 ms burst at peak power:
+ *   cost = peakPower_W × 0.025
+ * Calibration: 1200 W × 0.025 = 30 J reference.
+ * Minimum 5 J.
+ */
+function defenceCost_J(defender: Entity): I32 {
+  return Math.max(5, mulDiv(defender.attributes.performance.peakPower_W, 25, 1000));
 }
 
 function armourCoversHit(world: WorldState, coverage: Q, aId: number, bId: number): boolean {

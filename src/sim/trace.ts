@@ -61,6 +61,20 @@ export type TraceEvent =
       targetId: number;
       phase: "start" | "tick" | "break";
       strengthQ?: number;
+    }
+  | {
+      kind: typeof TraceKinds.WeaponBind;  // Phase 2C
+      tick: number;
+      attackerId: number;
+      targetId: number;
+      durationTicks: number;
+    }
+  | {
+      kind: typeof TraceKinds.WeaponBindBreak;  // Phase 2C
+      tick: number;
+      entityId: number;
+      partnerId: number;
+      reason: "timeout" | "forced";
     };
 
 export interface TraceSink {

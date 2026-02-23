@@ -30,7 +30,7 @@ export function mkHumanoidEntity(id: number, teamId: number, x_m: number, y_m: n
     action: defaultAction(),
     condition: defaultCondition(),
     injury: defaultInjury(),
-    grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0) },
+    grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0), position: "standing" as const },
   };
 }
 
@@ -77,7 +77,7 @@ export function mkWorld(seed: number, arg: any): WorldState {
         action: defaultAction(),
         condition: defaultCondition(),
         injury: defaultInjury(),
-        grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0) },
+        grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0), position: "standing" as const },
       },
       {
         id: 2,
@@ -92,7 +92,7 @@ export function mkWorld(seed: number, arg: any): WorldState {
         action: defaultAction(),
         condition: defaultCondition(),
         injury: defaultInjury(),
-        grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0) },
+        grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0), position: "standing" as const },
       },
     ],
   } as any;

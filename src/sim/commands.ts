@@ -11,7 +11,8 @@ export type Command =
   | AttackCommand
   | AttackNearestCommand
   | GrappleCommand
-  | BreakGrappleCommand;
+  | BreakGrappleCommand
+  | BreakBindCommand;
 
 export interface MoveCommand {
   kind: typeof CommandKinds.Move;
@@ -53,7 +54,15 @@ export interface AttackNearestCommand {
   mode: typeof EngageModes.Strike;
 }
 
-export interface GrappleCommand { kind: typeof CommandKinds.Grapple; targetId: number; intensity: Q; }
+export type GrappleMode = "grapple" | "throw" | "choke" | "jointLock";
+
+export interface GrappleCommand {
+  kind: typeof CommandKinds.Grapple;
+  targetId: number;
+  intensity: Q;
+  mode?: GrappleMode;  // default "grapple"
+}
 export interface BreakGrappleCommand { kind: typeof CommandKinds.BreakGrapple; intensity: Q; }
+export interface BreakBindCommand    { kind: typeof CommandKinds.BreakBind;    intensity: Q; }  // Phase 2C
 
 export type CommandMap = Map<number, readonly Command[]>;

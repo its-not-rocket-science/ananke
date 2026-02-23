@@ -116,6 +116,23 @@ export function stepEnergyAndFatigue(
 
   state.reserveEnergy_J = Math.max(0, state.reserveEnergy_J - E_reserveDrain);
 
+  // Phase 2B: regen — surplus continuous power replenishes reserve.
+  // Rate = surplus_W × dt × recoveryRate × 0.40 (40 % aerobic-to-reserve conversion).
+  // Calibration: at idle (80 W demand, 200 W cont) → 120 W surplus →
+  //   120 × 0.05 s × 1.0 × 0.40 = 2.4 J/tick ≈ 2 J/tick (integer floor).
+  const surplus_W = Math.max(0, cont - P);
+  if (surplus_W > 0) {
+    const regenBase_J = mulDiv(surplus_W, dt, SCALE.s);
+    const regen_J = mulDiv(
+      mulDiv(regenBase_J, a.resilience.recoveryRate, SCALE.Q),
+      q(0.40), SCALE.Q
+    );
+    state.reserveEnergy_J = Math.min(
+      a.performance.reserveEnergy_J,
+      state.reserveEnergy_J + regen_J
+    );
+  }
+
   const cap = Math.max(1, a.performance.reserveEnergy_J);
   const stepFrac_Q = mulDiv(E_reserveDrain * SCALE.Q, 1, cap) as Q;
 

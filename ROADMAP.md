@@ -142,45 +142,43 @@ Core kinetic combat simulation.
 - Occlusion: friendly lane blocking
 - Fire, corrosive, electrical, radiation, suffocation hazards (tick-based accumulation)
 
-**Partially implemented:**
-
-- Grappling: command accepted, trace emitted; leverage/grip/throw mechanics TBD (Phase 2)
-- Stamina: fatigue accumulates; exhaustion-driven penalties TBD (Phase 2)
+**Completed in Phase 2:** grappling (full mechanics) and stamina (full exhaustion model).
 
 ---
 
-## Phase 2 — Grappling, Stamina and Weapon Dynamics
+## Phase 2 — Grappling, Stamina and Weapon Dynamics (complete)
 
-### Grappling system
+### Grappling system (complete)
 
 Goal: deterministic close-combat control.
 
-- Grapple attempt resolution (strength + mass + technique)
+- Grapple attempt resolution (strength + mass + technique contest, seeded RNG)
 - Leverage comparison using physical moment arms (N·m)
 - Break-grapple attempt mechanics
 - Positional locking (prone, pinned, standing)
 - Throw and trip: outcome proportional to leverage differential and velocity (kg·m/s)
 - Ground fighting states: attack and defence modifiers per position
 - Choke and joint-lock: targeted structural or suffocation damage
+- Pinned/held impairment penalties in mobility and manipulation multipliers
 
-Determinism requirements: pair-based resolution, stable ordering, no mutation mid-resolution.
-
-### Stamina and energy model
-
-The engine already models `reserveEnergy_J` and `continuousPower_W`. This phase adds:
+### Stamina and energy model (complete)
 
 - Stamina depletion per action type (strike, block, sprint, grapple) in joules
 - Regen rate proportional to `continuousPower_W` and recovery state
-- Exhaustion threshold: when reserve falls below a fraction of baseline, functional penalties apply
+- Exhaustion threshold: when reserve falls below 15% of baseline, functional penalties ramp in
 - Collapse when depleted: entity becomes prone and defenceless
+- Fatigue accumulation (`energy.fatigue`) affects all four functional multipliers
 
-### Weapon dynamics expansion
+### Weapon dynamics expansion (complete)
 
-- Momentum carry between strikes (committed swing inertia)
-- Recovery time after missed strike (derived from weapon mass and angular momentum)
-- Weapon bind states: opposing weapons locked, requiring strength contest to disengage
-- Reach dominance: reach differential penalises short weapons in open ground
-- Two-handed leverage bonuses: moment arm advantage quantified in N·m
+- Recovery time after missed strike: `floor(mass_kg × reach_m × 2)` extra cooldown ticks, scaled by swing intensity
+- Weapon bind on parry: probability based on both weapons' moment arms; duration based on average mass; requires seeded strength contest (`breakBind` command) to disengage early
+- Reach dominance: reach deficit penalises both attacker and parrying defender (tactical/sim modes)
+- Two-handed leverage bonus: 1.12× energy delivery when both arms are functional and no off-hand item
+- Bind state traces: `WeaponBind` on lock, `WeaponBindBreak` on timeout or forced break
+- Fatigue increases bind probability (tired fighters bind more easily)
+
+**Not implemented** (deferred): momentum carry between strikes (committed swing inertia).
 
 ---
 
