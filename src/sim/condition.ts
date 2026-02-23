@@ -17,6 +17,9 @@ export interface ConditionState {
   // deterministic incapacity timers (ticks)
   standBlockedTicks: number;   // cannot stand while > 0
   unconsciousTicks: number;    // unconscious while > 0
+
+  // Phase 3: suppression from near-miss ranged fire
+  suppressedTicks: number;     // coordination penalty while > 0
 }
 
 export const defaultCondition = (): ConditionState => ({

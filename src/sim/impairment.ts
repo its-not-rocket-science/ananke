@@ -66,6 +66,9 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
   const pinnedQ: Q = (e.condition?.pinned ?? false) ? SCALE.Q : 0;
   const heldQ:   Q = (e.grapple?.heldByIds?.length ?? 0) > 0 ? SCALE.Q : 0;
 
+  // Phase 3: suppression from near-miss ranged fire
+  const suppressedQ: Q = ((e.condition as any).suppressedTicks ?? 0) > 0 ? SCALE.Q : 0;
+
   // Phase 2B: exhaustion signal — penalty ramps in below 15 % of baseline reserve.
   // exhaustionQ = 0 when reserve ≥ 15 %, up to 1 when reserve = 0.
   const EXHAUSTION_THRESHOLD: I32 = q(0.15); // 15 % of baseline (2 000 fixed-point = q(0.20) would be 4000/20000)
@@ -117,6 +120,7 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
     [stun, q(0.40)],
     [concLoss, q(0.35)],
     [exhaustionQ, q(0.20)],  // exhaustion: up to -20 % at full depletion
+    [suppressedQ, q(0.10)],  // Phase 3: suppression: -10 % while suppressed
   );
 
   const staminaMul = applyImpairmentsClamped(

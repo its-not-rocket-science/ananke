@@ -12,7 +12,8 @@ export type Command =
   | AttackNearestCommand
   | GrappleCommand
   | BreakGrappleCommand
-  | BreakBindCommand;
+  | BreakBindCommand
+  | ShootCommand;
 
 export interface MoveCommand {
   kind: typeof CommandKinds.Move;
@@ -64,5 +65,12 @@ export interface GrappleCommand {
 }
 export interface BreakGrappleCommand { kind: typeof CommandKinds.BreakGrapple; intensity: Q; }
 export interface BreakBindCommand    { kind: typeof CommandKinds.BreakBind;    intensity: Q; }  // Phase 2C
+
+export interface ShootCommand {           // Phase 3
+  kind: typeof CommandKinds.Shoot;
+  targetId: number;
+  weaponId?: string;
+  intensity?: Q;   // aiming effort; default q(1.0)
+}
 
 export type CommandMap = Map<number, readonly Command[]>;

@@ -1,11 +1,11 @@
 import type { WorldState } from "./world.js";
 import type { Entity } from "./entity.js";
-import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand } from "./commands.js";
+import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand, ShootCommand } from "./commands.js";
 
 import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
 import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive.js";
 import { DamageChannel } from "../channels.js";
-import { deriveArmourProfile, findWeapon, findShield, type Weapon } from "../equipment.js";
+import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, type Weapon, type RangedWeapon } from "../equipment.js";
 import { deriveFunctionalState } from "./impairment.js";
 import { TUNING, type SimulationTuning } from "./tuning.js";
 import { buildTraitProfile } from "../traits.js";
@@ -13,7 +13,7 @@ import { buildTraitProfile } from "../traits.js";
 import { integratePos, type Vec3, v3 } from "./vec3.js";
 import { defaultIntent } from "./intent.js";
 import { defaultAction } from "./action.js";
-import { resolveHit, shieldCovers, type HitArea } from "./combat.js";
+import { resolveHit, shieldCovers, chooseArea, type HitArea } from "./combat.js";
 import { normaliseDirCheapQ, dotDirQ } from "./vec3.js";
 import { eventSeed } from "./seeds.js";
 import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body.js";
@@ -51,6 +51,15 @@ import {
   bindDurationTicks,
   breakBindContestQ,
 } from "./weapon_dynamics.js";
+
+import {
+  energyAtRange_J,
+  adjustedDispersionQ,
+  groupingRadius_m,
+  thrownLaunchEnergy_J,
+  recycleTicks,
+  shootCost_J,
+} from "./ranged.js";
 
 export const TICK_HZ = 20;
 export const DT_S: I32 = to.s(1 / TICK_HZ);
@@ -99,14 +108,19 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     // Phase 2C: default weapon bind fields
     if ((e as any).action.weaponBindPartnerId === undefined) (e as any).action.weaponBindPartnerId = 0;
     if ((e as any).action.weaponBindTicks === undefined) (e as any).action.weaponBindTicks = 0;
+    // Phase 3: ranged combat fields
+    if ((e as any).action.shootCooldownTicks === undefined) (e as any).action.shootCooldownTicks = 0;
+    if ((e as any).condition.suppressedTicks === undefined) (e as any).condition.suppressedTicks = 0;
   }
 
   for (const e of world.entities) {
     e.action.attackCooldownTicks = Math.max(0, e.action.attackCooldownTicks - 1);
     e.action.defenceCooldownTicks = Math.max(0, e.action.defenceCooldownTicks - 1);
     e.action.grappleCooldownTicks = Math.max(0, e.action.grappleCooldownTicks - 1);
+    e.action.shootCooldownTicks = Math.max(0, e.action.shootCooldownTicks - 1);     // Phase 3
     e.condition.standBlockedTicks = Math.max(0, e.condition.standBlockedTicks - 1);
     e.condition.unconsciousTicks = Math.max(0, e.condition.unconsciousTicks - 1);
+    e.condition.suppressedTicks = Math.max(0, e.condition.suppressedTicks - 1);    // Phase 3
     // Phase 2C: weapon bind decay — emit trace only from the smaller-ID entity to avoid duplicates
     if (e.action.weaponBindTicks > 0) {
       e.action.weaponBindTicks = Math.max(0, e.action.weaponBindTicks - 1);
@@ -193,6 +207,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
         resolveBreakGrapple(world, e, (c as BreakGrappleCommand).intensity, tuning, index, trace);
       } else if (c.kind === "breakBind") {
         resolveBreakBind(world, e, (c as BreakBindCommand).intensity, index, trace);
+      } else if (c.kind === "shoot") {
+        resolveShoot(world, e, c as ShootCommand, tuning, index, impacts, trace);
       }
     }
   }
@@ -840,6 +856,157 @@ function resolveBreakBind(
     });
   }
   // On failure: bind persists; no trace (silence is the signal)
+}
+
+/* ------------------ Ranged combat (Phase 3) ------------------ */
+
+/** Integer square root of a BigInt (floor). Newton-Raphson. */
+function isqrtBig(n: bigint): bigint {
+  if (n <= 0n) return 0n;
+  let r = n;
+  let r1 = (r + 1n) >> 1n;
+  while (r1 < r) { r = r1; r1 = (r + n / r) >> 1n; }
+  return r;
+}
+
+function resolveShoot(
+  world: WorldState,
+  shooter: Entity,
+  cmd: ShootCommand,
+  tuning: SimulationTuning,
+  index: WorldIndex,
+  impacts: ImpactEvent[],
+  trace: TraceSink,
+): void {
+  if (shooter.action.shootCooldownTicks > 0) return;
+
+  const wpn = findRangedWeapon(shooter.loadout, cmd.weaponId);
+  if (!wpn) return;
+
+  const target = index.byId.get(cmd.targetId);
+  if (!target || target.injury.dead) return;
+
+  const funcA = deriveFunctionalState(shooter, tuning);
+  if (!funcA.canAct) return;
+
+  // 3D range (SCALE.m units)
+  const dx = BigInt(target.position_m.x - shooter.position_m.x);
+  const dy = BigInt(target.position_m.y - shooter.position_m.y);
+  const dz = BigInt(target.position_m.z - shooter.position_m.z);
+  const dist_m = Number(isqrtBig(dx * dx + dy * dy + dz * dz));
+
+  const intensity = clampQ(cmd.intensity ?? q(1.0), q(0.1), q(1.0));
+
+  // Determine launch energy
+  const launchEnergy = wpn.category === "thrown"
+    ? thrownLaunchEnergy_J(shooter.attributes.performance.peakPower_W)
+    : wpn.launchEnergy_J;
+
+  // Energy at impact after drag
+  const energy_J = energyAtRange_J(launchEnergy, wpn.dragCoeff_perM, dist_m);
+
+  // Shooter's aim quality
+  const ctrl = shooter.attributes.control;
+  const adjDisp = adjustedDispersionQ(
+    wpn.dispersionQ,
+    ctrl.controlQuality,
+    ctrl.fineControl,
+    shooter.energy.fatigue,
+    intensity,
+  );
+  const gRadius_m = groupingRadius_m(adjDisp, dist_m);
+
+  // Body half-width: ~20% of stature (≈0.35m for 1.75m human)
+  const bodyHalfWidth_m = mulDiv(shooter.attributes.morphology.stature_m, 2000, SCALE.Q);
+
+  // Deterministic hit roll (salt 0xD15A)
+  const dispSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15A);
+  const errorMag_m = gRadius_m > 0
+    ? mulDiv(dispSeed % SCALE.Q, gRadius_m, SCALE.Q)
+    : 0;
+
+  const hit = errorMag_m <= bodyHalfWidth_m;
+  const suppressed = !hit && errorMag_m <= bodyHalfWidth_m * 3;
+
+  // Deduct stamina and set reload cooldown regardless of hit
+  shooter.energy.reserveEnergy_J = Math.max(
+    0,
+    shooter.energy.reserveEnergy_J - shootCost_J(wpn, intensity, shooter.attributes.performance.peakPower_W),
+  );
+  shooter.action.shootCooldownTicks = recycleTicks(wpn, TICK_HZ);
+
+  if (suppressed) {
+    target.condition.suppressedTicks = Math.max(target.condition.suppressedTicks, 4);
+  }
+
+  let hitRegion: ReturnType<typeof regionFromHit> | undefined;
+
+  if (hit && energy_J > 0) {
+    // Choose hit region
+    const sideSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15B);
+    const areaSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15C);
+    const area = chooseArea((areaSeed % SCALE.Q) as Q);
+    const sideBit = (sideSeed & 1) as 0 | 1;
+    hitRegion = regionFromHit(area, sideBit);
+
+    // Shield interposition
+    const shield = findShield(target.loadout);
+    const shieldSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15D);
+    const shieldHit = shield && shieldCovers(shield, area)
+      && ((shieldSeed % SCALE.Q) < (shield as any).coverageQ);
+
+    // Armour
+    const armour = deriveArmourProfile(target.loadout);
+    const KINETIC_MASK = 1 << DamageChannel.Kinetic;
+    const armourHit = armourCoversHit(world, armour.coverageByRegion[hitRegion], shooter.id, target.id);
+    const protectedByArmour = armourHit && ((armour.protects & KINETIC_MASK) !== 0);
+
+    let finalEnergy = energy_J;
+    if (shieldHit) {
+      const shieldResidual = Math.max(0, energy_J - (shield as any).blockResist_J);
+      finalEnergy = mulDiv(shieldResidual, (shield as any).deflectQ ?? q(0.30), SCALE.Q);
+    }
+    if (protectedByArmour) {
+      finalEnergy = applyKineticArmourPenetration(finalEnergy, armour.resist_J, armour.protectedDamageMul);
+    }
+
+    // Build a minimal Weapon proxy for applyImpactToInjury
+    const wpnProxy: Weapon = {
+      id: wpn.id,
+      kind: "weapon",
+      name: wpn.name,
+      mass_kg: wpn.projectileMass_kg,
+      bulk: q(0),
+      damage: wpn.damage,
+    };
+
+    impacts.push({
+      kind: "impact",
+      attackerId: shooter.id,
+      targetId: target.id,
+      region: hitRegion,
+      energy_J: finalEnergy,
+      protectedByArmour,
+      weaponId: wpn.id,
+      wpn: wpnProxy,
+      blocked: shieldHit ?? false,
+      parried: false,
+      hitQuality: q(0.75),
+      shieldBlocked: shieldHit ?? false,
+    });
+  }
+
+  trace.onEvent({
+    kind: TraceKinds.ProjectileHit,
+    tick: world.tick,
+    shooterId: shooter.id,
+    targetId: target.id,
+    hit,
+    region: hitRegion,
+    distance_m: dist_m,
+    energyAtImpact_J: energy_J,
+    suppressed,
+  });
 }
 
 // ---- Phase 2B: per-action stamina cost helpers ----

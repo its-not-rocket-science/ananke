@@ -74,8 +74,9 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 2 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
-injury, environmental hazards, movement physics, formation basics, and deterministic AI scaffolding.
+**Phase 3 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+ranged and projectile combat, injury, environmental hazards, movement physics, formation
+basics, and deterministic AI scaffolding.
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -302,6 +303,28 @@ Bleeding rate increases proportionally to internal damage severity.
 Actions cost energy (joules). When reserve falls below 15% of baseline, functional penalties
 ramp in. At zero reserve the entity collapses prone and loses all active defence.
 
+### Ranged combat
+
+Physics-based projectile system parallel to melee. Issued via `shoot` command.
+
+**Energy at range** — linear drag approximation: `energy_J = launchEnergy_J × max(0, 1 − range_m × dragCoeff_perM)`. No energy means no hit.
+
+**Accuracy** — angular dispersion converts to grouping radius at range (`dispersionQ × range_m`). Compared against body half-width (~20% of stature). Miss if error exceeds half-width; near-miss if within 3× half-width.
+
+**Dispersion modifiers**: `controlQuality`, `fineControl`, fatigue, and aiming intensity all scale the base weapon dispersion.
+
+**Suppression** — near-misses set `suppressedTicks` on the target, applying a −10% `coordinationMul` penalty until the counter drains.
+
+**Projectile categories:**
+
+| Category | Launch energy | Examples |
+|---|---|---|
+| Thrown | Derived from thrower `peakPower_W` (÷10) | Sling |
+| Bow | Fixed weapon property (J) | Short bow, long bow, crossbow |
+| Firearm | Fixed weapon property (J) | Pistol, musket |
+
+Hits reuse the existing injury pipeline (`applyImpactToInjury`) via a weapon proxy. Armour and shields interpose by the same rules as melee.
+
 ---
 
 ## Armour
@@ -380,7 +403,7 @@ src/
   channels.ts       DamageChannel enum and bitmask helpers
   traits.ts         Entity trait definitions and attribute multiplier application
   archetypes.ts     Reference archetype baselines (HUMAN_BASE, SERVICE_ROBOT)
-  equipment.ts      Weapon, Armour, Shield, Loadout types and starter item catalogue
+  equipment.ts      Weapon, Armour, Shield, RangedWeapon, Loadout types and starter item catalogue
   generate.ts       Procedural individual generation from archetype with variance distributions
   derive.ts         Movement caps and energy/fatigue derived from attributes and loadout
 
@@ -396,6 +419,7 @@ src/
     combat.ts           resolveHit(), parryLeverageQ(), shield helpers
     grapple.ts          Grapple resolution: score, positions, throw/choke/joint-lock
     weapon_dynamics.ts  Reach dominance, two-handed bonus, miss recovery, weapon bind/break
+    ranged.ts           Ranged physics: energy at range, dispersion, grouping radius, costs
     events.ts           ImpactEvent type, deterministic sort
     seeds.ts            Deterministic per-event seed derivation
     formation.ts        pickNearestEnemyInReach()

@@ -1,5 +1,5 @@
 import type { I32, Q } from "./units.js";
-import { SCALE, q, clampQ, qMul, mulDiv } from "./units.js";
+import { SCALE, q, clampQ, qMul, mulDiv, to } from "./units.js";
 import type { ChannelMask } from "./channels.js";
 import { DamageChannel, channelMask } from "./channels.js";
 import type { IndividualAttributes } from "./types.js";
@@ -86,7 +86,18 @@ export interface Gear extends ItemBase {
   kind: "gear";
 }
 
-export type Item = Weapon | Armour | Gear | Shield;
+export interface RangedWeapon extends ItemBase {  // Phase 3
+  kind: "ranged";
+  category: "thrown" | "bow" | "firearm";
+  launchEnergy_J: I32;      // 0 = derive from thrower (thrown category)
+  projectileMass_kg: I32;   // projectile mass for reference
+  dragCoeff_perM: Q;        // q(0.007) → 0.7% energy loss per metre
+  dispersionQ: Q;           // base angular error at 1m (radians in Q)
+  recycleTime_s: I32;       // time between shots (reload + ready)
+  damage: WeaponDamageProfile;
+}
+
+export type Item = Weapon | Armour | Gear | Shield | RangedWeapon;
 export interface Loadout {
   items: Item[];
 }
@@ -288,6 +299,13 @@ export function findWeapon(loadout: Loadout, weaponId?: string): Weapon | null {
   return weapons.find(w => w.id === weaponId) ?? weapons[0]!;
 }
 
+export function findRangedWeapon(loadout: Loadout, weaponId?: string): RangedWeapon | null {  // Phase 3
+  const ranged = loadout.items.filter((x): x is RangedWeapon => x.kind === "ranged");
+  if (ranged.length === 0) return null;
+  if (!weaponId) return ranged[0]!;
+  return ranged.find(w => w.id === weaponId) ?? ranged[0]!;
+}
+
 
 export function findShield(loadout: Loadout): any {
   return loadout.items.find(item => item?.kind === "shield");
@@ -411,5 +429,102 @@ export const STARTER_SHIELDS: Shield[] = [
     manipulationMul: q(0.95),
     mobilityMul: q(0.98),
     fatigueMul: q(1.05),
+  },
+];
+
+// Phase 3: starter ranged weapons
+// damage profile: projectiles are penetrating; surface fraction is low.
+const PROJECTILE_DAMAGE: WeaponDamageProfile = {
+  surfaceFrac: q(0.20),
+  internalFrac: q(0.55),
+  structuralFrac: q(0.25),
+  bleedFactor: q(0.75),
+  penetrationBias: q(0.70),
+};
+
+export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
+  {
+    id: "rng_sling",
+    kind: "ranged",
+    name: "Sling",
+    category: "thrown",
+    mass_kg: Math.round(0.1 * SCALE.kg),
+    bulk: q(0.8),
+    launchEnergy_J: 0,                  // derived from thrower peakPower_W
+    projectileMass_kg: Math.round(0.08 * SCALE.kg),
+    dragCoeff_perM: q(0.012),           // 1.2% energy loss per metre
+    dispersionQ: q(0.012),             // 12 mrad base
+    recycleTime_s: to.s(2.0),
+    damage: PROJECTILE_DAMAGE,
+  },
+  {
+    id: "rng_shortbow",
+    kind: "ranged",
+    name: "Short bow",
+    category: "bow",
+    mass_kg: Math.round(0.8 * SCALE.kg),
+    bulk: q(1.3),
+    launchEnergy_J: 60,
+    projectileMass_kg: Math.round(0.025 * SCALE.kg),
+    dragCoeff_perM: q(0.007),           // 0.7% loss/m
+    dispersionQ: q(0.012),
+    recycleTime_s: to.s(1.5),
+    damage: PROJECTILE_DAMAGE,
+  },
+  {
+    id: "rng_longbow",
+    kind: "ranged",
+    name: "Long bow",
+    category: "bow",
+    mass_kg: Math.round(1.2 * SCALE.kg),
+    bulk: q(1.6),
+    launchEnergy_J: 90,
+    projectileMass_kg: Math.round(0.025 * SCALE.kg),
+    dragCoeff_perM: q(0.005),           // 0.5% loss/m
+    dispersionQ: q(0.008),
+    recycleTime_s: to.s(2.0),
+    damage: PROJECTILE_DAMAGE,
+  },
+  {
+    id: "rng_crossbow",
+    kind: "ranged",
+    name: "Crossbow",
+    category: "bow",
+    mass_kg: Math.round(3.5 * SCALE.kg),
+    bulk: q(2.0),
+    launchEnergy_J: 120,
+    projectileMass_kg: Math.round(0.040 * SCALE.kg),
+    dragCoeff_perM: q(0.004),
+    dispersionQ: q(0.006),
+    recycleTime_s: to.s(5.0),
+    damage: PROJECTILE_DAMAGE,
+  },
+  {
+    id: "rng_pistol",
+    kind: "ranged",
+    name: "Pistol",
+    category: "firearm",
+    mass_kg: Math.round(1.2 * SCALE.kg),
+    bulk: q(1.1),
+    launchEnergy_J: 400,
+    projectileMass_kg: Math.round(0.015 * SCALE.kg),
+    dragCoeff_perM: q(0.002),
+    dispersionQ: q(0.015),
+    recycleTime_s: to.s(12.0),
+    damage: PROJECTILE_DAMAGE,
+  },
+  {
+    id: "rng_musket",
+    kind: "ranged",
+    name: "Musket",
+    category: "firearm",
+    mass_kg: Math.round(4.5 * SCALE.kg),
+    bulk: q(2.2),
+    launchEnergy_J: 600,
+    projectileMass_kg: Math.round(0.030 * SCALE.kg),
+    dragCoeff_perM: q(0.0015),          // 0.15% loss/m
+    dispersionQ: q(0.010),
+    recycleTime_s: to.s(18.0),
+    damage: PROJECTILE_DAMAGE,
   },
 ];

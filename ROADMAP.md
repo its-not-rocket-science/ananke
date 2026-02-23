@@ -232,6 +232,95 @@ residual energy as injury. Identical to the melee kinetic channel, with velocity
 Incoming fire within a threat radius (m) causes stress accumulation even on near-misses,
 feeding the morale and fear system (Phase 5).
 
+### Planned extensions
+
+#### Cover and partial occlusion
+
+Obstacles occupy a fraction of the target's apparent cross-section from the shooter's vantage
+point. This fraction reduces the effective body half-width used in hit determination:
+
+```
+effectiveHalfWidth_m = bodyHalfWidth_m × (1 - coverFraction)
+```
+
+`coverFraction` is a Q value (0 = no cover, q(1.0) = full hard cover) derived from the
+obstacle's geometry and its position relative to the shooter–target line. Full hard cover
+(`coverFraction = q(1.0)`) makes the target un-hittable directly; indirect fire or flanking
+required. Partial cover (e.g., q(0.50)) roughly halves effective target area and thus doubles
+the range at which accurate fire is possible.
+
+Cover cells are introduced in Phase 6 (battlefield systems). The ranged hit formula already
+has the insertion point (`bodyHalfWidth_m`) ready to receive the modifier.
+
+#### Aiming time (multi-tick hold)
+
+Sustained aim across multiple ticks before firing reduces dispersion multiplicatively. An
+entity accumulates an `aimTicks` counter while issuing consecutive `shoot` commands against
+the same target without firing (or via a new `aim` command). Dispersion is reduced by an
+`aimMul` that converges from 1.0 toward a weapon-specific minimum (e.g., q(0.50) at full
+aim for a longbow):
+
+```
+aimMul = max(wpn.minAimMul, q(1.0) - qMul(aimTicks × aimDecayRate, q(1.0)))
+adjustedDisp = qMul(adjustedDispersionQ(...), aimMul)
+```
+
+`aimTicks` resets on movement, taking a hit, or firing. `aimDecayRate` and `minAimMul` are
+per-weapon properties. A crossbow can hold full aim indefinitely (low decay, stable rest);
+a drawn longbow accumulates fatigue and degrades aim after ~3 seconds.
+
+#### Moving target penalty
+
+Target angular velocity (rad/s) contributes to effective dispersion as a lead-calculation
+error proportional to the shooter's `reactionTime_s`. If the shooter's lead estimate is
+wrong by more than the residual grouping radius, the shot misses even if dispersion is low:
+
+```
+leadError_m = mulDiv(target.velocity_mps, reactionTime_s, SCALE.s)
+effectiveGroupRadius_m = groupingRadius_m + leadError_m
+```
+
+The penalty is largest for fast-moving targets at close range (counter-intuitively difficult
+to hit) and small for distant slow targets where grouping radius already dominates. No new
+state is required; `target.velocity_mps` and `reactionTime_s` are already on the entity.
+
+#### Suppression and AI decision-making
+
+The existing `suppressedTicks` counter (Phase 3) feeds a `suppressionQ` value to `deriveFunctionalState`
+as a −10% `coordinationMul` penalty. Planned AI integration (Phase 4 and Phase 5):
+
+- `decideCommandsForEntity` checks `suppressedTicks > 0` and biases toward `setProne` or
+  `move` (retreat) over `attack` or `shoot`, weighted by the entity's `distressTolerance`
+- Fear accumulation (Phase 5): each suppression tick contributes a fear increment
+  proportional to `(1 - distressTolerance) × suppressionStrength_J`, where
+  `suppressionStrength_J` is a per-weapon property (near-miss by a cannon contributes more
+  fear than a sling stone)
+- Suppression duration scales with incoming fire intensity; sustained fire resets the
+  counter, preventing recovery until the source is neutralised
+
+#### Ammunition types
+
+A `RangedWeapon` can carry an `ammo?: AmmoType[]` array. When present, a `shoot` command
+may specify an `ammoId` to select a loaded round. `AmmoType` overrides the weapon's base
+properties for that shot only:
+
+```typescript
+interface AmmoType {
+  id: string;
+  name: string;
+  projectileMass_kg: I32;    // heavier = more KE at cost of drag
+  dragCoeff_perM: Q;          // streamlined vs blunt rounds
+  damage: WeaponDamageProfile; // hollow-point vs AP vs incendiary
+  launchEnergyMul?: Q;        // e.g., q(0.85) for subsonic round
+}
+```
+
+Examples: bodkin arrow (high structuralFrac, low dragCoeff) vs broadhead (high bleedFactor,
+higher drag); standard ball vs explosive shell (damage deferred to Phase 10 blast model);
+armour-piercing vs hollow-point for firearms. The base weapon's `launchEnergy_J` is
+multiplied by `launchEnergyMul` if present. No engine change is needed beyond reading the
+override in `resolveShoot()`.
+
 ### Indirect fire (planned Phase 10)
 
 Mortars, artillery, grenades: explosion physics handled in Phase 10 (Environmental Hazards).

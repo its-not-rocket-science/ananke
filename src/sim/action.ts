@@ -9,6 +9,9 @@ export interface ActionState {
   // Phase 2C: weapon bind state
   weaponBindPartnerId: number;  // 0 if not bound
   weaponBindTicks: number;      // ticks remaining in bind
+
+  // Phase 3: ranged combat
+  shootCooldownTicks: I32;      // ticks until next shot can be fired
 }
 
 export const defaultAction = (): ActionState => ({
@@ -18,4 +21,5 @@ export const defaultAction = (): ActionState => ({
   facingDirQ: { x: 10_000, y: 0, z: 0 },
   weaponBindPartnerId: 0,
   weaponBindTicks: 0,
+  shootCooldownTicks: 0,
 });
