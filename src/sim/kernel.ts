@@ -1292,15 +1292,18 @@ function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, regi
   const intInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(intFrac, areaInt), INT_J * SCALE.Q));
   const strInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(wpn.damage.structuralFrac, areaStr), STR_J * SCALE.Q));
 
-  target.injury.byRegion[region].surfaceDamage = clampQ(target.injury.byRegion[region].surfaceDamage + surfInc, 0, SCALE.Q);
-  target.injury.byRegion[region].internalDamage = clampQ(target.injury.byRegion[region].internalDamage + intInc, 0, SCALE.Q);
-  target.injury.byRegion[region].structuralDamage = clampQ(target.injury.byRegion[region].structuralDamage + strInc, 0, SCALE.Q);
+  const regionState = target.injury.byRegion[region];
+  if (!regionState) return;
+
+  regionState.surfaceDamage = clampQ(regionState.surfaceDamage + surfInc, 0, SCALE.Q);
+  regionState.internalDamage = clampQ(regionState.internalDamage + intInc, 0, SCALE.Q);
+  regionState.structuralDamage = clampQ(regionState.structuralDamage + strInc, 0, SCALE.Q);
 
   const bleedBase = clampQ(((surfInc + intInc) >>> 1) as any, 0, SCALE.Q);
   const bleedDelta = qMul(bleedBase, wpn.damage.bleedFactor);
 
   const BLEED_SCALE = q(0.004);
-  target.injury.byRegion[region].bleedingRate = clampQ(target.injury.byRegion[region].bleedingRate + qMul(bleedDelta, BLEED_SCALE), 0, q(1.0));
+  regionState.bleedingRate = clampQ(regionState.bleedingRate + qMul(bleedDelta, BLEED_SCALE), 0, q(1.0));
 
   const SHOCK_SPIKE = q(0.010);
   target.injury.shock = clampQ(target.injury.shock + qMul(bleedBase, SHOCK_SPIKE), 0, SCALE.Q);

@@ -1,6 +1,5 @@
 // src/sim/trace.ts
 import type { Vec3 } from "./vec3.js";
-import type { BodyRegion } from "./body.js";
 import type { Q, I32 } from "../units.js";
 
 import { TraceKinds, type HitArea } from "./kinds.js";
@@ -25,7 +24,7 @@ export type TraceEvent =
       tick: number;
       attackerId: number;
       targetId: number;
-      region: BodyRegion;
+      region: string;
       energy_J: number;
       blocked: boolean;
       parried: boolean;
@@ -82,7 +81,7 @@ export type TraceEvent =
       shooterId: number;
       targetId: number;
       hit: boolean;
-      region?: BodyRegion;          // only when hit=true
+      region?: string;               // only when hit=true
       distance_m: I32;
       energyAtImpact_J: number;
       suppressed: boolean;
