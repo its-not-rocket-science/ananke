@@ -3,6 +3,7 @@ import type { Vec3 } from "./vec3.js";
 import type { Q, I32 } from "../units.js";
 
 import { TraceKinds, type HitArea } from "./kinds.js";
+import type { MedicalAction } from "./medical.js";
 
 export type TraceEvent =
   | { kind: typeof TraceKinds.TickStart, tick: number }
@@ -91,6 +92,20 @@ export type TraceEvent =
       tick: number;
       entityId: number;
       fearQ: Q;
+    }
+  | {
+      kind: typeof TraceKinds.Fracture;       // Phase 9
+      tick: number;
+      entityId: number;
+      region: string;
+    }
+  | {
+      kind: typeof TraceKinds.TreatmentApplied; // Phase 9
+      tick: number;
+      treaterId: number;
+      targetId: number;
+      action: MedicalAction;
+      regionId?: string;
     };
 
 export interface TraceSink {

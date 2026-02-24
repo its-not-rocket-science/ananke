@@ -10,6 +10,7 @@ export const CommandKinds = {
   BreakGrapple: "breakGrapple",
   BreakBind: "breakBind",  // Phase 2C
   Shoot: "shoot",          // Phase 3
+  Treat: "treat",          // Phase 9
   SetProne: "setProne",
 } as const;
 
@@ -31,6 +32,8 @@ export const TraceKinds = {
   WeaponBindBreak: "weaponBindBreak", // Phase 2C
   ProjectileHit: "projectileHit",    // Phase 3
   MoraleRoute: "moraleRoute",         // Phase 5
+  Fracture: "fracture",               // Phase 9
+  TreatmentApplied: "treatmentApplied", // Phase 9
 } as const;
 
 export type TraceKind = typeof TraceKinds[keyof typeof TraceKinds];

@@ -828,39 +828,44 @@ All segments `structureType: "exoskeleton"`. `regeneratesViaMolting: true` on le
 
 ---
 
-## Phase 9 — Injury and Medical Simulation
+## Phase 9 — Injury and Medical Simulation (complete)
 
 **Depends on Phase 8 (body plan system).**
 
-### Extended injury types
+### Implemented
 
-Building on the current per-region model:
+**New file:** `src/sim/medical.ts` — `MedicalTier` (`none`/`bandage`/`surgicalKit`/`autodoc`/
+`nanomedicine`), `TIER_RANK`, `TIER_MUL`, `MedicalAction`, `ACTION_MIN_TIER`.
 
-- Fracture: structural damage with persistent locomotion or manipulation penalty
-- Organ damage: region-specific internal damage with systemic consequence
-- CNS damage: incapacitation or death proportional to CNS layout (Phase 8)
-- Infection: onset delay (s), progression rate, treatment dependency (TBD model)
-- Long-term disability: permanent attribute reduction after severe injury (TBD)
+**`src/sim/injury.ts`** — `RegionInjury` extended with:
+- `fractured: boolean` — set when `structuralDamage ≥ q(0.70)`; persists until surgery
+- `permanentDamage: Q` — floor set at `structuralDamage × 0.75` when damage ≥ q(0.90); surgery cannot heal below it
+- `bleedDuration_ticks: number` — counter of ticks with active bleeding > q(0.05)
+- `infectedTick: number` — tick of infection onset; `-1` = none; requires 100 ticks bleeding + `internalDamage > q(0.10)`
 
-### Bleeding and survival
+`InjuryState` extended with `hemolymphLoss: Q` (stub for Phase 8B exoskeleton fluid system).
 
-- Natural clotting: rate proportional to `structureIntegrity`, reducing bleed over time
-- Fatal bleed threshold: total fluid loss beyond which death is irreversible
-- Tourniquet and pressure: treatment action that zeroes regional bleeding immediately
+**`src/sim/kernel.ts`** — `applyImpactToInjury`: fracture detection + permanent damage floor.
+`stepInjuryProgression(e, tick)`: natural clotting at `(1 − structuralDamage) × q(0.0002)/tick`;
+infection onset/progression; permanent damage floor update; fatal fluid loss at `fluidLoss ≥ q(0.80)`.
+`resolveTreat()`: proximity gate (2 m), tier rank gate, four action handlers (tourniquet/bandage/
+surgery/fluidReplacement), `effectMul = tierMul × treatmentRateMul`.
 
-### Medical capability
+**`src/sim/impairment.ts`** — `fractureFraction()` helper; fracture penalties:
+`mobilityMul` −30% (legs), `manipulationMul` −25% (arms).
 
-Treatment outcomes depend on:
+**`src/sim/kinds.ts`** — `Treat` command kind; `Fracture` and `TreatmentApplied` trace kinds.
 
-- Medical skill level of practitioner (SkillId: `medical`)
-- Tools available, parameterised by capability tier (bandages, surgical kit, autodoc, nanomedicine)
-- Time since injury (infection window, shock progression)
-- Technology level (Phase 11)
-- Optional: magical healing (Phase 12)
+**`src/sim/commands.ts`** — `TreatCommand` interface; added to `Command` union.
 
-Treatment is modelled as a rate process. A medic applies treatment actions that modify bleed
-rate, clotting rate, shock level, and fluid replacement at physically plausible rates.
-There is no instant heal.
+**`src/sim/trace.ts`** — `Fracture` and `TreatmentApplied` trace event variants.
+
+**`test/medical.test.ts`** — 37 tests: fracture detection, natural clotting, infection onset/
+progression, permanent damage floor, fatal fluid loss, tourniquet/bandage/surgery/fluid
+replacement, tier rank ordering.
+
+**`tools/run-demo.ts`** — Scenario 4: field medicine — treated vs untreated soldier showing
+tourniquet, surgery progression, infection onset, and fatal fluid loss over 266 ticks.
 
 ---
 

@@ -3,6 +3,7 @@ import { q } from "../units.js";
 import type { Vec3 } from "./vec3.js";
 
 import { CommandKinds, DefenceMode, EngageModes, EngageMode, MoveMode, MoveModes } from "./kinds.js";
+import type { MedicalAction, MedicalTier } from "./medical.js";
 
 export type Command =
   | MoveCommand
@@ -13,7 +14,8 @@ export type Command =
   | GrappleCommand
   | BreakGrappleCommand
   | BreakBindCommand
-  | ShootCommand;
+  | ShootCommand
+  | TreatCommand;
 
 export interface MoveCommand {
   kind: typeof CommandKinds.Move;
@@ -71,6 +73,15 @@ export interface ShootCommand {           // Phase 3
   targetId: number;
   weaponId?: string;
   intensity?: Q;   // aiming effort; default q(1.0)
+}
+
+export interface TreatCommand {           // Phase 9
+  kind: typeof CommandKinds.Treat;
+  targetId: number;
+  action: MedicalAction;
+  tier: MedicalTier;
+  /** Region to treat. Required for tourniquet/bandage/surgery; omit for fluidReplacement. */
+  regionId?: string;
 }
 
 export type CommandMap = Map<number, readonly Command[]>;

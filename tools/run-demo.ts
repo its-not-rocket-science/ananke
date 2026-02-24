@@ -1,8 +1,10 @@
 // tools/run-demo.ts  — Ananke engine demo
 //
-// Runs two scenarios:
+// Runs four scenarios:
 //   1. Melee brawl (2 vs 2) — AI-driven commands, morale, weapon binds, stamina
 //   2. Ranged engagement — archer vs two swordsmen approaching through mud
+//   3. Skill showcase — expert vs novice swordsman (Phase 7)
+//   4. Field medicine — treated vs untreated soldier (Phase 9)
 
 import { q, to, SCALE, type Q } from "../src/units.js";
 import { type KernelContext, stepWorld } from "../src/sim/kernel.js";
@@ -10,7 +12,8 @@ import { TUNING } from "../src/sim/tuning.js";
 import { mkWorld, mkHumanoidEntity } from "../src/sim/testing.js";
 import { buildWorldIndex } from "../src/sim/indexing.js";
 import { buildSpatialIndex } from "../src/sim/spatial.js";
-import { TraceKinds } from "../src/sim/kinds.js";
+import { TraceKinds, CommandKinds } from "../src/sim/kinds.js";
+import type { MedicalAction } from "../src/sim/medical.js";
 import type { TraceEvent, TraceSink } from "../src/sim/trace.js";
 import type { CommandMap } from "../src/sim/commands.js";
 import { decideCommandsForEntity } from "../src/sim/ai/decide.js";
@@ -90,8 +93,8 @@ class DemoTrace implements TraceSink {
         break;
 
       case TraceKinds.Injury:
-        // Only print significant injury changes
-        if ((ev as any).dead || (ev as any).shockQ > q(0.15)) {
+        // Only print significant injury changes; suppress in quiet mode (medical scenario uses medLine)
+        if (!this.quiet && ((ev as any).dead || (ev as any).shockQ > q(0.15))) {
           console.log(
             `  inj e${(ev as any).entityId} shock=${pct((ev as any).shockQ)}` +
             ` conc=${pct((ev as any).consciousnessQ)}` +
@@ -99,6 +102,19 @@ class DemoTrace implements TraceSink {
           );
         }
         break;
+
+      case TraceKinds.Fracture:
+        console.log(`  fracture e${(ev as any).entityId} region=${(ev as any).region}`);
+        break;
+
+      case TraceKinds.TreatmentApplied: {
+        const t = ev as any;
+        // Surgery fires every tick — skip it to avoid noise; log one-shot actions only
+        if (t.action === "tourniquet" || t.action === "fluidReplacement") {
+          console.log(`  treat e${t.treaterId}→e${t.targetId} ${t.action}${t.regionId ? ` [${t.regionId}]` : ""}`);
+        }
+        break;
+      }
     }
   }
 }
@@ -346,8 +362,116 @@ function scenarioSkills(): void {
   console.log("  (res reflects athleticism: expert drains less energy per tick)");
 }
 
+// ─── scenario 4: field medicine — treated vs untreated soldier ────────────────
+//
+// Two soldiers receive identical torso wounds at tick 0.
+// Soldier A (e1) is treated by a medic (e3) standing 1 m away.
+// Soldier B (e2) is 20 m away — outside the 2 m treatment radius — untreated.
+//
+// What the output shows:
+//   treated   — tourniquet zeroes bleeding immediately; surgery slowly repairs
+//               structural damage; infection never develops
+//   untreated — fluid loss accumulates q(0.003)/tick; infection onsets at
+//               tick 100 (5 s), adding q(0.0003)/tick internal damage; death
+//               near tick 267 (13.4 s) when fluidLoss reaches fatal q(0.80)
+
+function scenarioMedical(): void {
+  const WOUND_REGION = "torso";
+
+  // Soldier A (treated): at origin; medic is 1 m away (within 2 m treatment range)
+  const soldierA = mkHumanoidEntity(1, 1, 0, 0);
+  // Soldier B (untreated): 20 m away — far outside treatment range
+  const soldierB = mkHumanoidEntity(2, 1, Math.trunc(20 * M), 0);
+  // Medic: 1 m from soldier A, surgicalKit tier, 20% treatment skill bonus
+  const medic    = mkHumanoidEntity(3, 1, Math.trunc(1 * M), 0);
+  medic.skills   = buildSkillMap({
+    medical: { ...defaultSkillLevel(), treatmentRateMul: q(1.20) as Q },
+  });
+
+  // Identical torso wound on both soldiers:
+  //   bleedingRate q(0.06) → q(0.003)/tick fluid loss → fatal at ~tick 267
+  //   internalDamage q(0.20) > infection threshold q(0.10) — infection can develop
+  //   structuralDamage q(0.55) — significant but below fracture threshold q(0.70)
+  const applyWound = (e: any) => {
+    const r = e.injury.byRegion[WOUND_REGION];
+    r.bleedingRate     = q(0.06) as Q;
+    r.structuralDamage = q(0.55) as Q;
+    r.internalDamage   = q(0.20) as Q;
+  };
+  applyWound(soldierA);
+  applyWound(soldierB);
+
+  const world = mkWorld(1, [soldierA, soldierB, medic]);
+  const trace = new DemoTrace();
+  trace.quiet = true;  // suppress tick headers from DemoTrace; we print our own
+
+  const ctx: KernelContext = {
+    tractionCoeff: q(0.80) as Q,
+    tuning: TUNING.tactical,
+    trace,
+  };
+
+  console.log(`\n${"═".repeat(60)}`);
+  console.log("  Field Medicine — Treated (e1) vs Untreated (e2)");
+  console.log("  Wound: torso bleed=6%  str=55%  int=20%  TICK_HZ=20");
+  console.log("  Medic (e3): surgicalKit tier, treatmentRateMul=1.20×");
+  console.log("  Infection onset: tick 100 (5 s) if still bleeding");
+  console.log("  Fatal fluid loss: q(0.80) ≈ tick 267 (13.4 s)");
+  console.log(`${"═".repeat(60)}`);
+
+  const medLine = (label: string, e: any) => {
+    const r = e.injury.byRegion[WOUND_REGION];
+    const infected = r.infectedTick >= 0;
+    const flags = [
+      e.injury.dead     ? "DEAD"     : "",
+      infected          ? "INFECTED" : "",
+      r.fractured       ? "FRACTURED": "",
+    ].filter(Boolean).join("|");
+    console.log(
+      `  ${label}` +
+      ` bleed=${pct(r.bleedingRate)}` +
+      ` fluid=${pct(e.injury.fluidLoss)}` +
+      ` shock=${pct(e.injury.shock)}` +
+      ` str=${pct(r.structuralDamage)}` +
+      (flags ? `  [${flags}]` : ""),
+    );
+  };
+
+  for (let tick = 0; tick < 300; tick++) {
+    const index = buildWorldIndex(world);
+    const cmds: CommandMap = new Map();
+
+    // Medic treats soldier A: tourniquet on tick 0 (stops bleeding), surgery thereafter
+    if (!medic.injury.dead && !soldierA.injury.dead) {
+      const action: MedicalAction = tick === 0 ? "tourniquet" : "surgery";
+      cmds.set(medic.id, [{
+        kind: CommandKinds.Treat,
+        targetId: soldierA.id,
+        action,
+        tier: "surgicalKit",
+        regionId: WOUND_REGION,
+      }]);
+    }
+
+    stepWorld(world, cmds, ctx);
+
+    if (tick % 25 === 0 || soldierB.injury.dead) {
+      console.log(`\n── tick ${tick} (${(tick / 20).toFixed(1)} s) ──`);
+      medLine("treated  (e1):", soldierA);
+      medLine("untreated(e2):", soldierB);
+    }
+
+    if (soldierB.injury.dead) break;
+  }
+
+  console.log("\n── outcome ──");
+  medLine("treated  (e1):", soldierA);
+  medLine("untreated(e2):", soldierB);
+}
+
 // ─── main ─────────────────────────────────────────────────────────────────────
 
 scenarioMelee();
 scenarioRanged();
 scenarioSkills();
+scenarioMedical();

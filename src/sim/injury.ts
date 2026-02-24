@@ -2,11 +2,34 @@ import type { Q } from "../units.js";
 import { q, clampQ, SCALE, qMul } from "../units.js";
 import { ALL_REGIONS } from "./body.js";
 
+/**
+ * Structural damage fraction at which a fracture is recorded.
+ * Once set, `fractured` persists until surgically cleared.
+ */
+export const FRACTURE_THRESHOLD: Q = q(0.70) as Q;
+
 export interface RegionInjury {
-  surfaceDamage: Q;     // 0..1
-  internalDamage: Q;    // 0..1
-  structuralDamage: Q;  // 0..1
-  bleedingRate: Q;      // 0..1
+  surfaceDamage: Q;        // 0..1
+  internalDamage: Q;       // 0..1
+  structuralDamage: Q;     // 0..1
+  bleedingRate: Q;         // 0..1
+
+  // Phase 9 fields
+  /** Structural damage has crossed FRACTURE_THRESHOLD; cleared only by surgery. */
+  fractured: boolean;
+  /**
+   * Tick at which infection began; -1 = no infection.
+   * Set when a region bleeds for INFECTION_ONSET_TICKS consecutively with
+   * sufficient internal damage.
+   */
+  infectedTick: number;
+  /** Consecutive ticks the region has been actively bleeding (used for infection timer). */
+  bleedDuration_ticks: number;
+  /**
+   * Irreversible damage floor.  Set when structuralDamage ≥ PERMANENT_THRESHOLD.
+   * Treatment cannot reduce structuralDamage below this value.
+   */
+  permanentDamage: Q;
 }
 
 export interface InjuryState {
@@ -18,6 +41,9 @@ export interface InjuryState {
   consciousness: Q;   // 0..1
 
   dead: boolean;
+
+  /** Phase 8B forward compat: hemolymph loss for open-fluid exoskeleton segments (0..1). */
+  hemolymphLoss: Q;
 }
 
 export const defaultRegionInjury = (): RegionInjury => ({
@@ -25,6 +51,10 @@ export const defaultRegionInjury = (): RegionInjury => ({
   internalDamage: q(0),
   structuralDamage: q(0),
   bleedingRate: q(0),
+  fractured: false,
+  infectedTick: -1,
+  bleedDuration_ticks: 0,
+  permanentDamage: q(0),
 });
 
 /**
@@ -41,6 +71,7 @@ export const defaultInjury = (segmentIds?: readonly string[]): InjuryState => {
     shock: q(0),
     consciousness: q(1.0),
     dead: false,
+    hemolymphLoss: q(0),
   };
 };
 

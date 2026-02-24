@@ -1,6 +1,6 @@
 import type { WorldState } from "./world.js";
 import type { Entity } from "./entity.js";
-import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand, ShootCommand } from "./commands.js";
+import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand, ShootCommand, TreatCommand } from "./commands.js";
 
 import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
 import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive.js";
@@ -18,7 +18,8 @@ import { normaliseDirCheapQ, dotDirQ } from "./vec3.js";
 import { eventSeed } from "./seeds.js";
 import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body.js";
 import { resolveHitSegment, getExposureWeight, segmentIds } from "./bodyplan.js";
-import { totalBleedingRate, regionKOFactor } from "./injury.js";
+import { totalBleedingRate, regionKOFactor, FRACTURE_THRESHOLD } from "./injury.js";
+import { TIER_RANK, TIER_MUL, ACTION_MIN_TIER, type MedicalAction } from "./medical.js";
 import { WorldIndex, buildWorldIndex } from "./indexing.js";
 import { buildSpatialIndex, queryNearbyIds, type SpatialIndex } from "./spatial.js";
 import { type ImpactEvent, sortEventsDeterministic } from "./events.js";
@@ -161,6 +162,14 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     else if ((e.ai as any).decisionCooldownTicks === undefined) (e.ai as any).decisionCooldownTicks = 0;
     // Phase 5: fear / morale
     if ((e.condition as any).fearQ === undefined) (e.condition as any).fearQ = q(0);
+    // Phase 9: new RegionInjury fields (default for entities created pre-Phase-9)
+    if ((e.injury as any).hemolymphLoss === undefined) (e.injury as any).hemolymphLoss = q(0);
+    for (const reg of Object.values(e.injury.byRegion)) {
+      if ((reg as any).fractured === undefined)         (reg as any).fractured = false;
+      if ((reg as any).infectedTick === undefined)      (reg as any).infectedTick = -1;
+      if ((reg as any).bleedDuration_ticks === undefined) (reg as any).bleedDuration_ticks = 0;
+      if ((reg as any).permanentDamage === undefined)   (reg as any).permanentDamage = q(0);
+    }
   }
 
   for (const e of world.entities) {
@@ -264,6 +273,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
         resolveBreakBind(world, e, (c as BreakBindCommand).intensity, index, trace);
       } else if (c.kind === "shoot") {
         resolveShoot(world, e, c as ShootCommand, tuning, index, impacts, trace, ctx);
+      } else if (c.kind === "treat") {
+        resolveTreat(world, e, c as TreatCommand, index, trace);
       }
     }
   }
@@ -289,7 +300,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     const target = index.byId.get(ev.targetId);
     if (!target || target.injury.dead) continue;
 
-    applyImpactToInjury(target, ev.wpn, ev.energy_J, ev.region, ev.protectedByArmour);
+    applyImpactToInjury(target, ev.wpn, ev.energy_J, ev.region, ev.protectedByArmour, trace, world.tick);
 
     trace.onEvent({
       kind: TraceKinds.Attack,
@@ -325,7 +336,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   for (const e of world.entities) {
     if (e.injury.dead) continue;
     stepConditionsToInjury(world, e);
-    stepInjuryProgression(e);
+    stepInjuryProgression(e, world.tick);
     stepEnergy(e, ctx);
     trace.onEvent({
       kind: TraceKinds.Injury,
@@ -1259,7 +1270,7 @@ function impactEnergy_J(attacker: Entity, wpn: Weapon, relVel_mps: Vec3): number
   return Math.max(0, Number(num / denom));
 }
 
-function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, region: string, armoured: boolean): void {
+function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, region: string, armoured: boolean, trace: TraceSink, tick: number): void {
   if (energy_J <= 0) return;
 
   // Determine region role: head → CNS-critical; limb → structural-priority; torso → default
@@ -1307,6 +1318,20 @@ function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, regi
 
   const SHOCK_SPIKE = q(0.010);
   target.injury.shock = clampQ(target.injury.shock + qMul(bleedBase, SHOCK_SPIKE), 0, SCALE.Q);
+
+  // Phase 9: fracture detection
+  if (!regionState.fractured && regionState.structuralDamage >= FRACTURE_THRESHOLD) {
+    regionState.fractured = true;
+    trace.onEvent({ kind: TraceKinds.Fracture, tick, entityId: target.id, region });
+  }
+
+  // Phase 9: permanent damage floor — once structural is very high, a floor is set
+  const PERMANENT_THRESHOLD: Q = q(0.90) as Q;
+  const PERMANENT_FLOOR_MUL: Q = q(0.75) as Q;
+  if (regionState.structuralDamage >= PERMANENT_THRESHOLD) {
+    const newFloor = qMul(regionState.structuralDamage, PERMANENT_FLOOR_MUL);
+    if (newFloor > regionState.permanentDamage) regionState.permanentDamage = newFloor as Q;
+  }
 }
 
 /* ------------------ Conditions -> injury (armour-aware) ------------------ */
@@ -1492,8 +1517,50 @@ function regionSalt(region: string): number {
   }
 }
 
-function stepInjuryProgression(e: Entity): void {
+function stepInjuryProgression(e: Entity, tick: number): void {
   if (e.injury.dead) return;
+
+  // Phase 9: natural clotting — bleedingRate decays proportional to structural integrity.
+  // Heavily damaged tissue clots slowly; intact tissue clots quickly.
+  const CLOT_RATE_PER_TICK: Q = q(0.0002) as Q;
+  const INFECTION_BLEED_THRESHOLD: Q = q(0.05) as Q;
+  const INFECTION_INT_THRESHOLD: Q = q(0.10) as Q;
+  const INFECTION_ONSET_TICKS = 100;
+  const INFECTION_DAMAGE_PER_TICK: Q = q(0.0003) as Q;
+  const PERMANENT_THRESHOLD: Q = q(0.90) as Q;
+  const PERMANENT_FLOOR_MUL: Q = q(0.75) as Q;
+
+  for (const reg of Object.values(e.injury.byRegion)) {
+    // Clotting
+    if (reg.bleedingRate > 0) {
+      const structureIntegrity = clampQ((SCALE.Q - reg.structuralDamage) as Q, q(0), q(1.0));
+      const clotRate = qMul(structureIntegrity, CLOT_RATE_PER_TICK);
+      reg.bleedingRate = clampQ((reg.bleedingRate - clotRate) as Q, q(0), q(1.0));
+    }
+
+    // Infection timer — track consecutive ticks of active bleeding
+    if (reg.bleedingRate > INFECTION_BLEED_THRESHOLD) {
+      reg.bleedDuration_ticks++;
+      if (reg.bleedDuration_ticks >= INFECTION_ONSET_TICKS
+          && reg.internalDamage > INFECTION_INT_THRESHOLD
+          && reg.infectedTick < 0) {
+        reg.infectedTick = tick;
+      }
+    } else {
+      reg.bleedDuration_ticks = Math.max(0, reg.bleedDuration_ticks - 1);
+    }
+
+    // Infection progression — infected regions accumulate internal damage
+    if (reg.infectedTick >= 0) {
+      reg.internalDamage = clampQ(reg.internalDamage + INFECTION_DAMAGE_PER_TICK, 0, SCALE.Q);
+    }
+
+    // Permanent damage floor update — set when structural damage is very high
+    if (reg.structuralDamage >= PERMANENT_THRESHOLD) {
+      const newFloor = qMul(reg.structuralDamage, PERMANENT_FLOOR_MUL);
+      if (newFloor > reg.permanentDamage) reg.permanentDamage = newFloor as Q;
+    }
+  }
 
   const bleedRate = totalBleedingRate(e.injury);
   const rawBleedThisTick = Math.trunc((bleedRate * DT_S) / SCALE.s) as any;
@@ -1519,9 +1586,11 @@ function stepInjuryProgression(e: Entity): void {
   const loss = clampQ(qMul(e.injury.shock, CONSC_LOSS_FROM_SHOCK) + qMul(e.condition.suffocation, CONSC_LOSS_FROM_SUFF) + qMul(regionKOFactor(e.injury), q(0.0100)), 0, SCALE.Q);
   e.injury.consciousness = clampQ(e.injury.consciousness - loss, 0, SCALE.Q);
 
-  if (e.injury.shock >= SCALE.Q || e.injury.consciousness === 0) {
+  // Phase 9: explicit fatal fluid loss threshold (complements the shock path)
+  const FATAL_FLUID_LOSS: Q = q(0.80) as Q;
+  if (e.injury.fluidLoss >= FATAL_FLUID_LOSS || e.injury.shock >= SCALE.Q || e.injury.consciousness === 0) {
     e.injury.dead = true;
-    e.injury.consciousness = 0;
+    e.injury.consciousness = q(0);
     e.velocity_mps = v3(0, 0, 0);
   }
 }
@@ -1626,6 +1695,95 @@ function applyHazardDamage(e: Entity, hazard: HazardCell): void {
     torso.internalDamage = clampQ(torso.internalDamage + qMul(intensity, q(0.002)), 0, SCALE.Q);
     e.injury.consciousness = clampQ(e.injury.consciousness - qMul(intensity, q(0.003)), 0, SCALE.Q);
   }
+}
+
+/* ── Phase 9: medical treatment ──────────────────────────────────────────── */
+
+function resolveTreat(
+  world: WorldState,
+  treater: Entity,
+  cmd: TreatCommand,
+  index: WorldIndex,
+  trace: TraceSink,
+): void {
+  if (treater.injury.dead) return;
+
+  const target = index.byId.get(cmd.targetId);
+  if (!target || target.injury.dead) return;
+
+  // Treater must be within 2 m of target (physical contact required)
+  const dx = target.position_m.x - treater.position_m.x;
+  const dy = target.position_m.y - treater.position_m.y;
+  const dist2 = dx * dx + dy * dy;
+  const MAX_TREAT_DIST_m = Math.trunc(2 * SCALE.m);
+  if (dist2 > MAX_TREAT_DIST_m * MAX_TREAT_DIST_m) return;
+
+  // Check equipment tier meets minimum requirement
+  const tierRank = TIER_RANK[cmd.tier];
+  const actionMinRank = TIER_RANK[ACTION_MIN_TIER[cmd.action]];
+  if (tierRank < actionMinRank) return;
+
+  const tierMul = TIER_MUL[cmd.tier];
+  const medSkill = getSkill(treater.skills, "medical");
+  // effectMul = tierMul × (treatmentRateMul / SCALE.Q)
+  // treatmentRateMul at q(1.0) = SCALE.Q baseline gives exactly tierMul
+  const effectMul: Q = mulDiv(tierMul, medSkill.treatmentRateMul, SCALE.Q) as Q;
+
+  if (cmd.action === "tourniquet") {
+    const reg = cmd.regionId ? target.injury.byRegion[cmd.regionId] : undefined;
+    if (!reg) return;
+    reg.bleedingRate = q(0);
+    reg.bleedDuration_ticks = 0;
+    // Slight shock from painful application
+    target.injury.shock = clampQ(target.injury.shock + q(0.005), 0, SCALE.Q);
+
+  } else if (cmd.action === "bandage") {
+    const reg = cmd.regionId ? target.injury.byRegion[cmd.regionId] : undefined;
+    if (!reg) return;
+    const BASE_BANDAGE_RATE: Q = q(0.0050) as Q;
+    const reduction = mulDiv(BASE_BANDAGE_RATE, effectMul, SCALE.Q);
+    reg.bleedingRate = clampQ((reg.bleedingRate - reduction) as Q, q(0), q(1.0));
+
+  } else if (cmd.action === "surgery") {
+    const reg = cmd.regionId ? target.injury.byRegion[cmd.regionId] : undefined;
+    if (!reg) return;
+    const BASE_SURGERY_RATE: Q = q(0.0020) as Q;
+    const BASE_BANDAGE_RATE: Q = q(0.0050) as Q;
+    const strReduction = mulDiv(BASE_SURGERY_RATE, effectMul, SCALE.Q);
+    const newStr = clampQ(
+      (reg.structuralDamage - strReduction) as Q,
+      reg.permanentDamage,  // cannot heal below permanent floor
+      SCALE.Q,
+    );
+    reg.structuralDamage = newStr as Q;
+    // Surgery also stops active bleeding
+    const bleedReduction = mulDiv(BASE_BANDAGE_RATE, effectMul, SCALE.Q);
+    reg.bleedingRate = clampQ((reg.bleedingRate - bleedReduction) as Q, q(0), q(1.0));
+    // Clear fracture if structural drops below threshold
+    if (reg.fractured && reg.structuralDamage < FRACTURE_THRESHOLD) {
+      reg.fractured = false;
+    }
+    // Clear infection at surgicalKit tier or above
+    if (reg.infectedTick >= 0 && tierRank >= TIER_RANK["surgicalKit"]) {
+      reg.infectedTick = -1;
+    }
+
+  } else if (cmd.action === "fluidReplacement") {
+    const BASE_FLUID_RATE: Q = q(0.0050) as Q;
+    const recovery = mulDiv(BASE_FLUID_RATE, effectMul, SCALE.Q);
+    target.injury.fluidLoss = clampQ((target.injury.fluidLoss - recovery) as Q, q(0), SCALE.Q);
+    // Fluid restoration also reduces shock slightly
+    target.injury.shock = clampQ((target.injury.shock - q(0.002)) as Q, q(0), SCALE.Q);
+  }
+
+  trace.onEvent({
+    kind: TraceKinds.TreatmentApplied,
+    tick: world.tick,
+    treaterId: treater.id,
+    targetId: target.id,
+    action: cmd.action,
+    ...(cmd.regionId !== undefined ? { regionId: cmd.regionId } : {}),
+  });
 }
 
 function stepHazardEffects(entities: Entity[], grid: HazardGrid, cellSize_m: I32): void {

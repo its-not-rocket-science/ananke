@@ -74,15 +74,18 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 8 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+**Phase 9 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
 ranged and projectile combat, injury, entity environmental hazards, movement physics, formation
 basics, deterministic AI scaffolding, perception/cognition (sensory model, decision latency,
 surprise mechanics), morale and psychological state (fear accumulation, routing, pain blocking),
 terrain systems (surface friction, obstacle/cover grids, elevation, slope direction, dynamic
 hazard cells, AI cover-seeking, cover morale bonus, elevation melee advantage), a
-physics-grounded skill system, and a universal data-driven body plan system
+physics-grounded skill system, a universal data-driven body plan system
 (humanoid, quadruped, theropod, sauropod, avian, vermiform, centaur, octopoid — adding a new
-species requires only a BodyPlan data file and an Archetype baseline, no kernel changes).
+species requires only a BodyPlan data file and an Archetype baseline, no kernel changes),
+and a full injury and medical simulation layer (fractures, infection, permanent damage,
+natural clotting, fatal fluid loss, and a `TreatCommand` system with tiered medical equipment
+and skill-scaled treatment rates).
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -261,11 +264,15 @@ Each region tracks:
 - `internalDamage` — organ, soft-tissue, deep injury
 - `structuralDamage` — bone, frame, load-bearing structure
 - `bleedingRate` — active blood loss rate
+- `fractured` — set when `structuralDamage ≥ 0.70`; persistent impairment until surgically repaired (Phase 9)
+- `permanentDamage` — floor below which surgery cannot reduce `structuralDamage` (set at ≥ 0.90) (Phase 9)
+- `bleedDuration_ticks` — ticks with active bleeding; infection onsets after 100 ticks if `internalDamage > 0.10` (Phase 9)
+- `infectedTick` — tick at which infection began (`-1` = none); infected regions gain `+q(0.0003)` internal damage per tick (Phase 9)
 
 Global injury state:
 
 - `shock` — haemodynamic and neurological shock (0–1)
-- `fluidLoss` — cumulative blood or fluid loss (0–1)
+- `fluidLoss` — cumulative blood or fluid loss (0–1); fatal at 0.80 (Phase 9)
 - `consciousness` — 1.0 = fully conscious, 0 = unconscious
 - `dead` — irreversible cessation
 
@@ -279,7 +286,9 @@ stamina calculations:
 | Damage location | Effect |
 |---|---|
 | Leg structural | Sprint speed and acceleration reduction |
+| Leg fracture | Up to −30% mobility (Phase 9) |
 | Arm damage | Manipulation quality and parry effectiveness reduction |
+| Arm fracture | Up to −25% manipulation (Phase 9) |
 | Head damage | Coordination and consciousness degradation |
 | Torso damage | Breathing impairment and shock vulnerability |
 | Shock (global) | All performance multipliers degraded |
@@ -321,6 +330,30 @@ Bleeding rate increases proportionally to internal damage severity.
 
 Actions cost energy (joules). When reserve falls below 15% of baseline, functional penalties
 ramp in. At zero reserve the entity collapses prone and loses all active defence.
+
+### Medical treatment (Phase 9)
+
+Treatment is issued via `TreatCommand` and resolved by `resolveTreat()` in the kernel.
+The treater must be within 2 m of the target. Outcome scales with equipment tier and the
+treater's `medical` skill (`treatmentRateMul`).
+
+**Equipment tiers** (ascending capability): `bandage`, `surgicalKit`, `autodoc`, `nanomedicine`.
+
+| Action | Min tier | Effect |
+|---|---|---|
+| `tourniquet` | bandage | Zeroes `bleedingRate` for one region immediately |
+| `bandage` | bandage | Reduces `bleedingRate` by `q(0.005) × effectMul` per tick |
+| `surgery` | surgicalKit | Reduces `structuralDamage`; clears fracture; clears infection (≥ surgicalKit) |
+| `fluidReplacement` | autodoc | Reduces `fluidLoss`; slightly reduces shock |
+
+**Natural clotting**: `bleedingRate` decays automatically each tick at a rate proportional
+to `(1 − structuralDamage) × q(0.0002)`. Severe structural damage slows natural clotting.
+
+**Injury progression** each tick:
+- Bleeding accumulates `fluidLoss` at `bleedingRate / TICK_HZ`
+- Fluid loss drives shock; shock erodes consciousness
+- `fluidLoss ≥ 0.80` → immediate death
+- Infection (if present) adds `+q(0.0003)` internal damage per tick
 
 ### Ranged combat
 
@@ -493,6 +526,7 @@ src/
     kinds.ts            CommandKind, TraceKind, MoveMode, DefenceMode enums
     body.ts             BodyRegion type, region weights, hit-to-region mapping
     injury.ts           InjuryState, per-region damage, bleeding rate helpers
+    medical.ts          MedicalTier, MedicalAction, tier rank/multiplier tables
     condition.ts        ConditionState (fire, radiation, suffocation, stun, prone, etc.)
     impairment.ts       deriveFunctionalState() — damage to mobility and manipulation penalties
     combat.ts           resolveHit(), parryLeverageQ(), shield helpers

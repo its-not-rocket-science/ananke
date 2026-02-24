@@ -35,6 +35,17 @@ function applyImpairmentsClamped(
   return clampQ(out, minOut, maxOut);
 }
 
+/** Fraction of segments with a fracture (0 = none, q(1.0) = all). */
+function fractureFraction(
+  segs: BodySegment[],
+  byRegion: Record<string, RegionInjury>,
+): Q {
+  if (segs.length === 0) return q(0);
+  let count = 0;
+  for (const s of segs) if (byRegion[s.id]?.fractured) count++;
+  return Math.trunc(count * SCALE.Q / segs.length) as Q;
+}
+
 /** Average a damage field across a set of body segments. */
 function avgSegDamage(
   segs: BodySegment[],
@@ -56,6 +67,7 @@ function resolveDamageSources(
   legStr: Q; legInt: Q;
   armStr: Q; armInt: Q;
   headInt: Q; headStr: Q;
+  fractureLegQ: Q; fractureArmQ: Q;
   leftArmDisabled: boolean; rightArmDisabled: boolean;
   leftLegDisabled: boolean; rightLegDisabled: boolean;
 } {
@@ -69,6 +81,9 @@ function resolveDamageSources(
   const armInt  = avgSegDamage(primaryManip, byRegion, "internalDamage");
   const headInt = avgSegDamage(centralCNS,   byRegion, "internalDamage");
   const headStr = avgSegDamage(centralCNS,   byRegion, "structuralDamage");
+  // Phase 9: fracture signals (fraction of affected primary segments)
+  const fractureLegQ = fractureFraction(primaryLoco,  byRegion);
+  const fractureArmQ = fractureFraction(primaryManip, byRegion);
 
   // Map first two primary manipulation segments to "left/right arm"
   // Map first two primary locomotion segments to "left/right leg"
@@ -82,13 +97,14 @@ function resolveDamageSources(
   const leftLegDisabled  = leftLocoSeg   ? (byRegion[leftLocoSeg.id]?.structuralDamage   ?? q(0)) >= tuning.legDisableThreshold : false;
   const rightLegDisabled = rightLocoSeg  ? (byRegion[rightLocoSeg.id]?.structuralDamage  ?? q(0)) >= tuning.legDisableThreshold : false;
 
-  return { legStr, legInt, armStr, armInt, headInt, headStr, leftArmDisabled, rightArmDisabled, leftLegDisabled, rightLegDisabled };
+  return { legStr, legInt, armStr, armInt, headInt, headStr, fractureLegQ, fractureArmQ, leftArmDisabled, rightArmDisabled, leftLegDisabled, rightLegDisabled };
 }
 
 export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNING.tactical): FunctionalState {
   const inj = e.injury;
 
   let legStr: Q, legInt: Q, armStr: Q, armInt: Q, headInt: Q, headStr: Q;
+  let fractureLegQ: Q = q(0), fractureArmQ: Q = q(0);
   let leftArmDisabled: boolean, rightArmDisabled: boolean, leftLegDisabled: boolean, rightLegDisabled: boolean;
 
   if (e.bodyPlan) {
@@ -97,6 +113,7 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
     legStr = d.legStr; legInt = d.legInt;
     armStr = d.armStr; armInt = d.armInt;
     headInt = d.headInt; headStr = d.headStr;
+    fractureLegQ = d.fractureLegQ; fractureArmQ = d.fractureArmQ;
     leftArmDisabled  = d.leftArmDisabled;  rightArmDisabled = d.rightArmDisabled;
     leftLegDisabled  = d.leftLegDisabled;  rightLegDisabled = d.rightLegDisabled;
   } else {
@@ -117,6 +134,14 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
     armInt = mean2(leftArmInt, rightArmInt);
     headInt = inj.byRegion.head?.internalDamage  ?? q(0);
     headStr = inj.byRegion.head?.structuralDamage ?? q(0);
+
+    // Phase 9: humanoid fracture signals
+    const leftLegFrac  = inj.byRegion.leftLeg?.fractured  ?? false;
+    const rightLegFrac = inj.byRegion.rightLeg?.fractured ?? false;
+    const leftArmFrac  = inj.byRegion.leftArm?.fractured  ?? false;
+    const rightArmFrac = inj.byRegion.rightArm?.fractured ?? false;
+    fractureLegQ = Math.trunc(((leftLegFrac ? 1 : 0) + (rightLegFrac ? 1 : 0)) * SCALE.Q / 2) as Q;
+    fractureArmQ = Math.trunc(((leftArmFrac ? 1 : 0) + (rightArmFrac ? 1 : 0)) * SCALE.Q / 2) as Q;
 
     leftArmDisabled  = leftArmStr  >= tuning.armDisableThreshold;
     rightArmDisabled = rightArmStr >= tuning.armDisableThreshold;
@@ -165,9 +190,10 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
     [fatigue, q(0.25)],
     [stun, q(0.35)],
     [concLoss, q(0.10)],
-    [pinnedQ, q(0.80)],      // pinned: severely restricted movement
-    [heldQ,   q(0.30)],      // held:   moderate restriction
-    [exhaustionQ, q(0.30)],  // exhaustion: up to -30 % at full depletion
+    [pinnedQ, q(0.80)],         // pinned: severely restricted movement
+    [heldQ,   q(0.30)],         // held:   moderate restriction
+    [exhaustionQ, q(0.30)],     // exhaustion: up to -30 % at full depletion
+    [fractureLegQ, q(0.30)],    // Phase 9: fracture: up to -30 % for fully fractured legs
   );
 
   const manipulationMul = applyImpairmentsClamped(
@@ -178,10 +204,11 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
     [fatigue, q(0.20)],
     [stun, q(0.25)],
     [concLoss, q(0.20)],
-    [pinnedQ, q(0.60)],      // pinned: severely restricted manipulation
-    [heldQ,   q(0.20)],      // held:   moderate restriction
-    [exhaustionQ, q(0.25)],  // exhaustion: up to -25 % at full depletion
-    [fearQ,   q(0.15)],      // Phase 5: fear tremors: up to -15 % at max fear
+    [pinnedQ, q(0.60)],         // pinned: severely restricted manipulation
+    [heldQ,   q(0.20)],         // held:   moderate restriction
+    [exhaustionQ, q(0.25)],     // exhaustion: up to -25 % at full depletion
+    [fearQ,   q(0.15)],         // Phase 5: fear tremors: up to -15 % at max fear
+    [fractureArmQ, q(0.25)],    // Phase 9: fracture: up to -25 % for fully fractured arms
   );
 
   const coordinationMul = applyImpairmentsClamped(
