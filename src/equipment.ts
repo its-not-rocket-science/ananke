@@ -5,6 +5,7 @@ import { DamageChannel, channelMask } from "./channels.js";
 import type { IndividualAttributes } from "./types.js";
 import type { BodyRegion } from "./sim/body.js";
 import { ALL_REGIONS, DEFAULT_REGION_WEIGHTS, weightedMean01 } from "./sim/body.js";
+import type { TechCapability, TechContext } from "./sim/tech.js";
 
 export type ItemId = string;
 
@@ -13,6 +14,8 @@ export interface ItemBase {
   name: string;
   mass_kg: I32;
   bulk: Q;
+  /** Phase 11: capabilities that must be in TechContext.available for this item to be usable. */
+  requiredCapabilities?: readonly TechCapability[];
 }
 
 export interface WeaponDamageProfile {
@@ -86,6 +89,17 @@ export interface Gear extends ItemBase {
   kind: "gear";
 }
 
+/** Phase 11: powered exoskeleton — boosts speed and strike force at a continuous energy cost. */
+export interface Exoskeleton extends ItemBase {
+  kind: "exoskeleton";
+  /** Multiplier on effective sprint speed (e.g. q(1.25) = +25%). */
+  speedMultiplier: Q;
+  /** Multiplier on melee strike energy delivered (e.g. q(1.40) = +40%). */
+  forceMultiplier: Q;
+  /** Continuous power draw added to metabolic demand (watts). */
+  powerDrain_W: number;
+}
+
 export interface RangedWeapon extends ItemBase {  // Phase 3
   kind: "ranged";
   category: "thrown" | "bow" | "firearm";
@@ -97,7 +111,7 @@ export interface RangedWeapon extends ItemBase {  // Phase 3
   damage: WeaponDamageProfile;
 }
 
-export type Item = Weapon | Armour | Gear | Shield | RangedWeapon;
+export type Item = Weapon | Armour | Gear | Shield | RangedWeapon | Exoskeleton;
 export interface Loadout {
   items: Item[];
 }
@@ -311,6 +325,27 @@ export function findShield(loadout: Loadout): any {
   return loadout.items.find(item => item?.kind === "shield");
 }
 
+export function findExoskeleton(loadout: Loadout): Exoskeleton | null {
+  return (loadout.items.find((it): it is Exoskeleton => it.kind === "exoskeleton") ?? null);
+}
+
+/**
+ * Phase 11: check that every item in a loadout is usable in the given TechContext.
+ * Returns an array of error messages; empty array means the loadout is valid.
+ */
+export function validateLoadout(loadout: Loadout, ctx: TechContext): string[] {
+  const errors: string[] = [];
+  for (const item of loadout.items) {
+    if (!item.requiredCapabilities) continue;
+    for (const cap of item.requiredCapabilities) {
+      if (!ctx.available.has(cap)) {
+        errors.push(`"${item.id}" requires capability "${cap}"`);
+      }
+    }
+  }
+  return errors;
+}
+
 export function deriveWeaponHandling(
   w: Weapon,
   ownerStature_m: number
@@ -391,6 +426,32 @@ export const STARTER_WEAPONS: Weapon[] = [
   },
 ];
 
+// Phase 11: powered exoskeletons
+export const STARTER_EXOSKELETONS: Exoskeleton[] = [
+  {
+    id: "exo_combat",
+    kind: "exoskeleton",
+    name: "Combat exoskeleton",
+    mass_kg: Math.round(25.0 * SCALE.kg),
+    bulk: q(2.5),
+    requiredCapabilities: ["PoweredExoskeleton"],
+    speedMultiplier: q(1.25),   // +25% effective sprint speed
+    forceMultiplier: q(1.40),   // +40% melee strike energy
+    powerDrain_W: 200,           // equivalent to a second continuous-power budget
+  },
+  {
+    id: "exo_heavy",
+    kind: "exoskeleton",
+    name: "Heavy assault exoskeleton",
+    mass_kg: Math.round(45.0 * SCALE.kg),
+    bulk: q(3.0),
+    requiredCapabilities: ["PoweredExoskeleton"],
+    speedMultiplier: q(1.10),   // heavy — modest speed gain
+    forceMultiplier: q(1.80),   // massive force amplification
+    powerDrain_W: 400,
+  },
+];
+
 export const STARTER_ARMOUR: Armour[] = [
   {
     id: "arm_leather",
@@ -419,6 +480,7 @@ export const STARTER_ARMOUR: Armour[] = [
     name: "Mail armour",
     mass_kg: Math.round(10.0 * SCALE.kg),
     bulk: q(1.9),
+    requiredCapabilities: ["MetallicArmour"],
     protects: channelMask(DamageChannel.Kinetic),
     coverageByRegion: {
       head: q(0.05),
@@ -432,6 +494,27 @@ export const STARTER_ARMOUR: Armour[] = [
     protectedDamageMul: q(0.75),
     mobilityMul: q(0.90),
     fatigueMul: q(1.15),
+  },
+  {
+    id: "arm_plate",
+    kind: "armour",
+    name: "Plate armour",
+    mass_kg: Math.round(20.0 * SCALE.kg),
+    bulk: q(2.2),
+    requiredCapabilities: ["MetallicArmour"],
+    protects: channelMask(DamageChannel.Kinetic, DamageChannel.Thermal),
+    coverageByRegion: {
+      head: q(0.75),
+      torso: q(0.90),
+      leftArm: q(0.80),
+      rightArm: q(0.80),
+      leftLeg: q(0.70),
+      rightLeg: q(0.70),
+    },
+    resist_J: 800,
+    protectedDamageMul: q(0.60),
+    mobilityMul: q(0.82),
+    fatigueMul: q(1.25),
   },
 ];
 
@@ -527,6 +610,7 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     category: "firearm",
     mass_kg: Math.round(1.2 * SCALE.kg),
     bulk: q(1.1),
+    requiredCapabilities: ["FirearmsPropellant"],
     launchEnergy_J: 400,
     projectileMass_kg: Math.round(0.015 * SCALE.kg),
     dragCoeff_perM: q(0.002),
@@ -541,11 +625,33 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     category: "firearm",
     mass_kg: Math.round(4.5 * SCALE.kg),
     bulk: q(2.2),
+    requiredCapabilities: ["FirearmsPropellant"],
     launchEnergy_J: 600,
     projectileMass_kg: Math.round(0.030 * SCALE.kg),
     dragCoeff_perM: q(0.0015),          // 0.15% loss/m
     dispersionQ: q(0.010),
     recycleTime_s: to.s(18.0),
     damage: PROJECTILE_DAMAGE,
+  },
+  {
+    id: "rng_plasma_rifle",
+    kind: "ranged",
+    name: "Plasma rifle",
+    category: "firearm",
+    mass_kg: Math.round(3.8 * SCALE.kg),
+    bulk: q(1.8),
+    requiredCapabilities: ["EnergyWeapons"],
+    launchEnergy_J: 2000,
+    projectileMass_kg: Math.round(0.001 * SCALE.kg),
+    dragCoeff_perM: q(0.0005),          // near-negligible beam divergence
+    dispersionQ: q(0.004),
+    recycleTime_s: to.s(2.0),
+    damage: {
+      surfaceFrac: q(0.35),
+      internalFrac: q(0.45),
+      structuralFrac: q(0.20),
+      bleedFactor: q(0.15),            // plasma cauterises, low bleed
+      penetrationBias: q(0.90),
+    },
   },
 ];

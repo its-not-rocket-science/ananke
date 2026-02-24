@@ -1,10 +1,11 @@
 // tools/run-demo.ts  — Ananke engine demo
 //
-// Runs four scenarios:
+// Runs five scenarios:
 //   1. Melee brawl (2 vs 2) — AI-driven commands, morale, weapon binds, stamina
 //   2. Ranged engagement — archer vs two swordsmen approaching through mud
 //   3. Skill showcase — expert vs novice swordsman (Phase 7)
 //   4. Field medicine — treated vs untreated soldier (Phase 9)
+//   5. Technology spectrum — era validation, exoskeleton combat, nanomedicine gate (Phase 11)
 
 import { q, to, SCALE, type Q } from "../src/units.js";
 import { type KernelContext, stepWorld } from "../src/sim/kernel.js";
@@ -24,7 +25,14 @@ import {
   STARTER_ARMOUR,
   STARTER_SHIELDS,
   STARTER_RANGED_WEAPONS,
+  STARTER_EXOSKELETONS,
+  validateLoadout,
+  type Loadout,
 } from "../src/equipment.js";
+import {
+  TechEra,
+  defaultTechContext,
+} from "../src/sim/tech.js";
 import { buildTerrainGrid } from "../src/sim/terrain.js";
 import { buildSkillMap, combineSkillLevels, defaultSkillLevel } from "../src/sim/skills.js";
 import type { WorldState } from "../src/sim/world.js";
@@ -469,9 +477,169 @@ function scenarioMedical(): void {
   medLine("untreated(e2):", soldierB);
 }
 
+// ─── scenario 5: technology spectrum ─────────────────────────────────────────
+//
+// Three demonstrations in one scenario:
+//
+//   Part A — Era validation
+//     Show which items from a mixed loadout are and aren't available per era.
+//     Items: arm_mail (MetallicArmour), rng_pistol (FirearmsPropellant),
+//            exo_combat (PoweredExoskeleton), rng_plasma_rifle (EnergyWeapons)
+//
+//   Part B — Exoskeleton combat
+//     Baseline  (e1/t1): club + 25 kg ballast — same mass as exo, no tech bonus
+//     Augmented (e2/t2): club + exo_combat    — +25% speed, +40% force, 200W drain
+//     Start 10 m apart; print positions every 5 ticks to show faster closure.
+//
+//   Part C — Nanomedicine technology gate
+//     Same wound (structuralDamage q(0.50)) on two patients.
+//     Patient A: treated with surgicalKit (no capability req) — heals in any era.
+//     Patient B: treated with nanomedicine tier —
+//                works in DeepSpace (NanomedicalRepair present);
+//                blocked in Modern (NanomedicalRepair absent).
+
+function scenarioTech(): void {
+  const club = STARTER_WEAPONS.find(w => w.id === "wpn_club")!;
+  const exo  = STARTER_EXOSKELETONS.find(e => e.id === "exo_combat")!;
+
+  console.log(`\n${"═".repeat(60)}`);
+  console.log("  Technology Spectrum (Phase 11)");
+  console.log(`${"═".repeat(60)}`);
+
+  // ── Part A: Era validation ──────────────────────────────────────────────────
+  console.log("\n── Part A: Era validation ──");
+
+  const checkItems: [string, Loadout][] = [
+    ["arm_mail",         { items: [STARTER_ARMOUR.find(a => a.id === "arm_mail")!] }],
+    ["rng_pistol",       { items: [STARTER_RANGED_WEAPONS.find(w => w.id === "rng_pistol")!] }],
+    ["exo_combat",       { items: [exo] }],
+    ["rng_plasma_rifle", { items: [STARTER_RANGED_WEAPONS.find(w => w.id === "rng_plasma_rifle")!] }],
+  ];
+
+  const eras: Array<[string, number]> = [
+    ["Prehistoric", TechEra.Prehistoric],
+    ["Medieval",    TechEra.Medieval],
+    ["EarlyModern", TechEra.EarlyModern],
+    ["Modern",      TechEra.Modern],
+    ["NearFuture",  TechEra.NearFuture],
+    ["FarFuture",   TechEra.FarFuture],
+    ["DeepSpace",   TechEra.DeepSpace],
+  ];
+
+  const itemPad = 18;
+  const header = "  " + "Item".padEnd(itemPad) + eras.map(([n]) => n.padEnd(12)).join("");
+  console.log(header);
+  console.log("  " + "─".repeat(header.length - 2));
+
+  for (const [itemName, loadout] of checkItems) {
+    const row = "  " + itemName.padEnd(itemPad) +
+      eras.map(([, era]) => {
+        const ctx = defaultTechContext(era as any);
+        const errors = validateLoadout(loadout, ctx);
+        return (errors.length === 0 ? "✓" : "✗").padEnd(12);
+      }).join("");
+    console.log(row);
+  }
+
+  // ── Part B: Exoskeleton combat ──────────────────────────────────────────────
+  console.log("\n── Part B: Exoskeleton combat (start 10 m apart) ──");
+  console.log("  Baseline   (e1/t1): club + 25 kg ballast (no tech bonus)");
+  console.log("  Augmented  (e2/t2): club + exo_combat  (+25% speed, +40% force, 200W drain)");
+  console.log("  Watch augmented close distance faster and hit harder when they meet.\n");
+
+  const ballast = { id: "ballast", kind: "gear" as const, name: "Ballast", mass_kg: exo.mass_kg, bulk: q(0) };
+
+  const baseline  = mkHumanoidEntity(1, 1, 0, 0);
+  baseline.loadout = { items: [club, ballast] };
+
+  const augmented = mkHumanoidEntity(2, 2, Math.trunc(10.0 * M), 0);
+  augmented.loadout = { items: [club, exo] };
+
+  const worldExo = mkWorld(42, [baseline, augmented]);
+  const traceExo = new DemoTrace();
+  traceExo.quiet = true;
+
+  const exoCellSize = Math.trunc(4 * M);
+  const exoCtx: KernelContext = {
+    tractionCoeff: q(0.80) as Q,
+    tuning: TUNING.tactical,
+    trace: traceExo,
+  };
+
+  for (let tick = 0; tick < 150; tick++) {
+    const index   = buildWorldIndex(worldExo);
+    const spatial = buildSpatialIndex(worldExo, exoCellSize);
+
+    const cmds: CommandMap = new Map();
+    for (const e of worldExo.entities) {
+      if (e.injury.dead) continue;
+      const policy = AI_PRESETS["lineInfantry"]!;
+      const entityCmds = decideCommandsForEntity(worldExo, index, spatial, e, policy);
+      if (entityCmds.length > 0) cmds.set(e.id, [...entityCmds]);
+    }
+
+    stepWorld(worldExo, cmds, exoCtx);
+
+    if (tick % 5 === 0 || tick === 0) {
+      const b = worldExo.entities.find(e => e.id === 1)!;
+      const a = worldExo.entities.find(e => e.id === 2)!;
+      if (!b.injury.dead && !a.injury.dead) {
+        const dist_m = Math.abs(a.position_m.x - b.position_m.x) / M;
+        console.log(
+          `  tick ${String(tick).padStart(3)}: ` +
+          `baseline x=${(b.position_m.x / M).toFixed(1).padStart(5)}m  ` +
+          `augmented x=${(a.position_m.x / M).toFixed(1).padStart(5)}m  ` +
+          `gap=${dist_m.toFixed(1)}m  ` +
+          `res_aug=${a.energy.reserveEnergy_J}J`
+        );
+      }
+    }
+
+    if (allDead(worldExo, 1) || allDead(worldExo, 2)) break;
+  }
+
+  console.log("\n── final state ──");
+  for (const e of worldExo.entities) console.log(entityLine(e));
+
+  // ── Part C: Nanomedicine tech gate ─────────────────────────────────────────
+  console.log("\n── Part C: Nanomedicine tech gate ──");
+  console.log("  Wound: structuralDamage=50% on torso.  20 ticks of treatment.");
+  console.log("  surgicalKit tier (no req):        works in any era");
+  console.log("  nanomedicine tier (NanomedicalRepair):  Modern=blocked  DeepSpace=heals\n");
+
+  const runGateTest = (tierLabel: string, tier: string, era: number | null): number => {
+    const medic   = mkHumanoidEntity(1, 1, 0, 0);
+    const patient = mkHumanoidEntity(2, 1, Math.trunc(0.5 * M), 0);
+    patient.injury.byRegion["torso"]!.structuralDamage = q(0.50) as any;
+
+    const world = mkWorld(1, [medic, patient]);
+    const cmds = new Map([[1, [{
+      kind: "treat" as const, targetId: 2,
+      action: "surgery" as const,
+      tier: tier as any,
+      regionId: "torso",
+    }]]]);
+
+    const techCtx = era !== null ? defaultTechContext(era as any) : undefined;
+    const ctx: KernelContext = { tractionCoeff: q(0.80) as Q, tuning: TUNING.tactical, ...(techCtx ? { techCtx } : {}) };
+    for (let i = 0; i < 20; i++) stepWorld(world, cmds, ctx);
+    const finalDmg = world.entities.find(e => e.id === 2)!.injury.byRegion["torso"]!.structuralDamage;
+    const healed = finalDmg < q(0.50);
+    console.log(`  ${tierLabel.padEnd(42)}: str=${pct(finalDmg)}  ${healed ? "✓ heals" : "✗ blocked"}`);
+    return finalDmg;
+  };
+
+  runGateTest("surgicalKit   (no techCtx)",          "surgicalKit",  null);
+  runGateTest("surgicalKit   (Modern era)",           "surgicalKit",  TechEra.Modern);
+  runGateTest("nanomedicine  (no techCtx = gate off)","nanomedicine", null);
+  runGateTest("nanomedicine  (Modern, gate ON)",      "nanomedicine", TechEra.Modern);
+  runGateTest("nanomedicine  (DeepSpace, gate OFF)",  "nanomedicine", TechEra.DeepSpace);
+}
+
 // ─── main ─────────────────────────────────────────────────────────────────────
 
 scenarioMelee();
 scenarioRanged();
 scenarioSkills();
 scenarioMedical();
+scenarioTech();

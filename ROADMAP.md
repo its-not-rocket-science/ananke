@@ -1000,40 +1000,43 @@ The condition decrement belongs in the same cooldown loop as `suppressedTicks` i
 
 ---
 
-## Phase 11 — Technology Spectrum
+## Phase 11 — Technology Spectrum *(COMPLETE)*
 
-### Parameterisation mechanism
+### What was implemented
 
-Each world state carries a `TechContext`:
+`src/sim/tech.ts` — `TechEra` const object (0–8), `TechCapability` union, `TechContext` interface,
+`defaultTechContext(era)` (cumulative capability sets), `isCapabilityAvailable()`.
 
-```typescript
-interface TechContext {
-  era: TechEra;
-  medicalTier: MedicalTier;
-  available: Set<TechCapability>;
-}
+`src/equipment.ts` additions:
+- `requiredCapabilities?: readonly TechCapability[]` on `ItemBase`
+- `Exoskeleton` item kind (`speedMultiplier`, `forceMultiplier`, `powerDrain_W`)
+- `findExoskeleton(loadout): Exoskeleton | null`
+- `validateLoadout(loadout, ctx): string[]` — returns error messages for era-unavailable items
+- `STARTER_EXOSKELETONS`: `exo_combat` (+25% speed, +40% force, 200 W drain), `exo_heavy` (+10% speed, +80% force, 400 W drain)
+- `arm_plate` (heavy plate armour, requires `MetallicArmour`)
+- `rng_plasma_rifle` (2000 J, requires `EnergyWeapons`)
+- `arm_mail`, `rng_pistol`, `rng_musket` retroactively tagged with `requiredCapabilities`
 
-enum TechEra {
-  Prehistoric = 0,
-  Ancient = 1,
-  Medieval = 2,
-  EarlyModern = 3,
-  Industrial = 4,
-  Modern = 5,
-  NearFuture = 6,
-  FarFuture = 7,
-  DeepSpace = 8,
-}
-```
+`src/sim/kernel.ts` — `techCtx?` in `KernelContext`; exo speed in `stepMovement` baseMul;
+exo force in `resolveAttack` after `energy_J`; exo powerDrain_W added to demand in `stepEnergy`.
 
-`TechCapability` examples: `FirearmsPropellant`, `MetallicArmour`, `ExplosiveMunitions`,
-`BallisticArmour`, `PoweredExoskeleton`, `EnergyWeapons`, `NanomedicalRepair`, `ReactivePlating`.
+`test/tech.test.ts` — 27 tests.
 
-Items are not statically era-locked. `TechContext` validates which items are reachable for a
-given scenario. A bronze sword is valid in any era; a plasma rifle requires `FarFuture` or
-`EnergyWeapons` capability.
+### Era→capability mapping
 
-### Technology effects by domain
+| Era | Capabilities |
+|---|---|
+| Prehistoric | (none) |
+| Ancient | MetallicArmour |
+| Medieval | MetallicArmour |
+| EarlyModern | + FirearmsPropellant |
+| Industrial | + ExplosiveMunitions |
+| Modern | + BallisticArmour |
+| NearFuture | + PoweredExoskeleton |
+| FarFuture | + EnergyWeapons, ReactivePlating |
+| DeepSpace | + NanomedicalRepair |
+
+### Technology effects by domain (planned extensions)
 
 | Domain | How technology era changes it |
 |---|---|
@@ -1041,8 +1044,54 @@ given scenario. A bronze sword is valid in any era; a plasma rifle requires `Far
 | Armour | `resist_J` ranges; channel protections; `reflectivity` for energy weapon resistance |
 | Medicine | Medical tier gates which treatment actions are available and at what rates |
 | Sensors | `visionRange_m` boost from optics; electronic threat detection range (m) |
-| Mobility | Powered exoskeleton multipliers on `peakForce_N` and sprint speed |
+| Mobility | Powered exoskeleton multipliers on sprint speed and strike force |
 | Survivability | Vacuum suit (suffocation immunity), radiation hardening, pressure equalisation |
+
+---
+
+## Phase 11C — Tech Spectrum Extensions (deferred from Phase 11)
+
+### Tech-Specific Damage Channels
+
+Add `energyType?: "plasma" | "laser" | "sonic"` to `Weapon`/`RangedWeapon`. In `applyImpactToInjury`, route energy weapon hits through a new `DamageChannel.Energy` channel. Armour gains optional `reflectivity?: Q` — energy weapons receive `mulDiv(mitigated, SCALE.Q - reflectivity, SCALE.Q)` before armour penetration.
+
+Implementation outline:
+```typescript
+// equipment.ts
+export interface Armour extends ItemBase {
+  // ... existing fields ...
+  reflectivity?: Q;      // fraction of energy damage reflected (0..1)
+  ablative?: boolean;    // loses resist_J on each hit (tracked in entity.loadoutState)
+}
+// channels.ts: add DamageChannel.Energy = 8
+// kernel.ts: if (wpn.energyType && armour.reflectivity) apply reflectivity gate
+```
+
+### Tech-Based Perception Bonuses (per-entity sensors)
+
+Add a `Sensor` item kind to equipment.ts:
+```typescript
+export interface Sensor extends ItemBase {
+  kind: "sensor";
+  visionRangeMul: Q;    // e.g. q(2.0) = double vision range
+  hearingRangeMul: Q;
+  requiredCapabilities?: readonly TechCapability[];
+}
+```
+In `canDetect()` (sensory.ts), accept an optional `sensorBoost?: { visionRangeMul: Q; hearingRangeMul: Q }` and scale ranges accordingly. In kernel.ts (or AI layer), derive sensor profile from entity's loadout before calling perceiveLocal.
+
+### Ablative Armour State
+
+`ablative: true` armour degrades on each hit: track per-entity remaining resist in a new `entity.armourState?: Map<ItemId, { resistRemaining_J: number }>`. On hit: decrement by `mitigated_J`; when depleted, item provides no further resist. `deriveArmourProfile` accepts optional armourState.
+
+### Tech Tree Visualization (tools/)
+
+```typescript
+// tools/tech-tree.ts
+import { TechEra, ERA_DEFAULTS } from "../src/sim/tech.js";
+// Output DOT graph: each node = era, edges show added capabilities.
+// Run: npx tsx tools/tech-tree.ts > tech-tree.dot && dot -Tsvg tech-tree.dot > tech-tree.svg
+```
 
 ---
 

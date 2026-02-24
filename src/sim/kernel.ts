@@ -5,7 +5,8 @@ import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCo
 import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
 import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive.js";
 import { DamageChannel } from "../channels.js";
-import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, type Weapon, type RangedWeapon } from "../equipment.js";
+import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, type Weapon, type RangedWeapon } from "../equipment.js";
+import type { TechContext } from "./tech.js";
 import { deriveFunctionalState } from "./impairment.js";
 import { TUNING, type SimulationTuning } from "./tuning.js";
 import { buildTraitProfile } from "../traits.js";
@@ -19,7 +20,7 @@ import { eventSeed } from "./seeds.js";
 import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body.js";
 import { resolveHitSegment, getExposureWeight, segmentIds } from "./bodyplan.js";
 import { totalBleedingRate, regionKOFactor, FRACTURE_THRESHOLD } from "./injury.js";
-import { TIER_RANK, TIER_MUL, ACTION_MIN_TIER, type MedicalAction } from "./medical.js";
+import { TIER_RANK, TIER_MUL, ACTION_MIN_TIER, TIER_TECH_REQ, type MedicalAction } from "./medical.js";
 import { type BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy } from "./explosion.js";
 import type { ActiveSubstance } from "./substance.js";
 import { makeRng } from "../rng.js";
@@ -123,6 +124,14 @@ export interface KernelContext {
    * Entity attributes `heatTolerance` and `coldTolerance` scale the dose.
    */
   ambientTemperature_Q?: Q;
+
+  /**
+   * Phase 11: technology context.
+   * When provided, gates which items are available.
+   * Does not directly affect simulation physics — use validateLoadout() before stepWorld
+   * to verify that the entity's loadout is era-appropriate.
+   */
+  techCtx?: TechContext;
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
@@ -285,7 +294,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
       } else if (c.kind === "shoot") {
         resolveShoot(world, e, c as ShootCommand, tuning, index, impacts, trace, ctx);
       } else if (c.kind === "treat") {
-        resolveTreat(world, e, c as TreatCommand, index, trace);
+        resolveTreat(world, e, c as TreatCommand, index, trace, ctx);
       }
     }
   }
@@ -527,7 +536,11 @@ function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: 
       : clampQ((SCALE.Q + qMul(slope.grade, q(0.10))) as Q, q(1.0), q(1.20)) as Q
     : SCALE.Q as Q;
 
-  const baseMul = qMul(qMul(qMul(qMul(controlMul, mobilityMul), crowdMul), terrainSpeedMul), slopeMul);
+  // Phase 11: powered exoskeleton speed boost
+  const exo = findExoskeleton(e.loadout);
+  const exoSpeedMul: Q = exo ? exo.speedMultiplier : SCALE.Q as Q;
+
+  const baseMul = qMul(qMul(qMul(qMul(qMul(controlMul, mobilityMul), crowdMul), terrainSpeedMul), slopeMul), exoSpeedMul);
 
   const effVmax = mulDiv(vmax_mps, baseMul, SCALE.Q);
   const effAmax = mulDiv(amax_mps2, baseMul, SCALE.Q);
@@ -853,7 +866,10 @@ function resolveAttack(world: WorldState,
     SCALE.Q,
   );
   // Phase 7: meleeCombat.energyTransferMul boosts strike energy delivery (technique bonus)
-  const energy_J = mulDiv(baseEnergy_J, attackerMeleeSkill.energyTransferMul, SCALE.Q);
+  // Phase 11: exoskeleton force multiplier amplifies strike energy
+  const attackerExo = findExoskeleton(attacker.loadout);
+  const exoForceMul: Q = attackerExo ? attackerExo.forceMultiplier : SCALE.Q as Q;
+  const energy_J = mulDiv(mulDiv(baseEnergy_J, attackerMeleeSkill.energyTransferMul, SCALE.Q), exoForceMul, SCALE.Q);
 
   let mitigated = energy_J;
 
@@ -1996,6 +2012,7 @@ function resolveTreat(
   cmd: TreatCommand,
   index: WorldIndex,
   trace: TraceSink,
+  ctx: KernelContext,
 ): void {
   if (treater.injury.dead) return;
 
@@ -2013,6 +2030,10 @@ function resolveTreat(
   const tierRank = TIER_RANK[cmd.tier];
   const actionMinRank = TIER_RANK[ACTION_MIN_TIER[cmd.action]];
   if (tierRank < actionMinRank) return;
+
+  // Phase 11: technology gate — check if the tier's required capability is available
+  const techReq = TIER_TECH_REQ[cmd.tier];
+  if (techReq && ctx.techCtx && !ctx.techCtx.available.has(techReq)) return;
 
   const tierMul = TIER_MUL[cmd.tier];
   const medSkill = getSkill(treater.skills, "medical");
@@ -2104,7 +2125,9 @@ function stepEnergy(e: Entity, ctx: KernelContext): void {
   const speedAbs = Math.max(Math.abs(e.velocity_mps.x), Math.abs(e.velocity_mps.y), Math.abs(e.velocity_mps.z));
   const moving = speedAbs > Math.trunc(0.05 * SCALE.mps);
 
-  const demand = moving ? 250 : BASE_IDLE_W;
+  // Phase 11: powered exoskeleton adds continuous power draw to metabolic demand
+  const exoForEnergy = findExoskeleton(e.loadout);
+  const demand = (moving ? 250 : BASE_IDLE_W) + (exoForEnergy ? exoForEnergy.powerDrain_W : 0);
 
   const fatigueBefore = e.energy.fatigue;
   stepEnergyAndFatigue(e.attributes, e.energy, e.loadout, demand, DT_S, { tractionCoeff: ctx.tractionCoeff });

@@ -1,5 +1,6 @@
-// src/sim/medical.ts — Phase 9: medical treatment types
+// src/sim/medical.ts — Phase 9: medical treatment types; Phase 11: tech gating
 import { q, type Q } from "../units.js";
+import type { TechCapability } from "./tech.js";
 
 /**
  * Capability tier of the equipment used during treatment.
@@ -40,4 +41,14 @@ export const ACTION_MIN_TIER: Record<MedicalAction, MedicalTier> = {
   bandage:          "bandage",
   surgery:          "surgicalKit",
   fluidReplacement: "autodoc",
+};
+
+/**
+ * Phase 11: TechCapability that must be available in TechContext to use equipment at this tier.
+ * When ctx.techCtx is provided and the capability is absent, treatment is blocked.
+ *
+ * Tiers not listed here have no technology requirement (they work in any era).
+ */
+export const TIER_TECH_REQ: Partial<Record<MedicalTier, TechCapability>> = {
+  nanomedicine: "NanomedicalRepair",
 };

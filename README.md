@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 10 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+**Phase 11 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
 ranged and projectile combat, injury, entity environmental hazards, movement physics, formation
 basics, deterministic AI scaffolding, perception/cognition (sensory model, decision latency,
 surprise mechanics), morale and psychological state (fear accumulation, routing, pain blocking),
@@ -85,9 +85,12 @@ physics-grounded skill system, a universal data-driven body plan system
 species requires only a BodyPlan data file and an Archetype baseline, no kernel changes),
 a full injury and medical simulation layer (fractures, infection, permanent damage,
 natural clotting, fatal fluid loss, and a `TreatCommand` system with tiered medical equipment
-and skill-scaled treatment rates), and environmental physics including blast and fragmentation
+and skill-scaled treatment rates), environmental physics including blast and fragmentation
 explosions, fall damage, pharmacokinetics (one-compartment absorption/elimination model), and
-ambient temperature stress (heat and cold tolerance).
+ambient temperature stress (heat and cold tolerance), and a technology spectrum system
+(`TechContext`, `TechEra`, `TechCapability`, `validateLoadout`) with powered exoskeleton
+items (speed × force × power-drain) and era-gated starter items including plasma rifle and
+plate armour.
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -455,6 +458,38 @@ Effects activate when concentration exceeds `effectThreshold`:
 - Heat (above q(0.65)): shock + torso surface damage; scaled by `heatTolerance`
 - Cold (below q(0.35)): shock + fatigue accumulation; scaled by `coldTolerance`
 
+### Technology spectrum (Phase 11)
+
+`TechContext` gates which items are usable in a scenario without locking them to a specific era.
+
+```typescript
+import { TechEra, defaultTechContext, isCapabilityAvailable } from "./src/sim/tech.js";
+import { validateLoadout, STARTER_EXOSKELETONS } from "./src/equipment.js";
+
+const ctx = defaultTechContext(TechEra.NearFuture);
+// ctx.available includes PoweredExoskeleton but not EnergyWeapons
+
+const exo = STARTER_EXOSKELETONS.find(e => e.id === "exo_combat")!;
+const loadout = { items: [exo] };
+const errors = validateLoadout(loadout, ctx); // [] — valid
+```
+
+**`Exoskeleton` item kind** — integrated with kernel:
+- `speedMultiplier: Q` — factored into `stepMovement` baseMul
+- `forceMultiplier: Q` — applied to strike `energy_J` in `resolveAttack`
+- `powerDrain_W: number` — added to metabolic demand in `stepEnergy`
+
+**Starter items**: `exo_combat` (+25% speed, +40% force, 200 W drain),
+`exo_heavy` (+10% speed, +80% force, 400 W drain), `arm_plate` (800 J resist, requires `MetallicArmour`),
+`rng_plasma_rifle` (2000 J, requires `EnergyWeapons`).
+
+Era capabilities are cumulative: Prehistoric has none; DeepSpace has all eight.
+
+**Medical technology gate**: `TIER_TECH_REQ` in `medical.ts` maps medical tiers to required
+capabilities. When `ctx.techCtx` is set, `resolveTreat()` blocks treatment if the treater's
+tier requires a capability absent from the scenario. Currently: `nanomedicine` tier requires
+`NanomedicalRepair`. Tiers without a listed requirement work in any era.
+
 ---
 
 ## Determinism rules
@@ -575,6 +610,7 @@ src/
     ranged.ts           Ranged physics: energy at range, dispersion, grouping radius, costs
     explosion.ts        BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy
     substance.ts        Substance, ActiveSubstance, STARTER_SUBSTANCES — pharmacokinetics model
+    tech.ts             TechEra, TechCapability, TechContext, defaultTechContext, isCapabilityAvailable
     events.ts           ImpactEvent type, deterministic sort
     seeds.ts            Deterministic per-event seed derivation
     formation.ts        pickNearestEnemyInReach()
