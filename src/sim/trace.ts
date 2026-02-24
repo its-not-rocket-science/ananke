@@ -106,6 +106,13 @@ export type TraceEvent =
       targetId: number;
       action: MedicalAction;
       regionId?: string;
+    }
+  | {
+      kind: typeof TraceKinds.BlastHit;          // Phase 10
+      tick: number;
+      entityId: number;
+      blastEnergy_J: number;
+      fragHits: number;
     };
 
 export interface TraceSink {

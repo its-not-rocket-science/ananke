@@ -9,6 +9,7 @@ import type { IntentState, AIState } from "./intent.js";
 import type { ActionState } from "./action.js";
 import type { SkillMap } from "./skills.js";
 import type { BodyPlan } from "./bodyplan.js";
+import type { ActiveSubstance } from "./substance.js";
 
 import { Q } from "../units.js";
 
@@ -36,6 +37,9 @@ export interface Entity {
 
   /** Phase 8: optional body plan — enables data-driven injury and impairment. */
   bodyPlan?: BodyPlan;
+
+  /** Phase 10: active pharmacological substances (ingested/injected by the host application). */
+  substances?: ActiveSubstance[];
 
   position_m: Vec3;
   velocity_mps: Vec3;

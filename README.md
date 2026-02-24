@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 9 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+**Phase 10 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
 ranged and projectile combat, injury, entity environmental hazards, movement physics, formation
 basics, deterministic AI scaffolding, perception/cognition (sensory model, decision latency,
 surprise mechanics), morale and psychological state (fear accumulation, routing, pain blocking),
@@ -83,9 +83,11 @@ hazard cells, AI cover-seeking, cover morale bonus, elevation melee advantage), 
 physics-grounded skill system, a universal data-driven body plan system
 (humanoid, quadruped, theropod, sauropod, avian, vermiform, centaur, octopoid — adding a new
 species requires only a BodyPlan data file and an Archetype baseline, no kernel changes),
-and a full injury and medical simulation layer (fractures, infection, permanent damage,
+a full injury and medical simulation layer (fractures, infection, permanent damage,
 natural clotting, fatal fluid loss, and a `TreatCommand` system with tiered medical equipment
-and skill-scaled treatment rates).
+and skill-scaled treatment rates), and environmental physics including blast and fragmentation
+explosions, fall damage, pharmacokinetics (one-compartment absorption/elimination model), and
+ambient temperature stress (heat and cold tolerance).
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -415,6 +417,44 @@ per-region pipeline as combat:
 Armour provides protection against all channels. Traits (`radiationHardened`, `sealed`,
 `nonConductive`, etc.) provide immunity or resistance.
 
+### Blast and fragmentation (Phase 10)
+
+`applyExplosion(world, origin, spec, tick, trace)` applies a `BlastSpec` point-source explosion
+to all living entities within the blast radius. Uses quadratic falloff (`1 − dist²/radius²`).
+
+- **Blast wave**: delivered to torso as `BLAST_WEAPON` (high internal damage)
+- **Fragments**: stochastic count per entity; each fragment hits a random region as `FRAG_WEAPON`
+  (high penetration bias, high bleed factor)
+- Emits `BlastHit` trace event per affected entity
+
+### Fall damage (Phase 10)
+
+`applyFallDamage(world, entityId, height_m, tick, trace)` applies fall physics.
+KE = mass × g × height; 85% absorbed by muscles (15% transmitted). Any fall ≥ 1 m forces prone.
+Damage distributed: locomotion-primary regions 70%, others 30% (body-plan-aware).
+Humanoid fallback: legs 35% each, arms 10% each, torso/head 5% each.
+
+### Pharmacokinetics (Phase 10)
+
+One-compartment model per active substance (`entity.substances`). Each tick:
+absorption rate × pendingDose absorbed into concentration; elimination rate × concentration removed.
+Effects activate when concentration exceeds `effectThreshold`:
+
+| Effect type | Per-tick effect |
+|---|---|
+| `stimulant` | Reduces `fearQ` and slows fatigue accumulation |
+| `anaesthetic` | Erodes `consciousness` |
+| `poison` | Internal damage to torso + mild shock |
+| `haemostatic` | Reduces `bleedingRate` across all regions |
+
+`STARTER_SUBSTANCES` provides four ready-made entries: `stimulant`, `anaesthetic`, `poison`, `haemostatic`.
+
+### Ambient temperature (Phase 10)
+
+`KernelContext.ambientTemperature_Q` — comfort range `[q(0.35), q(0.65)]`.
+- Heat (above q(0.65)): shock + torso surface damage; scaled by `heatTolerance`
+- Cold (below q(0.35)): shock + fatigue accumulation; scaled by `coldTolerance`
+
 ---
 
 ## Determinism rules
@@ -520,7 +560,7 @@ src/
   derive.ts         Movement caps and energy/fatigue derived from attributes and loadout
 
   sim/
-    kernel.ts           stepWorld() — main simulation entry point
+    kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
     entity.ts           Entity type (all mutable simulation state)
     world.ts            WorldState type
     kinds.ts            CommandKind, TraceKind, MoveMode, DefenceMode enums
@@ -533,6 +573,8 @@ src/
     grapple.ts          Grapple resolution: score, positions, throw/choke/joint-lock
     weapon_dynamics.ts  Reach dominance, two-handed bonus, miss recovery, weapon bind/break
     ranged.ts           Ranged physics: energy at range, dispersion, grouping radius, costs
+    explosion.ts        BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy
+    substance.ts        Substance, ActiveSubstance, STARTER_SUBSTANCES — pharmacokinetics model
     events.ts           ImpactEvent type, deterministic sort
     seeds.ts            Deterministic per-event seed derivation
     formation.ts        pickNearestEnemyInReach()

@@ -869,38 +869,134 @@ tourniquet, surgery progression, infection onset, and fatal fluid loss over 266 
 
 ---
 
-## Phase 10 — Environmental Hazards
+## Phase 10 — Environmental Hazards ✓ COMPLETE
 
-**Fire, corrosive, electrical, radiation, suffocation: partially implemented.**
+**Implemented**: fall damage, explosion physics (blast + fragmentation), pharmacokinetics,
+ambient temperature stress. All 488 tests passing; all coverage thresholds met.
 
-### Physical hazards
+### Physical hazards implemented
 
-- **Falling**: impact energy = 0.5mv²; v derived from fall height. Kinetic channel.
-- **Crushing**: sustained compressive force (N) applied to structural regions.
-- **Drowning**: suffocation + thermal (cold water) + pressure at depth.
-- **Decompression**: internal damage from pressure differential (model TBD).
-- **Extreme temperature**: thermal channel dose from ambient environment, not fire.
+- **Falling** (`applyFallDamage`): KE = mass × g × height; 85% absorbed by muscles.
+  Remaining 15% distributed to regions (locomotion-primary × 70%, others × 30%).
+  Falls ≥ 1 m force prone. Fully body-plan-aware; humanoid fallback distributes to legs/arms/torso.
+- **Extreme temperature**: `KernelContext.ambientTemperature_Q` comfort range `[q(0.35), q(0.65)]`.
+  Heat → shock + torso surface damage (scaled by `heatTolerance`).
+  Cold → shock + fatigue accumulation (scaled by `coldTolerance`).
 
-### Explosions
+### Explosions implemented
 
-Blast overpressure (Pa) attenuating with distance by inverse square law. Fragmentation as
-kinetic projectiles with a mass and velocity distribution. Area of effect applies to all
-entities within radius.
+`applyExplosion(world, origin, spec, tick, trace)` applies a `BlastSpec` (defined in
+`src/sim/explosion.ts`) to all entities within radius using quadratic falloff.
 
-### Biological and chemical hazards
+- **Blast wave**: delivered as `BLAST_WEAPON` to torso (high internal damage profile)
+- **Fragmentation**: stochastic count per entity (fractional part resolved by RNG); each fragment
+  delivered as `FRAG_WEAPON` to a randomly chosen region (high penetration bias + bleed factor)
+- Emits `BlastHit` trace event per affected entity
+- Deterministic: seeds `eventSeed(world.seed, tick, entityId, 0, 0xBEA5)` for fragment count;
+  `eventSeed(world.seed, tick, entityId, f, 0xF4A6)` per fragment region selection
 
-**Pharmacokinetics model**: all substances (poisons, toxins, drugs, stimulants) follow a
-simplified one-compartment model:
+### Pharmacokinetics implemented
 
+One-compartment model in `src/sim/substance.ts`. Add `ActiveSubstance` to `entity.substances`.
+Each tick (via `stepSubstances`): `concentration += absorptionRate × pendingDose`;
+`concentration -= eliminationRate × concentration`. Effects above `effectThreshold`:
+
+| Effect type | Per-tick effect |
+|---|---|
+| `stimulant` | Reduces `fearQ` + slows fatigue |
+| `anaesthetic` | Erodes `consciousness` |
+| `poison` | Internal damage to torso + mild shock |
+| `haemostatic` | Reduces `bleedingRate` across all regions |
+
+`STARTER_SUBSTANCES` provides `stimulant`, `anaesthetic`, `poison`, `haemostatic`.
+
+### Implemented improvements (10B)
+
+- **Blast direction**: entities facing away from explosion receive 30% less blast energy
+  (dot product of `facingDirQ` against outward blast direction; tactical/sim parity — no
+  realism flag needed since it applies universally).
+- **Blast throw**: entities pushed outward with velocity proportional to `blastDelivered / mass`.
+  Formula: `throwVel = clamp(blastDelivered × BLAST_THROW_MUL / mass_kg, 0, 10 m/s)` where
+  `BLAST_THROW_MUL = SCALE.mps × SCALE.kg / 10 = 1_000_000`. Zero direction at epicentre is
+  handled gracefully (no throw if `distSq = 0`).
+
+### Deferred specs
+
+#### Substance interactions (Phase 10C)
+
+Two or more active substances can modulate each other's effective absorption or elimination.
+Implementation pattern — compute `effectiveElimRate` locally in `stepSubstances` rather than
+mutating the shared `Substance.eliminationRate`:
+
+```typescript
+// In stepSubstances, per active substance:
+let effectiveElimRate = sub.eliminationRate;
+if (sub.effectType === "haemostatic" && hasSubstanceType(e, "stimulant")) {
+  // Stimulant-induced vasoconstriction partially antagonises haemostatic absorption.
+  effectiveElimRate = qMul(effectiveElimRate, q(1.30)); // clears 30% faster
+}
+// Then use effectiveElimRate instead of sub.eliminationRate for elimination step.
 ```
-d[concentration]/dt = absorptionRate - eliminationRate × [concentration]
+
+Planned interactions:
+- `stimulant` + `haemostatic`: haemostatic eliminated 30% faster (sympathomimetic competition)
+- `anaesthetic` + `stimulant`: anaesthetic onset delayed; effectStrength reduced by 25%
+- `poison` + `haemostatic`: haemostatic partially counteracts poison-induced bleeding
+
+Requires `hasSubstanceType(e, type)` helper checking `e.substances` for active concentration
+above `effectThreshold`.
+
+#### Temperature-dependent drug metabolism (Phase 10C)
+
+Cold conditions slow hepatic metabolism, extending substance duration. Requires mapping
+`ctx.ambientTemperature_Q` to a per-tick elimination rate modifier. Two options:
+
+Option A — pass `ambientTemperature_Q` into `stepSubstances`:
+```typescript
+function stepSubstances(e: Entity, ambientTemperature_Q?: Q): void {
+  for (const active of e.substances) {
+    let elimRate = active.substance.eliminationRate;
+    if (ambientTemperature_Q !== undefined && ambientTemperature_Q < q(0.35)) {
+      // Cold: elimination rate scaled by max(q(0.50), ambientTemperature_Q / q(0.35))
+      const coldFrac = Math.max(q(0.50), mulDiv(ambientTemperature_Q, SCALE.Q, q(0.35)));
+      elimRate = qMul(elimRate, coldFrac);
+    }
+    // ... use elimRate instead of active.substance.eliminationRate
+  }
+}
 ```
 
-Damage or benefit is proportional to concentration above threshold. This supports poisons,
-venoms, anaesthetics, stimulants, and disease toxins within the same framework.
+Option B — add `effectiveEliminationRate: Q` field to `ActiveSubstance` and update it
+each tick based on temperature before running the absorption/elimination step.
 
-Disease: infection probability on exposure, incubation period (s), symptom progression rate,
-recovery rate. Modelled as a slow-acting internal damage channel.
+Recommendation: Option A (no interface change, consistent with the substance-interaction
+pattern above).
+
+#### Explosive flash/blindness (Phase 10C)
+
+Entities within a threshold distance of a detonation can be temporarily blinded by the
+flash. Implementation via a new `ConditionState` field:
+
+```typescript
+// condition.ts
+blindTicks: number;   // > 0 = temporarily blinded; decremented each tick
+```
+
+In `applyExplosion`, after blast processing:
+```typescript
+const FLASH_RADIUS_FRAC = q(0.40); // flash effective within inner 40% of blast radius
+const flashRadiusSq = mulDiv(spec.radius_m * spec.radius_m, FLASH_RADIUS_FRAC, SCALE.Q);
+if (distSq < flashRadiusSq) {
+  const blindDuration = Math.max(10, Math.trunc(20 * (1 - distSq / flashRadiusSq)));
+  e.condition.blindTicks = Math.max(e.condition.blindTicks, blindDuration);
+}
+```
+
+In `sensory.ts`, `canDetect()` reads `blindTicks > 0` to set `visionRange_m = 0`
+(or drastically reduced) for the blind entity. Armour with a sealed visor trait could
+provide immunity.
+
+The condition decrement belongs in the same cooldown loop as `suppressedTicks` in `stepWorld`.
 
 ---
 

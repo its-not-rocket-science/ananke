@@ -34,6 +34,7 @@ export const TraceKinds = {
   MoraleRoute: "moraleRoute",         // Phase 5
   Fracture: "fracture",               // Phase 9
   TreatmentApplied: "treatmentApplied", // Phase 9
+  BlastHit: "blastHit",               // Phase 10
 } as const;
 
 export type TraceKind = typeof TraceKinds[keyof typeof TraceKinds];

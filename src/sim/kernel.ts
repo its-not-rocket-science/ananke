@@ -10,7 +10,7 @@ import { deriveFunctionalState } from "./impairment.js";
 import { TUNING, type SimulationTuning } from "./tuning.js";
 import { buildTraitProfile } from "../traits.js";
 
-import { integratePos, type Vec3, v3 } from "./vec3.js";
+import { integratePos, type Vec3, v3, vSub, vAdd } from "./vec3.js";
 import { defaultIntent } from "./intent.js";
 import { defaultAction } from "./action.js";
 import { resolveHit, shieldCovers, chooseArea, type HitArea } from "./combat.js";
@@ -20,6 +20,9 @@ import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } f
 import { resolveHitSegment, getExposureWeight, segmentIds } from "./bodyplan.js";
 import { totalBleedingRate, regionKOFactor, FRACTURE_THRESHOLD } from "./injury.js";
 import { TIER_RANK, TIER_MUL, ACTION_MIN_TIER, type MedicalAction } from "./medical.js";
+import { type BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy } from "./explosion.js";
+import type { ActiveSubstance } from "./substance.js";
+import { makeRng } from "../rng.js";
 import { WorldIndex, buildWorldIndex } from "./indexing.js";
 import { buildSpatialIndex, queryNearbyIds, type SpatialIndex } from "./spatial.js";
 import { type ImpactEvent, sortEventsDeterministic } from "./events.js";
@@ -112,6 +115,14 @@ export interface KernelContext {
 
   /** Phase 6: dynamic hazard cells (fire, radiation, poison_gas). Damage applied per tick. */
   hazardGrid?: HazardGrid;
+
+  /**
+   * Phase 10: ambient temperature (Q 0..1).
+   * Comfort range: [q(0.35), q(0.65)].
+   * Above q(0.65) → heat stress (shock + surface damage); below q(0.35) → cold stress (shock + fatigue).
+   * Entity attributes `heatTolerance` and `coldTolerance` scale the dose.
+   */
+  ambientTemperature_Q?: Q;
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
@@ -335,8 +346,9 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   // Injury progression and energy — must complete for ALL entities before morale runs
   for (const e of world.entities) {
     if (e.injury.dead) continue;
-    stepConditionsToInjury(world, e);
+    stepConditionsToInjury(world, e, ctx.ambientTemperature_Q);
     stepInjuryProgression(e, world.tick);
+    stepSubstances(e);
     stepEnergy(e, ctx);
     trace.onEvent({
       kind: TraceKinds.Injury,
@@ -1336,7 +1348,7 @@ function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, regi
 
 /* ------------------ Conditions -> injury (armour-aware) ------------------ */
 
-function stepConditionsToInjury(world: WorldState, e: Entity): void {
+function stepConditionsToInjury(world: WorldState, e: Entity, ambientTemperature_Q?: Q): void {
   const traitProfile = buildTraitProfile(e.traits);
   const armour = deriveArmourProfile(e.loadout);
 
@@ -1496,6 +1508,35 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
 
   if (suff > 0) {
     e.injury.shock = clampQ(e.injury.shock + qMul(suff, SUFF_SHOCK_PER_TICK), 0, SCALE.Q);
+  }
+
+  // Phase 10: ambient temperature stress
+  if (ambientTemperature_Q !== undefined) {
+    const COMFORT_HIGH: Q = q(0.65) as Q;
+    const COMFORT_LOW:  Q = q(0.35) as Q;
+
+    if (ambientTemperature_Q > COMFORT_HIGH) {
+      // Heat stress: shock + mild surface damage; heatTolerance scales dose
+      const excess = clampQ((ambientTemperature_Q - COMFORT_HIGH) as Q, q(0), q(1.0));
+      const baseDose = qMul(excess, q(0.025));
+      const heatTol  = Math.max(1, e.attributes.resilience.heatTolerance);
+      const dose     = mulDiv(baseDose, SCALE.Q, heatTol);
+      e.injury.shock = clampQ((e.injury.shock + dose) as Q, 0, SCALE.Q);
+      const torsoReg = e.injury.byRegion["torso"] ?? Object.values(e.injury.byRegion)[0];
+      if (torsoReg) {
+        torsoReg.surfaceDamage = clampQ(
+          (torsoReg.surfaceDamage + qMul(dose, q(0.20))) as Q, 0, SCALE.Q,
+        );
+      }
+    } else if (ambientTemperature_Q < COMFORT_LOW) {
+      // Cold stress: shock + fatigue; coldTolerance scales dose
+      const deficit = clampQ((COMFORT_LOW - ambientTemperature_Q) as Q, q(0), q(1.0));
+      const baseDose = qMul(deficit, q(0.020));
+      const coldTol  = Math.max(1, e.attributes.resilience.coldTolerance);
+      const dose     = mulDiv(baseDose, SCALE.Q, coldTol);
+      e.injury.shock   = clampQ((e.injury.shock   + dose)                  as Q, 0, SCALE.Q);
+      e.energy.fatigue = clampQ((e.energy.fatigue + qMul(dose, q(0.50)))   as Q, 0, SCALE.Q);
+    }
   }
 }
 
@@ -1694,6 +1735,256 @@ function applyHazardDamage(e: Entity, hazard: HazardCell): void {
   } else if (hazard.type === "poison_gas") {
     torso.internalDamage = clampQ(torso.internalDamage + qMul(intensity, q(0.002)), 0, SCALE.Q);
     e.injury.consciousness = clampQ(e.injury.consciousness - qMul(intensity, q(0.003)), 0, SCALE.Q);
+  }
+}
+
+/* ── Phase 10: pharmacokinetics ──────────────────────────────────────────── */
+
+function stepSubstances(e: Entity): void {
+  if (!e.substances || e.substances.length === 0) return;
+
+  for (const active of e.substances) {
+    const sub = active.substance;
+
+    // Absorption: pendingDose → concentration
+    const absorbed = qMul(active.pendingDose, sub.absorptionRate);
+    active.pendingDose    = clampQ(active.pendingDose    - absorbed, q(0), q(1.0));
+    active.concentration  = clampQ(active.concentration  + absorbed, q(0), q(1.0));
+
+    // Elimination
+    const eliminated = qMul(active.concentration, sub.eliminationRate);
+    active.concentration  = clampQ(active.concentration  - eliminated, q(0), q(1.0));
+
+    // Effects — only when above threshold
+    if (active.concentration <= sub.effectThreshold) continue;
+
+    const delta      = clampQ(active.concentration - sub.effectThreshold, q(0), q(1.0));
+    const effectDose = qMul(delta, sub.effectStrength);
+
+    switch (sub.effectType) {
+      case "stimulant":
+        // Reduces fear and slows fatigue accumulation
+        e.condition.fearQ  = clampQ(e.condition.fearQ  - qMul(effectDose, q(0.005)), q(0), q(1.0));
+        e.energy.fatigue   = clampQ(e.energy.fatigue   - qMul(effectDose, q(0.003)), q(0), q(1.0));
+        break;
+      case "anaesthetic":
+        // Erodes consciousness
+        e.injury.consciousness = clampQ(e.injury.consciousness - qMul(effectDose, q(0.008)), q(0), q(1.0));
+        break;
+      case "poison": {
+        // Internal damage to torso (or first region)
+        const torsoReg = e.injury.byRegion["torso"] ?? Object.values(e.injury.byRegion)[0];
+        if (torsoReg) {
+          torsoReg.internalDamage = clampQ(torsoReg.internalDamage + qMul(effectDose, q(0.002)), q(0), q(1.0));
+        }
+        e.injury.shock = clampQ(e.injury.shock + qMul(effectDose, q(0.001)), 0, SCALE.Q);
+        break;
+      }
+      case "haemostatic":
+        // Reduces bleeding rate across all regions
+        for (const reg of Object.values(e.injury.byRegion)) {
+          if (reg.bleedingRate > 0) {
+            reg.bleedingRate = clampQ(reg.bleedingRate - qMul(effectDose, q(0.003)), q(0), q(1.0));
+          }
+        }
+        break;
+    }
+  }
+
+  // Remove exhausted substances (keep only those with meaningful dose or concentration)
+  e.substances = e.substances.filter(a => a.pendingDose > 1 || a.concentration > 1);
+}
+
+/* ── Phase 10: fall damage ────────────────────────────────────────────────── */
+
+// 15% of kinetic energy transmitted after muscle absorption (85% absorbed)
+const FALL_MUSCLE_ABSORB: Q = q(0.85);
+
+// Weapon-like damage profiles reused by the injury pipeline
+const FALL_WEAPON: Weapon = {
+  id: "fall", kind: "weapon", name: "Fall", mass_kg: 0, bulk: q(0),
+  damage: { penetrationBias: q(0), surfaceFrac: q(0.10), internalFrac: q(0.20), structuralFrac: q(0.70), bleedFactor: q(0.05) },
+};
+
+const BLAST_WEAPON: Weapon = {
+  id: "blast", kind: "weapon", name: "Blast Wave", mass_kg: 0, bulk: q(0),
+  damage: { penetrationBias: q(0), surfaceFrac: q(0.15), internalFrac: q(0.55), structuralFrac: q(0.30), bleedFactor: q(0.25) },
+};
+
+const FRAG_WEAPON: Weapon = {
+  id: "frag", kind: "weapon", name: "Fragment", mass_kg: 0, bulk: q(0),
+  damage: { penetrationBias: q(0.60), surfaceFrac: q(0.25), internalFrac: q(0.40), structuralFrac: q(0.35), bleedFactor: q(0.60) },
+};
+
+/**
+ * Apply fall damage to a single entity (Phase 10).
+ * KE = mass × g × height; 85% absorbed by controlled landing.
+ * Remaining 15% distributed: locomotion-primary regions × 70%, others × 30%.
+ * Any fall ≥ 1 m forces prone.
+ */
+export function applyFallDamage(
+  world: WorldState,
+  entityId: number,
+  height_m: I32,
+  tick: number,
+  trace: TraceSink,
+): void {
+  const e = world.entities.find(x => x.id === entityId);
+  if (!e || e.injury.dead) return;
+
+  // KE_J = (mass_kg / SCALE.kg) × 9.81 × (height_m / SCALE.m)
+  //       = mass_kg × 981 × height_m / (SCALE.kg × 100 × SCALE.m)
+  const G_X100 = 981;
+  const keFull = Number(
+    (BigInt(e.attributes.morphology.mass_kg) * BigInt(G_X100) * BigInt(height_m)) /
+    BigInt(SCALE.kg * 100 * SCALE.m),
+  );
+  if (keFull <= 0) return;
+
+  // 15% transmitted after muscle absorption
+  const keEffective = mulDiv(keFull, SCALE.Q - FALL_MUSCLE_ABSORB, SCALE.Q);
+  if (keEffective <= 0) return;
+
+  // Any fall ≥ 1 m forces prone
+  if (height_m >= SCALE.m) e.condition.prone = true;
+
+  const plan = e.bodyPlan;
+  if (plan) {
+    // Body-plan-aware: locomotion-primary 70%, remainder 30%
+    const primIds  = plan.segments.filter(s => s.locomotionRole === "primary").map(s => s.id);
+    const otherIds = plan.segments.filter(s => s.locomotionRole !== "primary").map(s => s.id);
+    const primShare  = primIds.length  > 0 ? Math.trunc((keEffective * 7) / 10) : 0;
+    const otherShare = otherIds.length > 0 ? keEffective - primShare            : 0;
+    const perPrim  = primIds.length  > 0 ? Math.trunc(primShare  / primIds.length)  : 0;
+    const perOther = otherIds.length > 0 ? Math.trunc(otherShare / otherIds.length) : 0;
+    for (const rid of primIds)  if (perPrim  > 0) applyImpactToInjury(e, FALL_WEAPON, perPrim,  rid, false, trace, tick);
+    for (const rid of otherIds) if (perOther > 0) applyImpactToInjury(e, FALL_WEAPON, perOther, rid, false, trace, tick);
+  } else {
+    // Humanoid fallback: legs 35% each, arms 10% each, torso 5%, head 5%
+    const regions: [string, number][] = [
+      ["leftLeg", 35], ["rightLeg", 35],
+      ["leftArm", 10], ["rightArm", 10],
+      ["torso",    5], ["head",      5],
+    ];
+    for (const [region, pct] of regions) {
+      const energy = Math.trunc((keEffective * pct) / 100);
+      if (energy > 0) applyImpactToInjury(e, FALL_WEAPON, energy, region, false, trace, tick);
+    }
+  }
+}
+
+// Multiplier for blast throw velocity: SCALE.mps × SCALE.kg ÷ 10 (empirical damping).
+// Produces ~0.67 m/s per 500 J on a 75 kg entity; capped at 10 m/s.
+const BLAST_THROW_MUL = Math.trunc(SCALE.mps * SCALE.kg / 10); // 1_000_000
+
+/**
+ * Apply a point-source explosion to all living entities within the blast radius (Phase 10).
+ *
+ * Features:
+ * - Blast wave delivered to torso; entities facing away take −30% blast damage.
+ * - Stochastic fragment hits to random regions.
+ * - Blast throw: entities are pushed outward; velocity proportional to blast energy / mass.
+ * - Emits a BlastHit trace event for each affected entity.
+ */
+export function applyExplosion(
+  world: WorldState,
+  origin: Vec3,
+  spec: BlastSpec,
+  tick: number,
+  trace: TraceSink,
+): void {
+  for (const e of world.entities) {
+    if (e.injury.dead) continue;
+
+    const dx     = e.position_m.x - origin.x;
+    const dy     = e.position_m.y - origin.y;
+    const distSq = dx * dx + dy * dy;
+
+    const blastFracQ   = blastEnergyFracQ(spec, distSq);
+    const fragExpected = fragmentsExpected(spec, distSq);
+
+    if (blastFracQ <= 0 && fragExpected <= 0) continue;
+
+    // Direction from epicentre to entity (used for facing check and throw).
+    // normaliseDirCheapQ handles zero-vector gracefully (returns all-zero).
+    const blastDir = normaliseDirCheapQ(vSub(e.position_m, origin));
+
+    // Blast wave — delivered to torso (or best equivalent region)
+    let blastDelivered = 0;
+    if (blastFracQ > 0) {
+      blastDelivered = mulDiv(spec.blastEnergy_J, blastFracQ, SCALE.Q);
+
+      // Facing check: entity facing away from blast has less frontal exposure → −30%.
+      // dot > 0 means facingDir and blastDir roughly align (entity turned away from blast).
+      if (blastDelivered > 0) {
+        const facingDot = dotDirQ(e.action.facingDirQ, blastDir);
+        if (facingDot > 0) {
+          blastDelivered = mulDiv(blastDelivered, q(0.70), SCALE.Q);
+        }
+      }
+
+      const blastRegion = e.bodyPlan
+        ? (e.bodyPlan.segments.find(s => s.locomotionRole === "none" && s.cnsRole !== "central")?.id
+            ?? e.bodyPlan.segments[0]?.id ?? "torso")
+        : "torso";
+      if (blastDelivered > 0 && e.injury.byRegion[blastRegion]) {
+        applyImpactToInjury(e, BLAST_WEAPON, blastDelivered, blastRegion, false, trace, tick);
+      }
+    }
+
+    // Fragment hits — stochastic count, fractional part resolved by RNG
+    let fragHits = 0;
+    if (fragExpected > 0) {
+      const countSeed = eventSeed(world.seed, tick, e.id, 0, 0xBEA5);
+      const rng       = makeRng(countSeed, SCALE.Q);
+      const fragFrac  = fragExpected - Math.trunc(fragExpected);
+      const fragCount = Math.trunc(fragExpected) + (rng.q01() < Math.trunc(fragFrac * SCALE.Q) ? 1 : 0);
+
+      const fragKeJ = fragmentKineticEnergy(spec, distSq);
+      for (let f = 0; f < fragCount; f++) {
+        if (fragKeJ <= 0) break;
+        const fragRegSeed = eventSeed(world.seed, tick, e.id, f, 0xF4A6);
+        const fragRng     = makeRng(fragRegSeed, SCALE.Q);
+        let fragRegion: string;
+        if (e.bodyPlan) {
+          fragRegion = resolveHitSegment(e.bodyPlan, fragRng.q01());
+        } else {
+          const area    = chooseArea(fragRng.q01());
+          const sideBit = (fragRegSeed & 1) as 0 | 1;
+          fragRegion    = regionFromHit(area, sideBit);
+        }
+        if (e.injury.byRegion[fragRegion]) {
+          applyImpactToInjury(e, FRAG_WEAPON, fragKeJ, fragRegion, false, trace, tick);
+          fragHits++;
+        }
+      }
+    }
+
+    // Blast throw: push entity outward from epicentre.
+    // throwVel_units = clamp(blastDelivered × BLAST_THROW_MUL / mass_kg, 0, 10 m/s)
+    if (blastDelivered > 0 && distSq > 0) {
+      const mass_kg = e.attributes.morphology.mass_kg;
+      const throwVel = Math.min(
+        to.mps(10),
+        Number(BigInt(blastDelivered) * BigInt(BLAST_THROW_MUL) / BigInt(Math.max(1, mass_kg))),
+      );
+      if (throwVel > 0) {
+        const throwVec = {
+          x: Math.trunc(blastDir.x * throwVel / SCALE.Q),
+          y: Math.trunc(blastDir.y * throwVel / SCALE.Q),
+          z: 0,
+        };
+        e.velocity_mps = vAdd(e.velocity_mps, throwVec);
+      }
+    }
+
+    trace.onEvent({
+      kind: TraceKinds.BlastHit,
+      tick,
+      entityId: e.id,
+      blastEnergy_J: blastDelivered,
+      fragHits,
+    });
   }
 }
 
