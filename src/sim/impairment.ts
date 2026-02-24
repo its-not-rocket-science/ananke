@@ -3,6 +3,8 @@ import { q, clampQ, SCALE, qMul, mulDiv } from "../units.js";
 import type { Entity } from "./entity.js";
 import type { SimulationTuning } from "./tuning.js";
 import { TUNING } from "./tuning.js";
+import type { BodySegment, BodyPlan } from "./bodyplan.js";
+import type { RegionInjury, DamageType } from "./injury.js";
 
 export interface FunctionalState {
   mobilityMul: Q;
@@ -33,28 +35,94 @@ function applyImpairmentsClamped(
   return clampQ(out, minOut, maxOut);
 }
 
+/** Average a damage field across a set of body segments. */
+function avgSegDamage(
+  segs: BodySegment[],
+  byRegion: Record<string, RegionInjury>,
+  type: DamageType,
+): Q {
+  if (segs.length === 0) return q(0);
+  let sum = 0;
+  for (const s of segs) sum += byRegion[s.id]?.[type] ?? 0;
+  return Math.trunc(sum / segs.length) as Q;
+}
+
+/** Resolve damage-derived inputs using body plan segment roles (Phase 8). */
+function resolveDamageSources(
+  plan: BodyPlan,
+  byRegion: Record<string, RegionInjury>,
+  tuning: SimulationTuning,
+): {
+  legStr: Q; legInt: Q;
+  armStr: Q; armInt: Q;
+  headInt: Q; headStr: Q;
+  leftArmDisabled: boolean; rightArmDisabled: boolean;
+  leftLegDisabled: boolean; rightLegDisabled: boolean;
+} {
+  const primaryLoco  = plan.segments.filter(s => s.locomotionRole  === "primary");
+  const primaryManip = plan.segments.filter(s => s.manipulationRole === "primary");
+  const centralCNS   = plan.segments.filter(s => s.cnsRole === "central");
+
+  const legStr  = avgSegDamage(primaryLoco,  byRegion, "structuralDamage");
+  const legInt  = avgSegDamage(primaryLoco,  byRegion, "internalDamage");
+  const armStr  = avgSegDamage(primaryManip, byRegion, "structuralDamage");
+  const armInt  = avgSegDamage(primaryManip, byRegion, "internalDamage");
+  const headInt = avgSegDamage(centralCNS,   byRegion, "internalDamage");
+  const headStr = avgSegDamage(centralCNS,   byRegion, "structuralDamage");
+
+  // Map first two primary manipulation segments to "left/right arm"
+  // Map first two primary locomotion segments to "left/right leg"
+  const leftManipSeg  = primaryManip[0];
+  const rightManipSeg = primaryManip[1];
+  const leftLocoSeg   = primaryLoco[0];
+  const rightLocoSeg  = primaryLoco[1];
+
+  const leftArmDisabled  = leftManipSeg  ? (byRegion[leftManipSeg.id]?.structuralDamage  ?? q(0)) >= tuning.armDisableThreshold : false;
+  const rightArmDisabled = rightManipSeg ? (byRegion[rightManipSeg.id]?.structuralDamage ?? q(0)) >= tuning.armDisableThreshold : false;
+  const leftLegDisabled  = leftLocoSeg   ? (byRegion[leftLocoSeg.id]?.structuralDamage   ?? q(0)) >= tuning.legDisableThreshold : false;
+  const rightLegDisabled = rightLocoSeg  ? (byRegion[rightLocoSeg.id]?.structuralDamage  ?? q(0)) >= tuning.legDisableThreshold : false;
+
+  return { legStr, legInt, armStr, armInt, headInt, headStr, leftArmDisabled, rightArmDisabled, leftLegDisabled, rightLegDisabled };
+}
+
 export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNING.tactical): FunctionalState {
   const inj = e.injury;
 
-  const leftArmStr = inj.byRegion.leftArm.structuralDamage;
-  const rightArmStr = inj.byRegion.rightArm.structuralDamage;
-  const leftLegStr = inj.byRegion.leftLeg.structuralDamage;
-  const rightLegStr = inj.byRegion.rightLeg.structuralDamage;
+  let legStr: Q, legInt: Q, armStr: Q, armInt: Q, headInt: Q, headStr: Q;
+  let leftArmDisabled: boolean, rightArmDisabled: boolean, leftLegDisabled: boolean, rightLegDisabled: boolean;
 
-  const leftLegInt = inj.byRegion.leftLeg.internalDamage;
-  const rightLegInt = inj.byRegion.rightLeg.internalDamage;
+  if (e.bodyPlan) {
+    // Phase 8: data-driven path via body plan segment roles
+    const d = resolveDamageSources(e.bodyPlan, inj.byRegion, tuning);
+    legStr = d.legStr; legInt = d.legInt;
+    armStr = d.armStr; armInt = d.armInt;
+    headInt = d.headInt; headStr = d.headStr;
+    leftArmDisabled  = d.leftArmDisabled;  rightArmDisabled = d.rightArmDisabled;
+    leftLegDisabled  = d.leftLegDisabled;  rightLegDisabled = d.rightLegDisabled;
+  } else {
+    // Backward compat: humanoid hardcoded regions
+    const leftArmStr  = inj.byRegion.leftArm?.structuralDamage  ?? q(0);
+    const rightArmStr = inj.byRegion.rightArm?.structuralDamage ?? q(0);
+    const leftLegStr  = inj.byRegion.leftLeg?.structuralDamage  ?? q(0);
+    const rightLegStr = inj.byRegion.rightLeg?.structuralDamage ?? q(0);
 
-  const leftArmInt = inj.byRegion.leftArm.internalDamage;
-  const rightArmInt = inj.byRegion.rightArm.internalDamage;
+    const leftLegInt  = inj.byRegion.leftLeg?.internalDamage  ?? q(0);
+    const rightLegInt = inj.byRegion.rightLeg?.internalDamage ?? q(0);
+    const leftArmInt  = inj.byRegion.leftArm?.internalDamage  ?? q(0);
+    const rightArmInt = inj.byRegion.rightArm?.internalDamage ?? q(0);
 
-  const legStr = mean2(leftLegStr, rightLegStr);
-  const legInt = mean2(leftLegInt, rightLegInt);
+    legStr = mean2(leftLegStr, rightLegStr);
+    legInt = mean2(leftLegInt, rightLegInt);
+    armStr = mean2(leftArmStr, rightArmStr);
+    armInt = mean2(leftArmInt, rightArmInt);
+    headInt = inj.byRegion.head?.internalDamage  ?? q(0);
+    headStr = inj.byRegion.head?.structuralDamage ?? q(0);
 
-  const armStr = mean2(leftArmStr, rightArmStr);
-  const armInt = mean2(leftArmInt, rightArmInt);
-  
-  const headInt = inj.byRegion.head.internalDamage;
-  const headStr = inj.byRegion.head.structuralDamage;
+    leftArmDisabled  = leftArmStr  >= tuning.armDisableThreshold;
+    rightArmDisabled = rightArmStr >= tuning.armDisableThreshold;
+    leftLegDisabled  = leftLegStr  >= tuning.legDisableThreshold;
+    rightLegDisabled = rightLegStr >= tuning.legDisableThreshold;
+  }
 
   const shock = inj.shock;
   const fatigue = e.energy.fatigue;
@@ -137,14 +205,9 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
     [exhaustionQ, q(0.50)],  // exhaustion: up to -50 % (primary fatigue signal)
   );
 
-  const leftArmDisabled = leftArmStr >= tuning.armDisableThreshold;
-  const rightArmDisabled = rightArmStr >= tuning.armDisableThreshold;
-  const leftLegDisabled = leftLegStr >= tuning.legDisableThreshold;
-  const rightLegDisabled = rightLegStr >= tuning.legDisableThreshold;
-
   const canAct = inj.consciousness >= tuning.unconsciousThreshold && !inj.dead;
 
-  // "cannot stand" if mobility is very low or both legs are functionally disabled
+  // "cannot stand" if mobility is very low or all primary locomotion segments are disabled
   const legsOut = leftLegDisabled && rightLegDisabled;
   const canStand = canAct && !legsOut && mobilityMul >= tuning.standFailThreshold;
 

@@ -1,4 +1,3 @@
-import type { BodyRegion } from "./body.js";
 import type { Weapon } from "../equipment.js";
 import type { Q } from "../units.js";
 
@@ -6,7 +5,8 @@ export interface ImpactEvent {
   kind: "impact";
   attackerId: number;
   targetId: number;
-  region: BodyRegion;
+  /** Segment id of the struck region (BodyRegion string for humanoid; arbitrary string for other body plans). */
+  region: string;
   energy_J: number;
   protectedByArmour: boolean;
   blocked: boolean;

@@ -8,6 +8,7 @@ import type { InjuryState } from "./injury.js";
 import type { IntentState, AIState } from "./intent.js";
 import type { ActionState } from "./action.js";
 import type { SkillMap } from "./skills.js";
+import type { BodyPlan } from "./bodyplan.js";
 
 import { Q } from "../units.js";
 
@@ -32,6 +33,9 @@ export interface Entity {
 
   /** Phase 7: optional skill map — consumes values from the host application. */
   skills?: SkillMap;
+
+  /** Phase 8: optional body plan — enables data-driven injury and impairment. */
+  bodyPlan?: BodyPlan;
 
   position_m: Vec3;
   velocity_mps: Vec3;

@@ -585,12 +585,28 @@ experience or decay modifiers before passing them to the simulation.
 
 ---
 
-## Phase 8 — Universal Body and Species System
+## Phase 8 — Universal Body and Species System (complete)
 
 **Prerequisite for Phases 9 and 10.**
 
-The current implementation hard-codes six humanoid body regions. This phase makes body plans
-fully data-driven.
+Body plans are fully data-driven. Adding a new species requires authoring a `BodyPlan` data
+file and an `Archetype` baseline — no kernel changes needed.
+
+### Implemented
+
+- `src/sim/bodyplan.ts`: `BodyPlan`, `BodySegment`, `LocomotionModel`, `CNSLayout` types
+- 8 built-in body plan constants: `HUMANOID_PLAN`, `QUADRUPED_PLAN`, `THEROPOD_PLAN`,
+  `SAUROPOD_PLAN`, `AVIAN_PLAN`, `VERMIFORM_PLAN`, `CENTAUR_PLAN`, `OCTOPOID_PLAN`
+- Helpers: `resolveHitSegment(plan, r01)`, `getExposureWeight(seg, channel)`, `segmentIds(plan)`
+- `Entity.bodyPlan?: BodyPlan` — optional; humanoid backward compat when absent
+- `InjuryState.byRegion: Record<string, RegionInjury>` — widened from `Record<BodyRegion, ...>`
+- `defaultInjury(segmentIds?)` — optional segment list; defaults to humanoid ALL_REGIONS
+- `deriveFunctionalState` — data-driven from segment roles when `e.bodyPlan` is set
+- `kernel.ts` — hit region selection, systemic hazard distribution, injury application all
+  use body plan when present; fall back to humanoid defaults when `bodyPlan` is absent
+- `test/bodyplan.test.ts` — 26 tests
+
+### Original body plan data structure
 
 ### Body plan data structure
 
@@ -629,6 +645,186 @@ interface BodySegment {
 
 Each body plan is a data file. Adding a new species requires authoring a BodyPlan and an
 Archetype baseline, not modifying the simulation kernel.
+
+---
+
+## Phase 8B — Exoskeleton Biology
+
+**Depends on Phase 8 (body plan system) and Phase 9 (injury model). Implement after Phase 9.**
+
+Insects, crustaceans, and analogous alien organisms have structural biologies that differ
+fundamentally from endoskeletal vertebrates. Phase 8B extends `BodySegment` with optional
+exoskeleton-specific fields and wires them into the injury and locomotion systems.
+
+All new fields are optional. Segments without them behave identically to Phase 8 segments.
+
+### New `BodySegment` fields
+
+```typescript
+interface BodySegment {
+  // ... existing fields ...
+
+  /** Structural biology of this segment. Absent = endoskeleton default. */
+  structureType?: "endoskeleton" | "exoskeleton" | "hydrostatic" | "gelatinous";
+
+  /**
+   * For exoskeletons: structural damage level (Q) at which the shell is breached.
+   * Below breach: all incoming damage routes to structuralDamage only.
+   * At or above breach: normal surface/internal/structural split applies.
+   */
+  breachThreshold?: Q;
+
+  /**
+   * Fluid transport system type.
+   * "closed" (vertebrate blood) vs "open" (arthropod hemolymph) vs "none".
+   * Determines which fluid-loss model applies when the segment is breached.
+   */
+  fluidSystem?: "closed" | "open" | "none";
+
+  /**
+   * Hemolymph loss rate per tick (Q) when an open-fluid segment is breached.
+   * Feeds into a global hemolymphLoss accumulator on InjuryState (parallel to
+   * the vertebrate bleeding model). Fatal threshold: same as fluidLoss_L.
+   */
+  hemolymphLossRate?: Q;
+
+  /**
+   * Is this segment a joint (articulation between hardened plates)?
+   * Joints take extra structural damage from kinetic impacts.
+   */
+  isJoint?: boolean;
+
+  /**
+   * Damage multiplier applied to structuralDamage increment when isJoint = true.
+   * e.g. q(1.5) = joints take 50% more structural damage than adjacent plates.
+   */
+  jointDamageMultiplier?: Q;
+
+  /**
+   * Can this segment regenerate via molting?
+   * When true, a molt event (timed by entity.molting) may partially restore
+   * structuralDamage on this segment.
+   */
+  regeneratesViaMolting?: boolean;
+}
+```
+
+### New `LocomotionModel` fields
+
+```typescript
+interface LocomotionModel {
+  // ... existing fields ...
+
+  /**
+   * Flight capability. Present only for winged body plans.
+   * Wings are segments; liftCapacity_kg is total mass the creature can sustain aloft.
+   */
+  flight?: {
+    wingSegments: string[];       // segment IDs used for lift
+    liftCapacity_kg: I32;         // maximum liftable mass (SCALE.kg units)
+    flightStaminaCost: Q;         // energy cost multiplier relative to ground movement
+    wingDamagePenalty: Q;         // mobility reduction per unit of average wing damage
+  };
+}
+```
+
+### New `Entity` state
+
+```typescript
+interface Entity {
+  // ... existing fields ...
+
+  /** Molting state for arthropod-type entities. */
+  molting?: {
+    active: boolean;
+    ticksRemaining: number;
+    /** Segments currently hardening — take reduced kinetic damage. */
+    softeningSegments: string[];
+  };
+}
+```
+
+### Kernel changes
+
+**`applyImpactToInjury` (injury.ts / kernel.ts)**
+
+When `seg.structureType === "exoskeleton"` and `breachThreshold` is set:
+
+- Below breach: add all incoming damage (surface + internal + structural increments) to
+  `segState.structuralDamage` only; no surface or internal damage until shell fails.
+- At or above breach: use the normal three-channel split.
+
+```typescript
+if (seg.structureType === "exoskeleton" && seg.breachThreshold !== undefined) {
+  if (segState.structuralDamage < seg.breachThreshold) {
+    const totalInc = surfInc + intInc + strInc;
+    segState.structuralDamage = clampQ(segState.structuralDamage + totalInc, 0, SCALE.Q);
+    return; // no internal damage yet
+  }
+  // fall through to normal split
+}
+```
+
+**Joint vulnerability**
+
+```typescript
+if (seg.isJoint && seg.jointDamageMultiplier) {
+  strInc = Math.trunc(strInc * seg.jointDamageMultiplier / SCALE.Q);
+}
+```
+
+**Hemolymph accumulation (`stepInjuryProgression`)**
+
+For each segment with `fluidSystem === "open"` and `hemolymphLossRate` defined:
+
+```typescript
+if (segState.structuralDamage >= (seg.breachThreshold ?? q(0.8))) {
+  const loss = qMul(seg.hemolymphLossRate, segState.structuralDamage);
+  e.injury.hemolymphLoss = clampQ((e.injury.hemolymphLoss ?? 0) + loss, 0, SCALE.Q);
+}
+```
+
+`InjuryState.hemolymphLoss?: Q` feeds the same death/incapacitation thresholds as `fluidLoss_L`.
+
+**Molting (`stepInjuryProgression`)**
+
+When `e.molting?.active`:
+- Segments in `softeningSegments` take reduced kinetic structural damage (× q(0.70)).
+- Each tick decrements `ticksRemaining`; when it reaches 0, `active` is set to false and
+  `regeneratesViaMolting` segments receive partial structural repair (−q(0.10) per molt cycle,
+  clamped to 0).
+
+**Flight locomotion (`deriveMovementCaps` or equivalent)**
+
+When `e.bodyPlan.locomotion.flight` is present:
+1. If `e.attributes.morphology.mass_kg > flight.liftCapacity_kg`, fall back to ground locomotion.
+2. Compute average wing damage across `wingSegments`. Apply `flightMul = SCALE.Q − qMul(avgWingDmg, wingDamagePenalty)`.
+3. Boost max sprint speed by 1.5× (flight speed), multiply by `flightMul`.
+4. Multiply energy cost by `flightStaminaCost`.
+
+### Reference body plan: GRASSHOPPER_PLAN
+
+A new built-in in `src/sim/bodyplan.ts` demonstrating all Phase 8B fields:
+head, thorax, forewing, hindwing, 6 legs (foreleg×2, midleg×2, hindleg×2).
+Wings have `breachThreshold: q(0.3)`, `isJoint: true`, `jointDamageMultiplier: q(1.5)`.
+Thorax has `fluidSystem: "open"`, `hemolymphLossRate: q(0.002)`.
+All segments `structureType: "exoskeleton"`. `regeneratesViaMolting: true` on legs.
+`locomotion.flight` wired to wing segment IDs.
+
+### Tests
+
+- `test/exoskeleton.test.ts` (new, ~25 tests):
+  - Shell breach: damage below `breachThreshold` routes entirely to structuralDamage
+  - Shell breach: damage at/above threshold uses normal split
+  - Joint vulnerability: joint segment takes more structural damage than adjacent plate
+  - Hemolymph accumulation: breached open-fluid segment increases `hemolymphLoss` each tick
+  - Hemolymph zero for non-breached segment
+  - Molt active: kinetic damage reduced; `ticksRemaining` decrements
+  - Molt complete: structural damage reduced on `regeneratesViaMolting` segments
+  - Flight: entity below liftCapacity uses boosted sprint speed
+  - Flight: entity above liftCapacity falls back to ground locomotion caps
+  - Wing damage: high average wing damage reduces effective flight speed
+  - GRASSHOPPER_PLAN round-trip: all segment IDs correct, locomotion wired correctly
 
 ---
 

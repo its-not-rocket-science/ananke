@@ -1,6 +1,5 @@
 import type { Q } from "../units.js";
 import { q, clampQ, SCALE, qMul } from "../units.js";
-import type { BodyRegion } from "./body.js";
 import { ALL_REGIONS } from "./body.js";
 
 export interface RegionInjury {
@@ -11,7 +10,8 @@ export interface RegionInjury {
 }
 
 export interface InjuryState {
-  byRegion: Record<BodyRegion, RegionInjury>;
+  /** Keyed by segment id (BodyRegion strings for humanoid, or custom ids for other body plans). */
+  byRegion: Record<string, RegionInjury>;
 
   fluidLoss: Q;       // 0..1
   shock: Q;           // 0..1
@@ -27,9 +27,14 @@ export const defaultRegionInjury = (): RegionInjury => ({
   bleedingRate: q(0),
 });
 
-export const defaultInjury = (): InjuryState => {
-  const byRegion = {} as Record<BodyRegion, RegionInjury>;
-  for (const r of ALL_REGIONS) byRegion[r] = defaultRegionInjury();
+/**
+ * Create a default InjuryState for the given segment ids.
+ * When omitted, defaults to the standard humanoid six regions.
+ */
+export const defaultInjury = (segmentIds?: readonly string[]): InjuryState => {
+  const ids = segmentIds ?? ALL_REGIONS;
+  const byRegion: Record<string, RegionInjury> = {};
+  for (const r of ids) byRegion[r] = defaultRegionInjury();
   return {
     byRegion,
     fluidLoss: q(0),
@@ -42,12 +47,10 @@ export const defaultInjury = (): InjuryState => {
 export type DamageType = 'surfaceDamage' | 'internalDamage' | 'structuralDamage' | 'bleedingRate';
 
 function totalRegionDamage(i: InjuryState, type: DamageType): Q {
-  const r = i.byRegion;
-  return clampQ(
-    (r.head[type] + r.torso[type] + r.leftArm[type] + 
-     r.rightArm[type] + r.leftLeg[type] + r.rightLeg[type]) as any,
-    0, 6 * SCALE.Q
-  );
+  const segs = Object.values(i.byRegion);
+  let sum = 0;
+  for (const r of segs) sum += r[type];
+  return clampQ(sum as any, 0, segs.length * SCALE.Q);
 }
 
 export function totalSurfaceDamage(i: InjuryState): Q {
@@ -68,8 +71,13 @@ export function totalBleedingRate(i: InjuryState): Q {
   return totalRegionDamage(i, 'bleedingRate');
 }
 
+/**
+ * Compute KO risk from CNS-critical region damage.
+ * For humanoid and any plan that uses "head"/"torso" segment ids.
+ * For other body plans, falls back gracefully to q(0) for absent segments.
+ */
 export function regionKOFactor(i: InjuryState): Q {
-  const head = i.byRegion.head.internalDamage;
-  const torso = i.byRegion.torso.internalDamage;
+  const head = i.byRegion["head"]?.internalDamage ?? q(0);
+  const torso = i.byRegion["torso"]?.internalDamage ?? q(0);
   return clampQ(qMul(head, q(1.2)) + qMul(torso, q(0.6)), 0, SCALE.Q);
 }

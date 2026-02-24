@@ -74,14 +74,15 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 7 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+**Phase 8 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
 ranged and projectile combat, injury, entity environmental hazards, movement physics, formation
 basics, deterministic AI scaffolding, perception/cognition (sensory model, decision latency,
 surprise mechanics), morale and psychological state (fear accumulation, routing, pain blocking),
 terrain systems (surface friction, obstacle/cover grids, elevation, slope direction, dynamic
-hazard cells, AI cover-seeking, cover morale bonus, elevation melee advantage), and a
-physics-grounded skill system (learned technique modifiers that adjust timing, energy transfer,
-dispersion, fatigue rate, and treatment rate — consumed from host-application-provided values).
+hazard cells, AI cover-seeking, cover morale bonus, elevation melee advantage), a
+physics-grounded skill system, and a universal data-driven body plan system
+(humanoid, quadruped, theropod, sauropod, avian, vermiform, centaur, octopoid — adding a new
+species requires only a BodyPlan data file and an Archetype baseline, no kernel changes).
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -250,8 +251,9 @@ Archetypes in `src/archetypes.ts`: `HUMAN_BASE`, `SERVICE_ROBOT`. Additional arc
 
 ## Anatomy and injury
 
-Per-region injury tracking (currently humanoid: head, torso, left arm, right arm, left leg, right leg).
-Region set becomes data-driven in Phase 8 (Universal Body System).
+Per-region injury tracking — fully data-driven via `BodyPlan` (Phase 8). Default is humanoid
+(head, torso, left arm, right arm, left leg, right leg). Other plans: quadruped, theropod,
+sauropod, avian, vermiform, centaur, octopoid — see `src/sim/bodyplan.ts`.
 
 Each region tracks:
 
@@ -514,6 +516,7 @@ src/
     tuning.ts           SimulationTuning presets (arcade, tactical, sim)
     testing.ts          mkHumanoidEntity(), mkWorld() test helpers
 
+    bodyplan.ts         BodyPlan, BodySegment, 8 body plan constants, resolveHitSegment, getExposureWeight
     sensory.ts          canDetect(), SensoryEnvironment — vision arc + hearing + env modifiers
     skills.ts           SkillId, SkillLevel, SkillMap, buildSkillMap, getSkill, combineSkillLevels
 

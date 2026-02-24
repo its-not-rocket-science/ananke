@@ -17,6 +17,7 @@ import { resolveHit, shieldCovers, chooseArea, type HitArea } from "./combat.js"
 import { normaliseDirCheapQ, dotDirQ } from "./vec3.js";
 import { eventSeed } from "./seeds.js";
 import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body.js";
+import { resolveHitSegment, getExposureWeight, segmentIds } from "./bodyplan.js";
 import { totalBleedingRate, regionKOFactor } from "./injury.js";
 import { WorldIndex, buildWorldIndex } from "./indexing.js";
 import { buildSpatialIndex, queryNearbyIds, type SpatialIndex } from "./spatial.js";
@@ -762,7 +763,10 @@ function resolveAttack(world: WorldState,
   }
 
   const sideBit = (eventSeed(world.seed, world.tick, attacker.id, target.id, 0x51DE) & 1) as 0 | 1;
-  const region = regionFromHit(res.area, sideBit);
+  // Phase 8: use body plan's kinetic exposure weights when available
+  const region: string = target.bodyPlan
+    ? resolveHitSegment(target.bodyPlan, ((eventSeed(world.seed, world.tick, attacker.id, target.id, 0x51DE) >>> 8) % SCALE.Q) as Q)
+    : regionFromHit(res.area, sideBit);
 
 
   const baseIntensity = clampQ(cmd.intensity ?? q(1.0), q(0.1), q(1.0));
@@ -901,7 +905,7 @@ function resolveAttack(world: WorldState,
 
   const armour = deriveArmourProfile(target.loadout);
   const KINETIC_MASK = 1 << DamageChannel.Kinetic;
-  const armourHit = armourCoversHit(world, armour.coverageByRegion[region], attacker.id, target.id);
+  const armourHit = armourCoversHit(world, (armour.coverageByRegion as any)[region] ?? q(0), attacker.id, target.id);
   const protectedByArmour = armourHit && ((armour.protects & KINETIC_MASK) !== 0);
 
   const finalEnergy = protectedByArmour
@@ -1126,26 +1130,31 @@ function resolveShoot(
     target.condition.suppressedTicks = Math.max(target.condition.suppressedTicks, 4);
   }
 
-  let hitRegion: ReturnType<typeof regionFromHit> | undefined;
+  let hitRegion: string | undefined;
 
   if (hit && energy_J > 0) {
-    // Choose hit region
+    // Choose hit region — Phase 8: use body plan when available
     const sideSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15B);
     const areaSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15C);
-    const area = chooseArea((areaSeed % SCALE.Q) as Q);
-    const sideBit = (sideSeed & 1) as 0 | 1;
-    hitRegion = regionFromHit(area, sideBit);
+    let hitArea: HitArea | undefined;
+    if (target.bodyPlan) {
+      hitRegion = resolveHitSegment(target.bodyPlan, ((areaSeed >>> 8) % SCALE.Q) as Q);
+    } else {
+      hitArea = chooseArea((areaSeed % SCALE.Q) as Q);
+      const sideBit = (sideSeed & 1) as 0 | 1;
+      hitRegion = regionFromHit(hitArea, sideBit);
+    }
 
     // Shield interposition
     const shield = findShield(target.loadout);
     const shieldSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15D);
-    const shieldHit = shield && shieldCovers(shield, area)
+    const shieldHit = shield && hitArea && shieldCovers(shield, hitArea)
       && ((shieldSeed % SCALE.Q) < (shield as any).coverageQ);
 
     // Armour
     const armour = deriveArmourProfile(target.loadout);
     const KINETIC_MASK = 1 << DamageChannel.Kinetic;
-    const armourHit = armourCoversHit(world, armour.coverageByRegion[hitRegion], shooter.id, target.id);
+    const armourHit = armourCoversHit(world, (armour.coverageByRegion as any)[hitRegion] ?? q(0), shooter.id, target.id);
     const protectedByArmour = armourHit && ((armour.protects & KINETIC_MASK) !== 0);
 
     let finalEnergy = energy_J;
@@ -1250,13 +1259,22 @@ function impactEnergy_J(attacker: Entity, wpn: Weapon, relVel_mps: Vec3): number
   return Math.max(0, Number(num / denom));
 }
 
-function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, region: BodyRegion, armoured: boolean): void {
+function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, region: string, armoured: boolean): void {
   if (energy_J <= 0) return;
 
+  // Determine region role: head → CNS-critical; limb → structural-priority; torso → default
   let areaSurf = q(1.0), areaInt = q(1.0), areaStr = q(1.0);
-  if (region === "head") { areaInt = q(1.25); areaStr = q(0.85); }
-  else if (region === "leftArm" || region === "rightArm" || region === "leftLeg" || region === "rightLeg") { areaStr = q(1.20); areaInt = q(0.80); }
-  else { areaInt = q(1.05); }
+  const seg = target.bodyPlan?.segments.find(s => s.id === region);
+  if (seg) {
+    if (seg.cnsRole === "central") { areaInt = q(1.25); areaStr = q(0.85); }
+    else if (seg.locomotionRole === "primary" || seg.manipulationRole === "primary") { areaStr = q(1.20); areaInt = q(0.80); }
+    else { areaInt = q(1.05); }
+  } else {
+    // Backward compat: humanoid string literals
+    if (region === "head") { areaInt = q(1.25); areaStr = q(0.85); }
+    else if (region === "leftArm" || region === "rightArm" || region === "leftLeg" || region === "rightLeg") { areaStr = q(1.20); areaInt = q(0.80); }
+    else { areaInt = q(1.05); }
+  }
 
   const armourShift = armoured ? q(0.75) : q(1.0);
 
@@ -1294,9 +1312,18 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
   const traitProfile = buildTraitProfile(e.traits);
   const armour = deriveArmourProfile(e.loadout);
 
+  // Phase 8: use body plan segments when available; fall back to humanoid defaults.
+  const planSegments = e.bodyPlan?.segments ?? null;
+
   // Exposure weights: "what tends to be exposed" for systemic hazards.
-  // v1: humanoid defaults; other body plans can override later.
-  const exposureWeights = (channel: DamageChannel): Record<BodyRegion, Q> => {
+  const exposureWeights = (channel: DamageChannel): Record<string, Q> => {
+    if (planSegments) {
+      // Data-driven: per-segment per-channel weights from body plan
+      const out: Record<string, Q> = {};
+      for (const seg of planSegments) out[seg.id] = getExposureWeight(seg, channel);
+      return out;
+    }
+    // Humanoid fallback
     switch (channel) {
       case DamageChannel.Thermal:
         // Fire: limbs tend to be exposed and catch/keep burning; torso often partly shielded.
@@ -1347,14 +1374,14 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
     }
   };
 
-  const applyDoseToRegion = (channel: DamageChannel, region: BodyRegion, dose: Q): Q => {
+  const applyDoseToRegion = (channel: DamageChannel, region: string, dose: Q): Q => {
     if (dose <= 0) return q(0);
     if ((traitProfile.immuneMask & (1 << channel)) !== 0) return q(0);
 
     let out = dose;
     if ((traitProfile.resistantMask & (1 << channel)) !== 0) out = Math.trunc(out / 2) as any;
 
-    const cov = armour.coverageByRegion[region];
+    const cov = (armour.coverageByRegion as any)[region] ?? q(0);
     const armCovers = armourCoversHit(world, cov, e.id, (e.id ^ 0xBEEF) + (channel << 8) + regionSalt(region));
     if (armCovers && ((armour.protects & (1 << channel)) !== 0)) {
       const mul = armour.channelResistMul[channel] ?? q(1.0);
@@ -1372,10 +1399,11 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
     return out;
   };
 
-  const distribute = (channel: DamageChannel, dose: Q): Record<BodyRegion, Q> => {
+  const distribute = (channel: DamageChannel, dose: Q): Record<string, Q> => {
     const w = exposureWeights(channel);
-    const out: any = {};
-    for (const r of ALL_REGIONS) out[r] = qMul(dose, w[r]);
+    const out: Record<string, Q> = {};
+    const regionList = planSegments ? planSegments.map(s => s.id) : ALL_REGIONS as readonly string[];
+    for (const r of regionList) out[r] = qMul(dose, w[r] ?? q(0));
     return out;
   };
 
@@ -1391,7 +1419,7 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
     if ((traitProfile.resistantMask & (1 << DamageChannel.Suffocation)) !== 0) out = Math.trunc(out / 2) as any;
 
     // Simple: masks/helmets reduce suffocation slightly if they protect Suffocation.
-    const armCovers = armourCoversHit(world, armour.coverageByRegion.head, e.id, e.id ^ 0x5AFF);
+    const armCovers = armourCoversHit(world, (armour.coverageByRegion as any)["head"] ?? q(0), e.id, e.id ^ 0x5AFF);
     if (armCovers && ((armour.protects & (1 << DamageChannel.Suffocation)) !== 0)) {
       out = qMul(out, armour.protectedDamageMul);
     }
@@ -1411,26 +1439,29 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
   const RAD_INTERNAL_PER_TICK = q(0.0008);
   const RAD_SHOCK_PER_TICK = q(0.0003);
 
-  for (const r of ALL_REGIONS) {
-    const fire = applyDoseToRegion(DamageChannel.Thermal, r, fireBy[r]);
-    const corr = applyDoseToRegion(DamageChannel.Chemical, r, corrBy[r]);
-    const elec = applyDoseToRegion(DamageChannel.Electrical, r, elecBy[r]);
-    const rad = applyDoseToRegion(DamageChannel.Radiation, r, radBy[r]);
+  const allRegionIds = planSegments ? planSegments.map(s => s.id) : ALL_REGIONS as readonly string[];
+  for (const r of allRegionIds) {
+    const fire = applyDoseToRegion(DamageChannel.Thermal,    r, fireBy[r] ?? q(0));
+    const corr = applyDoseToRegion(DamageChannel.Chemical,   r, corrBy[r] ?? q(0));
+    const elec = applyDoseToRegion(DamageChannel.Electrical, r, elecBy[r] ?? q(0));
+    const rad  = applyDoseToRegion(DamageChannel.Radiation,  r, radBy[r]  ?? q(0));
 
+    const reg = e.injury.byRegion[r];
+    if (!reg) continue;
     if (fire > 0) {
-      e.injury.byRegion[r].surfaceDamage = clampQ(e.injury.byRegion[r].surfaceDamage + qMul(fire, FIRE_SURFACE_PER_TICK), 0, SCALE.Q);
+      reg.surfaceDamage = clampQ(reg.surfaceDamage + qMul(fire, FIRE_SURFACE_PER_TICK), 0, SCALE.Q);
       e.injury.shock = clampQ(e.injury.shock + qMul(fire, FIRE_SHOCK_PER_TICK), 0, SCALE.Q);
     }
     if (corr > 0) {
-      e.injury.byRegion[r].surfaceDamage = clampQ(e.injury.byRegion[r].surfaceDamage + qMul(corr, CORR_SURFACE_PER_TICK), 0, SCALE.Q);
-      e.injury.byRegion[r].internalDamage = clampQ(e.injury.byRegion[r].internalDamage + qMul(corr, CORR_INTERNAL_PER_TICK), 0, SCALE.Q);
+      reg.surfaceDamage = clampQ(reg.surfaceDamage + qMul(corr, CORR_SURFACE_PER_TICK), 0, SCALE.Q);
+      reg.internalDamage = clampQ(reg.internalDamage + qMul(corr, CORR_INTERNAL_PER_TICK), 0, SCALE.Q);
     }
     if (elec > 0) {
-      e.injury.byRegion[r].internalDamage = clampQ(e.injury.byRegion[r].internalDamage + qMul(elec, ELEC_INTERNAL_PER_TICK), 0, SCALE.Q);
+      reg.internalDamage = clampQ(reg.internalDamage + qMul(elec, ELEC_INTERNAL_PER_TICK), 0, SCALE.Q);
       e.condition.stunned = clampQ(e.condition.stunned + qMul(elec, ELEC_STUNNED_RISE), 0, SCALE.Q);
     }
     if (rad > 0) {
-      e.injury.byRegion[r].internalDamage = clampQ(e.injury.byRegion[r].internalDamage + qMul(rad, RAD_INTERNAL_PER_TICK), 0, SCALE.Q);
+      reg.internalDamage = clampQ(reg.internalDamage + qMul(rad, RAD_INTERNAL_PER_TICK), 0, SCALE.Q);
       e.injury.shock = clampQ(e.injury.shock + qMul(rad, RAD_SHOCK_PER_TICK), 0, SCALE.Q);
     }
   }
@@ -1440,14 +1471,21 @@ function stepConditionsToInjury(world: WorldState, e: Entity): void {
   }
 }
 
-function regionSalt(region: BodyRegion): number {
+function regionSalt(region: string): number {
+  // Well-known humanoid regions get stable salts; others use a hash of the id string.
   switch (region) {
-    case "head": return 0x11;
-    case "torso": return 0x22;
-    case "leftArm": return 0x33;
+    case "head":     return 0x11;
+    case "torso":    return 0x22;
+    case "leftArm":  return 0x33;
     case "rightArm": return 0x44;
-    case "leftLeg": return 0x55;
+    case "leftLeg":  return 0x55;
     case "rightLeg": return 0x66;
+    default: {
+      // Deterministic hash of the segment id (FNV-1a-like)
+      let h = 0x77;
+      for (let i = 0; i < region.length; i++) h = ((h ^ region.charCodeAt(i)) * 0x1f) & 0xFF;
+      return h || 0x77;
+    }
   }
 }
 
@@ -1467,7 +1505,7 @@ function stepInjuryProgression(e: Entity): void {
   const SHOCK_FROM_INTERNAL = q(0.0020);
 
   e.injury.shock = clampQ(
-    e.injury.shock + qMul(e.injury.fluidLoss, SHOCK_FROM_FLUID) + qMul(e.injury.byRegion.torso.internalDamage, SHOCK_FROM_INTERNAL),
+    e.injury.shock + qMul(e.injury.fluidLoss, SHOCK_FROM_FLUID) + qMul(e.injury.byRegion["torso"]?.internalDamage ?? q(0), SHOCK_FROM_INTERNAL),
     0,
     SCALE.Q
   );
