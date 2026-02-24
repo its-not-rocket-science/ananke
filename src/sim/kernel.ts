@@ -80,6 +80,8 @@ import {
   shootCost_J,
 } from "./ranged.js";
 
+import { getSkill } from "./skills.js";
+
 export const TICK_HZ = 20;
 export const DT_S: I32 = to.s(1 / TICK_HZ);
 
@@ -638,7 +640,13 @@ function resolveAttack(world: WorldState,
   const dirToTarget = normaliseDirCheapQ({ x: dx, y: dy, z: dz });
 
   const readyTime_s = wpn.readyTime_s ?? to.s(0.6);
-  attacker.action.attackCooldownTicks = Math.max(1, Math.trunc((readyTime_s * TICK_HZ) / SCALE.s));
+  // Phase 7: meleeCombat.hitTimingOffset_s shortens attack recovery (max 67% reduction)
+  const attackerMeleeSkill = getSkill(attacker.skills, "meleeCombat");
+  const effectiveReadyTime = Math.max(
+    Math.trunc(readyTime_s / 3),
+    readyTime_s + attackerMeleeSkill.hitTimingOffset_s,
+  );
+  attacker.action.attackCooldownTicks = Math.max(1, Math.trunc((effectiveReadyTime * TICK_HZ) / SCALE.s));
 
   // Phase 2B: deduct strike stamina cost (always — attacker expends effort whether hit or miss)
   const clampedIntensity = clampQ(cmd.intensity ?? q(1.0), q(0.1), q(1.0));
@@ -675,6 +683,10 @@ function resolveAttack(world: WorldState,
     }
   }
 
+  // Phase 7: meleeDefence skill boosts effective defence quality (parry/block technique)
+  const defMeleeSkill = getSkill(target.skills, "meleeDefence");
+  defenceSkill = clampQ(qMul(defenceSkill, defMeleeSkill.energyTransferMul), q(0.01), q(0.99));
+
   // Phase 2C: weapon bind also prevents the defender from parrying/blocking with their weapon
   const defenceModeEffective = target.action.weaponBindPartnerId !== 0
     ? ("none" as const)
@@ -682,6 +694,15 @@ function resolveAttack(world: WorldState,
   let defenceIntensityEffective = target.action.weaponBindPartnerId !== 0
     ? q(0)
     : target.intent.defence.intensity;
+
+  // Phase 7: shieldCraft boosts effective defence skill when actively blocking with a shield
+  if (defenceModeEffective === "block") {
+    const tgtShield = findShield(target.loadout);
+    if (tgtShield) {
+      const shieldSkill = getSkill(target.skills, "shieldCraft");
+      defenceSkill = clampQ(qMul(defenceSkill, shieldSkill.energyTransferMul), q(0.01), q(0.99));
+    }
+  }
 
   // Phase 4: surprise mechanics — if the defender cannot perceive the attacker,
   // their defensive response is reduced or eliminated.
@@ -799,11 +820,13 @@ function resolveAttack(world: WorldState,
   const hasOffHand = attacker.loadout.items.some(it => it.kind === "shield") ||
     attacker.loadout.items.filter(it => it.kind === "weapon").length > 1;
   const twoHandBonus = twoHandedAttackBonusQ(wpn, funcA.leftArmDisabled, funcA.rightArmDisabled, hasOffHand);
-  const energy_J = mulDiv(
+  const baseEnergy_J = mulDiv(
     mulDiv((impactEnergy_J(attacker, wpn, rel)) as any, funcA.manipulationMul as any, SCALE.Q),
     twoHandBonus,
     SCALE.Q,
   );
+  // Phase 7: meleeCombat.energyTransferMul boosts strike energy delivery (technique bonus)
+  const energy_J = mulDiv(baseEnergy_J, attackerMeleeSkill.energyTransferMul, SCALE.Q);
 
   let mitigated = energy_J;
 
@@ -1047,8 +1070,13 @@ function resolveShoot(
   const intensity = clampQ(cmd.intensity ?? q(1.0), q(0.1), q(1.0));
 
   // Determine launch energy
+  // Phase 7: throwingWeapons.energyTransferMul boosts thrown weapon launch energy
   const launchEnergy = wpn.category === "thrown"
-    ? thrownLaunchEnergy_J(shooter.attributes.performance.peakPower_W)
+    ? mulDiv(
+        thrownLaunchEnergy_J(shooter.attributes.performance.peakPower_W),
+        getSkill(shooter.skills, "throwingWeapons").energyTransferMul,
+        SCALE.Q,
+      )
     : wpn.launchEnergy_J;
 
   // Energy at impact after drag
@@ -1063,7 +1091,10 @@ function resolveShoot(
     shooter.energy.fatigue,
     intensity,
   );
-  const gRadius_m = groupingRadius_m(adjDisp, dist_m);
+  // Phase 7: rangedCombat.dispersionMul reduces effective dispersion (tighter grouping)
+  const rangedSkill = getSkill(shooter.skills, "rangedCombat");
+  const skillAdjDisp = qMul(adjDisp, rangedSkill.dispersionMul);
+  const gRadius_m = groupingRadius_m(skillAdjDisp, dist_m);
 
   // Body half-width: ~20% of stature (≈0.35m for 1.75m human).
   // Phase 6: cover fraction reduces effective target width → harder to hit.
@@ -1424,7 +1455,12 @@ function stepInjuryProgression(e: Entity): void {
   if (e.injury.dead) return;
 
   const bleedRate = totalBleedingRate(e.injury);
-  const bleedThisTick = Math.trunc((bleedRate * DT_S) / SCALE.s) as any;
+  const rawBleedThisTick = Math.trunc((bleedRate * DT_S) / SCALE.s) as any;
+  // Phase 7: medical.treatmentRateMul reduces fluid loss (passive wound management)
+  const medSkill = getSkill(e.skills, "medical");
+  const bleedThisTick = medSkill.treatmentRateMul > SCALE.Q
+    ? mulDiv(rawBleedThisTick, SCALE.Q, medSkill.treatmentRateMul)
+    : rawBleedThisTick;
   e.injury.fluidLoss = clampQ(e.injury.fluidLoss + bleedThisTick, 0, SCALE.Q);
 
   const SHOCK_FROM_FLUID = q(0.0040);
@@ -1580,7 +1616,20 @@ function stepEnergy(e: Entity, ctx: KernelContext): void {
 
   const demand = moving ? 250 : BASE_IDLE_W;
 
+  const fatigueBefore = e.energy.fatigue;
   stepEnergyAndFatigue(e.attributes, e.energy, e.loadout, demand, DT_S, { tractionCoeff: ctx.tractionCoeff });
+
+  // Phase 7: athleticism.fatigueRateMul reduces fatigue accumulation each tick
+  const fatigueDelta = e.energy.fatigue - fatigueBefore;
+  if (fatigueDelta > 0) {
+    const athSkill = getSkill(e.skills, "athleticism");
+    if (athSkill.fatigueRateMul < SCALE.Q) {
+      e.energy.fatigue = clampQ(
+        (fatigueBefore + qMul(fatigueDelta as Q, athSkill.fatigueRateMul)) as Q,
+        0, SCALE.Q,
+      );
+    }
+  }
 
   if (!moving && e.injury.shock < q(0.4)) {
     e.energy.fatigue = clampQ(e.energy.fatigue - q(0.0020), 0, SCALE.Q);

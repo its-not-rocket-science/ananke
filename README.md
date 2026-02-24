@@ -74,12 +74,14 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 6 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+**Phase 7 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
 ranged and projectile combat, injury, entity environmental hazards, movement physics, formation
 basics, deterministic AI scaffolding, perception/cognition (sensory model, decision latency,
 surprise mechanics), morale and psychological state (fear accumulation, routing, pain blocking),
-and terrain systems (surface friction, obstacle/cover grids, elevation, slope direction, dynamic
-hazard cells, AI cover-seeking, cover morale bonus, elevation melee advantage).
+terrain systems (surface friction, obstacle/cover grids, elevation, slope direction, dynamic
+hazard cells, AI cover-seeking, cover morale bonus, elevation melee advantage), and a
+physics-grounded skill system (learned technique modifiers that adjust timing, energy transfer,
+dispersion, fatigue rate, and treatment rate — consumed from host-application-provided values).
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -414,6 +416,61 @@ proportionally. Full surprise (q(0)) eliminates defensive reaction entirely.
 
 ---
 
+## Skills (Phase 7)
+
+Skills represent learned technique — adjustments to physical outcomes, not abstract point totals.
+They are provided by the host application and consumed by the engine. The engine never writes
+back to skill values; progression is the host's responsibility.
+
+### Skill map
+
+Each entity carries an optional `skills?: SkillMap` (`Map<SkillId, SkillLevel>`).
+When a skill is absent, `getSkill()` returns neutral defaults (no effect on simulation output),
+making all existing entities fully backward-compatible.
+
+```typescript
+import { buildSkillMap } from "./src/sim/skills.js";
+
+entity.skills = buildSkillMap({
+  meleeCombat:  { hitTimingOffset_s: -to.s(0.2), energyTransferMul: q(1.35) },
+  meleeDefence: { energyTransferMul: q(1.5) },
+  athleticism:  { fatigueRateMul: q(0.75) },
+});
+```
+
+### Skill domains
+
+| SkillId | Physical effect |
+|---|---|
+| `meleeCombat` | `hitTimingOffset_s` reduces attack cooldown; `energyTransferMul` scales strike energy |
+| `meleeDefence` | `energyTransferMul` scales effective parry/block quality |
+| `grappling` | `energyTransferMul` scales grapple contest score |
+| `rangedCombat` | `dispersionMul` tightens grouping radius (more accurate fire) |
+| `throwingWeapons` | `energyTransferMul` scales thrown weapon launch energy |
+| `shieldCraft` | `energyTransferMul` boosts defence skill when blocking with a shield |
+| `medical` | `treatmentRateMul` reduces fluid loss from bleeding each tick |
+| `athleticism` | `fatigueRateMul` reduces fatigue accumulation per energy tick |
+| `tactics` | `hitTimingOffset_s` reduces AI decision latency |
+| `stealth` | `dispersionMul` reduces the subject's acoustic signature (harder to hear) |
+
+### Composing skill levels
+
+`combineSkillLevels(a, b)` multiplies Q fields and adds time offsets, letting the host express
+synergy bonuses or composite experience modifiers before building the SkillMap:
+
+```typescript
+import { combineSkillLevels, defaultSkillLevel } from "./src/sim/skills.js";
+
+// Melee expert with an athleticism timing synergy (−0.25 s total)
+const combined = combineSkillLevels(
+  { ...defaultSkillLevel(), hitTimingOffset_s: -to.s(0.20), energyTransferMul: q(1.40) },
+  { ...defaultSkillLevel(), hitTimingOffset_s: -to.s(0.05) },
+);
+entity.skills = buildSkillMap({ meleeCombat: combined });
+```
+
+---
+
 ## Project layout
 
 ```
@@ -458,6 +515,7 @@ src/
     testing.ts          mkHumanoidEntity(), mkWorld() test helpers
 
     sensory.ts          canDetect(), SensoryEnvironment — vision arc + hearing + env modifiers
+    skills.ts           SkillId, SkillLevel, SkillMap, buildSkillMap, getSkill, combineSkillLevels
 
     ai/
       types.ts      AIPolicy interface

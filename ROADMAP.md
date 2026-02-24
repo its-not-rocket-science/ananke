@@ -500,7 +500,7 @@ in `decideCommandsForEntity`.
 
 ---
 
-## Phase 7 — Skill System
+## Phase 7 — Skill System (complete)
 
 Skills are separate from physical attributes. They represent learned technique applied to
 physical capability.
@@ -536,12 +536,52 @@ interface SkillLevel {
 | `tactics` | Tactical decision quality | Decision latency reduction (s), threat horizon extension (m) |
 | `stealth` | Concealment and movement noise | Effective acoustic signature radius (m) |
 
-### Skill acquisition (TBD)
+### Implemented (Phase 7 complete)
 
-Skill levels increase through simulated experience. The accumulation model (repetitions,
-time-based decay, training contexts) is not yet designed. The interface is defined to receive
-values from the host application; the engine consumes them but does not manage progression
-internally.
+The core skill system is implemented. See `src/sim/skills.ts`:
+
+- `SkillId` (10 domains), `SkillLevel`, `SkillMap`
+- `buildSkillMap`, `getSkill` (neutral defaults when skill absent)
+- `combineSkillLevels(a, b)` — utility for host-side composition
+
+Wiring points in the engine: meleeCombat (attack timing + energy), meleeDefence, shieldCraft,
+grappling, rangedCombat, throwingWeapons, medical, athleticism, tactics, stealth.
+
+### Skill synergies (host-side, no engine change needed)
+
+The engine does not implement synergy logic. Instead, the host composes `SkillLevel` values
+before building the `SkillMap` using `combineSkillLevels`:
+
+```typescript
+// Example: meleeCombat + athleticism synergy: faster swings also drain less fatigue
+const meleeSynergy = combineSkillLevels(baseMelee, { ...defaultSkillLevel(), fatigueRateMul: q(0.90) });
+entity.skills = buildSkillMap({ meleeCombat: meleeSynergy });
+```
+
+`combineSkillLevels` adds timing offsets and multiplies Q fields, composing arbitrary bonuses.
+Synergy definitions stay in the host application where game design belongs.
+
+### Skill requirements for actions (host-side, no engine change needed)
+
+Complex technique gates (e.g. "only allow jointlock if grappling skill is above threshold")
+are handled by the host before issuing commands. The engine always executes commands as
+instructed; an unskilled entity's neutral `energyTransferMul` means the technique executes
+but delivers poor results — physical degradation without binary blocking.
+
+If hard action gating is needed in the engine (e.g. prevent throw attempt below a minimum
+contest score), the right mechanism is a per-command `minSkillQ?: Q` field on `GrappleCommand`
+that `resolveGrappleCommand` checks before resolving. This keeps the gate data-driven without
+hardcoding thresholds per skill domain.
+
+### Skill acquisition and decay (host-side concern)
+
+Skill progression (experience accumulation, decay from disuse, training) operates on
+campaign or long-form time scales (days to months), not at the 20 Hz combat tick rate.
+This belongs in the host application, not the engine. The engine's role is to consume
+whatever `SkillMap` the host provides — it does not write back to skill values.
+
+Host applications may use `combineSkillLevels` to composite base skill levels with
+experience or decay modifiers before passing them to the simulation.
 
 ---
 

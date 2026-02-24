@@ -10,6 +10,7 @@ import { SCALE, q, clampQ, qMul, mulDiv } from "../units.js";
 import type { Entity } from "./entity.js";
 import type { Vec3 } from "./vec3.js";
 import type { Perception } from "../types.js";
+import { getSkill } from "./skills.js";
 
 // Default perception — used as init guard for entities without Phase 4 attributes.
 export const DEFAULT_PERCEPTION: Perception = {
@@ -86,7 +87,14 @@ export function canDetect(
   }
 
   // ---- Hearing ----
-  const effectiveHearing = mulDiv(perc.hearingRange_m, env.noiseMul, SCALE.Q);
+  // Phase 7: stealth.dispersionMul reduces subject's acoustic signature
+  // (multiplied into observer's effective hearing range for this subject)
+  const stealthSkill = getSkill(subject.skills, "stealth");
+  const effectiveHearing = mulDiv(
+    mulDiv(perc.hearingRange_m, env.noiseMul, SCALE.Q),
+    stealthSkill.dispersionMul,
+    SCALE.Q,
+  );
   const hearingR2 = BigInt(effectiveHearing) * BigInt(effectiveHearing);
 
   if (dist2 <= hearingR2) return q(0.4) as Q;

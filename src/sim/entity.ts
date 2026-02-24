@@ -7,6 +7,7 @@ import type { ConditionState } from "./condition.js";
 import type { InjuryState } from "./injury.js";
 import type { IntentState, AIState } from "./intent.js";
 import type { ActionState } from "./action.js";
+import type { SkillMap } from "./skills.js";
 
 import { Q } from "../units.js";
 
@@ -28,6 +29,9 @@ export interface Entity {
 
   loadout: Loadout;
   traits: TraitId[];
+
+  /** Phase 7: optional skill map — consumes values from the host application. */
+  skills?: SkillMap;
 
   position_m: Vec3;
   velocity_mps: Vec3;

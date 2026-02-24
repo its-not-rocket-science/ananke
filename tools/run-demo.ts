@@ -4,7 +4,7 @@
 //   1. Melee brawl (2 vs 2) — AI-driven commands, morale, weapon binds, stamina
 //   2. Ranged engagement — archer vs two swordsmen approaching through mud
 
-import { q, SCALE, type Q } from "../src/units.js";
+import { q, to, SCALE, type Q } from "../src/units.js";
 import { type KernelContext, stepWorld } from "../src/sim/kernel.js";
 import { TUNING } from "../src/sim/tuning.js";
 import { mkWorld, mkHumanoidEntity } from "../src/sim/testing.js";
@@ -23,6 +23,7 @@ import {
   STARTER_RANGED_WEAPONS,
 } from "../src/equipment.js";
 import { buildTerrainGrid } from "../src/sim/terrain.js";
+import { buildSkillMap, combineSkillLevels, defaultSkillLevel } from "../src/sim/skills.js";
 import type { WorldState } from "../src/sim/world.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -266,7 +267,87 @@ function scenarioRanged(): void {
   for (const e of world.entities) console.log(entityLine(e));
 }
 
+// ─── scenario 3: skill showcase (expert vs novice swordsman) ─────────────────
+//
+// Both fighters are physically identical (same archetype, same loadout).
+// Expert carries three skill entries; novice has none (getSkill returns neutral defaults).
+//
+// What the output shows:
+//   atk E values   — expert delivers 1.40× more energy per hit
+//   attack rate    — expert cooldown is 10 ticks (0.5 s) vs novice 15 ticks (0.75 s)
+//   final res (J)  — expert's fatigueRateMul 0.70 keeps reserves higher
+
+function scenarioSkills(): void {
+  const sword  = STARTER_WEAPONS.find(w => w.id === "wpn_longsword")!;
+  const armour = STARTER_ARMOUR[0]!;
+  const cellSize = Math.trunc(4 * M);
+
+  // Expert meleeCombat: combine base technique with an athleticism timing synergy.
+  // Base  : hitTimingOffset = −0.20 s, energyTransferMul = 1.40×
+  // Synergy: additional −0.05 s from faster muscle response (athletics-trained)
+  // Total : hitTimingOffset = −0.25 s  →  10-tick cooldown (vs 15 for novice)
+  const expertMelee = combineSkillLevels(
+    { ...defaultSkillLevel(), hitTimingOffset_s: -to.s(0.20), energyTransferMul: q(1.40) as Q },
+    { ...defaultSkillLevel(), hitTimingOffset_s: -to.s(0.05) },
+  );
+
+  const expert = mkHumanoidEntity(1, 1, 0, 0);
+  expert.loadout = { items: [sword, armour] };
+  expert.skills = buildSkillMap({
+    meleeCombat:  expertMelee,
+    meleeDefence: { energyTransferMul: q(1.50) as Q },  // 50% better parry/block
+    athleticism:  { fatigueRateMul:    q(0.70) as Q },  // 30% less fatigue per tick
+  });
+
+  // Novice: identical equipment and attributes; no skills set.
+  // Start at exactly desiredRange_m (0.9 m) so neither entity needs to move —
+  // avoids the 10-tick decision-latency overshoot that causes oscillation.
+  const novice = mkHumanoidEntity(2, 2, Math.trunc(0.9 * M), 0);
+  novice.loadout = { items: [sword, armour] };
+
+  const world = mkWorld(7, [expert, novice]);
+  const trace = new DemoTrace();
+  const policy = AI_PRESETS["lineInfantry"]!;  // same AI policy for both
+
+  console.log(`\n${"═".repeat(60)}`);
+  console.log("  Skill Showcase — Expert Swordsman (e1/t1) vs Novice (e2/t2)");
+  console.log("  Identical: longsword + light armour, same archetype attributes");
+  console.log("  Expert skills (Phase 7):");
+  console.log("    meleeCombat  timing −0.25 s total → 10-tick cd (novice: 15)");
+  console.log("    meleeCombat  energyTransferMul 1.40× → harder strikes");
+  console.log("    meleeDefence energyTransferMul 1.50× → better parry/block");
+  console.log("    athleticism  fatigueRateMul    0.70× → 30% less fatigue");
+  console.log(`${"═".repeat(60)}`);
+
+  for (let tick = 0; tick < 200; tick++) {
+    const index   = buildWorldIndex(world);
+    const spatial = buildSpatialIndex(world, cellSize);
+
+    const cmds: CommandMap = new Map();
+    for (const e of world.entities) {
+      if (e.injury.dead) continue;
+      const entityCmds = decideCommandsForEntity(world, index, spatial, e, policy);
+      if (entityCmds.length > 0) cmds.set(e.id, [...entityCmds]);
+    }
+
+    stepWorld(world, cmds, {
+      tractionCoeff: q(0.80) as Q,
+      tuning: TUNING.tactical,
+      trace,
+    });
+
+    if (allDead(world, 1) || allDead(world, 2)) break;
+  }
+
+  console.log("\n── final state ──");
+  for (const e of world.entities) {
+    console.log(entityLine(e));
+  }
+  console.log("  (res reflects athleticism: expert drains less energy per tick)");
+}
+
 // ─── main ─────────────────────────────────────────────────────────────────────
 
 scenarioMelee();
 scenarioRanged();
+scenarioSkills();

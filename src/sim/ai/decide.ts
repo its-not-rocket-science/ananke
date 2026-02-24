@@ -11,6 +11,7 @@ import { v3, normaliseDirCheapQ } from "../vec3.js";
 import { DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
 import { isRouting, moraleThreshold } from "../morale.js";
 import { type ObstacleGrid, coverFractionAtPosition, terrainKey } from "../terrain.js";
+import { getSkill } from "../skills.js";
 
 // Local constant — avoids circular dependency with kernel.ts which exports TICK_HZ.
 const TICK_HZ = 20;
@@ -43,7 +44,13 @@ export function decideCommandsForEntity(
 
   // Charge latency for next decision cycle
   const perc = (self.attributes as any).perception ?? DEFAULT_PERCEPTION;
-  const latencyTicks = Math.max(1, Math.trunc((perc.decisionLatency_s * TICK_HZ) / SCALE.s));
+  // Phase 7: tactics.hitTimingOffset_s reduces decision latency (max 50% reduction)
+  const tacticsSkill = getSkill(self.skills, "tactics");
+  const adjustedLatency_s = Math.max(
+    Math.trunc(perc.decisionLatency_s / 2),
+    perc.decisionLatency_s + tacticsSkill.hitTimingOffset_s,
+  );
+  const latencyTicks = Math.max(1, Math.trunc((adjustedLatency_s * TICK_HZ) / SCALE.s));
   self.ai.decisionCooldownTicks = latencyTicks;
 
   // Phase 5: morale states — routing flees; hesitant suppresses attacks

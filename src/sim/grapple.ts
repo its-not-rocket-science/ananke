@@ -9,6 +9,7 @@
  */
 
 import { SCALE, q, qMul, clampQ, mulDiv, to, type Q, type I32 } from "../units.js";
+import { getSkill } from "./skills.js";
 import { eventSeed } from "./seeds.js";
 import type { Entity } from "./entity.js";
 import type { WorldState } from "./world.js";
@@ -191,10 +192,14 @@ export function grappleContestScore(e: Entity, func: FunctionalState): Q {
   // Apply functional impairment; clamp to [q(0.02), q(1.80)]
   const impaired: Q = clampQ(qMul(raw as Q, func.manipulationMul), q(0.02), q(1.80));
 
+  // Phase 7: grappling.energyTransferMul applies a leverage bonus to the contest score
+  const grapSkill = getSkill(e.skills, "grappling");
+  const adjusted: Q = clampQ(qMul(impaired, grapSkill.energyTransferMul), q(0.02), q(1.80));
+
   // Linear map [q(0.02), q(1.80)] → [q(0.05), q(0.95)]
   const range: I32 = q(1.80) - q(0.02); // 17 800
   return clampQ(
-    q(0.05) + mulDiv(Math.max(0, impaired - q(0.02)) as I32, q(0.90), range) as Q,
+    q(0.05) + mulDiv(Math.max(0, adjusted - q(0.02)) as I32, q(0.90), range) as Q,
     q(0.05), q(0.95)
   );
 }
