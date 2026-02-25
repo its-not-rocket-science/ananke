@@ -143,6 +143,13 @@ export interface KernelContext {
    * Ley lines, geothermal vents, solar collectors, stellar wind.
    */
   ambientGrid?: Map<string, Q>;
+
+  /**
+   * Phase 12B: terrain tag grid.
+   * Maps cell keys to arrays of string tags; used by CapabilitySource "event" regenModel
+   * { on: "terrain"; tag: string } triggers — fires once per cell-boundary crossing.
+   */
+  terrainTagGrid?: Map<string, string[]>;
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
@@ -257,6 +264,12 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
       }
       delete e.pendingActivation;
     }
+  }
+
+  // Phase 12B: step active concentration auras (castTime_ticks = -1 ongoing effects)
+  for (const e of world.entities) {
+    if (!e.activeConcentration || e.injury.dead) continue;
+    stepConcentration(world, e, trace, world.tick);
   }
 
   for (const e of world.entities) {
@@ -430,6 +443,18 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     // Phase 13: emit KO and Death events so metrics/replay consumers can track incapacitation
     if (e.injury.dead) {
       trace.onEvent({ kind: TraceKinds.Death, tick: world.tick, entityId: e.id });
+      // Phase 12B: kill-triggered regen — credit all living entities with kill triggers
+      for (const observer of world.entities) {
+        if (observer.id === e.id || observer.injury.dead) continue;
+        for (const src of (observer.capabilitySources ?? [])) {
+          if (src.regenModel.type !== "event") continue;
+          for (const trig of src.regenModel.triggers) {
+            if (trig.on === "kill") {
+              src.reserve_J = Math.min(src.maxReserve_J, src.reserve_J + trig.amount_J);
+            }
+          }
+        }
+      }
     } else if (wasAboveKOThreshold && e.injury.consciousness <= tuning.unconsciousThreshold) {
       trace.onEvent({ kind: TraceKinds.KO, tick: world.tick, entityId: e.id });
     }
@@ -2612,14 +2637,40 @@ function resolveActivation(
     }
   }
 
+  // Phase 12B: concentration aura — castTime_ticks < 0 means ongoing per-tick effect.
+  // No upfront cost; stepConcentration deducts cost_J each tick.
+  if (effect.castTime_ticks < 0) {
+    actor.activeConcentration = {
+      sourceId: source.id,
+      effectId: effect.id,
+      ...(cmd.targetId !== undefined ? { targetId: cmd.targetId } : {}),
+    };
+    trace.onEvent({ kind: TraceKinds.CapabilityActivated, tick, entityId: actor.id, sourceId: source.id, effectId: effect.id });
+    return;
+  }
+
   // Cost check (boundless sources always have enough)
   const isBoundless = source.regenModel.type === "boundless";
-  if (!isBoundless && source.reserve_J < effect.cost_J) return;
+  let sourceToDraw = source;
+  if (!isBoundless && source.reserve_J < effect.cost_J) {
+    // Phase 12B: try linked fallback source
+    if (source.linkedFallbackId) {
+      const fallback = actor.capabilitySources!.find(s => s.id === source.linkedFallbackId);
+      if (fallback && (fallback.regenModel.type === "boundless" || fallback.reserve_J >= effect.cost_J)) {
+        sourceToDraw = fallback;
+      } else {
+        return; // both depleted
+      }
+    } else {
+      return;
+    }
+  }
+  const drawIsBoundless = sourceToDraw.regenModel.type === "boundless";
 
   // Cast time — queue pending activation and deduct cost at cast-start
   if (effect.castTime_ticks > 0) {
     if (!actor.pendingActivation) {
-      if (!isBoundless) source.reserve_J -= effect.cost_J;
+      if (!drawIsBoundless) sourceToDraw.reserve_J -= effect.cost_J;
       actor.pendingActivation = cmd.targetId !== undefined
         ? { sourceId: cmd.sourceId, effectId: cmd.effectId, targetId: cmd.targetId, resolveAtTick: tick + effect.castTime_ticks }
         : { sourceId: cmd.sourceId, effectId: cmd.effectId, resolveAtTick: tick + effect.castTime_ticks };
@@ -2633,13 +2684,39 @@ function resolveActivation(
   }
 
   // Instant — deduct, resolve, and set cooldown
-  if (!isBoundless) source.reserve_J -= effect.cost_J;
+  if (!drawIsBoundless) sourceToDraw.reserve_J -= effect.cost_J;
   applyCapabilityEffect(world, actor, cmd.targetId, effect, trace, tick);
   trace.onEvent({ kind: TraceKinds.CapabilityActivated, tick, entityId: actor.id, sourceId: cmd.sourceId, effectId: cmd.effectId });
   if (effect.cooldown_ticks && effect.cooldown_ticks > 0) {
     if (!actor.action.capabilityCooldowns) actor.action.capabilityCooldowns = new Map();
     actor.action.capabilityCooldowns.set(cooldownKey, effect.cooldown_ticks);
   }
+}
+
+/**
+ * Phase 12B: advance a concentration aura for one tick.
+ * Deducts cost_J from the source and applies the effect payload.
+ * Clears activeConcentration if reserve is exhausted or entity is shocked.
+ */
+function stepConcentration(world: WorldState, e: Entity, trace: TraceSink, tick: number): void {
+  const { sourceId, effectId, targetId } = e.activeConcentration!;
+  const source = e.capabilitySources?.find(s => s.id === sourceId);
+  const effect = source?.effects.find(ef => ef.id === effectId);
+  const isBoundless = source?.regenModel.type === "boundless";
+
+  const interrupted =
+    !source || !effect ||
+    (!isBoundless && source.reserve_J < effect.cost_J) ||
+    e.injury.shock >= (q(0.30) as Q);
+
+  if (interrupted) {
+    delete e.activeConcentration;
+    trace.onEvent({ kind: TraceKinds.CastInterrupted, tick, entityId: e.id });
+    return;
+  }
+
+  if (!isBoundless) source!.reserve_J -= effect!.cost_J;
+  applyCapabilityEffect(world, e, targetId, effect!, trace, tick);
 }
 
 /**
@@ -2688,7 +2765,7 @@ function stepCapabilitySources(e: Entity, world: WorldState, ctx: KernelContext)
               trigger._nextTick = world.tick + trigger.every_n;
             }
           }
-          // kill and terrain triggers dispatched by kernel event hooks (Phase 12B)
+          // kill triggers dispatched by kernel death-detection loop; terrain triggers below
         }
         break;
       }
@@ -2698,6 +2775,25 @@ function stepCapabilitySources(e: Entity, world: WorldState, ctx: KernelContext)
       const regenThisTick = Math.trunc(regenRate_W * DT_S / SCALE.s);
       source.reserve_J = Math.min(source.maxReserve_J, source.reserve_J + regenThisTick);
     }
+  }
+
+  // Phase 12B: terrain-entry triggers — fire once per cell-boundary crossing
+  if (ctx.terrainTagGrid) {
+    const cx = Math.trunc(e.position_m.x / cellSize_m);
+    const cy = Math.trunc(e.position_m.y / cellSize_m);
+    const currentKey = terrainKey(cx, cy);
+    if (currentKey !== e.action.lastCellKey) {
+      const tags = ctx.terrainTagGrid.get(currentKey) ?? [];
+      for (const source of e.capabilitySources) {
+        if (source.regenModel.type !== "event") continue;
+        for (const trig of source.regenModel.triggers) {
+          if (trig.on === "terrain" && tags.includes(trig.tag)) {
+            source.reserve_J = Math.min(source.maxReserve_J, source.reserve_J + trig.amount_J);
+          }
+        }
+      }
+    }
+    e.action.lastCellKey = currentKey;
   }
 }
 

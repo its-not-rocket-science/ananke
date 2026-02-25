@@ -12,6 +12,13 @@ import type { BodyPlan } from "./bodyplan.js";
 import type { ActiveSubstance } from "./substance.js";
 import type { CapabilitySource, PendingActivation } from "./capability.js";
 
+/** Phase 12B: state for an active concentration aura (castTime_ticks = -1 effect). */
+export interface ConcentrationState {
+  sourceId: string;
+  effectId: string;
+  targetId?: number;
+}
+
 import { Q } from "../units.js";
 
 export type GrapplePosition = "standing" | "prone" | "pinned";
@@ -80,4 +87,7 @@ export interface Entity {
 
   /** Phase 12: in-flight cast — cleared on completion or concentration break. */
   pendingActivation?: PendingActivation;
+
+  /** Phase 12B: active concentration aura — cleared when reserve depletes or shock interrupts. */
+  activeConcentration?: ConcentrationState;
 }

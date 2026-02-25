@@ -124,6 +124,11 @@ export interface CapabilitySource {
   maxReserve_J: number;      // ceiling; Number.MAX_SAFE_INTEGER for boundless sources
   regenModel: RegenModel;
   effects: CapabilityEffect[];
+  /**
+   * Phase 12B: if primary reserve is exhausted, draw activation cost from this source instead.
+   * Must be the `id` of another CapabilitySource on the same entity.
+   */
+  linkedFallbackId?: string;
 }
 
 // ─── Pending activation (cast-time tracking on Entity) ────────────────────────

@@ -1554,7 +1554,7 @@ The column that varies is only `tags`. The engine path is identical.
 
 ---
 
-## Phase 12B — Capability Extensions
+## Phase 12B — Capability Extensions *(COMPLETE)*
 
 *Requires Phase 12 core.*
 
@@ -1568,16 +1568,19 @@ The column that varies is only `tags`. The engine path is identical.
   set on instant activation and at cast-start for timed effects.
 - **Magic resistance**: `magicResist?: Q` on `Resilience`; seeded roll per non-self target
   (salt `0x5E515`) in `applyCapabilityEffect`; q(1.0) = always resist; self-cast bypasses.
+- **Kill-triggered regen**: `{ on: "kill", amount_J }` trigger in `EventRegen.triggers`;
+  dispatched inside entity loop at death detection; killer included, dead entities excluded.
+- **Terrain-entry triggers**: `{ on: "terrain", tag, amount_J }` regen fires exactly once per
+  cell-boundary crossing; `action.lastCellKey` tracks previous cell; `KernelContext.terrainTagGrid`
+  maps cell keys to tag arrays; `KernelContext.cellSize_m` configures grid resolution.
+- **Concentration auras**: `castTime_ticks = -1` sentinel marks ongoing per-tick effects;
+  `entity.activeConcentration` tracks active aura; cost deducted each tick; breaks on reserve
+  depletion (non-boundless) or shock ≥ q(0.30); emits `CastInterrupted` on break.
+- **Linked sources**: `CapabilitySource.linkedFallbackId` draws activation cost from a secondary
+  source when primary is depleted; fallback can be boundless for unlimited overflow.
 
 ### Deferred
 
-- **Kill-triggered blood magic**: `EventTriggered` regen on kill — kernel emits kill event and
-  iterates `capabilitySources` to apply matching triggers.
-- **Terrain-entry triggers**: `on: "terrain"` regen fires when entity steps into tagged cell.
-- **Concentration auras**: continuous cost-per-tick effects (e.g. permanent force field) —
-  `castTime_ticks = -1` reserved sentinel; cost deducted each tick while active.
-- **Linked sources**: spell draws from primary source, overflows to secondary; relevant for
-  multi-divine casters or hybrid magic/tech setups.
 - **Effect chains**: one effect's `fieldEffect` payload triggers a second effect activation on
   entities that enter the field — requires event queue integration.
 

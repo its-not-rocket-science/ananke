@@ -548,6 +548,17 @@ Attached to `entity.capabilitySources?: CapabilitySource[]`. Each source is an e
   `Psionics`, `Nanotech`.
 - **Magic resistance**: `magicResist?: Q` on `Resilience`; seeded roll per non-self target in
   `applyCapabilityEffect`; q(1.0) = always resist; self-cast bypasses entirely.
+- **Kill-triggered regen**: `{ on: "kill", amount_J }` in `EventRegen.triggers`; dispatched at
+  entity death; all living non-dead observers receive the reward (including the killer).
+- **Terrain-entry triggers**: `{ on: "terrain", tag, amount_J }` fires exactly once per
+  cell-boundary crossing; `action.lastCellKey` tracks the previous cell; supply
+  `KernelContext.terrainTagGrid` (Map of cell key → tag array) and optional `cellSize_m`.
+- **Concentration auras**: `castTime_ticks = -1` marks an ongoing per-tick effect;
+  `entity.activeConcentration` holds the active aura; `cost_J` is deducted every tick;
+  concentration breaks when reserve falls below `cost_J` or shock reaches q(0.30), emitting
+  `CastInterrupted`.
+- **Linked sources**: `CapabilitySource.linkedFallbackId` names a secondary source to draw
+  from when the primary is depleted; fallback can be `boundless` for unlimited overflow.
 
 ---
 

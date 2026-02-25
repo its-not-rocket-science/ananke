@@ -15,6 +15,9 @@ export interface ActionState {
 
   // Phase 12B: per-capability cooldown. Key = "sourceId:effectId"; value = ticks remaining.
   capabilityCooldowns?: Map<string, number>;
+
+  // Phase 12B: previous terrain cell key — used for terrain-entry trigger detection.
+  lastCellKey?: string;
 }
 
 export const defaultAction = (): ActionState => ({
