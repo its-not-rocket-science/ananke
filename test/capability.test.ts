@@ -16,6 +16,7 @@ import type { ActiveSubstance } from "../src/sim/substance";
 import { STARTER_SUBSTANCES } from "../src/sim/substance";
 import type { ActivateCommand } from "../src/sim/commands";
 import { STARTER_WEAPONS } from "../src/equipment";
+import { TechEra, type TechCapability } from "../src/sim/tech";
 
 const BASE_CTX: KernelContext = { tractionCoeff: q(0.80) as Q };
 
@@ -657,5 +658,151 @@ describe("Clarke's Third Law — engine cannot distinguish magic from technology
     // Both reduced by q(0.20) — engine path is identical
     expect(magicDmg).toBe(nanoDmg);
     expect(magicDmg).toBeLessThan(q(0.50));
+  });
+});
+
+// ─── Tech gating ─────────────────────────────────────────────────────────────
+
+describe("tech gating (requiredCapability)", () => {
+  function makeGatedSource(cap: TechCapability): ReturnType<typeof makeSource> {
+    return makeSource({
+      reserve_J: 100_000,
+      effects: [makeEffect({ requiredCapability: cap })],
+    });
+  }
+
+  it("fires when techCtx includes the required capability", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.capabilitySources = [makeGatedSource("ArcaneMagic")];
+    const world = mkWorld(1, [e]);
+    const ctx: KernelContext = { ...BASE_CTX, techCtx: { era: TechEra.Medieval, available: new Set<TechCapability>(["ArcaneMagic"]) } };
+
+    stepWorld(world, new Map([[1, [activateCmd()]]]), ctx);
+
+    // Cost deducted → activation fired
+    expect(world.entities[0]!.capabilitySources![0]!.reserve_J).toBe(99_000);
+  });
+
+  it("is blocked when techCtx lacks the required capability", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.capabilitySources = [makeGatedSource("ArcaneMagic")];
+    const world = mkWorld(1, [e]);
+    const ctx: KernelContext = { ...BASE_CTX, techCtx: { era: TechEra.Modern, available: new Set<TechCapability>(["MetallicArmour"]) } };
+
+    stepWorld(world, new Map([[1, [activateCmd()]]]), ctx);
+
+    // Reserve unchanged — gated out
+    expect(world.entities[0]!.capabilitySources![0]!.reserve_J).toBe(100_000);
+  });
+
+  it("fires when no techCtx is provided (no restriction)", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.capabilitySources = [makeGatedSource("Psionics")];
+    const world = mkWorld(1, [e]);
+
+    stepWorld(world, new Map([[1, [activateCmd()]]]), BASE_CTX);
+
+    expect(world.entities[0]!.capabilitySources![0]!.reserve_J).toBe(99_000);
+  });
+});
+
+// ─── Capability cooldown ──────────────────────────────────────────────────────
+
+describe("capability cooldown", () => {
+  it("blocks re-activation until cooldown_ticks have elapsed", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.capabilitySources = [makeSource({
+      reserve_J: 200_000,
+      regenModel: { type: "constant", regenRate_W: 0 },
+      effects: [makeEffect({ cost_J: 1_000, cooldown_ticks: 5 })],
+    })];
+    const world = mkWorld(1, [e]);
+    const activateMap = new Map([[1, [activateCmd()]]]);
+
+    // First activation fires
+    stepWorld(world, activateMap, BASE_CTX);
+    expect(world.entities[0]!.capabilitySources![0]!.reserve_J).toBe(199_000);
+
+    // Four immediate re-attempts — all blocked by cooldown
+    for (let i = 0; i < 4; i++) stepWorld(world, activateMap, BASE_CTX);
+    expect(world.entities[0]!.capabilitySources![0]!.reserve_J).toBe(199_000);
+
+    // Fifth tick: cooldown 1 → 0 (cleared), activation fires
+    stepWorld(world, activateMap, BASE_CTX);
+    expect(world.entities[0]!.capabilitySources![0]!.reserve_J).toBe(198_000);
+  });
+});
+
+// ─── Magic resistance ─────────────────────────────────────────────────────────
+
+describe("magic resistance (magicResist)", () => {
+  function makeTargetedRepairSource(range_m: number): ReturnType<typeof makeSource> {
+    return makeSource({
+      reserve_J: 100_000,
+      effects: [makeEffect({
+        range_m,
+        payload: { kind: "structuralRepair", region: "torso", amount: q(0.20) as Q },
+      })],
+    });
+  }
+
+  it("q(1.0) magicResist fully blocks incoming effects", () => {
+    const caster = mkHumanoidEntity(1, 1, 0, 0);
+    const target = mkHumanoidEntity(2, 2, Math.trunc(0.5 * SCALE.m), 0);
+    target.injury.byRegion["torso"]!.structuralDamage = q(0.50);
+    target.attributes.resilience.magicResist = q(1.0) as Q;
+    caster.capabilitySources = [makeTargetedRepairSource(to.m(2))];
+    const world = mkWorld(1, [caster, target]);
+
+    stepWorld(world, new Map([[1, [activateCmd("test_src", "test_eff", 2)]]]), BASE_CTX);
+
+    expect(world.entities.find(e => e.id === 2)!.injury.byRegion["torso"]!.structuralDamage).toBe(q(0.50));
+  });
+
+  it("q(0) magicResist (or absent) never blocks", () => {
+    const caster = mkHumanoidEntity(1, 1, 0, 0);
+    const target = mkHumanoidEntity(2, 2, Math.trunc(0.5 * SCALE.m), 0);
+    target.injury.byRegion["torso"]!.structuralDamage = q(0.50);
+    // no magicResist set — defaults to 0
+    caster.capabilitySources = [makeTargetedRepairSource(to.m(2))];
+    const world = mkWorld(1, [caster, target]);
+
+    stepWorld(world, new Map([[1, [activateCmd("test_src", "test_eff", 2)]]]), BASE_CTX);
+
+    expect(world.entities.find(e => e.id === 2)!.injury.byRegion["torso"]!.structuralDamage).toBeLessThan(q(0.50));
+  });
+
+  it("self-cast effects bypass magicResist entirely", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.injury.byRegion["torso"]!.structuralDamage = q(0.50);
+    e.attributes.resilience.magicResist = q(1.0) as Q;
+    e.capabilitySources = [makeSource({
+      reserve_J: 100_000,
+      effects: [makeEffect({ payload: { kind: "structuralRepair", region: "torso", amount: q(0.20) as Q } })],
+    })];
+    const world = mkWorld(1, [e]);
+
+    stepWorld(world, new Map([[1, [activateCmd()]]]), BASE_CTX);
+
+    // Self-cast — not gated by magicResist
+    expect(world.entities[0]!.injury.byRegion["torso"]!.structuralDamage).toBeLessThan(q(0.50));
+  });
+
+  it("q(0.5) magicResist blocks roughly half over 100 seeds", () => {
+    let blocked = 0;
+    for (let seed = 1; seed <= 100; seed++) {
+      const caster = mkHumanoidEntity(1, 1, 0, 0);
+      const target = mkHumanoidEntity(2, 2, Math.trunc(0.5 * SCALE.m), 0);
+      target.injury.byRegion["torso"]!.structuralDamage = q(0.50);
+      target.attributes.resilience.magicResist = q(0.5) as Q;
+      caster.capabilitySources = [makeTargetedRepairSource(to.m(2))];
+      const world = mkWorld(seed, [caster, target]);
+
+      stepWorld(world, new Map([[1, [activateCmd("test_src", "test_eff", 2)]]]), BASE_CTX);
+
+      if (world.entities.find(e => e.id === 2)!.injury.byRegion["torso"]!.structuralDamage === q(0.50)) blocked++;
+    }
+    expect(blocked).toBeGreaterThan(30);
+    expect(blocked).toBeLessThan(70);
   });
 });

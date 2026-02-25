@@ -1134,7 +1134,7 @@ import { TechEra, ERA_DEFAULTS } from "../src/sim/tech.js";
 
 ---
 
-## Phase 12 — Capability Sources and Effects
+## Phase 12 — Capability Sources and Effects *(COMPLETE)*
 
 **Design principle — Clarke's Third Law**: "Any sufficiently advanced technology is
 indistinguishable from magic." The engine implements this literally: magic and advanced
@@ -1472,19 +1472,23 @@ The column that varies is only `tags`. The engine path is identical.
 
 | File | Change |
 |---|---|
-| `src/sim/capability.ts` | New — all types and builder helpers |
+| `src/sim/capability.ts` | New — `CapabilitySource`, `CapabilityEffect` (+`cooldown_ticks?`, +`requiredCapability?`), `RegenModel`, `EffectPayload`, `FieldEffect`, `FieldEffectSpec` |
 | `src/sim/entity.ts` | +`capabilitySources?: CapabilitySource[]` |
-| `src/sim/kernel.ts` | `resolveActivation`, `stepCapabilitySources`, `stepFieldEffects`; call sites in `stepWorld`; `KernelContext` gains `ambientGrid?: Map<string, Q>` |
+| `src/sim/kernel.ts` | `resolveActivation` (cooldown gate, tech gate, set cooldown on success), `stepCapabilitySources`, `stepFieldEffects`, `applyCapabilityEffect` (magic resist roll); call sites in `stepWorld`; `KernelContext` gains `ambientGrid?: Map<string, Q>` |
 | `src/sim/commands.ts` | +`ActivateCommand` |
-| `src/sim/world.ts` (or wherever `WorldState` lives) | +`activeFieldEffects?: FieldEffect[]` |
-| `test/capability.test.ts` | New — ~28 tests |
+| `src/sim/world.ts` | +`activeFieldEffects?: FieldEffect[]` |
+| `src/sim/action.ts` | +`capabilityCooldowns?: Map<string, number>` (key = `"sourceId:effectId"`) |
+| `src/types.ts` | +`magicResist?: Q` on `Resilience` |
+| `src/sim/tech.ts` | +`"ArcaneMagic" | "DivineMagic" | "Psionics" | "Nanotech"` to `TechCapability` |
+| `test/capability.test.ts` | New — 35 tests |
 
 ---
 
 ### 12.8 — Tests
 
-New `test/capability.test.ts`:
+`test/capability.test.ts` — 35 tests:
 
+**Phase 12 core (27 tests):**
 - `ConstantRegen` increases `reserve_J` every tick; clamped to `maxReserve_J`
 - `RestRegen` only regens when entity velocity ≈ 0 and no cooldown active
 - `BoundlessSource` activation does not reduce `reserve_J`
@@ -1507,11 +1511,34 @@ New `test/capability.test.ts`:
 - `stepFieldEffects` decrements `duration_ticks`; removes expired effects; leaves permanent (-1)
 - `"mend_bone"` vs `"nano_repair"`: both increase structural integrity; engine path identical
 
+**Phase 12B extensions (8 tests):**
+- Tech gating: activation fires when `techCtx` has required capability
+- Tech gating: activation is blocked when `techCtx` lacks required capability
+- Tech gating: activation fires when no `techCtx` set (unrestricted)
+- Cooldown: activation fires once, then blocked for `cooldown_ticks` ticks, then fires again
+- Magic resist q(1.0): non-self target always resists effect
+- Magic resist q(0): non-self target never resists effect
+- Magic resist: self-cast bypasses resistance entirely
+- Magic resist q(0.5): probabilistic — some seeds resist, some do not (brute-force verification)
+
 ---
 
-## Phase 12B — Capability Extensions (deferred)
+## Phase 12B — Capability Extensions
 
 *Requires Phase 12 core.*
+
+### Implemented
+
+- **TechCapability magic gates**: `requiredCapability?: TechCapability` on `CapabilityEffect`;
+  checked in `resolveActivation` against `ctx.techCtx` (absent = unrestricted). New types:
+  `"ArcaneMagic" | "DivineMagic" | "Psionics" | "Nanotech"` — not in any `ERA_DEFAULTS`.
+- **Per-capability cooldowns**: `cooldown_ticks?: number` on `CapabilityEffect`; key
+  `"sourceId:effectId"` in `action.capabilityCooldowns`; decremented at tick start in `stepWorld`;
+  set on instant activation and at cast-start for timed effects.
+- **Magic resistance**: `magicResist?: Q` on `Resilience`; seeded roll per non-self target
+  (salt `0x5E515`) in `applyCapabilityEffect`; q(1.0) = always resist; self-cast bypasses.
+
+### Deferred
 
 - **Kill-triggered blood magic**: `EventTriggered` regen on kill — kernel emits kill event and
   iterates `capabilitySources` to apply matching triggers.

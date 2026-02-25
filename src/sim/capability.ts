@@ -11,6 +11,7 @@ import type { Vec3 } from "./vec3.js";
 import { DamageChannel } from "../channels.js";
 import type { MedicalTier } from "./medical.js";
 import type { ActiveSubstance } from "./substance.js";
+import type { TechCapability } from "./tech.js";
 
 // ─── Regen models ─────────────────────────────────────────────────────────────
 
@@ -104,9 +105,11 @@ export type EffectPayload =
 export interface CapabilityEffect {
   id: string;
   cost_J: number;
-  castTime_ticks: number;    // 0 = instant; >0 = charge/concentration/invocation
-  range_m?: number;          // fixed-point metres; undefined = self-only
-  aoeRadius_m?: number;      // if set, all entities within radius receive payload
+  castTime_ticks: number;       // 0 = instant; >0 = charge/concentration/invocation
+  cooldown_ticks?: number;      // Phase 12B: ticks before same effect can fire again; 0/undefined = no cooldown
+  requiredCapability?: TechCapability; // Phase 12B: if set + techCtx present, gated by tech availability
+  range_m?: number;             // fixed-point metres; undefined = self-only
+  aoeRadius_m?: number;         // if set, all entities within radius receive payload
   payload: EffectPayload | EffectPayload[];
   tags?: string[];
 }

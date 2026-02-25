@@ -8,6 +8,7 @@ import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive.js";
 import { DamageChannel } from "../channels.js";
 import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, type Weapon, type RangedWeapon } from "../equipment.js";
 import type { TechContext } from "./tech.js";
+import { isCapabilityAvailable } from "./tech.js";
 import { deriveFunctionalState } from "./impairment.js";
 import { TUNING, type SimulationTuning } from "./tuning.js";
 import { buildTraitProfile } from "../traits.js";
@@ -206,6 +207,13 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     e.action.defenceCooldownTicks = Math.max(0, e.action.defenceCooldownTicks - 1);
     e.action.grappleCooldownTicks = Math.max(0, e.action.grappleCooldownTicks - 1);
     e.action.shootCooldownTicks = Math.max(0, e.action.shootCooldownTicks - 1);     // Phase 3
+    // Phase 12B: per-capability cooldown decay
+    if (e.action.capabilityCooldowns) {
+      for (const [key, ticks] of e.action.capabilityCooldowns) {
+        if (ticks <= 1) e.action.capabilityCooldowns.delete(key);
+        else e.action.capabilityCooldowns.set(key, ticks - 1);
+      }
+    }
     e.condition.standBlockedTicks = Math.max(0, e.condition.standBlockedTicks - 1);
     e.condition.unconsciousTicks = Math.max(0, e.condition.unconsciousTicks - 1);
     e.condition.suppressedTicks = Math.max(0, e.condition.suppressedTicks - 1);    // Phase 3
@@ -2442,6 +2450,14 @@ function applyCapabilityEffect(
   }
 
   for (const target of targets) {
+    // Phase 12B: magic resistance — non-self targets may resist the effect
+    if (target.id !== actor.id) {
+      const mr = target.attributes.resilience.magicResist ?? 0;
+      if (mr > 0) {
+        const resistSeed = eventSeed(world.seed, tick, actor.id, target.id, 0x5E515);
+        if ((resistSeed % SCALE.Q) < mr) continue;
+      }
+    }
     for (const p of payloads) {
       applyPayload(world, actor, target, p, trace, tick, effect.id);
     }
@@ -2465,6 +2481,15 @@ function resolveActivation(
   if (!source) return;
   const effect = source.effects.find(ef => ef.id === cmd.effectId);
   if (!effect) return;
+
+  // Phase 12B: cooldown gate — can't re-activate until cooldown expires
+  const cooldownKey = `${source.id}:${effect.id}`;
+  if ((actor.action.capabilityCooldowns?.get(cooldownKey) ?? 0) > 0) return;
+
+  // Phase 12B: tech-context gate — requiredCapability must be available if techCtx is present
+  if (effect.requiredCapability !== undefined && ctx.techCtx !== undefined) {
+    if (!isCapabilityAvailable(ctx.techCtx, effect.requiredCapability)) return;
+  }
 
   // Suppression check — any covering field whose tags overlap source tags blocks activation
   const ax = actor.position_m.x;
@@ -2502,14 +2527,23 @@ function resolveActivation(
       actor.pendingActivation = cmd.targetId !== undefined
         ? { sourceId: cmd.sourceId, effectId: cmd.effectId, targetId: cmd.targetId, resolveAtTick: tick + effect.castTime_ticks }
         : { sourceId: cmd.sourceId, effectId: cmd.effectId, resolveAtTick: tick + effect.castTime_ticks };
+      // Phase 12B: set cooldown at cast-start so the cast itself is gated
+      if (effect.cooldown_ticks && effect.cooldown_ticks > 0) {
+        if (!actor.action.capabilityCooldowns) actor.action.capabilityCooldowns = new Map();
+        actor.action.capabilityCooldowns.set(cooldownKey, effect.cooldown_ticks);
+      }
     }
     return;
   }
 
-  // Instant — deduct and resolve
+  // Instant — deduct, resolve, and set cooldown
   if (!isBoundless) source.reserve_J -= effect.cost_J;
   applyCapabilityEffect(world, actor, cmd.targetId, effect, trace, tick);
   trace.onEvent({ kind: TraceKinds.CapabilityActivated, tick, entityId: actor.id, sourceId: cmd.sourceId, effectId: cmd.effectId });
+  if (effect.cooldown_ticks && effect.cooldown_ticks > 0) {
+    if (!actor.action.capabilityCooldowns) actor.action.capabilityCooldowns = new Map();
+    actor.action.capabilityCooldowns.set(cooldownKey, effect.cooldown_ticks);
+  }
 }
 
 /**

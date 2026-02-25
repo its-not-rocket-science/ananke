@@ -49,6 +49,9 @@ export interface Resilience {
 
   fatigueRate: Q;           // 1.0 baseline
   recoveryRate: Q;          // 1.0 baseline
+
+  // Phase 12B: resistance to capability effects (magic / tech)
+  magicResist?: Q;          // 0 = fully susceptible; q(1.0) = completely immune
 }
 
 export interface IndividualAttributes {

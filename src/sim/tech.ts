@@ -36,7 +36,13 @@ export type TechCapability =
   | "PoweredExoskeleton"
   | "EnergyWeapons"
   | "ReactivePlating"
-  | "NanomedicalRepair";
+  | "NanomedicalRepair"
+  // Phase 12: Clarke's Third Law — magic/para-science capability gates.
+  // Not included in any ERA_DEFAULTS; add to bespoke scenarios as needed.
+  | "ArcaneMagic"    // traditional spellcasting, ley-line tapping, enchantment
+  | "DivineMagic"    // prayer, miracles, channelled deity power
+  | "Psionics"       // telekinesis, mind-read, precognition, psionic blast
+  | "Nanotech";      // nano-agent delivery, molecular assembly, swarm intelligence
 
 export interface TechContext {
   era:       TechEra;

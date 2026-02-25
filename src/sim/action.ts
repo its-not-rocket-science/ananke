@@ -12,6 +12,9 @@ export interface ActionState {
 
   // Phase 3: ranged combat
   shootCooldownTicks: I32;      // ticks until next shot can be fired
+
+  // Phase 12B: per-capability cooldown. Key = "sourceId:effectId"; value = ticks remaining.
+  capabilityCooldowns?: Map<string, number>;
 }
 
 export const defaultAction = (): ActionState => ({

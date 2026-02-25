@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 11 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+**Phase 12 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
 ranged and projectile combat, injury, entity environmental hazards, movement physics, formation
 basics, deterministic AI scaffolding, perception/cognition (sensory model, decision latency,
 surprise mechanics), morale and psychological state (fear accumulation, routing, pain blocking),
@@ -86,11 +86,12 @@ species requires only a BodyPlan data file and an Archetype baseline, no kernel 
 a full injury and medical simulation layer (fractures, infection, permanent damage,
 natural clotting, fatal fluid loss, and a `TreatCommand` system with tiered medical equipment
 and skill-scaled treatment rates), environmental physics including blast and fragmentation
-explosions, fall damage, pharmacokinetics (one-compartment absorption/elimination model), and
-ambient temperature stress (heat and cold tolerance), and a technology spectrum system
+explosions, fall damage, pharmacokinetics (one-compartment absorption/elimination model),
+ambient temperature stress (heat and cold tolerance), a technology spectrum system
 (`TechContext`, `TechEra`, `TechCapability`, `validateLoadout`) with powered exoskeleton
-items (speed × force × power-drain) and era-gated starter items including plasma rifle and
-plate armour.
+items (speed × force × power-drain) and era-gated starter items, and a **capability sources
+and effects** system (Clarke's Third Law — magic and advanced technology are the same
+abstraction; only the tags differ).
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -230,6 +231,7 @@ Every entity is built from four attribute groups, all in SI units.
 | `coldTolerance` | Q | Cold hazard resistance (0–1) |
 | `fatigueRate` | Q | Fatigue accumulation rate multiplier |
 | `recoveryRate` | Q | Recovery rate multiplier |
+| `magicResist` | Q | Resistance to capability effects (magic/technology); q(1.0) = fully immune (optional) |
 
 ### Perception (Phase 4)
 
@@ -485,10 +487,63 @@ const errors = validateLoadout(loadout, ctx); // [] — valid
 
 Era capabilities are cumulative: Prehistoric has none; DeepSpace has all eight.
 
+**Magic and para-science types** (Phase 12B) — four additional `TechCapability` values gate
+Clarke's Third Law capability effects: `ArcaneMagic`, `DivineMagic`, `Psionics`, `Nanotech`.
+These are not assigned to any era by `ERA_DEFAULTS`; host applications opt in explicitly.
+
 **Medical technology gate**: `TIER_TECH_REQ` in `medical.ts` maps medical tiers to required
 capabilities. When `ctx.techCtx` is set, `resolveTreat()` blocks treatment if the treater's
 tier requires a capability absent from the scenario. Currently: `nanomedicine` tier requires
 `NanomedicalRepair`. Tiers without a listed requirement work in any era.
+
+---
+
+## Capability Sources and Effects (Phase 12)
+
+**Clarke's Third Law**: a fireball and a plasma grenade, a healing spell and a nanobot swarm,
+a mana pool and a fusion reactor — all resolve through identical engine primitives. The engine
+cannot distinguish magic from technology. Only the `tags` field differs.
+
+### CapabilitySource
+
+Attached to `entity.capabilitySources?: CapabilitySource[]`. Each source is an energy reservoir
+(always in joules) with one of five regen models:
+
+| RegenModel type | Behaviour |
+|---|---|
+| `rest` | Regens only when entity is stationary and not in combat |
+| `constant` | Regens every tick regardless of activity |
+| `ambient` | Regens proportional to `ambientGrid` cell value at entity's position |
+| `event` | Fires on tick intervals or kill triggers |
+| `boundless` | Never depletes; cost deduction skipped entirely |
+
+### ActivateCommand
+
+```typescript
+{ kind: "activate", sourceId: string, effectId: string, targetId?: number, targetPos?: Vec3 }
+```
+
+### EffectPayload variants
+
+| Payload kind | Effect | Engine primitive |
+|---|---|---|
+| `impact` | Kinetic, thermal, internal, or penetrating damage | `applyImpactToInjury` |
+| `treatment` | Healing at specified tier and rate multiplier | `resolveTreat` |
+| `armourLayer` | Temporary per-channel armour overlay | `condition.temporaryArmour` |
+| `velocity` | Direct velocity delta (telekinesis, jump jet) | velocity integration |
+| `substance` | Pharmacokinetic substance injection | `stepSubstances` |
+| `structuralRepair` | Structural damage write-back (respects `permanentDamage`) | injury state |
+| `fieldEffect` | Places suppression zone in `world.activeFieldEffects` | `stepFieldEffects` |
+
+### Phase 12B extensions
+
+- **Per-capability cooldowns**: `cooldown_ticks?: number` on `CapabilityEffect`; tracked in
+  `action.capabilityCooldowns` (Map, key = `"sourceId:effectId"`); decremented at tick start.
+- **TechCapability gating**: `requiredCapability?: TechCapability` on `CapabilityEffect`;
+  checked against `ctx.techCtx` when set. Includes magic gates: `ArcaneMagic`, `DivineMagic`,
+  `Psionics`, `Nanotech`.
+- **Magic resistance**: `magicResist?: Q` on `Resilience`; seeded roll per non-self target in
+  `applyCapabilityEffect`; q(1.0) = always resist; self-cast bypasses entirely.
 
 ---
 
@@ -611,6 +666,7 @@ src/
     explosion.ts        BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy
     substance.ts        Substance, ActiveSubstance, STARTER_SUBSTANCES — pharmacokinetics model
     tech.ts             TechEra, TechCapability, TechContext, defaultTechContext, isCapabilityAvailable
+    capability.ts       CapabilitySource, CapabilityEffect, RegenModel, EffectPayload, FieldEffect — Clarke's Third Law abstraction
     events.ts           ImpactEvent type, deterministic sort
     seeds.ts            Deterministic per-event seed derivation
     formation.ts        pickNearestEnemyInReach()
