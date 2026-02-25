@@ -421,11 +421,18 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   // Injury progression and energy — must complete for ALL entities before morale runs
   for (const e of world.entities) {
     if (e.injury.dead) continue;
+    const wasAboveKOThreshold = e.injury.consciousness > tuning.unconsciousThreshold;
     stepConditionsToInjury(world, e, ctx.ambientTemperature_Q);
     stepInjuryProgression(e, world.tick);
     stepSubstances(e, ctx.ambientTemperature_Q);
     stepEnergy(e, ctx);
     stepCapabilitySources(e, world, ctx); // Phase 12
+    // Phase 13: emit KO and Death events so metrics/replay consumers can track incapacitation
+    if (e.injury.dead) {
+      trace.onEvent({ kind: TraceKinds.Death, tick: world.tick, entityId: e.id });
+    } else if (wasAboveKOThreshold && e.injury.consciousness <= tuning.unconsciousThreshold) {
+      trace.onEvent({ kind: TraceKinds.KO, tick: world.tick, entityId: e.id });
+    }
     trace.onEvent({
       kind: TraceKinds.Injury,
       tick: world.tick,

@@ -74,24 +74,28 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 12 + 8C complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
-ranged and projectile combat, injury, entity environmental hazards, movement physics, formation
-basics, deterministic AI scaffolding, perception/cognition (sensory model, decision latency,
-surprise mechanics), morale and psychological state (fear accumulation, routing, pain blocking),
-terrain systems (surface friction, obstacle/cover grids, elevation, slope direction, dynamic
-hazard cells, AI cover-seeking, cover morale bonus, elevation melee advantage), a
-physics-grounded skill system, a universal data-driven body plan system
-(humanoid, quadruped, theropod, sauropod, avian, vermiform, centaur, octopoid — adding a new
-species requires only a BodyPlan data file and an Archetype baseline, no kernel changes),
-a full injury and medical simulation layer (fractures, infection, permanent damage,
-natural clotting, fatal fluid loss, and a `TreatCommand` system with tiered medical equipment
-and skill-scaled treatment rates), environmental physics including blast and fragmentation
-explosions, fall damage, pharmacokinetics (one-compartment absorption/elimination model),
-ambient temperature stress (heat and cold tolerance), a technology spectrum system
-(`TechContext`, `TechEra`, `TechCapability`, `validateLoadout`) with powered exoskeleton
-items (speed × force × power-drain) and era-gated starter items, and a **capability sources
-and effects** system (Clarke's Third Law — magic and advanced technology are the same
-abstraction; only the tags differ).
+**Phases 1–13 complete** (including 8C, 10B, 10C, 11C, 12B). Melee combat, grappling, stamina
+and exhaustion, weapon dynamics, ranged and projectile combat, injury, entity environmental
+hazards, movement physics, formation basics, deterministic AI scaffolding,
+perception/cognition (sensory model, decision latency, surprise mechanics), morale and
+psychological state (fear accumulation, routing, pain blocking), terrain systems (surface
+friction, obstacle/cover grids, elevation, slope direction, dynamic hazard cells, AI
+cover-seeking, cover morale bonus, elevation melee advantage), a physics-grounded skill
+system, a universal data-driven body plan system (humanoid, quadruped, theropod, sauropod,
+avian, vermiform, centaur, octopoid — adding a new species requires only a BodyPlan data
+file and an Archetype baseline, no kernel changes), a full injury and medical simulation
+layer (fractures, infection, permanent damage, natural clotting, fatal fluid loss, and a
+`TreatCommand` system with tiered medical equipment and skill-scaled treatment rates),
+environmental physics including blast and fragmentation explosions, fall damage,
+pharmacokinetics with substance interactions (stimulant/haemostatic/anaesthetic/poison
+cross-effects, temperature-dependent metabolism), flash blindness from explosions, ambient
+temperature stress, a technology spectrum system (`TechContext`, `TechEra`,
+`TechCapability`, `validateLoadout`) with powered exoskeleton items, energy weapons,
+reflective and ablative armour, sensor items, and era-gated starter items, a **capability
+sources and effects** system (Clarke's Third Law — magic and advanced technology are the
+same abstraction; only the tags differ), and a **deterministic replay and analytics**
+system (`ReplayRecorder`, `replayTo`, `serializeReplay`/`deserializeReplay`,
+`CollectingTrace`, `collectMetrics`, `survivalRate`, `meanTimeToIncapacitation`).
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -636,6 +640,59 @@ entity.skills = buildSkillMap({ meleeCombat: combined });
 
 ---
 
+## Replay and analytics (Phase 13)
+
+### Deterministic replay
+
+Every simulation is reproducible from initial state + command log. `ReplayRecorder` snapshots
+the world before the first tick and records command maps per tick. `replayTo` reconstructs
+any past tick by restoring the snapshot and re-applying frames.
+
+```typescript
+import { ReplayRecorder, replayTo, serializeReplay, deserializeReplay } from "./src/replay.js";
+
+const recorder = new ReplayRecorder(world);
+for (let i = 0; i < 100; i++) {
+  recorder.record(world.tick, cmds);
+  stepWorld(world, cmds, ctx);
+}
+
+// Seek to any past tick
+const worldAt50 = replayTo(recorder.toReplay(), 50, ctx);
+
+// Persist and restore across sessions
+const json = serializeReplay(recorder.toReplay());
+const restored = deserializeReplay(json);
+const worldAt50Again = replayTo(restored, 50, ctx);
+```
+
+`serializeReplay`/`deserializeReplay` handle `Map` fields (`entity.armourState`,
+`action.capabilityCooldowns`) that `JSON.stringify` would otherwise drop.
+
+### Combat analytics
+
+`CollectingTrace` implements `TraceSink` and accumulates all trace events for offline
+analysis. Pass it to `stepWorld` via `ctx.trace`, then extract metrics.
+
+```typescript
+import { CollectingTrace, collectMetrics, survivalRate, meanTimeToIncapacitation }
+  from "./src/metrics.js";
+
+const tracer = new CollectingTrace();
+for (let i = 0; i < 200; i++) stepWorld(world, cmds, { ...ctx, trace: tracer });
+
+const m = collectMetrics(tracer.events);
+console.log("Damage dealt by entity 1:", m.damageDealt.get(1));   // joules
+console.log("Hits landed by entity 1:", m.hitsLanded.get(1));
+console.log("Survival rate:", survivalRate(tracer.events, [1, 2, 3, 4]));
+console.log("Mean TTI (ticks):", meanTimeToIncapacitation(tracer.events, [1, 2, 3, 4], 200));
+```
+
+`collectMetrics` covers melee `Attack` events and ranged `ProjectileHit` events in a single
+pass over any flat `TraceEvent[]` — ordering and tick mixing are fine.
+
+---
+
 ## Project layout
 
 ```
@@ -648,6 +705,8 @@ src/
   equipment.ts      Weapon, Armour, Shield, RangedWeapon, Loadout types and starter item catalogue
   generate.ts       Procedural individual generation from archetype with variance distributions
   derive.ts         Movement caps and energy/fatigue derived from attributes and loadout
+  replay.ts         ReplayRecorder, replayTo, serializeReplay/deserializeReplay — deterministic replay
+  metrics.ts        CollectingTrace, collectMetrics, survivalRate, meanTimeToIncapacitation — analytics
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points

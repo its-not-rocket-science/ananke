@@ -963,9 +963,9 @@ Each tick (via `stepSubstances`): `concentration += absorptionRate × pendingDos
   `BLAST_THROW_MUL = SCALE.mps × SCALE.kg / 10 = 1_000_000`. Zero direction at epicentre is
   handled gracefully (no throw if `distSq = 0`).
 
-### Deferred specs
+### Phase 10C implementations *(COMPLETE)*
 
-#### Substance interactions (Phase 10C)
+#### Substance interactions *(implemented)*
 
 Two or more active substances can modulate each other's effective absorption or elimination.
 Implementation pattern — compute `effectiveElimRate` locally in `stepSubstances` rather than
@@ -989,7 +989,7 @@ Planned interactions:
 Requires `hasSubstanceType(e, type)` helper checking `e.substances` for active concentration
 above `effectThreshold`.
 
-#### Temperature-dependent drug metabolism (Phase 10C)
+#### Temperature-dependent drug metabolism *(implemented)*
 
 Cold conditions slow hepatic metabolism, extending substance duration. Requires mapping
 `ctx.ambientTemperature_Q` to a per-tick elimination rate modifier. Two options:
@@ -1015,7 +1015,7 @@ each tick based on temperature before running the absorption/elimination step.
 Recommendation: Option A (no interface change, consistent with the substance-interaction
 pattern above).
 
-#### Explosive flash/blindness (Phase 10C)
+#### Explosive flash/blindness *(implemented)*
 
 Entities within a threshold distance of a detonation can be temporarily blinded by the
 flash. Implementation via a new `ConditionState` field:
@@ -1092,7 +1092,34 @@ exo force in `resolveAttack` after `energy_J`; exo powerDrain_W added to demand 
 
 ---
 
-## Phase 11C — Tech Spectrum Extensions (deferred from Phase 11)
+## Phase 11C — Tech Spectrum Extensions *(COMPLETE)*
+
+### Implemented
+
+- **Energy weapon channel**: `energyType?: "plasma" | "laser" | "sonic"` on `Weapon`/`RangedWeapon`.
+  Energy weapons route through `DamageChannel.Energy` in `applyImpactToInjury`.
+- **Reflective armour**: `reflectivity?: Q` on `Armour`; energy hits receive
+  `mulDiv(mitigated, SCALE.Q − reflectivity, SCALE.Q)` before penetration.
+- **Ablative armour**: `ablative?: boolean` on `Armour`; remaining resist tracked per entity in
+  `entity.armourState: Map<ItemId, { resistRemaining_J: number }>`. Depleted items provide no
+  further resist. `deriveArmourProfile` accepts optional `armourState`.
+- **Sensor items**: `Sensor` item kind (`visionRangeMul: Q`, `hearingRangeMul: Q`,
+  `requiredCapabilities?`). `canDetect()` accepts optional `sensorBoost` and scales ranges.
+  Sensor profile derived from loadout in the AI perception pass.
+
+Starter items: `arm_reflective` (50% reflectivity), `arm_reactive` (ablative, 1500 J),
+`sensor_optical` (2× vision), `sensor_tactical` (4× vision, requires `AdvancedSensors`).
+
+`test/tech.test.ts` — extended to ~42 tests. All 660 tests pass.
+
+### Tech Tree Visualization (tools/)
+
+```typescript
+// tools/tech-tree.ts
+import { TechEra, ERA_DEFAULTS } from "../src/sim/tech.js";
+// Output DOT graph: each node = era, edges show added capabilities.
+// Run: npx tsx tools/tech-tree.ts > tech-tree.dot && dot -Tsvg tech-tree.dot > tech-tree.svg
+```
 
 ### Tech-Specific Damage Channels
 
@@ -1556,25 +1583,50 @@ The column that varies is only `tags`. The engine path is identical.
 
 ---
 
-## Phase 13 — Replay, Research and Tooling
+## Phase 13 — Replay, Research and Tooling *(COMPLETE)*
 
-### Replay system
+### Replay system *(complete)*
 
-- Deterministic replays from seed + initial state + command log
-- Event log playback with time scrubbing (seek to any tick by replaying from start)
-- Trace event serialisation: JSON or binary format TBD
+`src/replay.ts`:
 
-### Metrics and analytics
+- `ReplayRecorder` — deep-clones initial `WorldState` via `structuredClone` (handles Maps);
+  `record(tick, cmds)` called once per tick; `toReplay()` returns an independent copy.
+- `replayTo(replay, targetTick, ctx)` — reconstructs `WorldState` at any tick by restoring
+  the snapshot and re-applying recorded command frames; does not mutate the `Replay` object.
+- `serializeReplay` / `deserializeReplay` — JSON round-trip with `__ananke_map__` marker-based
+  replacer/reviver; handles `entity.armourState` and `action.capabilityCooldowns` Maps.
 
-- Combat effectiveness: damage per tick, action success rates, time-to-incapacitation
-- Survival curves: distributions across entity populations with varying attributes
-- AI performance: targeting accuracy, formation coherence, morale cascade timing
+`test/replay.test.ts` — 13 tests: snapshot isolation, frame recording, command capture,
+independent `toReplay` copies, position/damage replay determinism, tick semantics (`replayTo(N)`
+→ `world.tick = N+1`), JSON round-trip including Map fields.
 
-### Visual debug layer (optional)
+### Metrics and analytics *(complete)*
 
-- Force vector visualisation
-- Hit trace display: resolved hit regions and energy values per tick
-- Condition heatmaps: per-entity condition state at any tick
+`src/metrics.ts`:
+
+- `CollectingTrace` — `TraceSink` implementation that accumulates all events for offline analysis;
+  `clear()` resets between runs.
+- `collectMetrics(events)` — derives `CombatMetrics` from any flat `TraceEvent[]`:
+  `damageDealt`, `hitsLanded`, `hitsTaken` (melee `Attack` + ranged `ProjectileHit`),
+  `tickOfKO`, `tickOfDeath`, `tickToIncapacitation` (min of KO and death).
+- `survivalRate(events, entityIds)` — fraction of entities never incapacitated.
+- `meanTimeToIncapacitation(events, entityIds, totalTicks)` — mean TTI; survivors contribute
+  `totalTicks` (capped at scenario duration).
+
+`src/sim/kernel.ts` — `Death` and `KO` trace events emitted from the injury progression loop.
+Both event kinds existed in `TraceKinds` but were previously never emitted anywhere; Phase 13
+analytics and survival tests require them.
+
+`test/metrics.test.ts` — 21 tests: event accumulation, damage/hit tallies, KO/death recording,
+projectile hit attribution, survival rate, mean TTI, live simulation integration.
+
+660 tests passing; all coverage thresholds met.
+
+### Visual debug layer
+
+- Force vector visualisation — *planned*
+- Hit trace display: resolved hit regions and energy values per tick — *planned*
+- Condition heatmaps: per-entity condition state at any tick — *planned*
 
 ---
 
