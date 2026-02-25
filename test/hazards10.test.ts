@@ -5,7 +5,8 @@ import { q, SCALE, to, qMul, mulDiv } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld, applyFallDamage, applyExplosion } from "../src/sim/kernel";
 import { blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy, type BlastSpec } from "../src/sim/explosion";
-import { STARTER_SUBSTANCES, type ActiveSubstance } from "../src/sim/substance";
+import { STARTER_SUBSTANCES, hasSubstanceType, type ActiveSubstance } from "../src/sim/substance";
+import { canDetect, DEFAULT_SENSORY_ENV } from "../src/sim/sensory";
 import { v3 } from "../src/sim/vec3";
 
 const BASE_CTX = { tractionCoeff: q(0.80) };
@@ -523,5 +524,213 @@ describe("ambient temperature — cold stress", () => {
     }
 
     expect(w1.entities[0]!.injury.shock).toBeGreaterThan(w2.entities[0]!.injury.shock);
+  });
+});
+
+// ── Phase 10C: substance interactions ────────────────────────────────────────
+
+describe("Phase 10C: hasSubstanceType helper", () => {
+  it("returns false when no substances", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    expect(hasSubstanceType(e, "stimulant")).toBe(false);
+  });
+
+  it("returns false when substance below effectThreshold", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.substances = [{ substance: STARTER_SUBSTANCES.stimulant!, pendingDose: q(0), concentration: q(0.05) }];
+    // effectThreshold for stimulant = q(0.10); q(0.05) < q(0.10)
+    expect(hasSubstanceType(e, "stimulant")).toBe(false);
+  });
+
+  it("returns true when substance is above effectThreshold", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.substances = [{ substance: STARTER_SUBSTANCES.stimulant!, pendingDose: q(0), concentration: q(0.50) }];
+    expect(hasSubstanceType(e, "stimulant")).toBe(true);
+  });
+});
+
+describe("Phase 10C: stimulant antagonises haemostatic (clears faster)", () => {
+  it("haemostatic clears faster when stimulant is also active", () => {
+    // Entity A: haemostatic + stimulant
+    const eA = mkHumanoidEntity(1, 1, 0, 0);
+    eA.substances = [
+      { substance: STARTER_SUBSTANCES.haemostatic!, pendingDose: q(0), concentration: q(0.50) },
+      { substance: STARTER_SUBSTANCES.stimulant!,   pendingDose: q(0), concentration: q(0.80) },
+    ];
+    // Entity B: haemostatic only
+    const eB = mkHumanoidEntity(2, 2, 0, 0);
+    eB.substances = [
+      { substance: STARTER_SUBSTANCES.haemostatic!, pendingDose: q(0), concentration: q(0.50) },
+    ];
+    const wA = mkWorld(1, [eA]);
+    const wB = mkWorld(2, [eB]);
+
+    for (let i = 0; i < 20; i++) {
+      stepWorld(wA, new Map(), BASE_CTX);
+      stepWorld(wB, new Map(), BASE_CTX);
+    }
+
+    const concA = wA.entities[0]!.substances?.find(s => s.substance.effectType === "haemostatic")?.concentration ?? 0;
+    const concB = wB.entities[0]!.substances?.find(s => s.substance.effectType === "haemostatic")?.concentration ?? 0;
+    // With stimulant, haemostatic should be lower concentration (cleared faster)
+    expect(concA).toBeLessThan(concB);
+  });
+});
+
+describe("Phase 10C: stimulant reduces anaesthetic effect", () => {
+  it("anaesthetic erodes consciousness more slowly when stimulant is active", () => {
+    // Entity A: anaesthetic + stimulant
+    const eA = mkHumanoidEntity(1, 1, 0, 0);
+    eA.substances = [
+      { substance: STARTER_SUBSTANCES.anaesthetic!, pendingDose: q(0), concentration: q(0.80) },
+      { substance: STARTER_SUBSTANCES.stimulant!,   pendingDose: q(0), concentration: q(0.80) },
+    ];
+    // Entity B: anaesthetic only
+    const eB = mkHumanoidEntity(2, 2, 0, 0);
+    eB.substances = [
+      { substance: STARTER_SUBSTANCES.anaesthetic!, pendingDose: q(0), concentration: q(0.80) },
+    ];
+    const wA = mkWorld(1, [eA]);
+    const wB = mkWorld(2, [eB]);
+
+    for (let i = 0; i < 30; i++) {
+      stepWorld(wA, new Map(), BASE_CTX);
+      stepWorld(wB, new Map(), BASE_CTX);
+    }
+
+    // With stimulant, consciousness should be higher (less eroded)
+    expect(wA.entities[0]!.injury.consciousness).toBeGreaterThan(wB.entities[0]!.injury.consciousness);
+  });
+});
+
+describe("Phase 10C: poison + haemostatic interaction", () => {
+  it("haemostatic clears more slowly when poison is active", () => {
+    // Entity A: haemostatic + poison
+    const eA = mkHumanoidEntity(1, 1, 0, 0);
+    eA.substances = [
+      { substance: STARTER_SUBSTANCES.haemostatic!, pendingDose: q(0), concentration: q(0.50) },
+      { substance: STARTER_SUBSTANCES.poison!,      pendingDose: q(0), concentration: q(0.80) },
+    ];
+    // Entity B: haemostatic only
+    const eB = mkHumanoidEntity(2, 2, 0, 0);
+    eB.substances = [
+      { substance: STARTER_SUBSTANCES.haemostatic!, pendingDose: q(0), concentration: q(0.50) },
+    ];
+    const wA = mkWorld(1, [eA]);
+    const wB = mkWorld(2, [eB]);
+
+    for (let i = 0; i < 20; i++) {
+      stepWorld(wA, new Map(), BASE_CTX);
+      stepWorld(wB, new Map(), BASE_CTX);
+    }
+
+    const concA = wA.entities[0]!.substances?.find(s => s.substance.effectType === "haemostatic")?.concentration ?? 0;
+    const concB = wB.entities[0]!.substances?.find(s => s.substance.effectType === "haemostatic")?.concentration ?? 0;
+    // With poison, haemostatic persists longer (higher concentration)
+    expect(concA).toBeGreaterThan(concB);
+  });
+});
+
+// ── Phase 10C: temperature-dependent metabolism ───────────────────────────────
+
+describe("Phase 10C: cold slows substance elimination", () => {
+  it("stimulant lasts longer in cold environment than normal temperature", () => {
+    const eCold   = mkHumanoidEntity(1, 1, 0, 0);
+    const eNormal = mkHumanoidEntity(2, 2, 0, 0);
+    eCold.substances   = [{ substance: STARTER_SUBSTANCES.stimulant!, pendingDose: q(0), concentration: q(0.60) }];
+    eNormal.substances = [{ substance: STARTER_SUBSTANCES.stimulant!, pendingDose: q(0), concentration: q(0.60) }];
+
+    const wCold   = mkWorld(1, [eCold]);
+    const wNormal = mkWorld(2, [eNormal]);
+
+    for (let i = 0; i < 30; i++) {
+      stepWorld(wCold,   new Map(), { ...BASE_CTX, ambientTemperature_Q: q(0.05) }); // very cold
+      stepWorld(wNormal, new Map(), { ...BASE_CTX, ambientTemperature_Q: q(0.60) }); // warm
+    }
+
+    const concCold   = wCold.entities[0]!.substances?.find(s => s.substance.id === "stimulant")?.concentration ?? 0;
+    const concNormal = wNormal.entities[0]!.substances?.find(s => s.substance.id === "stimulant")?.concentration ?? 0;
+    expect(concCold).toBeGreaterThan(concNormal);
+  });
+
+  it("temperature at or above q(0.35) does not slow metabolism", () => {
+    // Above threshold: no cold modifier applied — result identical to normal
+    const e1 = mkHumanoidEntity(1, 1, 0, 0);
+    const e2 = mkHumanoidEntity(2, 2, 0, 0);
+    e1.substances = [{ substance: STARTER_SUBSTANCES.stimulant!, pendingDose: q(0), concentration: q(0.60) }];
+    e2.substances = [{ substance: STARTER_SUBSTANCES.stimulant!, pendingDose: q(0), concentration: q(0.60) }];
+
+    const w1 = mkWorld(1, [e1]);
+    const w2 = mkWorld(2, [e2]);
+
+    for (let i = 0; i < 10; i++) {
+      stepWorld(w1, new Map(), { ...BASE_CTX, ambientTemperature_Q: q(0.35) });
+      stepWorld(w2, new Map(), { ...BASE_CTX, ambientTemperature_Q: q(0.80) });
+    }
+
+    const c1 = w1.entities[0]!.substances?.find(s => s.substance.id === "stimulant")?.concentration ?? 0;
+    const c2 = w2.entities[0]!.substances?.find(s => s.substance.id === "stimulant")?.concentration ?? 0;
+    // Both at or above threshold: same clearance rate
+    expect(c1).toBe(c2);
+  });
+});
+
+// ── Phase 10C: explosive flash / blindness ────────────────────────────────────
+
+describe("Phase 10C: explosion flash blindness", () => {
+  const SPEC: BlastSpec = {
+    blastEnergy_J: 50_000,
+    radius_m: to.m(10),
+    fragmentCount: 0,
+    fragmentMass_kg: 0,
+    fragmentVelocity_mps: 0,
+  };
+
+  it("entity at epicentre is blinded after explosion", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    const world = mkWorld(1, [e]);
+    const trace = { onEvent: () => {} };
+    applyExplosion(world, v3(0, 0, 0), SPEC, 1, trace);
+    expect(world.entities[0]!.condition.blindTicks).toBeGreaterThan(0);
+  });
+
+  it("entity outside flash radius is not blinded", () => {
+    // flashRadiusSq = radius² × 0.40; effective flash radius = 10m × √0.40 ≈ 6.32m
+    const e = mkHumanoidEntity(1, 1, to.m(7), 0);
+    const world = mkWorld(1, [e]);
+    const trace = { onEvent: () => {} };
+    applyExplosion(world, v3(0, 0, 0), SPEC, 1, trace);
+    expect(world.entities[0]!.condition.blindTicks).toBe(0);
+  });
+
+  it("closer entity is blinded longer than entity at edge of flash radius", () => {
+    const eNear = mkHumanoidEntity(1, 1, 0, 0);          // at epicentre
+    const eFar  = mkHumanoidEntity(2, 2, to.m(3.5), 0);  // near edge of 4m flash radius
+    const world = mkWorld(1, [eNear, eFar]);
+    const trace = { onEvent: () => {} };
+    applyExplosion(world, v3(0, 0, 0), SPEC, 1, trace);
+    expect(world.entities[0]!.condition.blindTicks).toBeGreaterThan(world.entities[1]!.condition.blindTicks);
+  });
+
+  it("blindTicks decrements each stepWorld tick", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.condition.blindTicks = 5;
+    const world = mkWorld(1, [e]);
+    stepWorld(world, new Map(), BASE_CTX);
+    expect(world.entities[0]!.condition.blindTicks).toBe(4);
+  });
+
+  it("blinded entity has degraded vision detection (canDetect)", () => {
+    const observer = mkHumanoidEntity(1, 1, 0, 0);
+    const subject  = mkHumanoidEntity(2, 2, to.m(10), 0); // within vision range
+    // Without blindness: fully visible
+    const normalQ = canDetect(observer, subject, DEFAULT_SENSORY_ENV);
+    expect(normalQ).toBe(q(1.0));
+
+    // With blindness: vision zeroed, only hearing possible (10m > hearing 50m? no — within hearing)
+    observer.condition.blindTicks = 10;
+    const blindQ = canDetect(observer, subject, DEFAULT_SENSORY_ENV);
+    // 10m < hearingRange(50m) → heard at q(0.4), not seen
+    expect(blindQ).toBe(q(0.4));
   });
 });

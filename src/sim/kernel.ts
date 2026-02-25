@@ -25,6 +25,7 @@ import { totalBleedingRate, regionKOFactor, FRACTURE_THRESHOLD } from "./injury.
 import { TIER_RANK, TIER_MUL, ACTION_MIN_TIER, TIER_TECH_REQ, type MedicalAction } from "./medical.js";
 import { type BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy } from "./explosion.js";
 import type { ActiveSubstance } from "./substance.js";
+import { hasSubstanceType } from "./substance.js";
 import { makeRng } from "../rng.js";
 import { WorldIndex, buildWorldIndex } from "./indexing.js";
 import { buildSpatialIndex, queryNearbyIds, type SpatialIndex } from "./spatial.js";
@@ -192,6 +193,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     else if ((e.ai as any).decisionCooldownTicks === undefined) (e.ai as any).decisionCooldownTicks = 0;
     // Phase 5: fear / morale
     if ((e.condition as any).fearQ === undefined) (e.condition as any).fearQ = q(0);
+    // Phase 10C: flash blindness
+    if ((e.condition as any).blindTicks === undefined) (e.condition as any).blindTicks = 0;
     // Phase 9: new RegionInjury fields (default for entities created pre-Phase-9)
     if ((e.injury as any).hemolymphLoss === undefined) (e.injury as any).hemolymphLoss = q(0);
     for (const reg of Object.values(e.injury.byRegion)) {
@@ -224,6 +227,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     e.condition.standBlockedTicks = Math.max(0, e.condition.standBlockedTicks - 1);
     e.condition.unconsciousTicks = Math.max(0, e.condition.unconsciousTicks - 1);
     e.condition.suppressedTicks = Math.max(0, e.condition.suppressedTicks - 1);    // Phase 3
+    e.condition.blindTicks      = Math.max(0, e.condition.blindTicks - 1);         // Phase 10C
     // Phase 2C: weapon bind decay — emit trace only from the smaller-ID entity to avoid duplicates
     if (e.action.weaponBindTicks > 0) {
       e.action.weaponBindTicks = Math.max(0, e.action.weaponBindTicks - 1);
@@ -419,7 +423,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     if (e.injury.dead) continue;
     stepConditionsToInjury(world, e, ctx.ambientTemperature_Q);
     stepInjuryProgression(e, world.tick);
-    stepSubstances(e);
+    stepSubstances(e, ctx.ambientTemperature_Q);
     stepEnergy(e, ctx);
     stepCapabilitySources(e, world, ctx); // Phase 12
     trace.onEvent({
@@ -1994,7 +1998,7 @@ function applyHazardDamage(e: Entity, hazard: HazardCell): void {
 
 /* ── Phase 10: pharmacokinetics ──────────────────────────────────────────── */
 
-function stepSubstances(e: Entity): void {
+function stepSubstances(e: Entity, ambientTemperature_Q?: Q): void {
   if (!e.substances || e.substances.length === 0) return;
 
   for (const active of e.substances) {
@@ -2005,15 +2009,42 @@ function stepSubstances(e: Entity): void {
     active.pendingDose    = clampQ(active.pendingDose    - absorbed, q(0), q(1.0));
     active.concentration  = clampQ(active.concentration  + absorbed, q(0), q(1.0));
 
-    // Elimination
-    const eliminated = qMul(active.concentration, sub.eliminationRate);
+    // Elimination — base rate, then modifiers
+    let effectiveElimRate = sub.eliminationRate;
+
+    // Phase 10C: substance interactions — modify elimination rate
+    if (sub.effectType === "haemostatic" && hasSubstanceType(e, "stimulant")) {
+      // Stimulant-induced vasoconstriction antagonises haemostatic absorption: clears 30% faster
+      effectiveElimRate = qMul(effectiveElimRate, q(1.30));
+    }
+    if (sub.effectType === "anaesthetic" && hasSubstanceType(e, "stimulant")) {
+      // Stimulant partially counteracts anaesthetic: clears 25% faster
+      effectiveElimRate = qMul(effectiveElimRate, q(1.25));
+    }
+    if (sub.effectType === "haemostatic" && hasSubstanceType(e, "poison")) {
+      // Haemostatic partially counteracts poison-induced bleeding: clears 20% slower
+      effectiveElimRate = qMul(effectiveElimRate, q(0.80));
+    }
+
+    // Phase 10C: temperature-dependent metabolism — cold slows hepatic clearance
+    if (ambientTemperature_Q !== undefined && ambientTemperature_Q < q(0.35)) {
+      const coldFrac = Math.max(q(0.50) as number, mulDiv(ambientTemperature_Q, SCALE.Q, q(0.35)));
+      effectiveElimRate = qMul(effectiveElimRate, coldFrac as Q);
+    }
+
+    const eliminated = qMul(active.concentration, effectiveElimRate);
     active.concentration  = clampQ(active.concentration  - eliminated, q(0), q(1.0));
 
     // Effects — only when above threshold
     if (active.concentration <= sub.effectThreshold) continue;
 
-    const delta      = clampQ(active.concentration - sub.effectThreshold, q(0), q(1.0));
-    const effectDose = qMul(delta, sub.effectStrength);
+    const delta = clampQ(active.concentration - sub.effectThreshold, q(0), q(1.0));
+    // Phase 10C: anaesthetic onset/strength is reduced when a stimulant is active
+    let effectStrengthMod = sub.effectStrength;
+    if (sub.effectType === "anaesthetic" && hasSubstanceType(e, "stimulant")) {
+      effectStrengthMod = qMul(effectStrengthMod, q(0.75));
+    }
+    const effectDose = qMul(delta, effectStrengthMod);
 
     switch (sub.effectType) {
       case "stimulant":
@@ -2211,6 +2242,16 @@ export function applyExplosion(
           applyImpactToInjury(e, FRAG_WEAPON, fragKeJ, fragRegion, false, trace, tick);
           fragHits++;
         }
+      }
+    }
+
+    // Phase 10C: flash blindness — entities within inner 40% of blast radius are temporarily blinded
+    if (blastFracQ > 0) {
+      const FLASH_RADIUS_FRAC = q(0.40);
+      const flashRadiusSq = mulDiv(spec.radius_m * spec.radius_m, FLASH_RADIUS_FRAC, SCALE.Q);
+      if (distSq < flashRadiusSq) {
+        const blindDuration = Math.max(10, Math.trunc(20 * (1 - distSq / flashRadiusSq)));
+        e.condition.blindTicks = Math.max(e.condition.blindTicks, blindDuration);
       }
     }
 

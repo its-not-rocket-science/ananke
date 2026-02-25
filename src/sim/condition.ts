@@ -21,6 +21,9 @@ export interface ConditionState {
   // Phase 3: suppression from near-miss ranged fire
   suppressedTicks: number;     // coordination penalty while > 0
 
+  // Phase 10C: temporary blindness from explosion flash
+  blindTicks: number;          // vision zeroed while > 0; decremented each tick
+
   // Phase 5: psychological state
   fearQ: Q;                    // accumulated fear 0..1; routing when ≥ moraleThreshold
 
@@ -41,5 +44,6 @@ export const defaultCondition = (): ConditionState => ({
   standBlockedTicks: 0,
   unconsciousTicks: 0,
   suppressedTicks: 0,
+  blindTicks: 0,
   fearQ: q(0),
 });

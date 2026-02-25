@@ -60,6 +60,9 @@ export function canDetect(
 ): Q {
   const perc: Perception = (observer.attributes as any).perception ?? DEFAULT_PERCEPTION;
 
+  // Phase 10C: blinded observer cannot see
+  const isBlind = (observer.condition as any).blindTicks > 0;
+
   const dx = subject.position_m.x - observer.position_m.x;
   const dy = subject.position_m.y - observer.position_m.y;
   const dz = subject.position_m.z - observer.position_m.z;
@@ -68,12 +71,13 @@ export function canDetect(
   const dist2 = BigInt(dx) * BigInt(dx) + BigInt(dy) * BigInt(dy) + BigInt(dz) * BigInt(dz);
 
   // ---- Vision ----
-  let effectiveVision = mulDiv(
+  // Phase 10C: blinded observer has zero effective vision range
+  let effectiveVision = isBlind ? 0 : mulDiv(
     mulDiv(perc.visionRange_m, env.lightMul, SCALE.Q),
     env.smokeMul,
     SCALE.Q,
   );
-  if (sensorBoost) effectiveVision = mulDiv(effectiveVision, sensorBoost.visionRangeMul, SCALE.Q);
+  if (!isBlind && sensorBoost) effectiveVision = mulDiv(effectiveVision, sensorBoost.visionRangeMul, SCALE.Q);
   const visionR2 = BigInt(effectiveVision) * BigInt(effectiveVision);
 
   if (dist2 <= visionR2) {

@@ -9,6 +9,7 @@
 
 import type { Q } from "../units.js";
 import { q } from "../units.js";
+import type { Entity } from "./entity.js";
 
 export type SubstanceEffectType =
   | "stimulant"      // reduces fear and slows fatigue accumulation
@@ -44,6 +45,17 @@ export interface ActiveSubstance {
   pendingDose: Q;
   /** Current systemic concentration (Q 0..1); rises with absorption, falls with elimination. */
   concentration: Q;
+}
+
+/**
+ * Phase 10C: returns true if the entity has an active substance of the given type
+ * with concentration above its effectThreshold.
+ */
+export function hasSubstanceType(e: Entity, type: SubstanceEffectType): boolean {
+  if (!e.substances) return false;
+  return e.substances.some(
+    a => a.substance.effectType === type && a.concentration > a.substance.effectThreshold,
+  );
 }
 
 /** Ready-made substance catalogue for common game scenarios. */
