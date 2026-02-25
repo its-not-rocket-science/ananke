@@ -1134,36 +1134,394 @@ import { TechEra, ERA_DEFAULTS } from "../src/sim/tech.js";
 
 ---
 
-## Phase 12 — Magic and Speculative Systems
+## Phase 12 — Capability Sources and Effects
 
-Magic is treated as an additional physical layer with non-standard but internally consistent
-rules. It does not bypass the SI framework; it extends it.
+**Design principle — Clarke's Third Law**: "Any sufficiently advanced technology is
+indistinguishable from magic." The engine implements this literally: magic and advanced
+technology are the same abstraction with different flavor metadata. A fireball and a plasma
+grenade, a healing spell and a nanobot swarm, a mana pool and a fusion reactor — all resolve
+through identical engine primitives. The engine cannot tell them apart. Only the tags differ.
 
-**Core principle**: every magical effect maps to a physical outcome the engine already
-understands. Magic is the source or mechanism; the engine handles downstream mechanics
-identically regardless of origin.
+---
 
-| Magical effect | Engine interpretation |
+### 12.1 — Core abstractions
+
+#### CapabilitySource
+
+A `CapabilitySource` is an energy reservoir attached to an entity. It replaces "mana pool",
+"fuel cell", "divine favour", or any other limited resource. Energy is always in joules — the
+same unit as `reserveEnergy_J` — regardless of the physical or metaphysical source.
+
+```typescript
+// src/sim/capability.ts
+
+export interface CapabilitySource {
+  id: string;
+  label: string;             // human-readable: "Arcane mana", "Fusion cell", "Void tap"
+  tags: string[];            // flavor + suppression: ["magic"], ["tech","fusion"], ["cosmic","void"]
+  reserve_J: number;         // current stored energy (joules, fixed-point integer)
+  maxReserve_J: number;      // capacity ceiling; Number.MAX_SAFE_INTEGER for boundless sources
+  regenModel: RegenModel;
+  effects: CapabilityEffect[];
+}
+```
+
+#### RegenModel — pluggable, flavor-agnostic
+
+```typescript
+export type RegenModel =
+  | { type: "rest";      regenRate_W: number }
+    // Regen only when entity is not moving and not in combat.
+    // Use for: meditation, sleep-charging, prayer.
+
+  | { type: "constant";  regenRate_W: number }
+    // Regen every tick regardless of activity.
+    // Use for: fusion reactor, enchanted gem, passive divine blessing.
+
+  | { type: "ambient";   maxRate_W: number }
+    // Regen scales with ambient energy at entity's current cell.
+    // Rate = maxRate_W × (ambientGrid cell value ÷ SCALE.Q).
+    // KernelContext gains optional `ambientGrid?: Map<string, Q>`.
+    // Use for: ley lines, geothermal vents, solar collectors, background radiation.
+
+  | { type: "event";     triggers: RegenTrigger[] }
+    // Regen fires on specific engine events.
+    // Use for: kill-triggered blood magic, prayer-answered divine grants.
+
+  | { type: "boundless" }
+    // No regen tracking needed — reserve never depletes.
+    // resolveActivation skips cost deduction entirely.
+    // Use for: black hole harvester, deity, reality-warper, environmental anchor.
+```
+
+```typescript
+export type RegenTrigger =
+  | { on: "kill";    amount_J: number }   // entity kills another entity
+  | { on: "tick";    every_n: number; amount_J: number }  // every N ticks
+  | { on: "terrain"; tag: string; amount_J: number };     // enters terrain with this tag
+```
+
+#### CapabilityEffect
+
+```typescript
+export interface CapabilityEffect {
+  id: string;
+  cost_J: number;            // drawn from source reserve on activation
+  castTime_ticks: number;    // 0 = instant; >0 = charge / concentration / invocation
+  range_m?: number;          // undefined = self-only
+  aoeRadius_m?: number;      // if set, payload applied to all entities within radius
+  payload: EffectPayload | EffectPayload[];  // multiple payloads allowed per effect
+  tags?: string[];           // effect flavor: ["fire", "healing", "force", "nano"]
+}
+```
+
+#### EffectPayload — maps to existing engine primitives
+
+```typescript
+export type EffectPayload =
+  | { kind: "impact";         spec: ImpactSpec }
+    // Kinetic, thermal, internal, or penetrating damage.
+    // Same path as applyImpactToInjury — armour interacts normally.
+    // Fireball = thermal ImpactSpec. Plasma bolt = energy ImpactSpec.
+    // Gravity crush = kinetic ImpactSpec. Nanobot disassembly = internal ImpactSpec.
+
+  | { kind: "treatment";      tier: MedicalTier; rateMul: Q }
+    // Healing at elevated rate. May be gated by TechCapability (nanomedicine).
+    // Magical heal = surgicalKit tier, rateMul q(3.0).
+    // Nanorepair = autodoc tier, rateMul q(5.0).
+
+  | { kind: "armourLayer";    resist_J: number; channels: DamageChannel[]; duration_ticks: number }
+    // Temporary armour applied over entity's loadout. Stacks with worn armour.
+    // Ward/shield spell, force field, reactive plating burst.
+
+  | { kind: "velocity";       delta_mps: Vec3 }
+    // Direct velocity change (fixed-point m/s). Telekinesis, jump jet, repulsion.
+    // Same physics as blast throw — subject to mass, limited by terrain.
+
+  | { kind: "substance";      substance: ActiveSubstance }
+    // Injects a pharmacokinetic substance. Magical poison, healing draught, nano-agent.
+    // Resolves through the Phase 10 substance pipeline.
+
+  | { kind: "structuralRepair"; region: string; amount: Q }
+    // Writes back structural damage — normally write-once after injury.
+    // Only magical healing, advanced nanomedicine, or equivalent can do this.
+    // Respects permanentDamage floor.
+
+  | { kind: "fieldEffect";    spec: FieldEffectSpec }
+    // Places a suppression zone or terrain-altering field in the world.
+    // See §12.4 Field Effects.
+```
+
+---
+
+### 12.2 — Entity and world integration
+
+```typescript
+// entity.ts — one new optional field
+capabilitySources?: CapabilitySource[];
+
+// commands.ts — one new command type
+export interface ActivateCommand {
+  kind: "activate";
+  sourceId: string;     // which CapabilitySource
+  effectId: string;     // which CapabilityEffect within that source
+  targetId?: number;    // entity target (omit for self or ground-targeted AoE)
+  targetPos?: Vec3;     // position target for ground-targeted AoE
+}
+
+// WorldState — one new optional field
+activeFieldEffects?: FieldEffect[];
+```
+
+---
+
+### 12.3 — Kernel integration
+
+#### `resolveActivation(actor, cmd, world, ctx, tick, trace)`
+
+Called from `stepWorld` in the command-processing phase (same position as `resolveAttack`).
+
+1. Look up `source` and `effect` by id; return if not found.
+2. **Suppression check**: if any `FieldEffect` in `world.activeFieldEffects` covers
+   `actor.position_m` and its `suppressesTags` overlaps `source.tags`, the activation fails.
+   Emit a `CapabilitySuppressed` trace event.
+3. **Range check**: if `effect.range_m` defined and target distance exceeds it, return.
+4. **Cost check**: if `regenModel.type !== "boundless"` and `source.reserve_J < effect.cost_J`,
+   return (insufficient reserve).
+5. **Cast time**:
+   - `castTime_ticks === 0`: resolve payloads immediately.
+   - `castTime_ticks > 0`: store as `actor.action.pendingActivation`; resolve when
+     `world.tick >= pendingActivation.resolveAtTick`. Damage above a threshold during cast
+     clears `pendingActivation` (concentration broken — emit `CastInterrupted`).
+6. **Deduct cost**: `source.reserve_J -= effect.cost_J` (skip for boundless).
+7. **Resolve each payload** in `effect.payload` array using existing helpers:
+   - `"impact"` → build `ImpactEvent`, push to tick queue, apply via `applyImpactToInjury`.
+   - `"treatment"` → call `resolveTreat`.
+   - `"armourLayer"` → push to `actor.condition.temporaryArmour` (new field, list drained each tick).
+   - `"velocity"` → add `delta_mps` to `actor.velocity_mps` (same integration as blast throw).
+   - `"substance"` → push to `actor.substances`.
+   - `"structuralRepair"` → clamp write-back respecting `permanentDamage`.
+   - `"fieldEffect"` → push to `world.activeFieldEffects`.
+8. Emit `CapabilityActivated` trace event (sourceId, effectId, targetId, tick).
+
+**Determinism**: AoE target selection uses `sortEntityDeterministic` (existing helper).
+Hit-chance effects within AoE use `eventSeed(worldSeed, tick, actorId, targetId, 0xCAB1)`.
+
+#### `stepCapabilitySources(e, world, ctx, tick)`
+
+Called from `stepWorld` after `stepMovement`, once per living entity.
+
+For each `CapabilitySource` in `e.capabilitySources`:
+- `"rest"`: regen only if `e.velocity_mps` ≈ 0 and no `attackCooldownTicks` active.
+- `"constant"`: always regen.
+- `"ambient"`: look up `terrainKey(cellSize, e.position_m.x, e.position_m.y)` in
+  `ctx.ambientGrid`; scale `maxRate_W` by the cell value.
+- `"event"`: tick-based triggers checked here; kill/terrain triggers injected from stepWorld
+  event dispatch.
+- `"boundless"`: no-op.
+- Apply regen: `reserve_J = min(maxReserve_J, reserve_J + floor(regenRate_W × DT_S / SCALE.s))`.
+
+#### `stepFieldEffects(world, tick)`
+
+Called once per `stepWorld` after all entity processing:
+- Decrement `duration_ticks` for all timed field effects.
+- Remove effects where `duration_ticks === 0`.
+- Permanent effects (`duration_ticks < 0`) never removed by this step.
+
+---
+
+### 12.4 — Field Effects (suppression zones)
+
+```typescript
+export interface FieldEffectSpec {
+  radius_m: number;
+  suppressesTags: string[];   // blocks CapabilitySources whose tags overlap
+  duration_ticks: number;     // -1 = permanent; >0 = auto-expires
+}
+
+export interface FieldEffect extends FieldEffectSpec {
+  id: string;
+  origin: Vec3;
+  placedByEntityId: number;
+}
+```
+
+Examples:
+- Anti-magic ward: `suppressesTags: ["magic","psionic"]`, radius 20m, permanent.
+- EMP pulse: `suppressesTags: ["tech","fusion","nano"]`, radius 50m, 300 ticks.
+- Dead zone: `suppressesTags: ["magic","tech","divine","cosmic"]`, full suppression.
+- Ley-line anchor: `suppressesTags: []` — no suppression; used only as `ambient` regen source
+  (placed in `ambientGrid`, not `activeFieldEffects`).
+
+---
+
+### 12.5 — Example CapabilitySources
+
+#### Medieval arcane mage
+```typescript
+{
+  id: "arcane_mana", label: "Arcane mana",
+  tags: ["magic", "arcane"],
+  reserve_J: 500_000, maxReserve_J: 500_000,
+  regenModel: { type: "rest", regenRate_W: 50 },
+  effects: [
+    { id: "fireball",   cost_J: 80_000, castTime_ticks: 20, range_m: 30, aoeRadius_m: 5,
+      payload: { kind: "impact", spec: { energy_J: 5_000, channel: DamageChannel.Thermal } } },
+    { id: "stone_ward", cost_J: 20_000, castTime_ticks: 5,
+      payload: { kind: "armourLayer", resist_J: 500, channels: [DamageChannel.Kinetic], duration_ticks: 200 } },
+    { id: "heal",       cost_J: 30_000, castTime_ticks: 10,
+      payload: { kind: "treatment", tier: "surgicalKit", rateMul: q(3.0) } },
+    { id: "mend_bone",  cost_J: 120_000, castTime_ticks: 60,
+      payload: { kind: "structuralRepair", region: "torso", amount: q(0.20) } },
+  ],
+}
+```
+
+#### Near-future powered armour (fusion cell)
+```typescript
+{
+  id: "fusion_cell", label: "Compact fusion cell",
+  tags: ["tech", "fusion"],
+  reserve_J: 100_000_000, maxReserve_J: 100_000_000,
+  regenModel: { type: "constant", regenRate_W: 2_000 },
+  effects: [
+    { id: "force_shield", cost_J: 500, castTime_ticks: 0,
+      payload: { kind: "armourLayer", resist_J: 200, channels: [DamageChannel.Kinetic], duration_ticks: 1 } },
+    { id: "jump_jet",     cost_J: 10_000, castTime_ticks: 0,
+      payload: { kind: "velocity", delta_mps: { x: 0, y: 0, z: to.mps(8) } } },
+    { id: "plasma_lance", cost_J: 25_000, castTime_ticks: 2, range_m: 50,
+      payload: { kind: "impact", spec: { energy_J: 3_000, channel: DamageChannel.Thermal } } },
+  ],
+}
+```
+
+#### Deep-space nanobot colony
+```typescript
+{
+  id: "nanobot_reserve", label: "Medical nanobot colony",
+  tags: ["tech", "nano", "bio"],
+  reserve_J: 50_000, maxReserve_J: 50_000,
+  regenModel: { type: "constant", regenRate_W: 20 },
+  effects: [
+    { id: "nano_repair",      cost_J: 1_000, castTime_ticks: 0,
+      payload: { kind: "structuralRepair", region: "torso", amount: q(0.05) } },
+    { id: "nano_disassemble", cost_J: 5_000, castTime_ticks: 5, range_m: 2,
+      payload: { kind: "impact", spec: { energy_J: 200, channel: DamageChannel.Internal } } },
+    { id: "nano_clot",        cost_J: 500, castTime_ticks: 0,
+      payload: { kind: "substance", substance: { id: "haemostatic", concentration: q(1.0), ... } } },
+  ],
+}
+```
+
+#### Geomancer (ambient/ley-line harvest)
+```typescript
+{
+  id: "geothermal_tap", label: "Geothermal ley tap",
+  tags: ["magic", "earth"],
+  reserve_J: 0, maxReserve_J: Number.MAX_SAFE_INTEGER,
+  regenModel: { type: "ambient", maxRate_W: 500_000 },
+  effects: [
+    { id: "lava_jet",   cost_J: 200_000, castTime_ticks: 5, range_m: 20,
+      payload: { kind: "impact", spec: { energy_J: 20_000, channel: DamageChannel.Thermal } } },
+    { id: "stone_skin", cost_J: 100_000, castTime_ticks: 10,
+      payload: { kind: "armourLayer", resist_J: 2_000, channels: [DamageChannel.Kinetic, DamageChannel.Penetrating], duration_ticks: 600 } },
+  ],
+}
+```
+
+#### Cosmic entity (black hole accretion tap)
+```typescript
+{
+  id: "singularity_tap", label: "Hawking radiation harvester",
+  tags: ["cosmic", "void"],
+  reserve_J: Number.MAX_SAFE_INTEGER, maxReserve_J: Number.MAX_SAFE_INTEGER,
+  regenModel: { type: "boundless" },
+  effects: [
+    { id: "gravity_crush",  cost_J: 0, castTime_ticks: 0, aoeRadius_m: 100,
+      payload: { kind: "impact", spec: { energy_J: 1_000_000, channel: DamageChannel.Kinetic } } },
+    { id: "void_suppress",  cost_J: 0, castTime_ticks: 0, range_m: 500,
+      payload: { kind: "fieldEffect",
+        spec: { radius_m: 200, suppressesTags: ["magic","tech","divine"], duration_ticks: -1 } } },
+  ],
+}
+```
+
+---
+
+### 12.6 — What the engine cannot distinguish
+
+| "Magic" source | "Tech" equivalent | Resolved as |
+|---|---|---|
+| Fireball | Plasma grenade | thermal `ImpactEvent` |
+| Healing spell | Nanobot repair swarm | `TreatmentAction` or `structuralRepair` |
+| Magic shield / ward | Force field projector | temporary `armourLayer` |
+| Telekinesis | Gravity gun | `velocity` delta |
+| Magical poison | Nano-toxin injection | `SubstanceDose` |
+| Anti-magic field | EMP zone | `FieldEffect` with `suppressesTags` |
+| Mana pool | Fusion cell | `CapabilitySource` with `reserve_J` |
+| Meditation regen | Solar charging | `RestRegen` vs `ConstantRegen` |
+| Ley-line harvest | Geothermal tap | `AmbientHarvest` from `ambientGrid` |
+| Divine miracle | Replicator matter feed | `EventTriggered` with kill/terrain trigger |
+| God-tier power | Black hole tap | `BoundlessSource` |
+
+The column that varies is only `tags`. The engine path is identical.
+
+---
+
+### 12.7 — Files
+
+| File | Change |
 |---|---|
-| Magical healing | Treatment action at elevated rate; may restore structural damage (normally permanent) |
-| Magical fire | Thermal channel dose; same armour interaction as mundane fire |
-| Magical shield or ward | Additional armour layer with configurable channel mask and resist_J |
-| Telekinetic force | Force vector applied to entity (N); same physics as impact event |
-| Magical poison | Pharmacokinetics model with custom absorption and elimination rates |
-| Anti-magic field | Suppresses `MagicSource` trait; entities lose magical attribute contributions |
-| Regeneration | Recovery rate multiplier applied to all injury types per tick |
-| Structural repair | Writes back to structural damage fields (normally write-once after injury) |
+| `src/sim/capability.ts` | New — all types and builder helpers |
+| `src/sim/entity.ts` | +`capabilitySources?: CapabilitySource[]` |
+| `src/sim/kernel.ts` | `resolveActivation`, `stepCapabilitySources`, `stepFieldEffects`; call sites in `stepWorld`; `KernelContext` gains `ambientGrid?: Map<string, Q>` |
+| `src/sim/commands.ts` | +`ActivateCommand` |
+| `src/sim/world.ts` (or wherever `WorldState` lives) | +`activeFieldEffects?: FieldEffect[]` |
+| `test/capability.test.ts` | New — ~28 tests |
 
-### Magic as a capability tier
+---
 
-Magic availability is a `TechCapability` entry in `TechContext`. In a mundane scenario, magic
-capabilities are absent and the system behaves exactly as without them.
+### 12.8 — Tests
 
-### Mana and magical reserve (TBD)
+New `test/capability.test.ts`:
 
-The mechanism by which magical energy is limited is not yet designed. Options include: a
-separate reserve analogous to `reserveEnergy_J`; ritual cost modelled as time (s); physical
-drain modelled as increased `fatigueRate`. To be decided based on target use cases.
+- `ConstantRegen` increases `reserve_J` every tick; clamped to `maxReserve_J`
+- `RestRegen` only regens when entity velocity ≈ 0 and no cooldown active
+- `BoundlessSource` activation does not reduce `reserve_J`
+- `AmbientHarvest` scales with `ambientGrid` cell value; zero at empty cell
+- `EventTriggered` (tick variant) fires on schedule; fires kill reward after entity death
+- Activation deducts `cost_J` from `reserve_J`
+- Activation fails (silently) when `reserve_J < cost_J`
+- `impact` payload: target takes damage via normal injury pipeline; armour interacts
+- `treatment` payload: target injury state improves
+- `armourLayer` payload: temporary layer reduces damage in specified channels for `duration_ticks`
+- `velocity` payload: entity velocity changes by `delta_mps`
+- `substance` payload: substance appears in `entity.substances`
+- `structuralRepair` payload: structural damage decreases; respects `permanentDamage` floor
+- `fieldEffect` payload: `FieldEffect` appears in `world.activeFieldEffects`
+- Suppression: activation fails inside field whose `suppressesTags` overlaps source tags
+- Suppression: activation succeeds when tags do not overlap (anti-magic does not block fusion)
+- AoE: payload applied to all entities within `aoeRadius_m`; outside entities unaffected
+- `castTime_ticks > 0`: effect not applied until delay elapses
+- Concentration break: pending activation cleared when entity takes damage during cast
+- `stepFieldEffects` decrements `duration_ticks`; removes expired effects; leaves permanent (-1)
+- `"mend_bone"` vs `"nano_repair"`: both increase structural integrity; engine path identical
+
+---
+
+## Phase 12B — Capability Extensions (deferred)
+
+*Requires Phase 12 core.*
+
+- **Kill-triggered blood magic**: `EventTriggered` regen on kill — kernel emits kill event and
+  iterates `capabilitySources` to apply matching triggers.
+- **Terrain-entry triggers**: `on: "terrain"` regen fires when entity steps into tagged cell.
+- **Concentration auras**: continuous cost-per-tick effects (e.g. permanent force field) —
+  `castTime_ticks = -1` reserved sentinel; cost deducted each tick while active.
+- **Linked sources**: spell draws from primary source, overflows to secondary; relevant for
+  multi-divine casters or hybrid magic/tech setups.
+- **Effect chains**: one effect's `fieldEffect` payload triggers a second effect activation on
+  entities that enter the field — requires event queue integration.
 
 ---
 
