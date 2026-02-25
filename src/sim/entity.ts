@@ -41,6 +41,19 @@ export interface Entity {
   /** Phase 10: active pharmacological substances (ingested/injected by the host application). */
   substances?: ActiveSubstance[];
 
+  /**
+   * Phase 8B: molting state for arthropod-type entities.
+   * Active molt: segments in `softeningSegments` take reduced kinetic structural damage.
+   * When `ticksRemaining` reaches 0, `active` is set to false and `regeneratesViaMolting`
+   * segments receive partial structural repair (−q(0.10) per cycle).
+   */
+  molting?: {
+    active: boolean;
+    ticksRemaining: number;
+    /** Segment IDs currently softening — these take reduced kinetic structural damage (×q(0.70)). */
+    softeningSegments: string[];
+  };
+
   position_m: Vec3;
   velocity_mps: Vec3;
 

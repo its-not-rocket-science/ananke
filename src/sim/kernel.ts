@@ -540,7 +540,27 @@ function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: 
   const exo = findExoskeleton(e.loadout);
   const exoSpeedMul: Q = exo ? exo.speedMultiplier : SCALE.Q as Q;
 
-  const baseMul = qMul(qMul(qMul(qMul(qMul(controlMul, mobilityMul), crowdMul), terrainSpeedMul), slopeMul), exoSpeedMul);
+  // Phase 8B: flight locomotion — boost sprint speed when entity can achieve flight
+  let flightSpeedMul: Q = SCALE.Q as Q;
+  const flightSpec = e.bodyPlan?.locomotion.flight;
+  if (flightSpec) {
+    const mass = e.attributes.morphology.mass_kg;
+    if (mass <= flightSpec.liftCapacity_kg) {
+      // Compute average wing damage
+      let wingDmgSum = 0;
+      let wingCount = 0;
+      for (const wid of flightSpec.wingSegments) {
+        const ws = e.injury.byRegion[wid];
+        if (ws) { wingDmgSum += ws.structuralDamage; wingCount++; }
+      }
+      const avgWingDmg: Q = wingCount > 0 ? Math.trunc(wingDmgSum / wingCount) as Q : q(0);
+      const flightMul: Q = clampQ((SCALE.Q - qMul(avgWingDmg, flightSpec.wingDamagePenalty)) as Q, q(0), q(1.0));
+      // 1.5× flight speed boost, scaled by wing condition
+      flightSpeedMul = qMul(q(1.50) as Q, flightMul) as Q;
+    }
+  }
+
+  const baseMul = qMul(qMul(qMul(qMul(qMul(qMul(controlMul, mobilityMul), crowdMul), terrainSpeedMul), slopeMul), exoSpeedMul), flightSpeedMul);
 
   const effVmax = mulDiv(vmax_mps, baseMul, SCALE.Q);
   const effAmax = mulDiv(amax_mps2, baseMul, SCALE.Q);
@@ -1329,10 +1349,35 @@ function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, regi
 
   const surfInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(qMul(surfFrac, areaSurf), armourShift), SURF_J * SCALE.Q));
   const intInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(intFrac, areaInt), INT_J * SCALE.Q));
-  const strInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(wpn.damage.structuralFrac, areaStr), STR_J * SCALE.Q));
+  let strInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(wpn.damage.structuralFrac, areaStr), STR_J * SCALE.Q));
+
+  // Phase 8B: joint vulnerability — joints take extra structural damage from kinetic impacts
+  if (seg?.isJoint && seg.jointDamageMultiplier) {
+    strInc = Math.trunc(strInc * seg.jointDamageMultiplier / SCALE.Q);
+  }
+
+  // Phase 8B: molting softening — segments currently softening take reduced structural damage (×q(0.70))
+  if (target.molting?.active && target.molting.softeningSegments.includes(region)) {
+    strInc = qMul(strInc as Q, q(0.70));
+  }
 
   const regionState = target.injury.byRegion[region];
   if (!regionState) return;
+
+  // Phase 8B: exoskeleton shell breach — below threshold all damage routes to structural only
+  if (seg?.structureType === "exoskeleton" && seg.breachThreshold !== undefined) {
+    if (regionState.structuralDamage < seg.breachThreshold) {
+      const totalInc = surfInc + intInc + strInc;
+      regionState.structuralDamage = clampQ(regionState.structuralDamage + totalInc, 0, SCALE.Q);
+      // Phase 9: fracture detection still applies during shell build-up
+      if (!regionState.fractured && regionState.structuralDamage >= FRACTURE_THRESHOLD) {
+        regionState.fractured = true;
+        trace.onEvent({ kind: TraceKinds.Fracture, tick, entityId: target.id, region });
+      }
+      return; // no bleed / shock until shell is breached
+    }
+    // shell already breached — fall through to normal three-channel split
+  }
 
   regionState.surfaceDamage = clampQ(regionState.surfaceDamage + surfInc, 0, SCALE.Q);
   regionState.internalDamage = clampQ(regionState.internalDamage + intInc, 0, SCALE.Q);
@@ -1616,6 +1661,95 @@ function stepInjuryProgression(e: Entity, tick: number): void {
     if (reg.structuralDamage >= PERMANENT_THRESHOLD) {
       const newFloor = qMul(reg.structuralDamage, PERMANENT_FLOOR_MUL);
       if (newFloor > reg.permanentDamage) reg.permanentDamage = newFloor as Q;
+    }
+  }
+
+  // Phase 8B: hemolymph accumulation — breached open-fluid segments leak each tick
+  if (e.bodyPlan) {
+    for (const seg of e.bodyPlan.segments) {
+      if (seg.fluidSystem !== "open" || seg.hemolymphLossRate === undefined) continue;
+      const segState = e.injury.byRegion[seg.id];
+      if (!segState) continue;
+      const breachAt = seg.breachThreshold ?? q(0.8);
+      if (segState.structuralDamage >= breachAt) {
+        const loss = qMul(seg.hemolymphLossRate, segState.structuralDamage as Q);
+        e.injury.hemolymphLoss = clampQ((e.injury.hemolymphLoss ?? 0) + loss, 0, SCALE.Q);
+      }
+    }
+  }
+
+  // Phase 8B: hemolymph fatal threshold — same as fluidLoss
+  const FATAL_HEMOLYMPH: Q = q(0.80) as Q;
+  if ((e.injury.hemolymphLoss ?? 0) >= FATAL_HEMOLYMPH) {
+    e.injury.dead = true;
+    e.injury.consciousness = q(0);
+    e.velocity_mps = v3(0, 0, 0);
+    return;
+  }
+
+  // Phase 8B: molting tick countdown and structural repair on completion
+  if (e.molting?.active) {
+    e.molting.ticksRemaining = Math.max(0, e.molting.ticksRemaining - 1);
+    if (e.molting.ticksRemaining === 0) {
+      e.molting.active = false;
+      // Repair regeneratesViaMolting segments
+      if (e.bodyPlan) {
+        for (const seg of e.bodyPlan.segments) {
+          if (!seg.regeneratesViaMolting) continue;
+          const segState = e.injury.byRegion[seg.id];
+          if (!segState) continue;
+          segState.structuralDamage = clampQ(
+            (segState.structuralDamage - q(0.10)) as Q, 0, SCALE.Q,
+          );
+        }
+      }
+    }
+  }
+
+  // Phase 8B: hemolymph clotting — passive decay of hemolymph loss each tick
+  const HEMOLYMPH_CLOT_RATE: Q = q(0.0001) as Q;
+  if ((e.injury.hemolymphLoss ?? 0) > 0) {
+    e.injury.hemolymphLoss = clampQ(
+      ((e.injury.hemolymphLoss ?? 0) - HEMOLYMPH_CLOT_RATE) as Q, 0, SCALE.Q,
+    );
+  }
+
+  // Phase 8B: auto-molt trigger — fires when average structural damage on
+  // regeneratesViaMolting segments reaches MOLT_TRIGGER_THRESHOLD and no molt
+  // is already active. Post-molt repair (−q(0.10)) typically drops average below
+  // threshold, preventing immediate re-trigger for minor damage; severely damaged
+  // entities will re-molt until damage falls below the threshold.
+  const MOLT_TRIGGER_THRESHOLD: Q = q(0.40) as Q;
+  const MOLT_DURATION_TICKS = TICK_HZ * 60; // 60 seconds at TICK_HZ fps
+  if (e.bodyPlan && !e.molting?.active) {
+    const regenSegs = e.bodyPlan.segments.filter(s => s.regeneratesViaMolting);
+    if (regenSegs.length > 0) {
+      let totalDmg = 0;
+      for (const seg of regenSegs) {
+        totalDmg += e.injury.byRegion[seg.id]?.structuralDamage ?? 0;
+      }
+      const avgDmg = Math.trunc(totalDmg / regenSegs.length) as Q;
+      if (avgDmg >= MOLT_TRIGGER_THRESHOLD) {
+        e.molting = {
+          active: true,
+          ticksRemaining: MOLT_DURATION_TICKS,
+          softeningSegments: regenSegs.map(s => s.id),
+        };
+      }
+    }
+  }
+
+  // Phase 8B: wing passive regeneration — slow structural repair on wing segments
+  // when not actively molting (molting repair is handled above on completion).
+  const WING_REGEN_RATE: Q = q(0.0001) as Q;
+  if (e.bodyPlan?.locomotion.flight && !e.molting?.active) {
+    for (const wid of e.bodyPlan.locomotion.flight.wingSegments) {
+      const ws = e.injury.byRegion[wid];
+      if (ws && ws.structuralDamage > 0) {
+        ws.structuralDamage = clampQ(
+          (ws.structuralDamage - WING_REGEN_RATE) as Q, 0, SCALE.Q,
+        );
+      }
     }
   }
 
@@ -2127,7 +2261,14 @@ function stepEnergy(e: Entity, ctx: KernelContext): void {
 
   // Phase 11: powered exoskeleton adds continuous power draw to metabolic demand
   const exoForEnergy = findExoskeleton(e.loadout);
-  const demand = (moving ? 250 : BASE_IDLE_W) + (exoForEnergy ? exoForEnergy.powerDrain_W : 0);
+
+  // Phase 8B: flight increases stamina demand when entity is airborne
+  const flightSpecE = e.bodyPlan?.locomotion.flight;
+  const isFlying = flightSpecE !== undefined && e.attributes.morphology.mass_kg <= flightSpecE.liftCapacity_kg;
+  const flightDemandMul: Q = (isFlying && moving) ? flightSpecE!.flightStaminaCost : SCALE.Q as Q;
+
+  const baseDemand = (moving ? 250 : BASE_IDLE_W) + (exoForEnergy ? exoForEnergy.powerDrain_W : 0);
+  const demand = mulDiv(baseDemand, flightDemandMul, SCALE.Q);
 
   const fatigueBefore = e.energy.fatigue;
   stepEnergyAndFatigue(e.attributes, e.energy, e.loadout, demand, DT_S, { tractionCoeff: ctx.tractionCoeff });

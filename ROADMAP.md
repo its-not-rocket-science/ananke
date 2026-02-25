@@ -828,6 +828,45 @@ All segments `structureType: "exoskeleton"`. `regeneratesViaMolting: true` on le
 
 ---
 
+## Phase 8C — Exoskeleton-Specific Armor (deferred)
+
+**Depends on Phase 8B.**
+
+Adds per-segment intrinsic armor resistance for exoskeleton segments, distinct from worn
+equipment armor. This is a structural property of the shell itself, not a carried item.
+
+### Design
+
+Extend `BodySegment` with:
+
+```typescript
+/** Intrinsic structural armor resist — energy absorbed before damage channels are allocated. */
+intrinsicArmor_J?: number;
+```
+
+### Engine integration
+
+In `applyImpactToInjury`, immediately before the exoskeleton breach check, apply the
+intrinsic armor absorption:
+
+```typescript
+if (seg?.intrinsicArmor_J !== undefined && seg.intrinsicArmor_J > 0) {
+  impactEnergy_J = Math.max(0, impactEnergy_J - seg.intrinsicArmor_J);
+  if (impactEnergy_J === 0) return; // fully absorbed
+}
+```
+
+The remaining energy then flows through the normal breach-routing or three-channel split.
+
+### Rationale for deferral
+
+Intrinsic armor shares logic with the equipment armor pipeline (`resolveAttack` → `armourAbsorb`).
+Full integration requires deciding whether intrinsic shell resistance stacks with, or replaces,
+worn armour, and whether it affects ranged hits consistently. Defer to a dedicated armor-pipeline
+refactor phase.
+
+---
+
 ## Phase 9 — Injury and Medical Simulation (complete)
 
 **Depends on Phase 8 (body plan system).**

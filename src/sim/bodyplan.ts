@@ -14,6 +14,21 @@ import { DamageChannel } from "../channels.js";
 export interface LocomotionModel {
   /** Primary locomotion mechanism. */
   type: "biped" | "quadruped" | "hexapod" | "undulation" | "flight" | "distributed";
+
+  /**
+   * Phase 8B: flight capability.  Present only for winged body plans.
+   * Wings are segments; liftCapacity_kg is the total mass the creature can sustain aloft.
+   */
+  flight?: {
+    /** Segment IDs used for lift (must match BodySegment.id values in the same plan). */
+    wingSegments: string[];
+    /** Maximum liftable mass (SCALE.kg units; e.g. 3000 = 3 kg). */
+    liftCapacity_kg: I32;
+    /** Energy cost multiplier relative to ground movement (Q; q(2.0) = double cost). */
+    flightStaminaCost: Q;
+    /** Mobility reduction per unit of average wing structural damage (Q multiplier). */
+    wingDamagePenalty: Q;
+  };
 }
 
 export interface CNSLayout {
@@ -46,6 +61,48 @@ export interface BodySegment {
   manipulationRole?: "primary" | "secondary" | "none";
   /** Central nervous system contribution. */
   cnsRole?: "central" | "ganglionic" | "none";
+
+  // ── Phase 8B: exoskeleton biology ─────────────────────────────────────────
+
+  /** Structural biology of this segment.  Absent = endoskeleton default. */
+  structureType?: "endoskeleton" | "exoskeleton" | "hydrostatic" | "gelatinous";
+
+  /**
+   * For exoskeletons: structural damage level (Q) at which the shell is breached.
+   * Below breach: all incoming damage routes to structuralDamage only.
+   * At or above breach: normal surface / internal / structural split applies.
+   */
+  breachThreshold?: Q;
+
+  /**
+   * Fluid transport system type.
+   * "open" = arthropod hemolymph; "closed" = vertebrate blood; "none" = dry.
+   */
+  fluidSystem?: "closed" | "open" | "none";
+
+  /**
+   * Hemolymph loss rate (Q) per tick when an open-fluid segment is breached.
+   * Feeds InjuryState.hemolymphLoss (parallel to the vertebrate fluidLoss model).
+   */
+  hemolymphLossRate?: Q;
+
+  /**
+   * Is this segment a joint (articulation between hardened plates)?
+   * Joints take extra structural damage from kinetic impacts.
+   */
+  isJoint?: boolean;
+
+  /**
+   * Structural damage multiplier applied to strInc when isJoint = true.
+   * e.g. q(1.5) = joints take 50% more structural damage than adjacent plates.
+   */
+  jointDamageMultiplier?: Q;
+
+  /**
+   * Can this segment regenerate structural integrity via a molt event?
+   * When true, completing a molt cycle reduces structuralDamage by q(0.10).
+   */
+  regeneratesViaMolting?: boolean;
 }
 
 // ─── body plan ───────────────────────────────────────────────────────────────
@@ -578,3 +635,156 @@ export const OCTOPOID_PLAN: BodyPlan = {
     { id: "arm8", parent: "mantle", mass_kg: 1500 as I32, exposureWeight: { [DamageChannel.Kinetic]: q(0.09) }, manipulationRole: "primary", locomotionRole: "secondary" },
   ],
 };
+
+/**
+ * Phase 8B reference plan: giant grasshopper (arthropod exoskeleton).
+ * Demonstrates all Phase 8B fields:
+ *  - All segments have structureType: "exoskeleton"
+ *  - Thorax has fluidSystem: "open" + hemolymphLossRate
+ *  - Wings have breachThreshold, isJoint, jointDamageMultiplier
+ *  - Legs have regeneratesViaMolting: true
+ *  - locomotion.flight wired to wing segment IDs
+ *
+ * Kinetic exposure weights sum to exactly 10000 (SCALE.Q).
+ */
+export const GRASSHOPPER_PLAN: BodyPlan = {
+  id: "grasshopper",
+  locomotion: {
+    type: "hexapod",
+    flight: {
+      wingSegments: ["forewing_l", "forewing_r", "hindwing_l", "hindwing_r"],
+      liftCapacity_kg: 10000 as I32,   // 10 kg — just enough to carry itself
+      flightStaminaCost: q(2.0) as Q,  // flight costs 2× ground stamina
+      wingDamagePenalty: q(0.8) as Q,  // 80% speed loss per unit of wing damage
+    },
+  },
+  cnsLayout: { type: "distributed" },
+  segments: [
+    {
+      id: "head",
+      parent: null,
+      mass_kg: 1000 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.05) },
+      cnsRole: "central",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.5),
+      fluidSystem: "none",
+    },
+    {
+      id: "thorax",
+      parent: null,
+      mass_kg: 3000 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.35) },
+      cnsRole: "ganglionic",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.4),
+      fluidSystem: "open",
+      hemolymphLossRate: q(0.002),
+    },
+    {
+      id: "forewing_l",
+      parent: "thorax",
+      mass_kg: 500 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.08) },
+      locomotionRole: "primary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.3),
+      isJoint: true,
+      jointDamageMultiplier: q(1.5),
+    },
+    {
+      id: "forewing_r",
+      parent: "thorax",
+      mass_kg: 500 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.08) },
+      locomotionRole: "primary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.3),
+      isJoint: true,
+      jointDamageMultiplier: q(1.5),
+    },
+    {
+      id: "hindwing_l",
+      parent: "thorax",
+      mass_kg: 700 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.10) },
+      locomotionRole: "primary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.3),
+      isJoint: true,
+      jointDamageMultiplier: q(1.5),
+    },
+    {
+      id: "hindwing_r",
+      parent: "thorax",
+      mass_kg: 700 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.10) },
+      locomotionRole: "primary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.3),
+      isJoint: true,
+      jointDamageMultiplier: q(1.5),
+    },
+    {
+      id: "foreleg_l",
+      parent: "thorax",
+      mass_kg: 500 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.035) },
+      locomotionRole: "secondary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.5),
+      regeneratesViaMolting: true,
+    },
+    {
+      id: "foreleg_r",
+      parent: "thorax",
+      mass_kg: 500 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.035) },
+      locomotionRole: "secondary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.5),
+      regeneratesViaMolting: true,
+    },
+    {
+      id: "midleg_l",
+      parent: "thorax",
+      mass_kg: 500 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.035) },
+      locomotionRole: "secondary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.5),
+      regeneratesViaMolting: true,
+    },
+    {
+      id: "midleg_r",
+      parent: "thorax",
+      mass_kg: 500 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.035) },
+      locomotionRole: "secondary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.5),
+      regeneratesViaMolting: true,
+    },
+    {
+      id: "hindleg_l",
+      parent: "thorax",
+      mass_kg: 800 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.05) },
+      locomotionRole: "primary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.5),
+      regeneratesViaMolting: true,
+    },
+    {
+      id: "hindleg_r",
+      parent: "thorax",
+      mass_kg: 800 as I32,
+      exposureWeight: { [DamageChannel.Kinetic]: q(0.05) },
+      locomotionRole: "primary",
+      structureType: "exoskeleton",
+      breachThreshold: q(0.5),
+      regeneratesViaMolting: true,
+    },
+  ],
+};
+// GRASSHOPPER_PLAN kinetic sum: 500+3500+800+800+1000+1000+350+350+350+350+500+500 = 10000 ✓
