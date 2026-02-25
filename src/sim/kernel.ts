@@ -1393,6 +1393,12 @@ function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, regi
 
   const armourShift = armoured ? q(0.75) : q(1.0);
 
+  // Phase 8C: intrinsic exoskeleton armor — absorbed before damage channels are allocated
+  if (seg?.intrinsicArmor_J !== undefined && seg.intrinsicArmor_J > 0) {
+    energy_J = Math.max(0, energy_J - seg.intrinsicArmor_J);
+    if (energy_J === 0) return;
+  }
+
   const SURF_J = 100;
   const INT_J = 160;
   const STR_J = 220;

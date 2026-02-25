@@ -828,7 +828,7 @@ All segments `structureType: "exoskeleton"`. `regeneratesViaMolting: true` on le
 
 ---
 
-## Phase 8C — Exoskeleton-Specific Armor (deferred)
+## Phase 8C — Exoskeleton-Specific Armor *(COMPLETE)*
 
 **Depends on Phase 8B.**
 
@@ -858,12 +858,16 @@ if (seg?.intrinsicArmor_J !== undefined && seg.intrinsicArmor_J > 0) {
 
 The remaining energy then flows through the normal breach-routing or three-channel split.
 
-### Rationale for deferral
+### Implementation
 
-Intrinsic armor shares logic with the equipment armor pipeline (`resolveAttack` → `armourAbsorb`).
-Full integration requires deciding whether intrinsic shell resistance stacks with, or replaces,
-worn armour, and whether it affects ranged hits consistently. Defer to a dedicated armor-pipeline
-refactor phase.
+`intrinsicArmor_J` is checked in `applyImpactToInjury` immediately after `armourShift` is computed
+and before damage channels are allocated. The check applies to all hit paths (melee, ranged, blast,
+fall) since they all call `applyImpactToInjury`. Stacks additively with worn equipment armour
+(intrinsic fires first; residual energy then proceeds through the normal channel split or exo breach
+routing). `GRASSHOPPER_PLAN` thorax has `intrinsicArmor_J: 40`.
+
+`test/exoskeleton.test.ts` — 5 new tests (40 total): data check, partial absorption, full
+absorption, zero-value no-op, full absorption inside exo breach routing path.
 
 ---
 

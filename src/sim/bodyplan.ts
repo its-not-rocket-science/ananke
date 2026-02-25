@@ -103,6 +103,15 @@ export interface BodySegment {
    * When true, completing a molt cycle reduces structuralDamage by q(0.10).
    */
   regeneratesViaMolting?: boolean;
+
+  // ── Phase 8C: exoskeleton-specific armor ──────────────────────────────────
+
+  /**
+   * Intrinsic structural armor resist (joules) — energy absorbed by the shell
+   * before damage channels are allocated.  Distinct from worn equipment armour.
+   * Absent or 0 = no intrinsic resistance.
+   */
+  intrinsicArmor_J?: number;
 }
 
 // ─── body plan ───────────────────────────────────────────────────────────────
@@ -680,6 +689,7 @@ export const GRASSHOPPER_PLAN: BodyPlan = {
       breachThreshold: q(0.4),
       fluidSystem: "open",
       hemolymphLossRate: q(0.002),
+      intrinsicArmor_J: 40,   // Phase 8C: chitinous shell absorbs 40 J before channel split
     },
     {
       id: "forewing_l",

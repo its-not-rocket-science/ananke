@@ -815,3 +815,111 @@ describe("wing passive regeneration", () => {
     expect(after).toBeGreaterThanOrEqual(0);
   });
 });
+
+// ─── Phase 8C: intrinsic exoskeleton armor ────────────────────────────────────
+
+describe("intrinsic exoskeleton armor (intrinsicArmor_J)", () => {
+  const attackCmd: AttackCommand = {
+    kind: "attack", targetId: 2, weaponId: CLUB.id, intensity: q(1.0) as Q, mode: "strike",
+  };
+  const cmds = new Map([[1, [attackCmd]]]);
+
+  it("GRASSHOPPER_PLAN thorax has intrinsicArmor_J > 0", () => {
+    const thorax = GRASSHOPPER_PLAN.segments.find(s => s.id === "thorax")!;
+    expect(thorax.intrinsicArmor_J).toBeDefined();
+    expect(thorax.intrinsicArmor_J!).toBeGreaterThan(0);
+  });
+
+  it("partial absorption: segment with intrinsicArmor_J receives less damage than one without", () => {
+    // Two identical worlds; only the defender's segment differs.
+    const makeWorld = (withArmor: boolean) => {
+      const plan = singleSegPlan("plate", withArmor ? { intrinsicArmor_J: 100 } : {});
+      const attacker = mkHumanoidEntity(1, 1, 0, 0);
+      attacker.loadout = { items: [CLUB] };
+      const defender = mkHumanoidEntity(2, 2, Math.trunc(0.5 * SCALE.m), 0);
+      defender.bodyPlan = plan;
+      defender.injury = defaultInjury(["plate"]);
+      return mkWorld(77, [attacker, defender]);
+    };
+
+    const worldA = makeWorld(true);   // with intrinsic armor
+    const worldB = makeWorld(false);  // without
+
+    for (let i = 0; i < 20; i++) {
+      stepWorld(worldA, cmds, BASE_CTX);
+      stepWorld(worldB, cmds, BASE_CTX);
+    }
+
+    const dmgA = worldA.entities.find(e => e.id === 2)!.injury.byRegion["plate"]!;
+    const dmgB = worldB.entities.find(e => e.id === 2)!.injury.byRegion["plate"]!;
+
+    const totalA = dmgA.surfaceDamage + dmgA.internalDamage + dmgA.structuralDamage;
+    const totalB = dmgB.surfaceDamage + dmgB.internalDamage + dmgB.structuralDamage;
+
+    // Intrinsic armor must have reduced total damage
+    expect(totalA).toBeLessThan(totalB);
+  });
+
+  it("full absorption: huge intrinsicArmor_J prevents all damage", () => {
+    const plan = singleSegPlan("plate", { intrinsicArmor_J: 999_999 });
+    const attacker = mkHumanoidEntity(1, 1, 0, 0);
+    attacker.loadout = { items: [CLUB] };
+    const defender = mkHumanoidEntity(2, 2, Math.trunc(0.5 * SCALE.m), 0);
+    defender.bodyPlan = plan;
+    defender.injury = defaultInjury(["plate"]);
+
+    const world = mkWorld(77, [attacker, defender]);
+    for (let i = 0; i < 20; i++) stepWorld(world, cmds, BASE_CTX);
+
+    const plate = world.entities.find(e => e.id === 2)!.injury.byRegion["plate"]!;
+    expect(plate.surfaceDamage).toBe(0);
+    expect(plate.internalDamage).toBe(0);
+    expect(plate.structuralDamage).toBe(0);
+  });
+
+  it("intrinsicArmor_J = 0 is a no-op (same damage as absent)", () => {
+    const makeWorld = (explicit: boolean) => {
+      const plan = singleSegPlan("plate", explicit ? { intrinsicArmor_J: 0 } : {});
+      const attacker = mkHumanoidEntity(1, 1, 0, 0);
+      attacker.loadout = { items: [CLUB] };
+      const defender = mkHumanoidEntity(2, 2, Math.trunc(0.5 * SCALE.m), 0);
+      defender.bodyPlan = plan;
+      defender.injury = defaultInjury(["plate"]);
+      return mkWorld(77, [attacker, defender]);
+    };
+
+    const worldA = makeWorld(true);
+    const worldB = makeWorld(false);
+    for (let i = 0; i < 10; i++) {
+      stepWorld(worldA, cmds, BASE_CTX);
+      stepWorld(worldB, cmds, BASE_CTX);
+    }
+
+    const dmgA = worldA.entities.find(e => e.id === 2)!.injury.byRegion["plate"]!;
+    const dmgB = worldB.entities.find(e => e.id === 2)!.injury.byRegion["plate"]!;
+    expect(dmgA.structuralDamage).toBe(dmgB.structuralDamage);
+    expect(dmgA.surfaceDamage).toBe(dmgB.surfaceDamage);
+  });
+
+  it("intrinsic armor blocks all damage inside exo breach routing path", () => {
+    // Un-breachable exo + huge intrinsicArmor_J: energy fully absorbed before
+    // breach routing runs, so no structural damage accumulates.
+    const UNBREACHABLE = (SCALE.Q + 1) as Q;
+    const plan = singleSegPlan("shell", {
+      structureType: "exoskeleton",
+      breachThreshold: UNBREACHABLE,
+      intrinsicArmor_J: 999_999,
+    });
+    const attacker = mkHumanoidEntity(1, 1, 0, 0);
+    attacker.loadout = { items: [CLUB] };
+    const defender = mkHumanoidEntity(2, 2, Math.trunc(0.5 * SCALE.m), 0);
+    defender.bodyPlan = plan;
+    defender.injury = defaultInjury(["shell"]);
+
+    const world = mkWorld(77, [attacker, defender]);
+    for (let i = 0; i < 20; i++) stepWorld(world, cmds, BASE_CTX);
+
+    const shell = world.entities.find(e => e.id === 2)!.injury.byRegion["shell"]!;
+    expect(shell.structuralDamage).toBe(0);
+  });
+});

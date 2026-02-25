@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phase 12 complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
+**Phase 12 + 8C complete.** Melee combat, grappling, stamina and exhaustion, weapon dynamics,
 ranged and projectile combat, injury, entity environmental hazards, movement physics, formation
 basics, deterministic AI scaffolding, perception/cognition (sensory model, decision latency,
 surprise mechanics), morale and psychological state (fear accumulation, routing, pain blocking),
