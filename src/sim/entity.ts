@@ -10,6 +10,7 @@ import type { ActionState } from "./action.js";
 import type { SkillMap } from "./skills.js";
 import type { BodyPlan } from "./bodyplan.js";
 import type { ActiveSubstance } from "./substance.js";
+import type { CapabilitySource, PendingActivation } from "./capability.js";
 
 import { Q } from "../units.js";
 
@@ -66,4 +67,10 @@ export interface Entity {
   grapple: GrappleState;
 
   ai?: AIState;
+
+  /** Phase 12: attached capability sources (mana pools, fusion cells, divine reserves, …). */
+  capabilitySources?: CapabilitySource[];
+
+  /** Phase 12: in-flight cast — cleared on completion or concentration break. */
+  pendingActivation?: PendingActivation;
 }

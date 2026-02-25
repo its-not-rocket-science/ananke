@@ -15,7 +15,8 @@ export type Command =
   | BreakGrappleCommand
   | BreakBindCommand
   | ShootCommand
-  | TreatCommand;
+  | TreatCommand
+  | ActivateCommand;
 
 export interface MoveCommand {
   kind: typeof CommandKinds.Move;
@@ -82,6 +83,13 @@ export interface TreatCommand {           // Phase 9
   tier: MedicalTier;
   /** Region to treat. Required for tourniquet/bandage/surgery; omit for fluidReplacement. */
   regionId?: string;
+}
+
+export interface ActivateCommand {   // Phase 12
+  kind: typeof CommandKinds.Activate;
+  sourceId: string;    // which CapabilitySource on the entity
+  effectId: string;    // which CapabilityEffect within that source
+  targetId?: number;   // entity target; undefined = self or AoE centred on self
 }
 
 export type CommandMap = Map<number, readonly Command[]>;

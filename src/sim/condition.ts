@@ -23,6 +23,10 @@ export interface ConditionState {
 
   // Phase 5: psychological state
   fearQ: Q;                    // accumulated fear 0..1; routing when ≥ moraleThreshold
+
+  // Phase 12: temporary energy-absorbing shield from capability armourLayer effects
+  shieldReserve_J?: number;    // remaining absorption capacity (joules)
+  shieldExpiry_tick?: number;  // tick at which the shield expires
 }
 
 export const defaultCondition = (): ConditionState => ({

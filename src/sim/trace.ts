@@ -113,6 +113,25 @@ export type TraceEvent =
       entityId: number;
       blastEnergy_J: number;
       fragHits: number;
+    }
+  | {
+      kind: typeof TraceKinds.CapabilityActivated;   // Phase 12
+      tick: number;
+      entityId: number;
+      sourceId: string;
+      effectId: string;
+    }
+  | {
+      kind: typeof TraceKinds.CapabilitySuppressed;  // Phase 12
+      tick: number;
+      entityId: number;
+      sourceId: string;
+      effectId: string;
+    }
+  | {
+      kind: typeof TraceKinds.CastInterrupted;       // Phase 12
+      tick: number;
+      entityId: number;
     };
 
 export interface TraceSink {

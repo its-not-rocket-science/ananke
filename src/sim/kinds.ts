@@ -12,6 +12,7 @@ export const CommandKinds = {
   Shoot: "shoot",          // Phase 3
   Treat: "treat",          // Phase 9
   SetProne: "setProne",
+  Activate: "activate",        // Phase 12: use a capability source effect
 } as const;
 
 export type CommandKind = typeof CommandKinds[keyof typeof CommandKinds];
@@ -35,6 +36,9 @@ export const TraceKinds = {
   Fracture: "fracture",               // Phase 9
   TreatmentApplied: "treatmentApplied", // Phase 9
   BlastHit: "blastHit",               // Phase 10
+  CapabilityActivated:   "capabilityActivated",   // Phase 12
+  CapabilitySuppressed:  "capabilitySuppressed",  // Phase 12
+  CastInterrupted:       "castInterrupted",        // Phase 12
 } as const;
 
 export type TraceKind = typeof TraceKinds[keyof typeof TraceKinds];

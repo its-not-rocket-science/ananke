@@ -1,6 +1,7 @@
 import type { WorldState } from "./world.js";
 import type { Entity } from "./entity.js";
-import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand, ShootCommand, TreatCommand } from "./commands.js";
+import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand, ShootCommand, TreatCommand, ActivateCommand } from "./commands.js";
+import type { CapabilityEffect, EffectPayload, FieldEffect } from "./capability.js";
 
 import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
 import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive.js";
@@ -132,6 +133,14 @@ export interface KernelContext {
    * to verify that the entity's loadout is era-appropriate.
    */
   techCtx?: TechContext;
+
+  /**
+   * Phase 12: ambient energy grid.
+   * Maps terrain cell keys to ambient energy fraction (Q, 0..1).
+   * Used by CapabilitySource regenModel "ambient" — regen rate scales with cell value.
+   * Ley lines, geothermal vents, solar collectors, stellar wind.
+   */
+  ambientGrid?: Map<string, Q>;
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
@@ -210,6 +219,24 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
           trace.onEvent({ kind: TraceKinds.WeaponBindBreak, tick: world.tick, entityId: e.id, partnerId, reason: "timeout" });
         }
       }
+    }
+  }
+
+  // Phase 12: resolve or interrupt pending capability activations (cast-time completion)
+  const CAST_INTERRUPT_SHOCK: Q = q(0.30) as Q;
+  for (const e of world.entities) {
+    if (!e.pendingActivation || e.injury.dead) continue;
+    if (e.injury.shock >= CAST_INTERRUPT_SHOCK) {
+      trace.onEvent({ kind: TraceKinds.CastInterrupted, tick: world.tick, entityId: e.id });
+      delete e.pendingActivation;
+    } else if (world.tick >= e.pendingActivation.resolveAtTick) {
+      const src = e.capabilitySources?.find(s => s.id === e.pendingActivation!.sourceId);
+      const eff = src?.effects.find(ef => ef.id === e.pendingActivation!.effectId);
+      if (src && eff) {
+        applyCapabilityEffect(world, e, e.pendingActivation.targetId, eff, trace, world.tick);
+        trace.onEvent({ kind: TraceKinds.CapabilityActivated, tick: world.tick, entityId: e.id, sourceId: src.id, effectId: eff.id });
+      }
+      delete e.pendingActivation;
     }
   }
 
@@ -295,6 +322,11 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
         resolveShoot(world, e, c as ShootCommand, tuning, index, impacts, trace, ctx);
       } else if (c.kind === "treat") {
         resolveTreat(world, e, c as TreatCommand, index, trace, ctx);
+      } else if (c.kind === "activate") {
+        // Don't queue a new activation if one is already pending (cast in progress)
+        if (!e.pendingActivation) {
+          resolveActivation(world, e, c as ActivateCommand, ctx, trace, world.tick);
+        }
       }
     }
   }
@@ -320,7 +352,19 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     const target = index.byId.get(ev.targetId);
     if (!target || target.injury.dead) continue;
 
-    applyImpactToInjury(target, ev.wpn, ev.energy_J, ev.region, ev.protectedByArmour, trace, world.tick);
+    // Phase 12: temporary shield absorption from armourLayer capability effects
+    let effectiveEnergy = ev.energy_J;
+    if ((target.condition.shieldReserve_J ?? 0) > 0 &&
+        target.condition.shieldExpiry_tick !== undefined &&
+        world.tick <= target.condition.shieldExpiry_tick) {
+      const absorbed = Math.min(target.condition.shieldReserve_J!, effectiveEnergy);
+      target.condition.shieldReserve_J! -= absorbed;
+      effectiveEnergy -= absorbed;
+    }
+
+    if (effectiveEnergy > 0) {
+      applyImpactToInjury(target, ev.wpn, effectiveEnergy, ev.region, ev.protectedByArmour, trace, world.tick);
+    }
 
     trace.onEvent({
       kind: TraceKinds.Attack,
@@ -336,6 +380,9 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
       hitQuality: ev.hitQuality,
     });
   }
+
+  // Phase 12: expire timed field effects
+  stepFieldEffects(world);
 
   // Phase 5: precompute routing fraction per team for routing cascade check
   const teamAliveCount = new Map<number, number>();
@@ -359,6 +406,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     stepInjuryProgression(e, world.tick);
     stepSubstances(e);
     stepEnergy(e, ctx);
+    stepCapabilitySources(e, world, ctx); // Phase 12
     trace.onEvent({
       kind: TraceKinds.Injury,
       tick: world.tick,
@@ -2229,6 +2277,310 @@ function resolveTreat(
     targetId: target.id,
     action: cmd.action,
     ...(cmd.regionId !== undefined ? { regionId: cmd.regionId } : {}),
+  });
+}
+
+/* ── Phase 12: capability sources and effects ─────────────────────────────── */
+
+/**
+ * Synthetic Weapon objects for capability impact payloads, keyed by DamageChannel.
+ * The engine cannot distinguish these from weapon impacts — same applyImpactToInjury path.
+ */
+const CAPABILITY_CHANNEL_WEAPONS: Partial<Record<number, Weapon>> = {
+  [DamageChannel.Kinetic]:    { id: "cap_kinetic",  kind: "weapon", name: "Kinetic Force", mass_kg: 0, bulk: q(0), damage: { penetrationBias: q(0.30), surfaceFrac: q(0.30), internalFrac: q(0.30), structuralFrac: q(0.40), bleedFactor: q(0.30) } },
+  [DamageChannel.Thermal]:    { id: "cap_thermal",  kind: "weapon", name: "Thermal",       mass_kg: 0, bulk: q(0), damage: { penetrationBias: q(0),    surfaceFrac: q(0.40), internalFrac: q(0.50), structuralFrac: q(0.10), bleedFactor: q(0.10) } },
+  [DamageChannel.Electrical]: { id: "cap_elec",     kind: "weapon", name: "Electrical",    mass_kg: 0, bulk: q(0), damage: { penetrationBias: q(0.20), surfaceFrac: q(0.20), internalFrac: q(0.60), structuralFrac: q(0.20), bleedFactor: q(0.05) } },
+  [DamageChannel.Chemical]:   { id: "cap_chem",     kind: "weapon", name: "Chemical",      mass_kg: 0, bulk: q(0), damage: { penetrationBias: q(0),    surfaceFrac: q(0.45), internalFrac: q(0.45), structuralFrac: q(0.10), bleedFactor: q(0.20) } },
+  [DamageChannel.Radiation]:  { id: "cap_rad",      kind: "weapon", name: "Radiation",     mass_kg: 0, bulk: q(0), damage: { penetrationBias: q(0),    surfaceFrac: q(0.05), internalFrac: q(0.90), structuralFrac: q(0.05), bleedFactor: q(0.05) } },
+};
+const CAPABILITY_WEAPON_DEFAULT: Weapon = {
+  id: "cap_generic", kind: "weapon", name: "Capability", mass_kg: 0, bulk: q(0),
+  damage: { penetrationBias: q(0.10), surfaceFrac: q(0.30), internalFrac: q(0.40), structuralFrac: q(0.30), bleedFactor: q(0.20) },
+};
+
+/**
+ * Apply a single EffectPayload to target on behalf of actor.
+ * All payloads route to existing engine primitives — the engine does not distinguish
+ * magical from technological effects at this level.
+ */
+function applyPayload(
+  world: WorldState,
+  actor: Entity,
+  target: Entity,
+  payload: EffectPayload,
+  trace: TraceSink,
+  tick: number,
+  effectId: string,
+): void {
+  switch (payload.kind) {
+
+    case "impact": {
+      const wpn = CAPABILITY_CHANNEL_WEAPONS[payload.spec.channel] ?? CAPABILITY_WEAPON_DEFAULT;
+      const capSeed = eventSeed(world.seed, tick, actor.id, target.id, 0xCAB1);
+      const capRng  = makeRng(capSeed, SCALE.Q);
+      let hitRegion: string;
+      if (target.bodyPlan) {
+        hitRegion = resolveHitSegment(target.bodyPlan, capRng.q01());
+      } else {
+        const area    = chooseArea(capRng.q01());
+        const sideBit = (capSeed & 1) as 0 | 1;
+        hitRegion     = regionFromHit(area, sideBit);
+      }
+      if (!target.injury.byRegion[hitRegion]) break;
+
+      // Check temporary shield absorption before applying impact
+      let effectiveEnergy = payload.spec.energy_J;
+      if ((target.condition.shieldReserve_J ?? 0) > 0 &&
+          target.condition.shieldExpiry_tick !== undefined &&
+          tick <= target.condition.shieldExpiry_tick) {
+        const absorbed = Math.min(target.condition.shieldReserve_J!, effectiveEnergy);
+        target.condition.shieldReserve_J! -= absorbed;
+        effectiveEnergy -= absorbed;
+      }
+      if (effectiveEnergy > 0) {
+        applyImpactToInjury(target, wpn, effectiveEnergy, hitRegion, false, trace, tick);
+      }
+      break;
+    }
+
+    case "treatment": {
+      // Direct healing — bypasses range/equipment checks; capability source IS the tool.
+      const BASE_CAP_HEAL: Q = q(0.0050) as Q;
+      const healRate = qMul(BASE_CAP_HEAL, payload.rateMul);
+      for (const reg of Object.values(target.injury.byRegion)) {
+        if (reg.bleedingRate > 0) {
+          reg.bleedingRate = clampQ((reg.bleedingRate - healRate) as Q, 0, SCALE.Q);
+        }
+      }
+      target.injury.shock = clampQ(
+        (target.injury.shock - qMul(q(0.01), payload.rateMul)) as Q, 0, SCALE.Q,
+      );
+      break;
+    }
+
+    case "armourLayer": {
+      // Accumulate into shield reserve; extend or set expiry.
+      target.condition.shieldReserve_J = (target.condition.shieldReserve_J ?? 0) + payload.resist_J;
+      const newExpiry = tick + payload.duration_ticks;
+      target.condition.shieldExpiry_tick = Math.max(
+        target.condition.shieldExpiry_tick ?? 0,
+        newExpiry,
+      );
+      break;
+    }
+
+    case "velocity": {
+      target.velocity_mps = vAdd(target.velocity_mps, payload.delta_mps);
+      break;
+    }
+
+    case "substance": {
+      if (!target.substances) target.substances = [];
+      target.substances.push({ ...payload.substance });
+      break;
+    }
+
+    case "structuralRepair": {
+      const seg = target.injury.byRegion[payload.region];
+      if (seg) {
+        const floor = seg.permanentDamage ?? 0;
+        const repaired = Math.max(floor, seg.structuralDamage - payload.amount);
+        seg.structuralDamage = clampQ(repaired as Q, 0, SCALE.Q);
+      }
+      break;
+    }
+
+    case "fieldEffect": {
+      if (!world.activeFieldEffects) world.activeFieldEffects = [];
+      const fe: FieldEffect = {
+        ...payload.spec,
+        id: `${actor.id}_${effectId}_${tick}`,
+        origin: { x: actor.position_m.x, y: actor.position_m.y, z: actor.position_m.z },
+        placedByEntityId: actor.id,
+      };
+      world.activeFieldEffects.push(fe);
+      break;
+    }
+  }
+}
+
+/**
+ * Resolve all payloads of a capability effect for the appropriate target set.
+ * AoE: all living entities within aoeRadius_m of target/actor position.
+ * Single-target: targetId entity, or self if absent.
+ */
+function applyCapabilityEffect(
+  world: WorldState,
+  actor: Entity,
+  targetId: number | undefined,
+  effect: CapabilityEffect,
+  trace: TraceSink,
+  tick: number,
+): void {
+  const payloads: EffectPayload[] = Array.isArray(effect.payload)
+    ? effect.payload
+    : [effect.payload];
+
+  // Determine target entities
+  let targets: Entity[];
+  if (effect.aoeRadius_m !== undefined) {
+    const origin = targetId !== undefined
+      ? (world.entities.find(e => e.id === targetId)?.position_m ?? actor.position_m)
+      : actor.position_m;
+    const radSq = effect.aoeRadius_m * effect.aoeRadius_m;
+    targets = world.entities.filter(e => {
+      if (e.injury.dead) return false;
+      const dx = e.position_m.x - origin.x;
+      const dy = e.position_m.y - origin.y;
+      return dx * dx + dy * dy <= radSq;
+    });
+  } else if (targetId !== undefined) {
+    const t = world.entities.find(e => e.id === targetId);
+    targets = t && !t.injury.dead ? [t] : [];
+  } else {
+    targets = [actor];
+  }
+
+  for (const target of targets) {
+    for (const p of payloads) {
+      applyPayload(world, actor, target, p, trace, tick, effect.id);
+    }
+  }
+}
+
+/**
+ * Resolve a capability activation command for actor.
+ * Validates suppression, range, and cost; handles cast time via pendingActivation.
+ */
+function resolveActivation(
+  world: WorldState,
+  actor: Entity,
+  cmd: ActivateCommand,
+  ctx: KernelContext,
+  trace: TraceSink,
+  tick: number,
+): void {
+  if (!actor.capabilitySources) return;
+  const source = actor.capabilitySources.find(s => s.id === cmd.sourceId);
+  if (!source) return;
+  const effect = source.effects.find(ef => ef.id === cmd.effectId);
+  if (!effect) return;
+
+  // Suppression check — any covering field whose tags overlap source tags blocks activation
+  const ax = actor.position_m.x;
+  const ay = actor.position_m.y;
+  const suppressed = (world.activeFieldEffects ?? []).some(fe => {
+    const dx = ax - fe.origin.x;
+    const dy = ay - fe.origin.y;
+    const distSq = dx * dx + dy * dy;
+    const radSq  = fe.radius_m * fe.radius_m;
+    return distSq <= radSq && source.tags.some(t => fe.suppressesTags.includes(t));
+  });
+  if (suppressed) {
+    trace.onEvent({ kind: TraceKinds.CapabilitySuppressed, tick, entityId: actor.id, sourceId: cmd.sourceId, effectId: cmd.effectId });
+    return;
+  }
+
+  // Range check
+  if (effect.range_m !== undefined && cmd.targetId !== undefined) {
+    const tgt = world.entities.find(e => e.id === cmd.targetId);
+    if (tgt) {
+      const dx = tgt.position_m.x - ax;
+      const dy = tgt.position_m.y - ay;
+      if (dx * dx + dy * dy > effect.range_m * effect.range_m) return;
+    }
+  }
+
+  // Cost check (boundless sources always have enough)
+  const isBoundless = source.regenModel.type === "boundless";
+  if (!isBoundless && source.reserve_J < effect.cost_J) return;
+
+  // Cast time — queue pending activation and deduct cost at cast-start
+  if (effect.castTime_ticks > 0) {
+    if (!actor.pendingActivation) {
+      if (!isBoundless) source.reserve_J -= effect.cost_J;
+      actor.pendingActivation = cmd.targetId !== undefined
+        ? { sourceId: cmd.sourceId, effectId: cmd.effectId, targetId: cmd.targetId, resolveAtTick: tick + effect.castTime_ticks }
+        : { sourceId: cmd.sourceId, effectId: cmd.effectId, resolveAtTick: tick + effect.castTime_ticks };
+    }
+    return;
+  }
+
+  // Instant — deduct and resolve
+  if (!isBoundless) source.reserve_J -= effect.cost_J;
+  applyCapabilityEffect(world, actor, cmd.targetId, effect, trace, tick);
+  trace.onEvent({ kind: TraceKinds.CapabilityActivated, tick, entityId: actor.id, sourceId: cmd.sourceId, effectId: cmd.effectId });
+}
+
+/**
+ * Per-entity per-tick regen of all capability sources.
+ * Called after stepMovement so velocity is current.
+ */
+function stepCapabilitySources(e: Entity, world: WorldState, ctx: KernelContext): void {
+  if (!e.capabilitySources) return;
+  const cellSize_m = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
+
+  for (const source of e.capabilitySources) {
+    const model = source.regenModel;
+    if (model.type === "boundless") continue;
+
+    let regenRate_W = 0;
+
+    switch (model.type) {
+      case "constant":
+        regenRate_W = model.regenRate_W;
+        break;
+
+      case "rest": {
+        const speedAbs = Math.max(Math.abs(e.velocity_mps.x), Math.abs(e.velocity_mps.y));
+        const isResting = speedAbs <= Math.trunc(0.05 * SCALE.mps) && e.action.attackCooldownTicks === 0;
+        if (isResting) regenRate_W = model.regenRate_W;
+        break;
+      }
+
+      case "ambient": {
+        const cx = Math.trunc(e.position_m.x / cellSize_m);
+        const cy = Math.trunc(e.position_m.y / cellSize_m);
+        const key = terrainKey(cx, cy);
+        const ambientVal = ctx.ambientGrid?.get(key) ?? 0;
+        if (ambientVal > 0) {
+          regenRate_W = Math.trunc(model.maxRate_W * ambientVal / SCALE.Q);
+        }
+        break;
+      }
+
+      case "event": {
+        for (const trigger of model.triggers) {
+          if (trigger.on === "tick") {
+            if (trigger._nextTick === undefined) trigger._nextTick = world.tick + trigger.every_n;
+            if (world.tick >= trigger._nextTick) {
+              source.reserve_J = Math.min(source.maxReserve_J, source.reserve_J + trigger.amount_J);
+              trigger._nextTick = world.tick + trigger.every_n;
+            }
+          }
+          // kill and terrain triggers dispatched by kernel event hooks (Phase 12B)
+        }
+        break;
+      }
+    }
+
+    if (regenRate_W > 0) {
+      const regenThisTick = Math.trunc(regenRate_W * DT_S / SCALE.s);
+      source.reserve_J = Math.min(source.maxReserve_J, source.reserve_J + regenThisTick);
+    }
+  }
+}
+
+/**
+ * Decrement duration on timed field effects; remove expired ones.
+ * Permanent effects (duration_ticks === -1) are never removed.
+ */
+function stepFieldEffects(world: WorldState): void {
+  if (!world.activeFieldEffects?.length) return;
+  world.activeFieldEffects = world.activeFieldEffects.filter(fe => {
+    if (fe.duration_ticks < 0) return true; // permanent
+    fe.duration_ticks -= 1;
+    return fe.duration_ticks > 0;
   });
 }
 
