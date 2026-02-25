@@ -71,6 +71,13 @@ export interface Entity {
   /** Phase 12: attached capability sources (mana pools, fusion cells, divine reserves, …). */
   capabilitySources?: CapabilitySource[];
 
+  /**
+   * Phase 11C: mutable resist state for ablative armour items.
+   * Key = item id; value = remaining resist in joules.
+   * Initialized automatically by stepWorld for entities with ablative items.
+   */
+  armourState?: Map<string, { resistRemaining_J: number }>;
+
   /** Phase 12: in-flight cast — cleared on completion or concentration break. */
   pendingActivation?: PendingActivation;
 }

@@ -55,6 +55,8 @@ export function canDetect(
   observer: Entity,
   subject: Entity,
   env: SensoryEnvironment,
+  /** Phase 11C: optional sensor boost from the observer's loadout. */
+  sensorBoost?: { visionRangeMul: Q; hearingRangeMul: Q },
 ): Q {
   const perc: Perception = (observer.attributes as any).perception ?? DEFAULT_PERCEPTION;
 
@@ -66,11 +68,12 @@ export function canDetect(
   const dist2 = BigInt(dx) * BigInt(dx) + BigInt(dy) * BigInt(dy) + BigInt(dz) * BigInt(dz);
 
   // ---- Vision ----
-  const effectiveVision = mulDiv(
+  let effectiveVision = mulDiv(
     mulDiv(perc.visionRange_m, env.lightMul, SCALE.Q),
     env.smokeMul,
     SCALE.Q,
   );
+  if (sensorBoost) effectiveVision = mulDiv(effectiveVision, sensorBoost.visionRangeMul, SCALE.Q);
   const visionR2 = BigInt(effectiveVision) * BigInt(effectiveVision);
 
   if (dist2 <= visionR2) {
@@ -90,11 +93,12 @@ export function canDetect(
   // Phase 7: stealth.dispersionMul reduces subject's acoustic signature
   // (multiplied into observer's effective hearing range for this subject)
   const stealthSkill = getSkill(subject.skills, "stealth");
-  const effectiveHearing = mulDiv(
+  let effectiveHearing = mulDiv(
     mulDiv(perc.hearingRange_m, env.noiseMul, SCALE.Q),
     stealthSkill.dispersionMul,
     SCALE.Q,
   );
+  if (sensorBoost) effectiveHearing = mulDiv(effectiveHearing, sensorBoost.hearingRangeMul, SCALE.Q);
   const hearingR2 = BigInt(effectiveHearing) * BigInt(effectiveHearing);
 
   if (dist2 <= hearingR2) return q(0.4) as Q;

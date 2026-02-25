@@ -47,6 +47,9 @@ export interface Weapon extends ItemBase {
 
   /** how tiring it is to wield (dimensionless Q multiplier). */
   handlingLoadMul?: Q;
+
+  /** Phase 11C: energy weapon type — routes damage through DamageChannel.Energy; resisted by reflectivity. */
+  energyType?: "plasma" | "laser" | "sonic";
 }
 
 export interface Shield extends ItemBase {
@@ -83,6 +86,11 @@ export interface Armour extends ItemBase {
 
   mobilityMul?: Q;
   fatigueMul?: Q;
+
+  /** Phase 11C: fraction of energy-weapon damage reflected (0..1); q(0.40) = deflects 40%. */
+  reflectivity?: Q;
+  /** Phase 11C: ablative plating — resist_J degrades each time the armour absorbs a hit. */
+  ablative?: boolean;
 }
 
 export interface Gear extends ItemBase {
@@ -109,9 +117,20 @@ export interface RangedWeapon extends ItemBase {  // Phase 3
   dispersionQ: Q;           // base angular error at 1m (radians in Q)
   recycleTime_s: I32;       // time between shots (reload + ready)
   damage: WeaponDamageProfile;
+  /** Phase 11C: energy weapon type — routes damage through DamageChannel.Energy; resisted by reflectivity. */
+  energyType?: "plasma" | "laser" | "sonic";
 }
 
-export type Item = Weapon | Armour | Gear | Shield | RangedWeapon | Exoskeleton;
+/** Phase 11C: electronic sensor suite — boosts vision and hearing range while worn. */
+export interface Sensor extends ItemBase {
+  kind: "sensor";
+  /** Multiplier on effective vision range (e.g. q(2.0) = double range). */
+  visionRangeMul: Q;
+  /** Multiplier on effective hearing range (e.g. q(1.5) = +50%). */
+  hearingRangeMul: Q;
+}
+
+export type Item = Weapon | Armour | Gear | Shield | RangedWeapon | Exoskeleton | Sensor;
 export interface Loadout {
   items: Item[];
 }
@@ -248,6 +267,9 @@ export interface ProtectionProfile {
   fatigueMul: Q;
 
   channelResistMul: Partial<Record<DamageChannel, Q>>;
+
+  /** Phase 11C: max reflectivity across all armour items (for energy-weapon mitigation). */
+  reflectivity: Q;
 }
 
 function emptyCoverage(): Record<BodyRegion, Q> {
@@ -256,7 +278,10 @@ function emptyCoverage(): Record<BodyRegion, Q> {
   return out;
 }
 
-export function deriveArmourProfile(loadout: Loadout): ProtectionProfile {
+export function deriveArmourProfile(
+  loadout: Loadout,
+  armourState?: Map<string, { resistRemaining_J: number }>,
+): ProtectionProfile {
   const items = [...loadout.items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   let protects: ChannelMask = 0;
   let protectedMul = q(1.0);
@@ -265,6 +290,7 @@ export function deriveArmourProfile(loadout: Loadout): ProtectionProfile {
 
   const coverageByRegion = emptyCoverage();
   let resist_J = 0;
+  let reflectivity: Q = q(0);
 
   const channelResistMul: Partial<Record<DamageChannel, Q>> = {};
 
@@ -282,7 +308,16 @@ export function deriveArmourProfile(loadout: Loadout): ProtectionProfile {
       coverageByRegion[r] = (q(1.0) - qMul(q(1.0) - coverageByRegion[r], oneMinus)) as Q;
     }
 
-    resist_J += it.resist_J;
+    // Phase 11C: ablative — use remaining resist if tracked, else full
+    const effectiveResist = (it.ablative && armourState?.has(it.id))
+      ? armourState.get(it.id)!.resistRemaining_J
+      : it.resist_J;
+    resist_J += effectiveResist;
+
+    // Phase 11C: reflectivity — take the maximum across all items
+    if (it.reflectivity && it.reflectivity > reflectivity) {
+      reflectivity = it.reflectivity;
+    }
 
     if (it.channelResistMul) {
       for (const k of Object.keys(it.channelResistMul)) {
@@ -302,6 +337,7 @@ export function deriveArmourProfile(loadout: Loadout): ProtectionProfile {
     mobilityMul: clampQ(mobilityMul, q(0.30), q(1.0)),
     fatigueMul: clampQ(fatigueMul, q(0.80), q(3.0)),
     channelResistMul,
+    reflectivity,
   };
 }
 
@@ -327,6 +363,11 @@ export function findShield(loadout: Loadout): any {
 
 export function findExoskeleton(loadout: Loadout): Exoskeleton | null {
   return (loadout.items.find((it): it is Exoskeleton => it.kind === "exoskeleton") ?? null);
+}
+
+/** Phase 11C: return the first Sensor in the loadout, or null. */
+export function findSensor(loadout: Loadout): Sensor | null {
+  return (loadout.items.find((it): it is Sensor => it.kind === "sensor") ?? null);
 }
 
 /**
@@ -646,6 +687,7 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     dragCoeff_perM: q(0.0005),          // near-negligible beam divergence
     dispersionQ: q(0.004),
     recycleTime_s: to.s(2.0),
+    energyType: "plasma",               // Phase 11C: Energy channel; resisted by reflectivity
     damage: {
       surfaceFrac: q(0.35),
       internalFrac: q(0.45),
@@ -653,5 +695,69 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
       bleedFactor: q(0.15),            // plasma cauterises, low bleed
       penetrationBias: q(0.90),
     },
+  },
+];
+
+// ── Phase 11C starter items ────────────────────────────────────────────────────
+
+/** Reflective/ablative armour items for energy and kinetic threats. */
+export const STARTER_ARMOUR_11C: Armour[] = [
+  {
+    id: "arm_reflective",
+    kind: "armour",
+    name: "Reflective coating",
+    mass_kg: Math.round(0.5 * SCALE.kg),
+    bulk: q(0.3),
+    requiredCapabilities: ["EnergyWeapons"],
+    protects: channelMask(DamageChannel.Energy),
+    coverageByRegion: {
+      head: q(0.50), torso: q(0.80),
+      leftArm: q(0.50), rightArm: q(0.50),
+      leftLeg: q(0.30), rightLeg: q(0.30),
+    },
+    resist_J: 0 as I32,
+    protectedDamageMul: q(1.0),
+    reflectivity: q(0.40) as Q,         // deflects 40% of energy weapon damage
+  },
+  {
+    id: "arm_reactive",
+    kind: "armour",
+    name: "Reactive plating",
+    mass_kg: Math.round(3.0 * SCALE.kg),
+    bulk: q(1.5),
+    requiredCapabilities: ["ReactivePlating"],
+    protects: channelMask(DamageChannel.Kinetic),
+    coverageByRegion: {
+      head: q(0.40), torso: q(0.85),
+      leftArm: q(0.40), rightArm: q(0.40),
+      leftLeg: q(0.20), rightLeg: q(0.20),
+    },
+    resist_J: 1500 as I32,
+    protectedDamageMul: q(0.65),
+    ablative: true,                     // degrades with use; tracked in entity.armourState
+  },
+];
+
+/** Phase 11C: sensor suites that boost vision and hearing range. */
+export const STARTER_SENSORS: Sensor[] = [
+  {
+    id: "sens_nightvision",
+    kind: "sensor",
+    name: "Night-vision goggles",
+    mass_kg: Math.round(0.3 * SCALE.kg),
+    bulk: q(1.1),
+    requiredCapabilities: ["BallisticArmour"],
+    visionRangeMul: q(1.5) as Q,        // +50% vision range
+    hearingRangeMul: q(1.0) as Q,
+  },
+  {
+    id: "sens_tactical",
+    kind: "sensor",
+    name: "Tactical sensor suite",
+    mass_kg: Math.round(0.8 * SCALE.kg),
+    bulk: q(1.3),
+    requiredCapabilities: ["PoweredExoskeleton"],
+    visionRangeMul: q(2.0) as Q,        // double vision range
+    hearingRangeMul: q(1.5) as Q,       // +50% hearing range
   },
 ];

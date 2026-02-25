@@ -6,7 +6,7 @@ import type { CapabilityEffect, EffectPayload, FieldEffect } from "./capability.
 import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
 import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive.js";
 import { DamageChannel } from "../channels.js";
-import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, type Weapon, type RangedWeapon } from "../equipment.js";
+import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, findSensor, type Weapon, type RangedWeapon } from "../equipment.js";
 import type { TechContext } from "./tech.js";
 import { isCapabilityAvailable } from "./tech.js";
 import { deriveFunctionalState } from "./impairment.js";
@@ -199,6 +199,13 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
       if ((reg as any).infectedTick === undefined)      (reg as any).infectedTick = -1;
       if ((reg as any).bleedDuration_ticks === undefined) (reg as any).bleedDuration_ticks = 0;
       if ((reg as any).permanentDamage === undefined)   (reg as any).permanentDamage = q(0);
+    }
+    // Phase 11C: initialize ablative armour state for entities that don't have it yet
+    if (!e.armourState) {
+      const ablativeItems = e.loadout.items.filter(it => it.kind === "armour" && !!(it as any).ablative);
+      if (ablativeItems.length > 0) {
+        e.armourState = new Map(ablativeItems.map(it => [it.id, { resistRemaining_J: (it as any).resist_J as number }]));
+      }
     }
   }
 
@@ -821,7 +828,12 @@ function resolveAttack(world: WorldState,
   // their defensive response is reduced or eliminated.
   if (tuning.realism !== "arcade") {
     const sEnv = (world as any).__sensoryEnv as SensoryEnvironment | undefined ?? DEFAULT_SENSORY_ENV;
-    const detectionQ = canDetect(target, attacker, sEnv);
+    // Phase 11C: sensor boost from loadout
+    const tgtSensor = findSensor(target.loadout);
+    const tgtSensorBoost = tgtSensor
+      ? { visionRangeMul: tgtSensor.visionRangeMul, hearingRangeMul: tgtSensor.hearingRangeMul }
+      : undefined;
+    const detectionQ = canDetect(target, attacker, sEnv, tgtSensorBoost);
     if (detectionQ <= 0) {
       // Full surprise: defender has no defence
       defenceIntensityEffective = q(0);
@@ -1018,14 +1030,30 @@ function resolveAttack(world: WorldState,
     }
   }
 
-  const armour = deriveArmourProfile(target.loadout);
-  const KINETIC_MASK = 1 << DamageChannel.Kinetic;
+  const armour = deriveArmourProfile(target.loadout, target.armourState);
+  const isEnergyWeapon = !!(wpn as any).energyType;
+  const CHANNEL_MASK = isEnergyWeapon ? (1 << DamageChannel.Energy) : (1 << DamageChannel.Kinetic);
   const armourHit = armourCoversHit(world, (armour.coverageByRegion as any)[region] ?? q(0), attacker.id, target.id);
-  const protectedByArmour = armourHit && ((armour.protects & KINETIC_MASK) !== 0);
+  const protectedByArmour = armourHit && ((armour.protects & CHANNEL_MASK) !== 0);
 
-  const finalEnergy = protectedByArmour
-    ? applyKineticArmourPenetration(mitigated, armour.resist_J, armour.protectedDamageMul)
-    : mitigated;
+  let finalEnergy = mitigated;
+  if (protectedByArmour) {
+    if (isEnergyWeapon && armour.reflectivity > q(0)) {
+      // Phase 11C: reflective armour reduces energy weapon damage
+      finalEnergy = mulDiv(finalEnergy, SCALE.Q - armour.reflectivity, SCALE.Q);
+    } else if (!isEnergyWeapon) {
+      finalEnergy = applyKineticArmourPenetration(mitigated, armour.resist_J, armour.protectedDamageMul);
+    }
+    // Phase 11C: decrement ablative armour resist
+    if (target.armourState) {
+      for (const it of target.loadout.items) {
+        if ((it as any).ablative && target.armourState.has(it.id)) {
+          const st = target.armourState.get(it.id)!;
+          st.resistRemaining_J = Math.max(0, st.resistRemaining_J - mitigated);
+        }
+      }
+    }
+  }
 
   impacts.push({
     kind: "impact",
@@ -1267,10 +1295,11 @@ function resolveShoot(
       && ((shieldSeed % SCALE.Q) < (shield as any).coverageQ);
 
     // Armour
-    const armour = deriveArmourProfile(target.loadout);
-    const KINETIC_MASK = 1 << DamageChannel.Kinetic;
+    const armour = deriveArmourProfile(target.loadout, target.armourState);
+    const isEnergyProjectile = !!(wpn as any).energyType;
+    const PROJ_CHANNEL_MASK = isEnergyProjectile ? (1 << DamageChannel.Energy) : (1 << DamageChannel.Kinetic);
     const armourHit = armourCoversHit(world, (armour.coverageByRegion as any)[hitRegion] ?? q(0), shooter.id, target.id);
-    const protectedByArmour = armourHit && ((armour.protects & KINETIC_MASK) !== 0);
+    const protectedByArmour = armourHit && ((armour.protects & PROJ_CHANNEL_MASK) !== 0);
 
     let finalEnergy = energy_J;
     if (shieldHit) {
@@ -1278,7 +1307,20 @@ function resolveShoot(
       finalEnergy = mulDiv(shieldResidual, (shield as any).deflectQ ?? q(0.30), SCALE.Q);
     }
     if (protectedByArmour) {
-      finalEnergy = applyKineticArmourPenetration(finalEnergy, armour.resist_J, armour.protectedDamageMul);
+      if (isEnergyProjectile && armour.reflectivity > q(0)) {
+        finalEnergy = mulDiv(finalEnergy, SCALE.Q - armour.reflectivity, SCALE.Q);
+      } else if (!isEnergyProjectile) {
+        finalEnergy = applyKineticArmourPenetration(finalEnergy, armour.resist_J, armour.protectedDamageMul);
+      }
+      // Phase 11C: decrement ablative armour resist
+      if (target.armourState) {
+        for (const it of target.loadout.items) {
+          if ((it as any).ablative && target.armourState.has(it.id)) {
+            const st = target.armourState.get(it.id)!;
+            st.resistRemaining_J = Math.max(0, st.resistRemaining_J - energy_J);
+          }
+        }
+      }
     }
 
     // Build a minimal Weapon proxy for applyImpactToInjury

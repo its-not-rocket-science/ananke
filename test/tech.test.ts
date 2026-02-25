@@ -13,12 +13,17 @@ import {
 import {
   validateLoadout,
   findExoskeleton,
+  findSensor,
+  deriveArmourProfile,
   STARTER_ARMOUR,
   STARTER_WEAPONS,
   STARTER_RANGED_WEAPONS,
   STARTER_EXOSKELETONS,
+  STARTER_ARMOUR_11C,
+  STARTER_SENSORS,
   type Loadout,
 } from "../src/equipment";
+import { canDetect, DEFAULT_SENSORY_ENV } from "../src/sim/sensory";
 import { v3 } from "../src/sim/vec3";
 
 const BASE_CTX = { tractionCoeff: q(0.80) };
@@ -383,5 +388,198 @@ describe("medical technology gate", () => {
 
     const dmgAfter = world.entities.find(e => e.id === 2)!.injury.byRegion["torso"]!.structuralDamage;
     expect(dmgAfter).toBeLessThan(q(0.50));
+  });
+});
+
+// ── Phase 11C: Energy Weapons ─────────────────────────────────────────────────
+
+describe("Phase 11C: STARTER_ARMOUR_11C entries", () => {
+  it("arm_reflective has Energy channel protection and reflectivity q(0.40)", () => {
+    const reflective = STARTER_ARMOUR_11C.find(a => a.id === "arm_reflective")!;
+    expect(reflective.kind).toBe("armour");
+    expect(reflective.reflectivity).toBe(q(0.40));
+    // protects Energy channel (bit 8)
+    expect(reflective.protects & (1 << 8)).toBeGreaterThan(0);
+  });
+
+  it("arm_reactive is ablative with kinetic protection and resist_J = 1500", () => {
+    const reactive = STARTER_ARMOUR_11C.find(a => a.id === "arm_reactive")!;
+    expect(reactive.kind).toBe("armour");
+    expect(reactive.ablative).toBe(true);
+    expect(reactive.resist_J).toBe(1500);
+    // protects Kinetic channel (bit 0)
+    expect(reactive.protects & 1).toBeGreaterThan(0);
+  });
+});
+
+describe("Phase 11C: deriveArmourProfile reflectivity", () => {
+  it("arm_reflective gives reflectivity q(0.40) in derived profile", () => {
+    const reflective = STARTER_ARMOUR_11C.find(a => a.id === "arm_reflective")!;
+    const loadout: Loadout = { items: [reflective] };
+    const profile = deriveArmourProfile(loadout);
+    expect(profile.reflectivity).toBe(q(0.40));
+  });
+
+  it("standard armour has reflectivity q(0) — no energy protection", () => {
+    const leather = STARTER_ARMOUR.find(a => a.id === "arm_leather")!;
+    const loadout: Loadout = { items: [leather] };
+    const profile = deriveArmourProfile(loadout);
+    expect(profile.reflectivity).toBe(q(0));
+  });
+
+  it("ablative armour uses armourState resistRemaining_J when provided", () => {
+    const reactive = STARTER_ARMOUR_11C.find(a => a.id === "arm_reactive")!;
+    const loadout: Loadout = { items: [reactive] };
+    const armourState = new Map([["arm_reactive", { resistRemaining_J: 500 }]]);
+    const profile = deriveArmourProfile(loadout, armourState);
+    expect(profile.resist_J).toBe(500);
+  });
+});
+
+// ── Phase 11C: Sensors ────────────────────────────────────────────────────────
+
+describe("Phase 11C: STARTER_SENSORS entries", () => {
+  it("sens_nightvision has visionRangeMul q(1.5)", () => {
+    const nv = STARTER_SENSORS.find(s => s.id === "sens_nightvision")!;
+    expect(nv.kind).toBe("sensor");
+    expect(nv.visionRangeMul).toBe(q(1.5));
+    expect(nv.hearingRangeMul).toBe(q(1.0));
+  });
+
+  it("sens_tactical has visionRangeMul q(2.0) and hearingRangeMul q(1.5)", () => {
+    const tac = STARTER_SENSORS.find(s => s.id === "sens_tactical")!;
+    expect(tac.kind).toBe("sensor");
+    expect(tac.visionRangeMul).toBe(q(2.0));
+    expect(tac.hearingRangeMul).toBe(q(1.5));
+  });
+});
+
+describe("Phase 11C: findSensor", () => {
+  it("returns null for empty loadout", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    expect(findSensor(e.loadout)).toBeNull();
+  });
+
+  it("returns the sensor when present", () => {
+    const nv = STARTER_SENSORS.find(s => s.id === "sens_nightvision")!;
+    const loadout: Loadout = { items: [nv] };
+    expect(findSensor(loadout)).toBe(nv);
+  });
+
+  it("ignores non-sensor items", () => {
+    const leather = STARTER_ARMOUR.find(a => a.id === "arm_leather")!;
+    const loadout: Loadout = { items: [leather] };
+    expect(findSensor(loadout)).toBeNull();
+  });
+});
+
+describe("Phase 11C: sensor boost extends canDetect range", () => {
+  it("night-vision sensor detects beyond normal vision range", () => {
+    const observer = mkHumanoidEntity(1, 1, 0, 0);
+    // Ensure facing +X (default: facingDirQ = {x:10000,y:0,z:0})
+    const subject = mkHumanoidEntity(2, 2, to.m(210), 0); // 210m — beyond default 200m vision
+
+    // Without sensor: energy weapon channel only — cannot see at 210m
+    const noSensorQ = canDetect(observer, subject, DEFAULT_SENSORY_ENV);
+    expect(noSensorQ).toBe(q(0)); // 210m > hearingRange(50m) and > visionRange(200m)
+
+    // With nightvision (1.5× vision → 300m effective):
+    const nv = STARTER_SENSORS.find(s => s.id === "sens_nightvision")!;
+    const boost = { visionRangeMul: nv.visionRangeMul, hearingRangeMul: nv.hearingRangeMul };
+    const withSensorQ = canDetect(observer, subject, DEFAULT_SENSORY_ENV, boost);
+    expect(withSensorQ).toBe(q(1.0)); // 210m < 300m → fully visible
+  });
+
+  it("sensor hearing boost detects beyond normal hearing range", () => {
+    const observer = mkHumanoidEntity(1, 1, 0, 0);
+    // Put subject behind observer (outside 120° arc) so vision doesn't trigger
+    const subject = mkHumanoidEntity(2, 2, to.m(-60), 0); // 60m behind, beyond 50m hearing
+
+    // Without sensor: 60m > hearingRange(50m) → undetected
+    const noSensorQ = canDetect(observer, subject, DEFAULT_SENSORY_ENV);
+    expect(noSensorQ).toBe(q(0));
+
+    // With tactical sensor (1.5× hearing → 75m effective):
+    const tac = STARTER_SENSORS.find(s => s.id === "sens_tactical")!;
+    const boost = { visionRangeMul: tac.visionRangeMul, hearingRangeMul: tac.hearingRangeMul };
+    const withSensorQ = canDetect(observer, subject, DEFAULT_SENSORY_ENV, boost);
+    expect(withSensorQ).toBe(q(0.4)); // within boosted hearing range
+  });
+});
+
+// ── Phase 11C: Ablative Armour ────────────────────────────────────────────────
+
+describe("Phase 11C: ablative armour decrement", () => {
+  const club = STARTER_WEAPONS.find(w => w.id === "wpn_club")!;
+
+  it("armourState initialized with full resist_J on first tick", () => {
+    const reactive = STARTER_ARMOUR_11C.find(a => a.id === "arm_reactive")!;
+    const target = mkHumanoidEntity(2, 2, to.m(0.5), 0);
+    target.loadout = { items: [reactive] };
+
+    const world = mkWorld(1, [target]);
+    // stepWorld initializes armourState in preamble
+    stepWorld(world, new Map(), BASE_CTX);
+
+    const t = world.entities.find(e => e.id === 2)!;
+    expect(t.armourState).toBeDefined();
+    expect(t.armourState!.has("arm_reactive")).toBe(true);
+    expect(t.armourState!.get("arm_reactive")!.resistRemaining_J).toBe(1500);
+  });
+
+  it("ablative armour resist decrements after kinetic hits", () => {
+    const reactive = STARTER_ARMOUR_11C.find(a => a.id === "arm_reactive")!;
+    const attacker = mkHumanoidEntity(1, 1, 0, 0);
+    attacker.loadout = { items: [club] };
+    const target = mkHumanoidEntity(2, 2, to.m(0.5), 0);
+    target.loadout = { items: [reactive] };
+
+    const world = mkWorld(1, [attacker, target]);
+    const cmds = new Map([[1, [{ kind: "attack" as const, targetId: 2, weaponId: club.id, intensity: q(1.0) }]]]);
+
+    // Run enough ticks for multiple protected hits
+    for (let i = 0; i < 40; i++) stepWorld(world, cmds, BASE_CTX);
+
+    const t = world.entities.find(e => e.id === 2)!;
+    const state = t.armourState?.get("arm_reactive");
+    expect(state).toBeDefined();
+    expect(state!.resistRemaining_J).toBeLessThan(1500);
+  });
+
+  it("depleted ablative armour passes full kinetic damage", () => {
+    const reactive = STARTER_ARMOUR_11C.find(a => a.id === "arm_reactive")!;
+    const attacker = mkHumanoidEntity(1, 1, 0, 0);
+    attacker.loadout = { items: [club] };
+
+    // Target A: with ablative armour pre-depleted
+    const targetA = mkHumanoidEntity(2, 2, to.m(0.5), 0);
+    targetA.loadout = { items: [reactive] };
+    targetA.armourState = new Map([["arm_reactive", { resistRemaining_J: 0 }]]);
+
+    // Target B: no armour
+    const targetB = mkHumanoidEntity(4, 2, to.m(0.5), 0);
+
+    const worldA = mkWorld(42, [attacker, targetA]);
+    const worldB = mkWorld(42, [{ ...attacker, id: 3, teamId: 1 }, targetB]);
+
+    const cmdsA = new Map([[1, [{ kind: "attack" as const, targetId: 2, weaponId: club.id, intensity: q(1.0) }]]]);
+    const cmdsB = new Map([[3, [{ kind: "attack" as const, targetId: 4, weaponId: club.id, intensity: q(1.0) }]]]);
+
+    for (let i = 0; i < 30; i++) {
+      stepWorld(worldA, cmdsA, BASE_CTX);
+      stepWorld(worldB, cmdsB, BASE_CTX);
+    }
+
+    const totalDmg = (world: typeof worldA, id: number) => {
+      const t = world.entities.find(e => e.id === id)!;
+      return Object.values(t.injury.byRegion).reduce((s, r) => s + r.structuralDamage + r.internalDamage + r.surfaceDamage, 0);
+    };
+
+    // Depleted armour should offer no more protection than no armour
+    // (resist_J derived from armourState = 0, same as unarmoured)
+    const dmgDepleted = totalDmg(worldA, 2);
+    const dmgUnarmoured = totalDmg(worldB, 4);
+    // Allow a small margin since protectedDamageMul still applies structurally
+    expect(dmgDepleted).toBeGreaterThanOrEqual(dmgUnarmoured * 0.85);
   });
 });

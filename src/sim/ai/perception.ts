@@ -5,6 +5,7 @@ import { queryNearbyIds } from "../spatial.js";
 import { isEnemy } from "../team.js";
 import { SCALE, q } from "../../units.js";
 import { canDetect, DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
+import { findSensor } from "../../equipment.js";
 
 export interface LocalPerception {
   enemies: Entity[];
@@ -38,7 +39,12 @@ export function perceiveLocal(
     if (!e || e.injury.dead) continue;
 
     // Phase 4: filter by sensory detection
-    const detQ = canDetect(self, e, env);
+    // Phase 11C: derive sensor boost from loadout
+    const sensor = findSensor(self.loadout);
+    const sensorBoost = sensor
+      ? { visionRangeMul: sensor.visionRangeMul, hearingRangeMul: sensor.hearingRangeMul }
+      : undefined;
+    const detQ = canDetect(self, e, env, sensorBoost);
     if (detQ <= q(0)) continue;
 
     if (isEnemy(self, e)) enemies.push(e);

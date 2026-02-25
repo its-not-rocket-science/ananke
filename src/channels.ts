@@ -7,6 +7,8 @@ export enum DamageChannel {
   Corrosive = 5,
   Suffocation = 6,
   ControlDisruption = 7,
+  /** Phase 11C: directed energy — plasma, laser, sonic. Armour resists via reflectivity. */
+  Energy = 8,
 }
 
 export type ChannelMask = number;
