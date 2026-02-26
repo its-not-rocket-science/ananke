@@ -1622,9 +1622,7 @@ analytics and survival tests require them.
 `test/metrics.test.ts` — 21 tests: event accumulation, damage/hit tallies, KO/death recording,
 projectile hit attribution, survival rate, mean TTI, live simulation integration.
 
-660 tests passing; all coverage thresholds met.
-
-### Visual debug layer
+710 tests passing after metrics; all coverage thresholds met.
 
 ### Visual debug layer *(complete)*
 
@@ -1642,16 +1640,30 @@ projectile hit attribution, survival rate, mean TTI, live simulation integration
 
 ---
 
-## Phase 14 — 3D Model Integration
+## Phase 14 — 3D Model Integration *(COMPLETE)*
 
 Enable Ananke as a physics realism layer for 3D characters.
+Engine outputs physical state per tick; interpretation as visual motion is the host's responsibility.
 
-- Mass distribution and centre of gravity from body plan segment masses
-- Leverage and inertia tensors for procedural animation
-- Injury visualisation: per-region damage drives deformation and motion quality
-- Procedural animation driven by physical state (limping, guarding, collapse)
-- Grapple state drives pose constraints
-- Compatible with external animation rigs via a defined interface contract
+`src/model3d.ts` — six pure extraction functions; no kernel changes:
 
-Engine outputs physical state per tick. Interpretation as visual motion is the responsibility
-of the host engine or renderer.
+- `deriveMassDistribution(entity)` → `MassDistribution` — per-segment mass fractions and
+  estimated centre of gravity in real metres. Segment positions derived from ID keyword
+  matching (head/torso/arm/leg/tail/wing patterns); falls back to geometric midpoint for
+  unknown IDs. Single "body" segment returned when no body plan is present.
+- `deriveInertiaTensor(entity)` → `InertiaTensor` — simplified diagonal tensor (yaw, pitch,
+  roll in kg·m²) from segment masses and canonical offsets. Solid-sphere approximation used
+  when no body plan is present.
+- `deriveAnimationHints(entity)` → `AnimationHints` — mutually exclusive locomotion blend
+  weights (idle/walk/run/sprint/crawl), defence blend weight from `intent.defence.intensity`,
+  attack weight from `action.attackCooldownTicks`, plus shockQ, fearQ, prone, unconscious,
+  dead flags.
+- `derivePoseModifiers(entity)` → `PoseModifier[]` — per-region structural and surface damage
+  as deformation blend weights; `impairmentQ = max(structuralQ, surfaceQ)`.
+- `deriveGrappleConstraint(entity)` → `GrapplePoseConstraint` — isHolder/isHeld/heldByIds/
+  position/gripQ for pose-constraint solving between grappling entities.
+- `extractRigSnapshots(world)` → `RigSnapshot[]` — aggregates all of the above per entity for
+  a single-call per-tick visualisation feed.
+
+`test/model3d.test.ts` — 42 tests; `src/model3d.ts` at 99% statement coverage.
+752 tests total; all coverage thresholds met.

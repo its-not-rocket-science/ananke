@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–13 complete** (including 8C, 10B, 10C, 11C, 12B). Melee combat, grappling, stamina
+**Phases 1–14 complete** (including 8C, 10B, 10C, 11C, 12B). Melee combat, grappling, stamina
 and exhaustion, weapon dynamics, ranged and projectile combat, injury, entity environmental
 hazards, movement physics, formation basics, deterministic AI scaffolding,
 perception/cognition (sensory model, decision latency, surprise mechanics), morale and
@@ -93,9 +93,12 @@ temperature stress, a technology spectrum system (`TechContext`, `TechEra`,
 `TechCapability`, `validateLoadout`) with powered exoskeleton items, energy weapons,
 reflective and ablative armour, sensor items, and era-gated starter items, a **capability
 sources and effects** system (Clarke's Third Law — magic and advanced technology are the
-same abstraction; only the tags differ), and a **deterministic replay and analytics**
-system (`ReplayRecorder`, `replayTo`, `serializeReplay`/`deserializeReplay`,
-`CollectingTrace`, `collectMetrics`, `survivalRate`, `meanTimeToIncapacitation`).
+same abstraction; only the tags differ), a **deterministic replay and analytics** system
+(`ReplayRecorder`, `replayTo`, `serializeReplay`/`deserializeReplay`, `CollectingTrace`,
+`collectMetrics`, `survivalRate`, `meanTimeToIncapacitation`), and a **3D model integration
+layer** (`deriveMassDistribution`, `deriveInertiaTensor`, `deriveAnimationHints`,
+`derivePoseModifiers`, `deriveGrappleConstraint`, `extractRigSnapshots`) for driving
+host renderer rigs from simulation state.
 
 See `ROADMAP.md` for the full 14-phase development plan.
 
@@ -565,6 +568,41 @@ Attached to `entity.capabilitySources?: CapabilitySource[]`. Each source is an e
 
 ---
 
+## 3D model integration (Phase 14)
+
+`src/model3d.ts` provides pure data-extraction functions for driving 3D character rigs from
+simulation state. No kernel changes, no state mutations. Call once per tick after `stepWorld`.
+
+```typescript
+import { extractRigSnapshots } from "./src/model3d.js";
+
+const snapshots = extractRigSnapshots(world);
+for (const snap of snapshots) {
+  // snap.mass     — MassDistribution: per-segment mass and estimated CoG in real metres
+  // snap.inertia  — InertiaTensor: yaw/pitch/roll moment of inertia (kg·m²)
+  // snap.animation — AnimationHints: locomotion blend weights, guarding, attacking, prone, dead
+  // snap.pose     — PoseModifier[]: per-region injury deformation blend weights
+  // snap.grapple  — GrapplePoseConstraint: relative pose lock for grappling pairs
+  hostRenderer.updateRig(snap.entityId, snap);
+}
+```
+
+**Mass and inertia** are derived from `entity.bodyPlan` segment masses via canonical keyword
+matching (`head`, `torso`, `forearm`, `thigh`, `shin`, `wing`, etc.); fallback to a solid-sphere
+approximation when no body plan is present.
+
+**Animation hints** — locomotion weights (`idle`/`walk`/`run`/`sprint`/`crawl`) are mutually
+exclusive; exactly one is `SCALE.Q` when mobile. Overlays include `guardingQ`, `attackingQ`,
+`shockQ`, `fearQ`, and boolean flags `prone`, `unconscious`, `dead`.
+
+**Pose modifiers** — one entry per `injury.byRegion` key. `impairmentQ = max(structuralQ, surfaceQ)`.
+Map each `segmentId` to a skeleton bone and drive blend-shape or constraint weights.
+
+**Grapple constraints** — `isHolder`/`isHeld` flags, `holdingEntityId`, `heldByIds`, `position`
+(`standing`/`prone`/`pinned`), and `gripQ`. Use to lock relative pose between grappling entities.
+
+---
+
 ## Determinism rules
 
 To maintain lockstep safety:
@@ -748,6 +786,7 @@ src/
   replay.ts         ReplayRecorder, replayTo, serializeReplay/deserializeReplay — deterministic replay
   metrics.ts        CollectingTrace, collectMetrics, survivalRate, meanTimeToIncapacitation — analytics
   debug.ts          extractMotionVectors, extractHitTraces, extractConditionSamples — visual debug layer
+  model3d.ts        deriveMassDistribution, deriveInertiaTensor, deriveAnimationHints, derivePoseModifiers, deriveGrappleConstraint, extractRigSnapshots — 3D rig integration
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
