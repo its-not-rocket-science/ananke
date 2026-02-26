@@ -60,6 +60,12 @@ export interface FieldEffectSpec {
   radius_m: number;        // fixed-point metres (SCALE.m units)
   suppressesTags: string[];
   duration_ticks: number;  // -1 = permanent; > 0 = auto-expires
+  /**
+   * Phase 12B effect chain: payload applied to every living entity inside the
+   * field radius each tick. Fires in the same tick the field is active,
+   * before expiry. The placing entity is the actor for attribution.
+   */
+  chainPayload?: EffectPayload | EffectPayload[];
 }
 
 /** A FieldEffect living in WorldState.activeFieldEffects. */

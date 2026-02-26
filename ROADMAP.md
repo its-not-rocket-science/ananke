@@ -1578,11 +1578,10 @@ The column that varies is only `tags`. The engine path is identical.
   depletion (non-boundless) or shock ≥ q(0.30); emits `CastInterrupted` on break.
 - **Linked sources**: `CapabilitySource.linkedFallbackId` draws activation cost from a secondary
   source when primary is depleted; fallback can be boundless for unlimited overflow.
-
-### Deferred
-
-- **Effect chains**: one effect's `fieldEffect` payload triggers a second effect activation on
-  entities that enter the field — requires event queue integration.
+- **Effect chains**: `FieldEffectSpec.chainPayload?: EffectPayload | EffectPayload[]` —
+  payload applied to every living entity within the field's radius each tick while the field
+  is active; fires before expiry (final tick still fires); placer entity is the actor for
+  attribution. Implemented in `stepChainEffects` called just before `stepFieldEffects`.
 
 ---
 

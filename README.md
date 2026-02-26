@@ -559,6 +559,9 @@ Attached to `entity.capabilitySources?: CapabilitySource[]`. Each source is an e
   `CastInterrupted`.
 - **Linked sources**: `CapabilitySource.linkedFallbackId` names a secondary source to draw
   from when the primary is depleted; fallback can be `boundless` for unlimited overflow.
+- **Effect chains**: `FieldEffectSpec.chainPayload?: EffectPayload | EffectPayload[]` — payload
+  applied to every living entity within the field's radius each tick while the field is active;
+  fires before expiry so the final tick still delivers the payload.
 
 ---
 

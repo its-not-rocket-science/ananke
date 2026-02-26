@@ -413,7 +413,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     });
   }
 
-  // Phase 12: expire timed field effects
+  // Phase 12B: apply chain payloads from active field effects, then expire timed ones
+  stepChainEffects(world, trace, world.tick);
   stepFieldEffects(world);
 
   // Phase 5: precompute routing fraction per team for routing cascade check
@@ -2794,6 +2795,32 @@ function stepCapabilitySources(e: Entity, world: WorldState, ctx: KernelContext)
       }
     }
     e.action.lastCellKey = currentKey;
+  }
+}
+
+/**
+ * Phase 12B effect chains: apply chainPayload from each active FieldEffect to every
+ * living entity within its radius. Runs before expiry so the final tick still fires.
+ */
+function stepChainEffects(world: WorldState, trace: TraceSink, tick: number): void {
+  if (!world.activeFieldEffects?.length) return;
+  for (const fe of world.activeFieldEffects) {
+    if (!fe.chainPayload) continue;
+    const actor = world.entities.find(e => e.id === fe.placedByEntityId);
+    if (!actor) continue;
+    const payloads: EffectPayload[] = Array.isArray(fe.chainPayload)
+      ? fe.chainPayload
+      : [fe.chainPayload];
+    const radSq = fe.radius_m * fe.radius_m;
+    for (const target of world.entities) {
+      if (target.injury.dead) continue;
+      const dx = target.position_m.x - fe.origin.x;
+      const dy = target.position_m.y - fe.origin.y;
+      if (dx * dx + dy * dy > radSq) continue;
+      for (const p of payloads) {
+        applyPayload(world, actor, target, p, trace, tick, fe.id);
+      }
+    }
   }
 }
 

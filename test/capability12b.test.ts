@@ -504,6 +504,7 @@ describe("Linked sources", () => {
   });
 
   it("no linkedFallbackId on exhausted source: activation fails (existing behaviour)", () => {
+
     const e = mkHumanoidEntity(1, 1, 0, 0);
     e.capabilitySources = [makeSource({
       id: "solo", reserve_J: 10, maxReserve_J: 10_000,
@@ -518,5 +519,124 @@ describe("Linked sources", () => {
 
     expect(tracer.events.some(ev => ev.kind === TraceKinds.CapabilityActivated)).toBe(false);
     expect(world.entities[0]!.capabilitySources![0]!.reserve_J).toBe(10);
+  });
+});
+
+// ── Effect chains ─────────────────────────────────────────────────────────────
+
+import type { FieldEffectSpec } from "../src/sim/capability";
+import { SCALE as _SCALE } from "../src/units";
+
+describe("Effect chains", () => {
+  /** Helper: make a FieldEffectSpec with an optional chainPayload. */
+  function makeFieldSpec(overrides: Partial<FieldEffectSpec> = {}): FieldEffectSpec {
+    return {
+      radius_m: Math.trunc(5 * SCALE.m),  // 5 m radius
+      suppressesTags: [],
+      duration_ticks: 3,
+      ...overrides,
+    };
+  }
+
+  /** Helper: capability source that places a field effect on activation. */
+  function makePlacerSource(fieldSpec: FieldEffectSpec): CapabilitySource {
+    return makeSource({
+      id: "placer_src",
+      reserve_J: 100_000,
+      maxReserve_J: 100_000,
+      regenModel: { type: "boundless" },
+      effects: [makeEffect({
+        id: "place_field",
+        cost_J: 0,
+        castTime_ticks: 0,
+        payload: { kind: "fieldEffect", spec: fieldSpec },
+      })],
+    });
+  }
+
+  it("entity within field radius receives chainPayload each tick", () => {
+    // Placer at origin; target at 2 m (inside 5 m radius)
+    const placer = mkHumanoidEntity(1, 1, 0, 0);
+    placer.capabilitySources = [makePlacerSource(makeFieldSpec({
+      chainPayload: { kind: "armourLayer", resist_J: 500, channels: [], duration_ticks: 10 },
+    }))];
+
+    const target = mkHumanoidEntity(2, 2, to.m(2), 0);
+    const world = mkWorld(1, [placer, target]);
+
+    // Tick 1: place field
+    stepWorld(world, new Map([[1, [activateCmd("placer_src", "place_field")]]]), BASE_CTX);
+    const shieldAfterT1 = world.entities[1]!.condition.shieldReserve_J ?? 0;
+    expect(shieldAfterT1).toBe(500);
+
+    // Tick 2: chain fires again (field duration=2 remaining)
+    stepWorld(world, new Map(), BASE_CTX);
+    const shieldAfterT2 = world.entities[1]!.condition.shieldReserve_J ?? 0;
+    expect(shieldAfterT2).toBe(1000);
+  });
+
+  it("entity outside field radius does not receive chainPayload", () => {
+    const placer = mkHumanoidEntity(1, 1, 0, 0);
+    placer.capabilitySources = [makePlacerSource(makeFieldSpec({
+      radius_m: Math.trunc(3 * SCALE.m),  // 3 m radius
+      chainPayload: { kind: "armourLayer", resist_J: 500, channels: [], duration_ticks: 10 },
+    }))];
+
+    const outside = mkHumanoidEntity(2, 2, to.m(10), 0);  // 10 m away
+    const world = mkWorld(1, [placer, outside]);
+
+    stepWorld(world, new Map([[1, [activateCmd("placer_src", "place_field")]]]), BASE_CTX);
+    expect(world.entities[1]!.condition.shieldReserve_J ?? 0).toBe(0);
+  });
+
+  it("dead entity inside field radius is excluded from chainPayload", () => {
+    const placer = mkHumanoidEntity(1, 1, 0, 0);
+    placer.capabilitySources = [makePlacerSource(makeFieldSpec({
+      chainPayload: { kind: "armourLayer", resist_J: 500, channels: [], duration_ticks: 10 },
+    }))];
+
+    const dead = mkHumanoidEntity(2, 2, to.m(1), 0);
+    dead.injury.dead = true;
+
+    const world = mkWorld(1, [placer, dead]);
+    stepWorld(world, new Map([[1, [activateCmd("placer_src", "place_field")]]]), BASE_CTX);
+    expect(world.entities[1]!.condition.shieldReserve_J ?? 0).toBe(0);
+  });
+
+  it("chain stops firing after field expires", () => {
+    const placer = mkHumanoidEntity(1, 1, 0, 0);
+    placer.capabilitySources = [makePlacerSource(makeFieldSpec({
+      duration_ticks: 2,  // expires after 2 ticks
+      chainPayload: { kind: "armourLayer", resist_J: 100, channels: [], duration_ticks: 99 },
+    }))];
+
+    const target = mkHumanoidEntity(2, 2, to.m(1), 0);
+    const world = mkWorld(1, [placer, target]);
+
+    stepWorld(world, new Map([[1, [activateCmd("placer_src", "place_field")]]]), BASE_CTX);
+    const s1 = world.entities[1]!.condition.shieldReserve_J ?? 0;  // 100 (tick 1)
+    stepWorld(world, new Map(), BASE_CTX);
+    const s2 = world.entities[1]!.condition.shieldReserve_J ?? 0;  // 200 (tick 2 — last active tick)
+    stepWorld(world, new Map(), BASE_CTX);
+    const s3 = world.entities[1]!.condition.shieldReserve_J ?? 0;  // still 200 — field expired
+
+    expect(s1).toBe(100);
+    expect(s2).toBe(200);
+    expect(s3).toBe(200);
+  });
+
+  it("multiple entities inside radius all receive chainPayload", () => {
+    const placer = mkHumanoidEntity(1, 1, 0, 0);
+    placer.capabilitySources = [makePlacerSource(makeFieldSpec({
+      chainPayload: { kind: "armourLayer", resist_J: 300, channels: [], duration_ticks: 10 },
+    }))];
+
+    const t2 = mkHumanoidEntity(2, 2, to.m(1), 0);
+    const t3 = mkHumanoidEntity(3, 2, to.m(2), 0);
+    const world = mkWorld(1, [placer, t2, t3]);
+
+    stepWorld(world, new Map([[1, [activateCmd("placer_src", "place_field")]]]), BASE_CTX);
+    expect(world.entities[1]!.condition.shieldReserve_J ?? 0).toBe(300);
+    expect(world.entities[2]!.condition.shieldReserve_J ?? 0).toBe(300);
   });
 });
