@@ -94,6 +94,18 @@ import { getSkill } from "./skills.js";
 export const TICK_HZ = 20;
 export const DT_S: I32 = to.s(1 / TICK_HZ);
 
+// Phase 2 extension: swing momentum carry
+const SWING_MOMENTUM_DECAY = q(0.95) as Q;  // 5% decay per tick
+const SWING_MOMENTUM_MAX   = q(0.12) as Q;  // max +12% energy bonus at full momentum
+
+// Phase 3 extension: aiming time
+const AIM_MAX_TICKS        = 20;            // 1 second at 20 ticks/s
+const AIM_MIN_MUL          = q(0.50) as Q;  // half dispersion at full aim
+const AIM_STILL_THRESHOLD  = 5_000;         // 0.5 m/s in SCALE.mps units
+
+// Phase 3 extension: suppression→AI
+const SUPPRESSION_PRONE_TICKS = 3;          // ticks of suppression before going prone
+
 export interface KernelContext {
   tractionCoeff: Q;
   tuning?: SimulationTuning;
@@ -194,6 +206,11 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     // Phase 3: ranged combat fields
     if ((e as any).action.shootCooldownTicks === undefined) (e as any).action.shootCooldownTicks = 0;
     if ((e as any).condition.suppressedTicks === undefined) (e as any).condition.suppressedTicks = 0;
+    // Phase 2 extension: swing momentum
+    if ((e as any).action.swingMomentumQ === undefined) (e as any).action.swingMomentumQ = 0;
+    // Phase 3 extension: aiming time
+    if ((e as any).action.aimTicks === undefined) (e as any).action.aimTicks = 0;
+    if ((e as any).action.aimTargetId === undefined) (e as any).action.aimTargetId = 0;
     // Phase 4: perception defaults and decision latency
     if (!(e.attributes as any).perception) (e.attributes as any).perception = DEFAULT_PERCEPTION;
     if (!e.ai) e.ai = { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
@@ -224,6 +241,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     e.action.defenceCooldownTicks = Math.max(0, e.action.defenceCooldownTicks - 1);
     e.action.grappleCooldownTicks = Math.max(0, e.action.grappleCooldownTicks - 1);
     e.action.shootCooldownTicks = Math.max(0, e.action.shootCooldownTicks - 1);     // Phase 3
+    e.action.swingMomentumQ = qMul(e.action.swingMomentumQ, SWING_MOMENTUM_DECAY) as Q; // Phase 2 ext
     // Phase 12B: per-capability cooldown decay
     if (e.action.capabilityCooldowns) {
       for (const [key, ticks] of e.action.capabilityCooldowns) {
@@ -920,6 +938,7 @@ function resolveAttack(world: WorldState,
     attacker.action.attackCooldownTicks += Math.trunc(
       mulDiv(missRecoveryTicks(wpn), clampedIntensity, SCALE.Q)
     );
+    attacker.action.swingMomentumQ = q(0) as Q;  // Phase 2 ext: miss breaks rhythm
     return;
   }
 
@@ -994,7 +1013,11 @@ function resolveAttack(world: WorldState,
   // Phase 11: exoskeleton force multiplier amplifies strike energy
   const attackerExo = findExoskeleton(attacker.loadout);
   const exoForceMul: Q = attackerExo ? attackerExo.forceMultiplier : SCALE.Q as Q;
-  const energy_J = mulDiv(mulDiv(baseEnergy_J, attackerMeleeSkill.energyTransferMul, SCALE.Q), exoForceMul, SCALE.Q);
+  let energy_J = mulDiv(mulDiv(baseEnergy_J, attackerMeleeSkill.energyTransferMul, SCALE.Q), exoForceMul, SCALE.Q);
+
+  // Phase 2 extension: swing momentum carry — bonus energy from rhythmic consecutive strikes
+  const momentumBonus_J = Math.trunc(qMul(energy_J, qMul(attacker.action.swingMomentumQ, SWING_MOMENTUM_MAX)));
+  energy_J += momentumBonus_J;
 
   let mitigated = energy_J;
 
@@ -1106,6 +1129,15 @@ function resolveAttack(world: WorldState,
     hitQuality: clampQ(res.hitQuality, q(0.05), q(1.0)),
     shieldBlocked,
   });
+
+  // Phase 2 extension: update swing momentum based on outcome
+  if (res.blocked || res.parried) {
+    // Blocked/parried — defender broke the rhythm
+    attacker.action.swingMomentumQ = q(0) as Q;
+  } else {
+    // Clean hit — rhythm maintained; capture intensity for next strike bonus
+    attacker.action.swingMomentumQ = clampQ(qMul(clampedIntensity, q(0.80)), q(0), SCALE.Q as Q) as Q;
+  }
 }
 
 /* ------------------ Grapple command dispatch (Phase 2A) ------------------ */
@@ -1231,6 +1263,19 @@ function resolveShoot(
   trace: TraceSink,
   ctx: KernelContext,
 ): void {
+  // Phase 3 extension: aiming time accumulation — runs even during reload cooldown
+  {
+    const svx = shooter.velocity_mps.x;
+    const svy = shooter.velocity_mps.y;
+    const shooterVelMag = Math.trunc(Math.sqrt(svx * svx + svy * svy));
+    if (cmd.targetId !== shooter.action.aimTargetId || shooterVelMag > AIM_STILL_THRESHOLD) {
+      shooter.action.aimTicks = 0;
+      shooter.action.aimTargetId = cmd.targetId;
+    } else if (shooter.action.shootCooldownTicks > 0 && shooterVelMag <= AIM_STILL_THRESHOLD) {
+      shooter.action.aimTicks = Math.min(shooter.action.aimTicks + 1, AIM_MAX_TICKS);
+    }
+  }
+
   if (shooter.action.shootCooldownTicks > 0) return;
 
   const wpn = findRangedWeapon(shooter.loadout, cmd.weaponId);
@@ -1238,6 +1283,13 @@ function resolveShoot(
 
   const target = index.byId.get(cmd.targetId);
   if (!target || target.injury.dead) return;
+
+  // Phase 3 extension: ammo type override
+  const ammo = cmd.ammoId ? wpn.ammo?.find(a => a.id === cmd.ammoId) : undefined;
+  const projMass_kg   = ammo?.projectileMass_kg ?? wpn.projectileMass_kg;
+  const dragCoeff_perM = ammo?.dragCoeff_perM   ?? wpn.dragCoeff_perM;
+  const ammoDamage    = ammo?.damage             ?? wpn.damage;
+  const launchMul     = ammo?.launchEnergyMul    ?? (SCALE.Q as Q);
 
   const funcA = deriveFunctionalState(shooter, tuning);
   if (!funcA.canAct) return;
@@ -1255,16 +1307,17 @@ function resolveShoot(
 
   // Determine launch energy
   // Phase 7: throwingWeapons.energyTransferMul boosts thrown weapon launch energy
+  // Phase 3 extension: ammo launchEnergyMul applied for non-thrown weapons
   const launchEnergy = wpn.category === "thrown"
     ? mulDiv(
         thrownLaunchEnergy_J(shooter.attributes.performance.peakPower_W),
         getSkill(shooter.skills, "throwingWeapons").energyTransferMul,
         SCALE.Q,
       )
-    : wpn.launchEnergy_J;
+    : Math.trunc(qMul(wpn.launchEnergy_J, launchMul));
 
-  // Energy at impact after drag
-  const energy_J = energyAtRange_J(launchEnergy, wpn.dragCoeff_perM, dist_m);
+  // Energy at impact after drag (Phase 3 extension: use ammo drag coefficient)
+  const energy_J = energyAtRange_J(launchEnergy, dragCoeff_perM, dist_m);
 
   // Shooter's aim quality
   const ctrl = shooter.attributes.control;
@@ -1278,7 +1331,19 @@ function resolveShoot(
   // Phase 7: rangedCombat.dispersionMul reduces effective dispersion (tighter grouping)
   const rangedSkill = getSkill(shooter.skills, "rangedCombat");
   const skillAdjDisp = qMul(adjDisp, rangedSkill.dispersionMul);
-  const gRadius_m = groupingRadius_m(skillAdjDisp, dist_m);
+  let gRadius_m = groupingRadius_m(skillAdjDisp, dist_m);
+
+  // Phase 3 extension: aiming time — reduce dispersion up to 50% at full aim
+  const aimReduction = mulDiv(SCALE.Q - AIM_MIN_MUL, Math.min(shooter.action.aimTicks, AIM_MAX_TICKS), AIM_MAX_TICKS);
+  const aimMul = (SCALE.Q - aimReduction) as Q;
+  gRadius_m = Math.trunc(qMul(gRadius_m, aimMul));
+
+  // Phase 3 extension: moving target penalty — lead error based on target velocity
+  const tvx = target.velocity_mps.x;
+  const tvy = target.velocity_mps.y;
+  const targetVelMag = Math.trunc(Math.sqrt(tvx * tvx + tvy * tvy));
+  const leadError_m = mulDiv(targetVelMag, 2_000, SCALE.mps);  // 0.2s reaction × SCALE.m
+  gRadius_m += leadError_m;
 
   // Body half-width: ~20% of stature (≈0.35m for 1.75m human).
   // Phase 6: cover fraction reduces effective target width → harder to hit.
@@ -1305,6 +1370,7 @@ function resolveShoot(
     shooter.energy.reserveEnergy_J - shootCost_J(wpn, intensity, shooter.attributes.performance.peakPower_W),
   );
   shooter.action.shootCooldownTicks = recycleTicks(wpn, TICK_HZ);
+  shooter.action.aimTicks = 0;  // Phase 3 extension: reset aim after each shot
 
   if (suppressed) {
     target.condition.suppressedTicks = Math.max(target.condition.suppressedTicks, 4);
@@ -1361,13 +1427,14 @@ function resolveShoot(
     }
 
     // Build a minimal Weapon proxy for applyImpactToInjury
+    // Phase 3 extension: use ammo-overridden damage and projectile mass
     const wpnProxy: Weapon = {
       id: wpn.id,
       kind: "weapon",
       name: wpn.name,
-      mass_kg: wpn.projectileMass_kg,
+      mass_kg: projMass_kg,
       bulk: q(0),
-      damage: wpn.damage,
+      damage: ammoDamage,
     };
 
     impacts.push({

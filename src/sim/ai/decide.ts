@@ -3,7 +3,7 @@ import type { WorldState } from "../world.js";
 import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import type { Command } from "../commands.js";
-import { q, clampQ, qMul, SCALE, type I32 } from "../../units.js";
+import { q, clampQ, qMul, SCALE, type I32, Q } from "../../units.js";
 import { pickTarget, updateFocus } from "./targeting.js";
 import type { AIPolicy } from "./types.js";
 import { findWeapon } from "../../equipment.js";
@@ -78,6 +78,16 @@ export function decideCommandsForEntity(
     return [{ kind: "defend", mode: "none" as DefenceMode, intensity: q(0) }];
   }
 
+  // Phase 3 extension: suppression response — go prone when sustained under fire (low distressTol only)
+  const suppressedTicks = (self.condition as any).suppressedTicks ?? 0;
+  if (suppressedTicks >= 3 && distressTol < q(0.50)) {
+    const suppCmds: Command[] = [{ kind: "defend", mode: "none" as DefenceMode, intensity: q(0) }];
+    if (!self.condition.prone) {
+      suppCmds.push({ kind: "setProne", prone: true });
+    }
+    return suppCmds;
+  }
+
   const target = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
   updateFocus(self, target, policy);
 
@@ -128,7 +138,8 @@ export function decideCommandsForEntity(
   const selfCoverQ = obstacleGrid
     ? coverFractionAtPosition(obstacleGrid, aiCellSize, self.position_m.x, self.position_m.y)
     : 0;
-  if (selfCoverQ < q(0.3) && !isRouting(fearQ, distressTol)) {
+  const coverThreshold: Q = suppressedTicks > 0 ? q(0.50) : q(0.30);
+  if (selfCoverQ < coverThreshold && !isRouting(fearQ, distressTol)) {
     const enemyCount = world.entities.filter(
       en => en.teamId !== self.teamId && !en.injury.dead &&
         approxDist(en.position_m.x - self.position_m.x, en.position_m.y - self.position_m.y) < Math.trunc(30 * SCALE.m),

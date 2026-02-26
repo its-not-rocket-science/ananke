@@ -74,6 +74,7 @@ export interface ShootCommand {           // Phase 3
   targetId: number;
   weaponId?: string;
   intensity?: Q;   // aiming effort; default q(1.0)
+  ammoId?: string; // Phase 3 extension: ammo type override; weapon default if omitted
 }
 
 export interface TreatCommand {           // Phase 9

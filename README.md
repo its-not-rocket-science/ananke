@@ -74,9 +74,11 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–14 complete** (including 8C, 10B, 10C, 11C, 12B). Melee combat, grappling, stamina
-and exhaustion, weapon dynamics, ranged and projectile combat, injury, entity environmental
-hazards, movement physics, formation basics, deterministic AI scaffolding,
+**Phases 1–14 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
+and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
+and ammo type overrides), injury, entity environmental hazards, movement physics, formation
+basics, deterministic AI scaffolding,
 perception/cognition (sensory model, decision latency, surprise mechanics), morale and
 psychological state (fear accumulation, routing, pain blocking), terrain systems (surface
 friction, obstacle/cover grids, elevation, slope direction, dynamic hazard cells, AI
@@ -100,7 +102,7 @@ layer** (`deriveMassDistribution`, `deriveInertiaTensor`, `deriveAnimationHints`
 `derivePoseModifiers`, `deriveGrappleConstraint`, `extractRigSnapshots`) for driving
 host renderer rigs from simulation state.
 
-See `ROADMAP.md` for the full 14-phase development plan.
+See `ROADMAP.md` for the full development plan.
 
 ---
 
@@ -339,6 +341,7 @@ Bleeding rate increases proportionally to internal damage severity.
 - **Miss recovery**: missed strikes add extra cooldown ticks proportional to weapon angular momentum (mass × reach)
 - **Weapon bind**: successful parry with heavy weapons can lock both weapons; requires a strength contest (`breakBind`) to escape
 - **Grappling**: strength+mass+technique contest; positions (standing/pinned/prone), throws, chokes, joint locks
+- **Swing momentum carry**: `swingMomentumQ` decays 5%/tick; a clean hit sets it to `intensity × q(0.80)`; adds up to +12% energy on the next strike; reset to 0 on miss, block, or parry
 
 ### Stamina
 
@@ -379,7 +382,13 @@ Physics-based projectile system parallel to melee. Issued via `shoot` command.
 
 **Dispersion modifiers**: `controlQuality`, `fineControl`, fatigue, and aiming intensity all scale the base weapon dispersion.
 
-**Suppression** — near-misses set `suppressedTicks` on the target, applying a −10% `coordinationMul` penalty until the counter drains.
+**Aiming time** — issuing consecutive `shoot` commands against the same target while stationary accumulates `aimTicks` (max 20, capped at 50% dispersion reduction). Resets on target switch, movement above 0.5 m/s, or after firing.
+
+**Moving target penalty** — target velocity adds a lead error (`velocity × 0.2 s reaction time`) to the grouping radius before the hit roll. A sprinting target at 30 m is dramatically harder to hit than a stationary one.
+
+**Suppression** — near-misses set `suppressedTicks` on the target, applying a −10% `coordinationMul` penalty until the counter drains. Entities with `suppressedTicks ≥ 3` and low `distressTolerance` will go prone via AI; all suppressed entities seek cover at a higher threshold (q(0.50) vs q(0.30)).
+
+**Ammo types** — a `RangedWeapon` may carry an `ammo: AmmoType[]` array. A `shoot` command with `ammoId` selects a round that overrides mass, drag, damage profile, and/or launch energy multiplier for that shot. `STARTER_AMMO` provides `ammo_ap` (penetrating), `ammo_hv` (×1.20 launch energy), and `ammo_hollow` (high bleed factor).
 
 **Projectile categories:**
 

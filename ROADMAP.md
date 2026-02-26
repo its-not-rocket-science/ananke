@@ -178,7 +178,7 @@ Goal: deterministic close-combat control.
 - Bind state traces: `WeaponBind` on lock, `WeaponBindBreak` on timeout or forced break
 - Fatigue increases bind probability (tired fighters bind more easily)
 
-**Not implemented** (deferred): momentum carry between strikes (committed swing inertia).
+**Implemented:** momentum carry between strikes — `swingMomentumQ` decays at q(0.95)/tick; clean hits set it to `intensity × q(0.80)`; adds up to +12% energy on next strike (`SWING_MOMENTUM_MAX = q(0.12)`); reset to 0 on miss, block, or parry.
 
 ---
 
@@ -232,9 +232,9 @@ residual energy as injury. Identical to the melee kinetic channel, with velocity
 Incoming fire within a threat radius (m) causes stress accumulation even on near-misses,
 feeding the morale and fear system (Phase 5).
 
-### Planned extensions
+### Extensions (complete)
 
-#### Cover and partial occlusion
+#### Cover and partial occlusion (complete)
 
 Obstacles occupy a fraction of the target's apparent cross-section from the shooter's vantage
 point. This fraction reduces the effective body half-width used in hit determination:
@@ -252,7 +252,7 @@ the range at which accurate fire is possible.
 Cover cells are introduced in Phase 6 (battlefield systems). The ranged hit formula already
 has the insertion point (`bodyHalfWidth_m`) ready to receive the modifier.
 
-#### Aiming time (multi-tick hold)
+#### Aiming time (complete)
 
 Sustained aim across multiple ticks before firing reduces dispersion multiplicatively. An
 entity accumulates an `aimTicks` counter while issuing consecutive `shoot` commands against
@@ -269,7 +269,7 @@ adjustedDisp = qMul(adjustedDispersionQ(...), aimMul)
 per-weapon properties. A crossbow can hold full aim indefinitely (low decay, stable rest);
 a drawn longbow accumulates fatigue and degrades aim after ~3 seconds.
 
-#### Moving target penalty
+#### Moving target penalty (complete)
 
 Target angular velocity (rad/s) contributes to effective dispersion as a lead-calculation
 error proportional to the shooter's `reactionTime_s`. If the shooter's lead estimate is
@@ -284,7 +284,7 @@ The penalty is largest for fast-moving targets at close range (counter-intuitive
 to hit) and small for distant slow targets where grouping radius already dominates. No new
 state is required; `target.velocity_mps` and `reactionTime_s` are already on the entity.
 
-#### Suppression and AI decision-making
+#### Suppression and AI decision-making (complete)
 
 The existing `suppressedTicks` counter (Phase 3) feeds a `suppressionQ` value to `deriveFunctionalState`
 as a −10% `coordinationMul` penalty. Planned AI integration (Phase 4 and Phase 5):
@@ -298,7 +298,7 @@ as a −10% `coordinationMul` penalty. Planned AI integration (Phase 4 and Phase
 - Suppression duration scales with incoming fire intensity; sustained fire resets the
   counter, preventing recovery until the source is neutralised
 
-#### Ammunition types
+#### Ammunition types (complete)
 
 A `RangedWeapon` can carry an `ammo?: AmmoType[]` array. When present, a `shoot` command
 may specify an `ammoId` to select a loaded round. `AmmoType` overrides the weapon's base

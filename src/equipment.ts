@@ -108,6 +108,20 @@ export interface Exoskeleton extends ItemBase {
   powerDrain_W: number;
 }
 
+/** Phase 3 extension: ammo type — overrides projectile properties per shot. */
+export interface AmmoType {
+  id: string;
+  name: string;
+  /** Override projectile mass (SCALE.kg). Omit to use weapon default. */
+  projectileMass_kg?: number;
+  /** Override drag coefficient per metre. Omit to use weapon default. */
+  dragCoeff_perM?: Q;
+  /** Override damage channel distribution. Omit to use weapon default. */
+  damage?: WeaponDamageProfile;
+  /** Multiplier on weapon's launchEnergy_J (Q). Default q(1.0). */
+  launchEnergyMul?: Q;
+}
+
 export interface RangedWeapon extends ItemBase {  // Phase 3
   kind: "ranged";
   category: "thrown" | "bow" | "firearm";
@@ -119,6 +133,8 @@ export interface RangedWeapon extends ItemBase {  // Phase 3
   damage: WeaponDamageProfile;
   /** Phase 11C: energy weapon type — routes damage through DamageChannel.Energy; resisted by reflectivity. */
   energyType?: "plasma" | "laser" | "sonic";
+  /** Phase 3 extension: available ammo types for this weapon. */
+  ammo?: AmmoType[];
 }
 
 /** Phase 11C: electronic sensor suite — boosts vision and hearing range while worn. */
@@ -759,5 +775,46 @@ export const STARTER_SENSORS: Sensor[] = [
     requiredCapabilities: ["PoweredExoskeleton"],
     visionRangeMul: q(2.0) as Q,        // double vision range
     hearingRangeMul: q(1.5) as Q,       // +50% hearing range
+  },
+];
+
+// ── Phase 3 extension: starter ammo types ─────────────────────────────────────
+
+/** Armour-piercing projectile damage profile: increased penetration, lower energy. */
+const AP_DAMAGE: WeaponDamageProfile = {
+  surfaceFrac: q(0.10),
+  internalFrac: q(0.60),
+  structuralFrac: q(0.30),
+  bleedFactor: q(0.50),
+  penetrationBias: q(0.95),
+};
+
+/** Hollow-point projectile damage profile: maximum bleeding, lower penetration. */
+const HP_DAMAGE: WeaponDamageProfile = {
+  surfaceFrac: q(0.40),
+  internalFrac: q(0.55),
+  structuralFrac: q(0.05),
+  bleedFactor: q(0.95),
+  penetrationBias: q(0.20),
+};
+
+export const STARTER_AMMO: AmmoType[] = [
+  {
+    id: "ammo_ap",
+    name: "Armour-Piercing",
+    damage: AP_DAMAGE,
+    launchEnergyMul: q(0.90) as Q,   // slightly lower velocity than ball
+  },
+  {
+    id: "ammo_hv",
+    name: "High-Velocity",
+    launchEnergyMul: q(1.20) as Q,   // +20% muzzle energy
+    dragCoeff_perM: q(0.002) as Q,   // streamlined projectile
+  },
+  {
+    id: "ammo_hollow",
+    name: "Hollow-Point",
+    damage: HP_DAMAGE,
+    launchEnergyMul: q(0.95) as Q,   // slightly heavier
   },
 ];
