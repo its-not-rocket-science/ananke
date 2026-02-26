@@ -1626,9 +1626,19 @@ projectile hit attribution, survival rate, mean TTI, live simulation integration
 
 ### Visual debug layer
 
-- Force vector visualisation — *planned*
-- Hit trace display: resolved hit regions and energy values per tick — *planned*
-- Condition heatmaps: per-entity condition state at any tick — *planned*
+### Visual debug layer *(complete)*
+
+`src/debug.ts` — three pure extraction functions; no kernel changes:
+
+- `extractMotionVectors(world)` → `MotionVector[]` — per-entity position, velocity, and
+  facing direction; includes dead entities (last-known position).
+- `extractHitTraces(events)` → `{ meleeHits, projectileHits }` — filters `TraceKinds.Attack`
+  and confirmed `TraceKinds.ProjectileHit` (hit=true) events; preserves blocked/parried/
+  shieldBlocked/armoured flags and region/energy values.
+- `extractConditionSamples(world)` → `ConditionSample[]` — per-entity fearQ, shock,
+  consciousness, fluidLoss, and dead flag; pass `replayTo(tick)` output to sample any past tick.
+
+`test/debug.test.ts` — 22 tests; `src/debug.ts` at 100% coverage.
 
 ---
 

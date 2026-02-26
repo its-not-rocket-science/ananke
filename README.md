@@ -705,6 +705,32 @@ console.log("Mean TTI (ticks):", meanTimeToIncapacitation(tracer.events, [1, 2, 
 `collectMetrics` covers melee `Attack` events and ranged `ProjectileHit` events in a single
 pass over any flat `TraceEvent[]` — ordering and tick mixing are fine.
 
+### Visual debug layer (Phase 13)
+
+`extractMotionVectors`, `extractHitTraces`, and `extractConditionSamples` in `src/debug.ts`
+transform world state and trace events into renderer-friendly snapshots:
+
+```typescript
+import { extractMotionVectors, extractHitTraces, extractConditionSamples } from "./src/debug.js";
+import { CollectingTrace } from "./src/metrics.js";
+
+const tracer = new CollectingTrace();
+stepWorld(world, commands, { ...ctx, trace: tracer });
+
+// Motion overlay — one entry per entity with position, velocity, and facing
+const arrows = extractMotionVectors(world);
+
+// Hit display — melee and projectile hits with region and energy
+const { meleeHits, projectileHits } = extractHitTraces(tracer.events);
+
+// Condition heatmap — fear, shock, consciousness, fluid loss per entity
+const heatmap = extractConditionSamples(world);
+
+// Sample any past tick via replay
+const past = replayTo(recorder.toReplay(), 42, ctx);
+const pastHeatmap = extractConditionSamples(past);
+```
+
 ---
 
 ## Project layout
@@ -721,6 +747,7 @@ src/
   derive.ts         Movement caps and energy/fatigue derived from attributes and loadout
   replay.ts         ReplayRecorder, replayTo, serializeReplay/deserializeReplay — deterministic replay
   metrics.ts        CollectingTrace, collectMetrics, survivalRate, meanTimeToIncapacitation — analytics
+  debug.ts          extractMotionVectors, extractHitTraces, extractConditionSamples — visual debug layer
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
