@@ -221,9 +221,9 @@ describe("extractConditionSamples", () => {
     expect(s!.consciousness).toBe(q(0.60));
   });
 
-  it("fluidLoss matches entity injury fluidLoss_L", () => {
+  it("fluidLoss matches entity injury fluidLoss", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
-    e.injury.fluidLoss_L = q(0.30);
+    e.injury.fluidLoss = q(0.30);
     const world = mkWorld(1, [e]);
     const [s] = extractConditionSamples(world);
     expect(s!.fluidLoss).toBe(q(0.30));

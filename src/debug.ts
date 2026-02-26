@@ -152,7 +152,7 @@ export function extractConditionSamples(world: WorldState): ConditionSample[] {
     fearQ:        e.condition.fearQ,
     shock:        e.injury.shock,
     consciousness: e.injury.consciousness,
-    fluidLoss:    e.injury.fluidLoss_L,
+    fluidLoss:    e.injury.fluidLoss,
     dead:         e.injury.dead,
   }));
 }
