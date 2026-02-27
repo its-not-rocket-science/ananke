@@ -28,6 +28,20 @@ export const FEAR_SURPRISE: Q = q(0.080);
 /** Fear added per tick when >50% of own team is already routing. */
 export const FEAR_ROUTING_CASCADE: Q = q(0.030);
 
+// ── Phase 5 extension constants ───────────────────────────────────────────────
+
+/** Additional fear decay per leader within AURA_RADIUS_m. */
+export const LEADER_AURA_FEAR_REDUCTION: Q = q(0.015);
+
+/** Additional fear decay per standard-bearer within AURA_RADIUS_m. */
+export const BANNER_AURA_FEAR_REDUCTION: Q = q(0.010);
+
+/** Radius within which leader/banner auras apply (SCALE.m units). */
+export const AURA_RADIUS_m: number = Math.trunc(20 * SCALE.m);
+
+/** Ticks of attack suppression after recovering from routing. */
+export const RALLY_COOLDOWN_TICKS = 60;
+
 // ── Fear decay constants ──────────────────────────────────────────────────────
 
 /** Base fear decay per tick, multiplied by distressTolerance. */

@@ -1,7 +1,7 @@
 // test/medical.test.ts — Phase 9: natural clotting, fractures, infection, treatment
 import { describe, it, expect } from "vitest";
 import { q, SCALE, to, type Q } from "../src/units";
-import type { KernelContext } from "../src/sim/kernel";
+import type { KernelContext } from "../src/sim/context";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
 import { FRACTURE_THRESHOLD, defaultRegionInjury } from "../src/sim/injury";

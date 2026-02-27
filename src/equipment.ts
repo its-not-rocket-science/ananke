@@ -135,6 +135,8 @@ export interface RangedWeapon extends ItemBase {  // Phase 3
   energyType?: "plasma" | "laser" | "sonic";
   /** Phase 3 extension: available ammo types for this weapon. */
   ammo?: AmmoType[];
+  /** Phase 5 extension: scales per-tick suppression fear (default q(1.0)). */
+  suppressionFearMul?: Q;
 }
 
 /** Phase 11C: electronic sensor suite — boosts vision and hearing range while worn. */
@@ -617,6 +619,7 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     dispersionQ: q(0.012),             // 12 mrad base
     recycleTime_s: to.s(2.0),
     damage: PROJECTILE_DAMAGE,
+    suppressionFearMul: q(0.5),
   },
   {
     id: "rng_shortbow",
@@ -631,6 +634,7 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     dispersionQ: q(0.012),
     recycleTime_s: to.s(1.5),
     damage: PROJECTILE_DAMAGE,
+    suppressionFearMul: q(1.0),
   },
   {
     id: "rng_longbow",
@@ -645,6 +649,7 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     dispersionQ: q(0.008),
     recycleTime_s: to.s(2.0),
     damage: PROJECTILE_DAMAGE,
+    suppressionFearMul: q(1.5),
   },
   {
     id: "rng_crossbow",
@@ -659,6 +664,7 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     dispersionQ: q(0.006),
     recycleTime_s: to.s(5.0),
     damage: PROJECTILE_DAMAGE,
+    suppressionFearMul: q(1.5),
   },
   {
     id: "rng_pistol",
@@ -674,6 +680,7 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     dispersionQ: q(0.015),
     recycleTime_s: to.s(12.0),
     damage: PROJECTILE_DAMAGE,
+    suppressionFearMul: q(2.0),
   },
   {
     id: "rng_musket",
@@ -689,6 +696,7 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     dispersionQ: q(0.010),
     recycleTime_s: to.s(18.0),
     damage: PROJECTILE_DAMAGE,
+    suppressionFearMul: q(3.0),
   },
   {
     id: "rng_plasma_rifle",
@@ -704,6 +712,7 @@ export const STARTER_RANGED_WEAPONS: RangedWeapon[] = [
     dispersionQ: q(0.004),
     recycleTime_s: to.s(2.0),
     energyType: "plasma",               // Phase 11C: Energy channel; resisted by reflectivity
+    suppressionFearMul: q(1.0),
     damage: {
       surfaceFrac: q(0.35),
       internalFrac: q(0.45),

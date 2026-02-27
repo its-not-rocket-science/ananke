@@ -1,5 +1,4 @@
-import type { Q } from "../units.js";
-import { q } from "../units.js";
+import { q, type Q, SCALE } from "../units.js";
 
 export interface ConditionState {
   // Intensities are 0..1 in Q unless otherwise noted
@@ -27,6 +26,13 @@ export interface ConditionState {
   // Phase 5: psychological state
   fearQ: Q;                    // accumulated fear 0..1; routing when ≥ moraleThreshold
 
+  // Phase 5 extensions: morale features
+  suppressionFearMul: Q;       // caliber-based suppression fear multiplier (default SCALE.Q)
+  recentAllyDeaths: number;    // ally deaths within the last 5s window (fear memory)
+  lastAllyDeathTick: number;   // tick of last ally death observation (-1 = none)
+  surrendered: boolean;        // entity has surrendered (permanent passive state)
+  rallyCooldownTicks: number;  // ticks remaining after routing → normal transition
+
   // Phase 12: temporary energy-absorbing shield from capability armourLayer effects
   shieldReserve_J?: number;    // remaining absorption capacity (joules)
   shieldExpiry_tick?: number;  // tick at which the shield expires
@@ -46,4 +52,9 @@ export const defaultCondition = (): ConditionState => ({
   suppressedTicks: 0,
   blindTicks: 0,
   fearQ: q(0),
+  suppressionFearMul: SCALE.Q as Q,
+  recentAllyDeaths: 0,
+  lastAllyDeathTick: -1,
+  surrendered: false,
+  rallyCooldownTicks: 0,
 });

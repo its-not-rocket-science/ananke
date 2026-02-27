@@ -2,33 +2,30 @@ import type { WorldState } from "./world.js";
 import type { Entity } from "./entity.js";
 import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand, ShootCommand, TreatCommand, ActivateCommand } from "./commands.js";
 import type { CapabilityEffect, EffectPayload, FieldEffect } from "./capability.js";
+import type { KernelContext } from "./context.js";
 
 import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
-import { deriveMovementCaps, stepEnergyAndFatigue } from "../derive.js";
 import { DamageChannel } from "../channels.js";
 import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, findSensor, type Weapon, type RangedWeapon } from "../equipment.js";
-import type { TechContext } from "./tech.js";
+
 import { isCapabilityAvailable } from "./tech.js";
 import { deriveFunctionalState } from "./impairment.js";
 import { TUNING, type SimulationTuning } from "./tuning.js";
-import { buildTraitProfile } from "../traits.js";
-
-import { integratePos, type Vec3, v3, vSub, vAdd } from "./vec3.js";
+import { type Vec3, v3, vSub, vAdd } from "./vec3.js";
 import { defaultIntent } from "./intent.js";
 import { defaultAction } from "./action.js";
 import { resolveHit, shieldCovers, chooseArea, type HitArea } from "./combat.js";
 import { normaliseDirCheapQ, dotDirQ } from "./vec3.js";
 import { eventSeed } from "./seeds.js";
-import { type BodyRegion, regionFromHit, ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "./body.js";
-import { resolveHitSegment, getExposureWeight, segmentIds } from "./bodyplan.js";
-import { totalBleedingRate, regionKOFactor, FRACTURE_THRESHOLD } from "./injury.js";
-import { TIER_RANK, TIER_MUL, ACTION_MIN_TIER, TIER_TECH_REQ, type MedicalAction } from "./medical.js";
+import { regionFromHit } from "./body.js";
+import { resolveHitSegment } from "./bodyplan.js";
+import { FRACTURE_THRESHOLD } from "./injury.js";
+import { TIER_RANK, TIER_MUL, ACTION_MIN_TIER, TIER_TECH_REQ } from "./medical.js";
 import { type BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy } from "./explosion.js";
-import type { ActiveSubstance } from "./substance.js";
-import { hasSubstanceType } from "./substance.js";
+
 import { makeRng } from "../rng.js";
 import { WorldIndex, buildWorldIndex } from "./indexing.js";
-import { buildSpatialIndex, queryNearbyIds, type SpatialIndex } from "./spatial.js";
+import { buildSpatialIndex, type SpatialIndex } from "./spatial.js";
 import { type ImpactEvent, sortEventsDeterministic } from "./events.js";
 
 import { parryLeverageQ } from "./combat.js";
@@ -37,30 +34,24 @@ import { pickNearestEnemyInReach } from "./formation.js";
 import { isMeleeLaneOccludedByFriendly } from "./occlusion.js";
 import { applyFrontageCap } from "./frontage.js";
 
-import { type DensityField, computeDensityField } from "./density.js";
-import {
-  type TerrainGrid, tractionAtPosition, speedMulAtPosition,
-  type ObstacleGrid, type ElevationGrid,
-  coverFractionAtPosition, elevationAtPosition,
-  type SlopeGrid, slopeAtPosition,
-  type HazardGrid, type HazardCell, terrainKey,
-} from "./terrain.js";
-import { stepPushAndRepulsion } from "./push.js";
+import { computeDensityField } from "./density.js";
+import { coverFractionAtPosition, elevationAtPosition } from "./terrain.js";
 
 import { type TraceSink, nullTrace } from "./trace.js";
 import { TraceKinds } from "./kinds.js";
 import { type SensoryEnvironment, DEFAULT_SENSORY_ENV, DEFAULT_PERCEPTION, canDetect } from "./sensory.js";
-import {
-  FEAR_PER_SUPPRESSION_TICK,
-  FEAR_FOR_ALLY_DEATH,
-  FEAR_INJURY_MUL,
-  FEAR_OUTNUMBERED,
-  FEAR_SURPRISE,
-  FEAR_ROUTING_CASCADE,
-  fearDecayPerTick,
-  isRouting,
-  painBlocksAction,
-} from "./morale.js";
+import { FEAR_SURPRISE, isRouting, painBlocksAction } from "./morale.js";
+
+import { stepPushAndRepulsion } from "./step/push.js";
+import { stepMoraleForEntity } from "./step/morale.js";
+import { applyHazardDamage } from "./step/hazards.js";
+import { stepSubstances } from "./step/substances.js";
+import { stepEnergy } from "./step/energy.js";
+import { stepConcentration } from "./step/concentration.js";
+import { stepConditionsToInjury, stepInjuryProgression } from "./step/injury.js";
+import { stepCapabilitySources } from "./step/capability.js";
+import { stepMovement } from "./step/movement.js";
+import { stepChainEffects, stepFieldEffects, stepHazardEffects } from "./step/effects.js";
 
 import {
   resolveGrappleAttempt,
@@ -91,8 +82,7 @@ import {
 
 import { getSkill } from "./skills.js";
 
-export const TICK_HZ = 20;
-export const DT_S: I32 = to.s(1 / TICK_HZ);
+import { TICK_HZ } from "./tick.js";
 
 // Phase 2 extension: swing momentum carry
 const SWING_MOMENTUM_DECAY = q(0.95) as Q;  // 5% decay per tick
@@ -103,66 +93,8 @@ const AIM_MAX_TICKS        = 20;            // 1 second at 20 ticks/s
 const AIM_MIN_MUL          = q(0.50) as Q;  // half dispersion at full aim
 const AIM_STILL_THRESHOLD  = 5_000;         // 0.5 m/s in SCALE.mps units
 
-// Phase 3 extension: suppression→AI
-const SUPPRESSION_PRONE_TICKS = 3;          // ticks of suppression before going prone
 
-export interface KernelContext {
-  tractionCoeff: Q;
-  tuning?: SimulationTuning;
-  cellSize_m?: I32; // fixed-point metres; default 4m
-  density?: DensityField;
 
-  trace?: TraceSink;
-
-  /** Phase 4: ambient sensory conditions. Defaults to DEFAULT_SENSORY_ENV (full daylight, clear). */
-  sensoryEnv?: SensoryEnvironment;
-
-  /** Phase 6: per-cell terrain grid. When provided, traction is looked up by entity position. */
-  terrainGrid?: TerrainGrid;
-
-  /** Phase 6: impassable and partial-cover cells.  q(1.0) = fully impassable; q(0.5) = 50% cover. */
-  obstacleGrid?: ObstacleGrid;
-
-  /** Phase 6: height above ground level per cell (SCALE.m units). Affects melee reach and projectile range. */
-  elevationGrid?: ElevationGrid;
-
-  /** Phase 6: per-cell slope direction and grade.  Modifies effective sprint speed. */
-  slopeGrid?: SlopeGrid;
-
-  /** Phase 6: dynamic hazard cells (fire, radiation, poison_gas). Damage applied per tick. */
-  hazardGrid?: HazardGrid;
-
-  /**
-   * Phase 10: ambient temperature (Q 0..1).
-   * Comfort range: [q(0.35), q(0.65)].
-   * Above q(0.65) → heat stress (shock + surface damage); below q(0.35) → cold stress (shock + fatigue).
-   * Entity attributes `heatTolerance` and `coldTolerance` scale the dose.
-   */
-  ambientTemperature_Q?: Q;
-
-  /**
-   * Phase 11: technology context.
-   * When provided, gates which items are available.
-   * Does not directly affect simulation physics — use validateLoadout() before stepWorld
-   * to verify that the entity's loadout is era-appropriate.
-   */
-  techCtx?: TechContext;
-
-  /**
-   * Phase 12: ambient energy grid.
-   * Maps terrain cell keys to ambient energy fraction (Q, 0..1).
-   * Used by CapabilitySource regenModel "ambient" — regen rate scales with cell value.
-   * Ley lines, geothermal vents, solar collectors, stellar wind.
-   */
-  ambientGrid?: Map<string, Q>;
-
-  /**
-   * Phase 12B: terrain tag grid.
-   * Maps cell keys to arrays of string tags; used by CapabilitySource "event" regenModel
-   * { on: "terrain"; tag: string } triggers — fires once per cell-boundary crossing.
-   */
-  terrainTagGrid?: Map<string, string[]>;
-}
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
   const tuning = ctx.tuning ?? TUNING.tactical;
@@ -217,6 +149,12 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     else if ((e.ai as any).decisionCooldownTicks === undefined) (e.ai as any).decisionCooldownTicks = 0;
     // Phase 5: fear / morale
     if ((e.condition as any).fearQ === undefined) (e.condition as any).fearQ = q(0);
+    // Phase 5 extensions: morale features
+    if ((e.condition as any).suppressionFearMul === undefined) (e.condition as any).suppressionFearMul = SCALE.Q;
+    if ((e.condition as any).recentAllyDeaths === undefined) (e.condition as any).recentAllyDeaths = 0;
+    if ((e.condition as any).lastAllyDeathTick === undefined) (e.condition as any).lastAllyDeathTick = -1;
+    if ((e.condition as any).surrendered === undefined) (e.condition as any).surrendered = false;
+    if ((e.condition as any).rallyCooldownTicks === undefined) (e.condition as any).rallyCooldownTicks = 0;
     // Phase 10C: flash blindness
     if ((e.condition as any).blindTicks === undefined) (e.condition as any).blindTicks = 0;
     // Phase 9: new RegionInjury fields (default for entities created pre-Phase-9)
@@ -253,6 +191,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     e.condition.unconsciousTicks = Math.max(0, e.condition.unconsciousTicks - 1);
     e.condition.suppressedTicks = Math.max(0, e.condition.suppressedTicks - 1);    // Phase 3
     e.condition.blindTicks      = Math.max(0, e.condition.blindTicks - 1);         // Phase 10C
+    e.condition.rallyCooldownTicks = Math.max(0, e.condition.rallyCooldownTicks - 1); // Phase 5 ext
     // Phase 2C: weapon bind decay — emit trace only from the smaller-ID entity to avoid duplicates
     if (e.action.weaponBindTicks > 0) {
       e.action.weaponBindTicks = Math.max(0, e.action.weaponBindTicks - 1);
@@ -287,7 +226,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   // Phase 12B: step active concentration auras (castTime_ticks = -1 ongoing effects)
   for (const e of world.entities) {
     if (!e.activeConcentration || e.injury.dead) continue;
-    stepConcentration(world, e, trace, world.tick);
+    stepConcentration (e, world, trace, world.tick);
   }
 
   for (const e of world.entities) {
@@ -308,7 +247,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   for (const e of world.entities) {
     if (e.injury.dead) continue;
 
-    stepMovement(world, e, ctx, tuning);
+    stepMovement(e, world, ctx, tuning);
 
     trace.onEvent({ kind: TraceKinds.Move, tick: world.tick, entityId: e.id, pos: e.position_m, vel: e.velocity_mps });
   }
@@ -454,7 +393,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   for (const e of world.entities) {
     if (e.injury.dead) continue;
     const wasAboveKOThreshold = e.injury.consciousness > tuning.unconsciousThreshold;
-    stepConditionsToInjury(world, e, ctx.ambientTemperature_Q);
+    stepConditionsToInjury(e, world, ctx.ambientTemperature_Q);
     stepInjuryProgression(e, world.tick);
     stepSubstances(e, ctx.ambientTemperature_Q);
     stepEnergy(e, ctx);
@@ -604,155 +543,6 @@ function applyStandAndKO(world: WorldState, e: Entity, tuning: SimulationTuning)
   }
 }
 
-function stepMovement(world: WorldState, e: Entity, ctx: KernelContext, tuning: SimulationTuning): void {
-  const cellSize = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
-  const traction = tractionAtPosition(ctx.terrainGrid, cellSize, e.position_m.x, e.position_m.y, ctx.tractionCoeff);
-  const caps = deriveMovementCaps(e.attributes, e.loadout, { tractionCoeff: traction });
-  const func = deriveFunctionalState(e, tuning);
-
-  // Capability gating
-  if (!func.canAct) {
-    // unconscious/otherwise incapable: no voluntary movement
-    e.intent.move = { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" };
-  }
-  if (!func.canStand) {
-    // force prone if unable to stand (tactical/sim)
-    if (tuning.realism !== "arcade") e.condition.prone = true;
-  }
-
-
-  if (e.condition.unconsciousTicks > 0) {
-    e.velocity_mps = v3(0, 0, 0);
-    return;
-  }
-
-  const vmax_mps = caps.maxSprintSpeed_mps;
-  const amax_mps2 = caps.maxAcceleration_mps2;
-
-  const controlMulBase = clampQ(q(1.0) - qMul(q(0.7), e.condition.stunned), q(0.1), q(1.0));
-  let mobilityMulBase = e.condition.prone ? q(0.25) : q(1.0);
-
-  // crawl tuning
-  if (e.condition.prone && e.condition.unconsciousTicks === 0 && tuning.realism !== "arcade") {
-    mobilityMulBase = qMul(mobilityMulBase, q(0.20)); // crawling is slow
-  }
-
-  // impairment affects control and mobility
-  const controlMul = qMul(controlMulBase, func.coordinationMul);
-  const mobilityMul = qMul(mobilityMulBase, func.mobilityMul);
-  const crowd = ctx.density?.crowdingQ.get(e.id) ?? 0;
-  const crowdMul = clampQ(q(1.0) - qMul(q(0.65), crowd as any), q(0.25), q(1.0));
-
-  const terrainSpeedMul = speedMulAtPosition(ctx.terrainGrid, cellSize, e.position_m.x, e.position_m.y);
-
-  // Phase 6: slope direction adjusts effective speed.
-  // uphill: −25% per grade unit, clamped [50%,95%]; downhill: +10% per grade unit, clamped [100%,120%].
-  const slope = slopeAtPosition(ctx.slopeGrid, cellSize, e.position_m.x, e.position_m.y);
-  const slopeMul: Q = slope
-    ? slope.type === "uphill"
-      ? clampQ((SCALE.Q - qMul(slope.grade, q(0.25))) as Q, q(0.50), q(0.95))
-      : clampQ((SCALE.Q + qMul(slope.grade, q(0.10))) as Q, q(1.0), q(1.20)) as Q
-    : SCALE.Q as Q;
-
-  // Phase 11: powered exoskeleton speed boost
-  const exo = findExoskeleton(e.loadout);
-  const exoSpeedMul: Q = exo ? exo.speedMultiplier : SCALE.Q as Q;
-
-  // Phase 8B: flight locomotion — boost sprint speed when entity can achieve flight
-  let flightSpeedMul: Q = SCALE.Q as Q;
-  const flightSpec = e.bodyPlan?.locomotion.flight;
-  if (flightSpec) {
-    const mass = e.attributes.morphology.mass_kg;
-    if (mass <= flightSpec.liftCapacity_kg) {
-      // Compute average wing damage
-      let wingDmgSum = 0;
-      let wingCount = 0;
-      for (const wid of flightSpec.wingSegments) {
-        const ws = e.injury.byRegion[wid];
-        if (ws) { wingDmgSum += ws.structuralDamage; wingCount++; }
-      }
-      const avgWingDmg: Q = wingCount > 0 ? Math.trunc(wingDmgSum / wingCount) as Q : q(0);
-      const flightMul: Q = clampQ((SCALE.Q - qMul(avgWingDmg, flightSpec.wingDamagePenalty)) as Q, q(0), q(1.0));
-      // 1.5× flight speed boost, scaled by wing condition
-      flightSpeedMul = qMul(q(1.50) as Q, flightMul) as Q;
-    }
-  }
-
-  const baseMul = qMul(qMul(qMul(qMul(qMul(qMul(controlMul, mobilityMul), crowdMul), terrainSpeedMul), slopeMul), exoSpeedMul), flightSpeedMul);
-
-  const effVmax = mulDiv(vmax_mps, baseMul, SCALE.Q);
-  const effAmax = mulDiv(amax_mps2, baseMul, SCALE.Q);
-
-  let modeMul =
-    e.intent.move.mode === "walk" ? q(0.40) :
-      e.intent.move.mode === "run" ? q(0.70) : q(1.0);
-
-  if (e.condition.prone && tuning.realism !== "arcade") {
-    // cannot sprint while prone
-    if (e.intent.move.mode === "sprint") modeMul = q(0.40);
-  }
-
-  const dir = normaliseDirCheapQ(e.intent.move.dir);
-  const intensity = clampQ(e.intent.move.intensity, 0, SCALE.Q);
-
-  // Sim-only: stumble/fall risk when sprinting with impaired mobility/coordination
-  if (tuning.realism === "sim" && intensity > 0 && e.intent.move.mode === "sprint" && !e.condition.prone) {
-    const instability = (SCALE.Q - qMul(func.mobilityMul, func.coordinationMul)) as any;
-    const chance = clampQ(tuning.stumbleBaseChance + qMul(instability, q(0.05)), q(0), q(0.25));
-    if (chance > 0) {
-      const seed = eventSeed(world.seed, world.tick, e.id, 0, 0xF411);
-      const roll = (seed % SCALE.Q) as any;
-      if (roll < chance) {
-        e.condition.prone = true;
-        // a small deterministic shock spike
-        e.injury.shock = clampQ(e.injury.shock + q(0.02), 0, SCALE.Q);
-      }
-    }
-  }
-
-
-  const vTargetMag = mulDiv(mulDiv(effVmax, intensity, SCALE.Q), modeMul, SCALE.Q);
-  const targetVel = scaleDirToSpeed(dir, vTargetMag);
-
-  e.velocity_mps = accelToward(e.velocity_mps, targetVel, effAmax);
-  e.velocity_mps = clampSpeed(e.velocity_mps, effVmax);
-
-  // Phase 6: obstacle blocking — impassable cells (coverFraction = q(1.0)) prevent entry.
-  const nextPos = integratePos(e.position_m, e.velocity_mps, DT_S);
-  if (ctx.obstacleGrid) {
-    const cov = coverFractionAtPosition(ctx.obstacleGrid, cellSize, nextPos.x, nextPos.y);
-    if (cov >= SCALE.Q) {
-      e.velocity_mps = v3(0, 0, 0);
-      return;
-    }
-  }
-  e.position_m = nextPos;
-}
-
-function scaleDirToSpeed(dirQ: Vec3, speed_mps: I32): Vec3 {
-  return {
-    x: mulDiv(speed_mps, dirQ.x, SCALE.Q),
-    y: mulDiv(speed_mps, dirQ.y, SCALE.Q),
-    z: mulDiv(speed_mps, dirQ.z, SCALE.Q),
-  };
-}
-
-function accelToward(v: Vec3, target: Vec3, amax_mps2: I32): Vec3 {
-  const maxDv = Math.trunc((amax_mps2 * DT_S) / SCALE.s);
-  return {
-    x: v.x + clampI32(target.x - v.x, -maxDv, maxDv),
-    y: v.y + clampI32(target.y - v.y, -maxDv, maxDv),
-    z: v.z + clampI32(target.z - v.z, -maxDv, maxDv),
-  };
-}
-
-function clampSpeed(v: Vec3, vmax_mps: I32): Vec3 {
-  return { x: clampI32(v.x, -vmax_mps, vmax_mps), y: clampI32(v.y, -vmax_mps, vmax_mps), z: clampI32(v.z, -vmax_mps, vmax_mps) };
-}
-
-function clampI32(x: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, x));
-}
 
 /* ------------------ Combat ------------------ */
 function resolveAttack(world: WorldState,
@@ -1140,6 +930,23 @@ function resolveAttack(world: WorldState,
   }
 }
 
+
+export function clampSpeed(v: Vec3, vmax_mps: I32): Vec3 {
+  return { x: clampI32(v.x, -vmax_mps, vmax_mps), y: clampI32(v.y, -vmax_mps, vmax_mps), z: clampI32(v.z, -vmax_mps, vmax_mps) };
+}
+
+export function scaleDirToSpeed(dirQ: Vec3, speed_mps: I32): Vec3 {
+  return {
+    x: mulDiv(speed_mps, dirQ.x, SCALE.Q),
+    y: mulDiv(speed_mps, dirQ.y, SCALE.Q),
+    z: mulDiv(speed_mps, dirQ.z, SCALE.Q),
+  };
+}
+
+export function clampI32(x: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, x));
+}
+
 /* ------------------ Grapple command dispatch (Phase 2A) ------------------ */
 function resolveGrappleCommand(
   world: WorldState,
@@ -1374,6 +1181,7 @@ function resolveShoot(
 
   if (suppressed) {
     target.condition.suppressedTicks = Math.max(target.condition.suppressedTicks, 4);
+    target.condition.suppressionFearMul = wpn.suppressionFearMul ?? (SCALE.Q as Q);
   }
 
   let hitRegion: string | undefined;
@@ -1491,7 +1299,7 @@ function defenceCost_J(defender: Entity): I32 {
   return Math.max(5, mulDiv(defender.attributes.performance.peakPower_W, 25, 1000));
 }
 
-function armourCoversHit(world: WorldState, coverage: Q, aId: number, bId: number): boolean {
+export function armourCoversHit(world: WorldState, coverage: Q, aId: number, bId: number): boolean {
   if (coverage <= 0) return false;
   if (coverage >= SCALE.Q) return true;
   const seed = eventSeed(world.seed, world.tick, aId, bId, 0xC0DE);
@@ -1614,573 +1422,6 @@ function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, regi
     if (newFloor > regionState.permanentDamage) regionState.permanentDamage = newFloor as Q;
   }
 }
-
-/* ------------------ Conditions -> injury (armour-aware) ------------------ */
-
-function stepConditionsToInjury(world: WorldState, e: Entity, ambientTemperature_Q?: Q): void {
-  const traitProfile = buildTraitProfile(e.traits);
-  const armour = deriveArmourProfile(e.loadout);
-
-  // Phase 8: use body plan segments when available; fall back to humanoid defaults.
-  const planSegments = e.bodyPlan?.segments ?? null;
-
-  // Exposure weights: "what tends to be exposed" for systemic hazards.
-  const exposureWeights = (channel: DamageChannel): Record<string, Q> => {
-    if (planSegments) {
-      // Data-driven: per-segment per-channel weights from body plan
-      const out: Record<string, Q> = {};
-      for (const seg of planSegments) out[seg.id] = getExposureWeight(seg, channel);
-      return out;
-    }
-    // Humanoid fallback
-    switch (channel) {
-      case DamageChannel.Thermal:
-        // Fire: limbs tend to be exposed and catch/keep burning; torso often partly shielded.
-        return {
-          head: q(0.18),
-          torso: q(0.28),
-          leftArm: q(0.14),
-          rightArm: q(0.14),
-          leftLeg: q(0.13),
-          rightLeg: q(0.13),
-        };
-      case DamageChannel.Chemical:
-        // Chemical/corrosive aerosols: more even, but torso still prominent.
-        // Note: condition.corrosiveExposure feeds this channel — Chemical and
-        // Corrosive are unified here. DamageChannel.Corrosive is reserved for
-        // future liquid-contact mechanics with a distinct distribution profile.
-        return {
-          head: q(0.16),
-          torso: q(0.36),
-          leftArm: q(0.12),
-          rightArm: q(0.12),
-          leftLeg: q(0.12),
-          rightLeg: q(0.12),
-        };
-      case DamageChannel.Radiation:
-        // Penetrating radiation: roughly proportional to mass (torso dominant).
-        return {
-          head: q(0.12),
-          torso: q(0.52),
-          leftArm: q(0.09),
-          rightArm: q(0.09),
-          leftLeg: q(0.09),
-          rightLeg: q(0.09),
-        };
-      case DamageChannel.Electrical:
-        // Conductive contact often through extremities.
-        return {
-          head: q(0.10),
-          torso: q(0.22),
-          leftArm: q(0.22),
-          rightArm: q(0.22),
-          leftLeg: q(0.12),
-          rightLeg: q(0.12),
-        };
-      default:
-        // Fallback: assume proportional to area.
-        return DEFAULT_REGION_WEIGHTS as any;
-    }
-  };
-
-  const applyDoseToRegion = (channel: DamageChannel, region: string, dose: Q): Q => {
-    if (dose <= 0) return q(0);
-    if ((traitProfile.immuneMask & (1 << channel)) !== 0) return q(0);
-
-    let out = dose;
-    if ((traitProfile.resistantMask & (1 << channel)) !== 0) out = Math.trunc(out / 2) as any;
-
-    const cov = (armour.coverageByRegion as any)[region] ?? q(0);
-    const armCovers = armourCoversHit(world, cov, e.id, (e.id ^ 0xBEEF) + (channel << 8) + regionSalt(region));
-    if (armCovers && ((armour.protects & (1 << channel)) !== 0)) {
-      const mul = armour.channelResistMul[channel] ?? q(1.0);
-
-      // A simple "resist factor" curve; for non-kinetic we treat resist_J as a generalised protective capacity.
-      const resistFactor = clampQ(
-        q(1.0) - (mulDiv(Math.min(armour.resist_J, 800) * SCALE.Q, 1, 800) as any),
-        q(0.20),
-        q(1.0),
-      );
-
-      out = qMul(qMul(out, resistFactor), armour.protectedDamageMul);
-      out = qMul(out, mul);
-    }
-    return out;
-  };
-
-  const distribute = (channel: DamageChannel, dose: Q): Record<string, Q> => {
-    const w = exposureWeights(channel);
-    const out: Record<string, Q> = {};
-    const regionList = planSegments ? planSegments.map(s => s.id) : ALL_REGIONS as readonly string[];
-    for (const r of regionList) out[r] = qMul(dose, w[r] ?? q(0));
-    return out;
-  };
-
-  const fireBy = distribute(DamageChannel.Thermal, e.condition.onFire);
-  const corrBy = distribute(DamageChannel.Chemical, e.condition.corrosiveExposure);
-  const elecBy = distribute(DamageChannel.Electrical, e.condition.electricalOverload);
-  const radBy = distribute(DamageChannel.Radiation, e.condition.radiation);
-
-  // Suffocation is global rather than surface-localised.
-  const suff = (() => {
-    if ((traitProfile.immuneMask & (1 << DamageChannel.Suffocation)) !== 0) return q(0);
-    let out = e.condition.suffocation;
-    if ((traitProfile.resistantMask & (1 << DamageChannel.Suffocation)) !== 0) out = Math.trunc(out / 2) as any;
-
-    // Simple: masks/helmets reduce suffocation slightly if they protect Suffocation.
-    const armCovers = armourCoversHit(world, (armour.coverageByRegion as any)["head"] ?? q(0), e.id, e.id ^ 0x5AFF);
-    if (armCovers && ((armour.protects & (1 << DamageChannel.Suffocation)) !== 0)) {
-      out = qMul(out, armour.protectedDamageMul);
-    }
-    return out;
-  })();
-
-  const FIRE_SURFACE_PER_TICK = q(0.0020);
-  const FIRE_SHOCK_PER_TICK = q(0.0010);
-  const CORR_SURFACE_PER_TICK = q(0.0015);
-  const CORR_INTERNAL_PER_TICK = q(0.0008);
-  const SUFF_SHOCK_PER_TICK = q(0.0015);
-  const ELEC_INTERNAL_PER_TICK = q(0.0010);
-  const ELEC_STUNNED_RISE = q(0.0200);
-  // Radiation: primary effect is internal cellular damage accumulating slowly.
-  // Rate calibrated so continuous exposure at q(1.0) reaches ~50% internal
-  // damage on the torso (highest-weight region) after ~250 ticks (12.5 s).
-  const RAD_INTERNAL_PER_TICK = q(0.0008);
-  const RAD_SHOCK_PER_TICK = q(0.0003);
-
-  const allRegionIds = planSegments ? planSegments.map(s => s.id) : ALL_REGIONS as readonly string[];
-  for (const r of allRegionIds) {
-    const fire = applyDoseToRegion(DamageChannel.Thermal,    r, fireBy[r] ?? q(0));
-    const corr = applyDoseToRegion(DamageChannel.Chemical,   r, corrBy[r] ?? q(0));
-    const elec = applyDoseToRegion(DamageChannel.Electrical, r, elecBy[r] ?? q(0));
-    const rad  = applyDoseToRegion(DamageChannel.Radiation,  r, radBy[r]  ?? q(0));
-
-    const reg = e.injury.byRegion[r];
-    if (!reg) continue;
-    if (fire > 0) {
-      reg.surfaceDamage = clampQ(reg.surfaceDamage + qMul(fire, FIRE_SURFACE_PER_TICK), 0, SCALE.Q);
-      e.injury.shock = clampQ(e.injury.shock + qMul(fire, FIRE_SHOCK_PER_TICK), 0, SCALE.Q);
-    }
-    if (corr > 0) {
-      reg.surfaceDamage = clampQ(reg.surfaceDamage + qMul(corr, CORR_SURFACE_PER_TICK), 0, SCALE.Q);
-      reg.internalDamage = clampQ(reg.internalDamage + qMul(corr, CORR_INTERNAL_PER_TICK), 0, SCALE.Q);
-    }
-    if (elec > 0) {
-      reg.internalDamage = clampQ(reg.internalDamage + qMul(elec, ELEC_INTERNAL_PER_TICK), 0, SCALE.Q);
-      e.condition.stunned = clampQ(e.condition.stunned + qMul(elec, ELEC_STUNNED_RISE), 0, SCALE.Q);
-    }
-    if (rad > 0) {
-      reg.internalDamage = clampQ(reg.internalDamage + qMul(rad, RAD_INTERNAL_PER_TICK), 0, SCALE.Q);
-      e.injury.shock = clampQ(e.injury.shock + qMul(rad, RAD_SHOCK_PER_TICK), 0, SCALE.Q);
-    }
-  }
-
-  if (suff > 0) {
-    e.injury.shock = clampQ(e.injury.shock + qMul(suff, SUFF_SHOCK_PER_TICK), 0, SCALE.Q);
-  }
-
-  // Phase 10: ambient temperature stress
-  if (ambientTemperature_Q !== undefined) {
-    const COMFORT_HIGH: Q = q(0.65) as Q;
-    const COMFORT_LOW:  Q = q(0.35) as Q;
-
-    if (ambientTemperature_Q > COMFORT_HIGH) {
-      // Heat stress: shock + mild surface damage; heatTolerance scales dose
-      const excess = clampQ((ambientTemperature_Q - COMFORT_HIGH) as Q, q(0), q(1.0));
-      const baseDose = qMul(excess, q(0.025));
-      const heatTol  = Math.max(1, e.attributes.resilience.heatTolerance);
-      const dose     = mulDiv(baseDose, SCALE.Q, heatTol);
-      e.injury.shock = clampQ((e.injury.shock + dose) as Q, 0, SCALE.Q);
-      const torsoReg = e.injury.byRegion["torso"] ?? Object.values(e.injury.byRegion)[0];
-      if (torsoReg) {
-        torsoReg.surfaceDamage = clampQ(
-          (torsoReg.surfaceDamage + qMul(dose, q(0.20))) as Q, 0, SCALE.Q,
-        );
-      }
-    } else if (ambientTemperature_Q < COMFORT_LOW) {
-      // Cold stress: shock + fatigue; coldTolerance scales dose
-      const deficit = clampQ((COMFORT_LOW - ambientTemperature_Q) as Q, q(0), q(1.0));
-      const baseDose = qMul(deficit, q(0.020));
-      const coldTol  = Math.max(1, e.attributes.resilience.coldTolerance);
-      const dose     = mulDiv(baseDose, SCALE.Q, coldTol);
-      e.injury.shock   = clampQ((e.injury.shock   + dose)                  as Q, 0, SCALE.Q);
-      e.energy.fatigue = clampQ((e.energy.fatigue + qMul(dose, q(0.50)))   as Q, 0, SCALE.Q);
-    }
-  }
-}
-
-function regionSalt(region: string): number {
-  // Well-known humanoid regions get stable salts; others use a hash of the id string.
-  switch (region) {
-    case "head":     return 0x11;
-    case "torso":    return 0x22;
-    case "leftArm":  return 0x33;
-    case "rightArm": return 0x44;
-    case "leftLeg":  return 0x55;
-    case "rightLeg": return 0x66;
-    default: {
-      // Deterministic hash of the segment id (FNV-1a-like)
-      let h = 0x77;
-      for (let i = 0; i < region.length; i++) h = ((h ^ region.charCodeAt(i)) * 0x1f) & 0xFF;
-      return h || 0x77;
-    }
-  }
-}
-
-function stepInjuryProgression(e: Entity, tick: number): void {
-  if (e.injury.dead) return;
-
-  // Phase 9: natural clotting — bleedingRate decays proportional to structural integrity.
-  // Heavily damaged tissue clots slowly; intact tissue clots quickly.
-  const CLOT_RATE_PER_TICK: Q = q(0.0002) as Q;
-  const INFECTION_BLEED_THRESHOLD: Q = q(0.05) as Q;
-  const INFECTION_INT_THRESHOLD: Q = q(0.10) as Q;
-  const INFECTION_ONSET_TICKS = 100;
-  const INFECTION_DAMAGE_PER_TICK: Q = q(0.0003) as Q;
-  const PERMANENT_THRESHOLD: Q = q(0.90) as Q;
-  const PERMANENT_FLOOR_MUL: Q = q(0.75) as Q;
-
-  for (const reg of Object.values(e.injury.byRegion)) {
-    // Clotting
-    if (reg.bleedingRate > 0) {
-      const structureIntegrity = clampQ((SCALE.Q - reg.structuralDamage) as Q, q(0), q(1.0));
-      const clotRate = qMul(structureIntegrity, CLOT_RATE_PER_TICK);
-      reg.bleedingRate = clampQ((reg.bleedingRate - clotRate) as Q, q(0), q(1.0));
-    }
-
-    // Infection timer — track consecutive ticks of active bleeding
-    if (reg.bleedingRate > INFECTION_BLEED_THRESHOLD) {
-      reg.bleedDuration_ticks++;
-      if (reg.bleedDuration_ticks >= INFECTION_ONSET_TICKS
-          && reg.internalDamage > INFECTION_INT_THRESHOLD
-          && reg.infectedTick < 0) {
-        reg.infectedTick = tick;
-      }
-    } else {
-      reg.bleedDuration_ticks = Math.max(0, reg.bleedDuration_ticks - 1);
-    }
-
-    // Infection progression — infected regions accumulate internal damage
-    if (reg.infectedTick >= 0) {
-      reg.internalDamage = clampQ(reg.internalDamage + INFECTION_DAMAGE_PER_TICK, 0, SCALE.Q);
-    }
-
-    // Permanent damage floor update — set when structural damage is very high
-    if (reg.structuralDamage >= PERMANENT_THRESHOLD) {
-      const newFloor = qMul(reg.structuralDamage, PERMANENT_FLOOR_MUL);
-      if (newFloor > reg.permanentDamage) reg.permanentDamage = newFloor as Q;
-    }
-  }
-
-  // Phase 8B: hemolymph accumulation — breached open-fluid segments leak each tick
-  if (e.bodyPlan) {
-    for (const seg of e.bodyPlan.segments) {
-      if (seg.fluidSystem !== "open" || seg.hemolymphLossRate === undefined) continue;
-      const segState = e.injury.byRegion[seg.id];
-      if (!segState) continue;
-      const breachAt = seg.breachThreshold ?? q(0.8);
-      if (segState.structuralDamage >= breachAt) {
-        const loss = qMul(seg.hemolymphLossRate, segState.structuralDamage as Q);
-        e.injury.hemolymphLoss = clampQ((e.injury.hemolymphLoss ?? 0) + loss, 0, SCALE.Q);
-      }
-    }
-  }
-
-  // Phase 8B: hemolymph fatal threshold — same as fluidLoss
-  const FATAL_HEMOLYMPH: Q = q(0.80) as Q;
-  if ((e.injury.hemolymphLoss ?? 0) >= FATAL_HEMOLYMPH) {
-    e.injury.dead = true;
-    e.injury.consciousness = q(0);
-    e.velocity_mps = v3(0, 0, 0);
-    return;
-  }
-
-  // Phase 8B: molting tick countdown and structural repair on completion
-  if (e.molting?.active) {
-    e.molting.ticksRemaining = Math.max(0, e.molting.ticksRemaining - 1);
-    if (e.molting.ticksRemaining === 0) {
-      e.molting.active = false;
-      // Repair regeneratesViaMolting segments
-      if (e.bodyPlan) {
-        for (const seg of e.bodyPlan.segments) {
-          if (!seg.regeneratesViaMolting) continue;
-          const segState = e.injury.byRegion[seg.id];
-          if (!segState) continue;
-          segState.structuralDamage = clampQ(
-            (segState.structuralDamage - q(0.10)) as Q, 0, SCALE.Q,
-          );
-        }
-      }
-    }
-  }
-
-  // Phase 8B: hemolymph clotting — passive decay of hemolymph loss each tick
-  const HEMOLYMPH_CLOT_RATE: Q = q(0.0001) as Q;
-  if ((e.injury.hemolymphLoss ?? 0) > 0) {
-    e.injury.hemolymphLoss = clampQ(
-      ((e.injury.hemolymphLoss ?? 0) - HEMOLYMPH_CLOT_RATE) as Q, 0, SCALE.Q,
-    );
-  }
-
-  // Phase 8B: auto-molt trigger — fires when average structural damage on
-  // regeneratesViaMolting segments reaches MOLT_TRIGGER_THRESHOLD and no molt
-  // is already active. Post-molt repair (−q(0.10)) typically drops average below
-  // threshold, preventing immediate re-trigger for minor damage; severely damaged
-  // entities will re-molt until damage falls below the threshold.
-  const MOLT_TRIGGER_THRESHOLD: Q = q(0.40) as Q;
-  const MOLT_DURATION_TICKS = TICK_HZ * 60; // 60 seconds at TICK_HZ fps
-  if (e.bodyPlan && !e.molting?.active) {
-    const regenSegs = e.bodyPlan.segments.filter(s => s.regeneratesViaMolting);
-    if (regenSegs.length > 0) {
-      let totalDmg = 0;
-      for (const seg of regenSegs) {
-        totalDmg += e.injury.byRegion[seg.id]?.structuralDamage ?? 0;
-      }
-      const avgDmg = Math.trunc(totalDmg / regenSegs.length) as Q;
-      if (avgDmg >= MOLT_TRIGGER_THRESHOLD) {
-        e.molting = {
-          active: true,
-          ticksRemaining: MOLT_DURATION_TICKS,
-          softeningSegments: regenSegs.map(s => s.id),
-        };
-      }
-    }
-  }
-
-  // Phase 8B: wing passive regeneration — slow structural repair on wing segments
-  // when not actively molting (molting repair is handled above on completion).
-  const WING_REGEN_RATE: Q = q(0.0001) as Q;
-  if (e.bodyPlan?.locomotion.flight && !e.molting?.active) {
-    for (const wid of e.bodyPlan.locomotion.flight.wingSegments) {
-      const ws = e.injury.byRegion[wid];
-      if (ws && ws.structuralDamage > 0) {
-        ws.structuralDamage = clampQ(
-          (ws.structuralDamage - WING_REGEN_RATE) as Q, 0, SCALE.Q,
-        );
-      }
-    }
-  }
-
-  const bleedRate = totalBleedingRate(e.injury);
-  const rawBleedThisTick = Math.trunc((bleedRate * DT_S) / SCALE.s) as any;
-  // Phase 7: medical.treatmentRateMul reduces fluid loss (passive wound management)
-  const medSkill = getSkill(e.skills, "medical");
-  const bleedThisTick = medSkill.treatmentRateMul > SCALE.Q
-    ? mulDiv(rawBleedThisTick, SCALE.Q, medSkill.treatmentRateMul)
-    : rawBleedThisTick;
-  e.injury.fluidLoss = clampQ(e.injury.fluidLoss + bleedThisTick, 0, SCALE.Q);
-
-  const SHOCK_FROM_FLUID = q(0.0040);
-  const SHOCK_FROM_INTERNAL = q(0.0020);
-
-  e.injury.shock = clampQ(
-    e.injury.shock + qMul(e.injury.fluidLoss, SHOCK_FROM_FLUID) + qMul(e.injury.byRegion["torso"]?.internalDamage ?? q(0), SHOCK_FROM_INTERNAL),
-    0,
-    SCALE.Q
-  );
-
-  const CONSC_LOSS_FROM_SHOCK = q(0.0100);
-  const CONSC_LOSS_FROM_SUFF = q(0.0200);
-
-  const loss = clampQ(qMul(e.injury.shock, CONSC_LOSS_FROM_SHOCK) + qMul(e.condition.suffocation, CONSC_LOSS_FROM_SUFF) + qMul(regionKOFactor(e.injury), q(0.0100)), 0, SCALE.Q);
-  e.injury.consciousness = clampQ(e.injury.consciousness - loss, 0, SCALE.Q);
-
-  // Phase 9: explicit fatal fluid loss threshold (complements the shock path)
-  const FATAL_FLUID_LOSS: Q = q(0.80) as Q;
-  if (e.injury.fluidLoss >= FATAL_FLUID_LOSS || e.injury.shock >= SCALE.Q || e.injury.consciousness === 0) {
-    e.injury.dead = true;
-    e.injury.consciousness = q(0);
-    e.velocity_mps = v3(0, 0, 0);
-  }
-}
-
-/* ── Phase 5: morale step ─────────────────────────────────────────────────── */
-
-/**
- * Per-entity morale update — accumulates fear from all sources and applies decay.
- * Emits a MoraleRoute trace event whenever the entity crosses the routing threshold.
- */
-function stepMoraleForEntity(
-  world: WorldState,
-  e: Entity,
-  index: WorldIndex,
-  spatial: SpatialIndex,
-  aliveBeforeTick: Set<number>,
-  teamRoutingFrac: Map<number, number>,
-  trace: TraceSink,
-  ctx: KernelContext,
-): void {
-  if (e.injury.dead) return;
-
-  const distressTol = e.attributes.resilience.distressTolerance;
-  const MORALE_RADIUS_m = Math.trunc(30 * SCALE.m); // 30 m awareness radius
-
-  const nearbyIds = queryNearbyIds(spatial, e.position_m, MORALE_RADIUS_m);
-
-  let nearbyAllyCount = 0;
-  let nearbyEnemyCount = 0;
-  let allyDeathsThisTick = 0;
-
-  for (const nId of nearbyIds) {
-    if (nId === e.id) continue;
-    const neighbor = index.byId.get(nId);
-    if (!neighbor) continue;
-
-    if (neighbor.teamId === e.teamId) {
-      if (!neighbor.injury.dead) {
-        nearbyAllyCount++;
-      } else if (aliveBeforeTick.has(nId)) {
-        allyDeathsThisTick++;
-      }
-    } else if (!neighbor.injury.dead) {
-      nearbyEnemyCount++;
-    }
-  }
-
-  const wasRouting = isRouting(e.condition.fearQ, distressTol);
-  let fearQ = e.condition.fearQ;
-
-  // 1. Suppression ticks add fear per tick
-  if (e.condition.suppressedTicks > 0) {
-    fearQ = clampQ(fearQ + FEAR_PER_SUPPRESSION_TICK, 0, SCALE.Q);
-  }
-  // 2. Ally deaths this tick
-  if (allyDeathsThisTick > 0) {
-    fearQ = clampQ(fearQ + allyDeathsThisTick * FEAR_FOR_ALLY_DEATH, 0, SCALE.Q);
-  }
-  // 3. Self-injury (shock accumulation) adds fear per tick
-  fearQ = clampQ(fearQ + qMul(e.injury.shock, FEAR_INJURY_MUL), 0, SCALE.Q);
-  // 4. Being outnumbered by visible enemies adds fear per tick
-  // Include self in friendly count: entity + its allies vs enemies.
-  if (nearbyEnemyCount > nearbyAllyCount + 1) {
-    fearQ = clampQ(fearQ + FEAR_OUTNUMBERED, 0, SCALE.Q);
-  }
-  // 5. Routing cascade: more than half the team is already routing
-  if ((teamRoutingFrac.get(e.teamId) ?? 0) > 0.50) {
-    fearQ = clampQ(fearQ + FEAR_ROUTING_CASCADE, 0, SCALE.Q);
-  }
-
-  // Fear decay — faster with high tolerance and nearby allies (cohesion)
-  fearQ = clampQ(fearQ - fearDecayPerTick(distressTol, nearbyAllyCount), 0, SCALE.Q);
-
-  // Phase 6: cover provides a psychological safety bonus
-  const moraleCellSize = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
-  const coverForMorale = ctx.obstacleGrid
-    ? coverFractionAtPosition(ctx.obstacleGrid, moraleCellSize, e.position_m.x, e.position_m.y)
-    : 0;
-  if (coverForMorale > q(0.5)) {
-    fearQ = clampQ(fearQ - q(0.01), 0, SCALE.Q);
-  }
-
-  e.condition.fearQ = fearQ;
-
-  // Emit trace when routing state crosses threshold
-  const nowRouting = isRouting(fearQ, distressTol);
-  if (nowRouting !== wasRouting) {
-    trace.onEvent({ kind: TraceKinds.MoraleRoute, tick: world.tick, entityId: e.id, fearQ });
-  }
-}
-
-function applyHazardDamage(e: Entity, hazard: HazardCell): void {
-  const torso = e.injury.byRegion["torso"];
-  if (!torso) return;
-  const intensity = hazard.intensity;
-  if (hazard.type === "fire") {
-    torso.surfaceDamage = clampQ(torso.surfaceDamage + qMul(intensity, q(0.003)), 0, SCALE.Q);
-    e.injury.shock = clampQ(e.injury.shock + qMul(intensity, q(0.005)), 0, SCALE.Q);
-  } else if (hazard.type === "radiation") {
-    torso.internalDamage = clampQ(torso.internalDamage + qMul(intensity, q(0.004)), 0, SCALE.Q);
-  } else if (hazard.type === "poison_gas") {
-    torso.internalDamage = clampQ(torso.internalDamage + qMul(intensity, q(0.002)), 0, SCALE.Q);
-    e.injury.consciousness = clampQ(e.injury.consciousness - qMul(intensity, q(0.003)), 0, SCALE.Q);
-  }
-}
-
-/* ── Phase 10: pharmacokinetics ──────────────────────────────────────────── */
-
-function stepSubstances(e: Entity, ambientTemperature_Q?: Q): void {
-  if (!e.substances || e.substances.length === 0) return;
-
-  for (const active of e.substances) {
-    const sub = active.substance;
-
-    // Absorption: pendingDose → concentration
-    const absorbed = qMul(active.pendingDose, sub.absorptionRate);
-    active.pendingDose    = clampQ(active.pendingDose    - absorbed, q(0), q(1.0));
-    active.concentration  = clampQ(active.concentration  + absorbed, q(0), q(1.0));
-
-    // Elimination — base rate, then modifiers
-    let effectiveElimRate = sub.eliminationRate;
-
-    // Phase 10C: substance interactions — modify elimination rate
-    if (sub.effectType === "haemostatic" && hasSubstanceType(e, "stimulant")) {
-      // Stimulant-induced vasoconstriction antagonises haemostatic absorption: clears 30% faster
-      effectiveElimRate = qMul(effectiveElimRate, q(1.30));
-    }
-    if (sub.effectType === "anaesthetic" && hasSubstanceType(e, "stimulant")) {
-      // Stimulant partially counteracts anaesthetic: clears 25% faster
-      effectiveElimRate = qMul(effectiveElimRate, q(1.25));
-    }
-    if (sub.effectType === "haemostatic" && hasSubstanceType(e, "poison")) {
-      // Haemostatic partially counteracts poison-induced bleeding: clears 20% slower
-      effectiveElimRate = qMul(effectiveElimRate, q(0.80));
-    }
-
-    // Phase 10C: temperature-dependent metabolism — cold slows hepatic clearance
-    if (ambientTemperature_Q !== undefined && ambientTemperature_Q < q(0.35)) {
-      const coldFrac = Math.max(q(0.50) as number, mulDiv(ambientTemperature_Q, SCALE.Q, q(0.35)));
-      effectiveElimRate = qMul(effectiveElimRate, coldFrac as Q);
-    }
-
-    const eliminated = qMul(active.concentration, effectiveElimRate);
-    active.concentration  = clampQ(active.concentration  - eliminated, q(0), q(1.0));
-
-    // Effects — only when above threshold
-    if (active.concentration <= sub.effectThreshold) continue;
-
-    const delta = clampQ(active.concentration - sub.effectThreshold, q(0), q(1.0));
-    // Phase 10C: anaesthetic onset/strength is reduced when a stimulant is active
-    let effectStrengthMod = sub.effectStrength;
-    if (sub.effectType === "anaesthetic" && hasSubstanceType(e, "stimulant")) {
-      effectStrengthMod = qMul(effectStrengthMod, q(0.75));
-    }
-    const effectDose = qMul(delta, effectStrengthMod);
-
-    switch (sub.effectType) {
-      case "stimulant":
-        // Reduces fear and slows fatigue accumulation
-        e.condition.fearQ  = clampQ(e.condition.fearQ  - qMul(effectDose, q(0.005)), q(0), q(1.0));
-        e.energy.fatigue   = clampQ(e.energy.fatigue   - qMul(effectDose, q(0.003)), q(0), q(1.0));
-        break;
-      case "anaesthetic":
-        // Erodes consciousness
-        e.injury.consciousness = clampQ(e.injury.consciousness - qMul(effectDose, q(0.008)), q(0), q(1.0));
-        break;
-      case "poison": {
-        // Internal damage to torso (or first region)
-        const torsoReg = e.injury.byRegion["torso"] ?? Object.values(e.injury.byRegion)[0];
-        if (torsoReg) {
-          torsoReg.internalDamage = clampQ(torsoReg.internalDamage + qMul(effectDose, q(0.002)), q(0), q(1.0));
-        }
-        e.injury.shock = clampQ(e.injury.shock + qMul(effectDose, q(0.001)), 0, SCALE.Q);
-        break;
-      }
-      case "haemostatic":
-        // Reduces bleeding rate across all regions
-        for (const reg of Object.values(e.injury.byRegion)) {
-          if (reg.bleedingRate > 0) {
-            reg.bleedingRate = clampQ(reg.bleedingRate - qMul(effectDose, q(0.003)), q(0), q(1.0));
-          }
-        }
-        break;
-    }
-  }
-
-  // Remove exhausted substances (keep only those with meaningful dose or concentration)
-  e.substances = e.substances.filter(a => a.pendingDose > 1 || a.concentration > 1);
-}
-
-/* ── Phase 10: fall damage ────────────────────────────────────────────────── */
 
 // 15% of kinetic energy transmitted after muscle absorption (85% absorbed)
 const FALL_MUSCLE_ABSORB: Q = q(0.85);
@@ -2500,7 +1741,7 @@ const CAPABILITY_WEAPON_DEFAULT: Weapon = {
  * All payloads route to existing engine primitives — the engine does not distinguish
  * magical from technological effects at this level.
  */
-function applyPayload(
+export function applyPayload(
   world: WorldState,
   actor: Entity,
   target: Entity,
@@ -2606,7 +1847,7 @@ function applyPayload(
  * AoE: all living entities within aoeRadius_m of target/actor position.
  * Single-target: targetId entity, or self if absent.
  */
-function applyCapabilityEffect(
+export function applyCapabilityEffect(
   world: WorldState,
   actor: Entity,
   targetId: number | undefined,
@@ -2758,206 +1999,5 @@ function resolveActivation(
   if (effect.cooldown_ticks && effect.cooldown_ticks > 0) {
     if (!actor.action.capabilityCooldowns) actor.action.capabilityCooldowns = new Map();
     actor.action.capabilityCooldowns.set(cooldownKey, effect.cooldown_ticks);
-  }
-}
-
-/**
- * Phase 12B: advance a concentration aura for one tick.
- * Deducts cost_J from the source and applies the effect payload.
- * Clears activeConcentration if reserve is exhausted or entity is shocked.
- */
-function stepConcentration(world: WorldState, e: Entity, trace: TraceSink, tick: number): void {
-  const { sourceId, effectId, targetId } = e.activeConcentration!;
-  const source = e.capabilitySources?.find(s => s.id === sourceId);
-  const effect = source?.effects.find(ef => ef.id === effectId);
-  const isBoundless = source?.regenModel.type === "boundless";
-
-  const interrupted =
-    !source || !effect ||
-    (!isBoundless && source.reserve_J < effect.cost_J) ||
-    e.injury.shock >= (q(0.30) as Q);
-
-  if (interrupted) {
-    delete e.activeConcentration;
-    trace.onEvent({ kind: TraceKinds.CastInterrupted, tick, entityId: e.id });
-    return;
-  }
-
-  if (!isBoundless) source!.reserve_J -= effect!.cost_J;
-  applyCapabilityEffect(world, e, targetId, effect!, trace, tick);
-}
-
-/**
- * Per-entity per-tick regen of all capability sources.
- * Called after stepMovement so velocity is current.
- */
-function stepCapabilitySources(e: Entity, world: WorldState, ctx: KernelContext): void {
-  if (!e.capabilitySources) return;
-  const cellSize_m = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
-
-  for (const source of e.capabilitySources) {
-    const model = source.regenModel;
-    if (model.type === "boundless") continue;
-
-    let regenRate_W = 0;
-
-    switch (model.type) {
-      case "constant":
-        regenRate_W = model.regenRate_W;
-        break;
-
-      case "rest": {
-        const speedAbs = Math.max(Math.abs(e.velocity_mps.x), Math.abs(e.velocity_mps.y));
-        const isResting = speedAbs <= Math.trunc(0.05 * SCALE.mps) && e.action.attackCooldownTicks === 0;
-        if (isResting) regenRate_W = model.regenRate_W;
-        break;
-      }
-
-      case "ambient": {
-        const cx = Math.trunc(e.position_m.x / cellSize_m);
-        const cy = Math.trunc(e.position_m.y / cellSize_m);
-        const key = terrainKey(cx, cy);
-        const ambientVal = ctx.ambientGrid?.get(key) ?? 0;
-        if (ambientVal > 0) {
-          regenRate_W = Math.trunc(model.maxRate_W * ambientVal / SCALE.Q);
-        }
-        break;
-      }
-
-      case "event": {
-        for (const trigger of model.triggers) {
-          if (trigger.on === "tick") {
-            if (trigger._nextTick === undefined) trigger._nextTick = world.tick + trigger.every_n;
-            if (world.tick >= trigger._nextTick) {
-              source.reserve_J = Math.min(source.maxReserve_J, source.reserve_J + trigger.amount_J);
-              trigger._nextTick = world.tick + trigger.every_n;
-            }
-          }
-          // kill triggers dispatched by kernel death-detection loop; terrain triggers below
-        }
-        break;
-      }
-    }
-
-    if (regenRate_W > 0) {
-      const regenThisTick = Math.trunc(regenRate_W * DT_S / SCALE.s);
-      source.reserve_J = Math.min(source.maxReserve_J, source.reserve_J + regenThisTick);
-    }
-  }
-
-  // Phase 12B: terrain-entry triggers — fire once per cell-boundary crossing
-  if (ctx.terrainTagGrid) {
-    const cx = Math.trunc(e.position_m.x / cellSize_m);
-    const cy = Math.trunc(e.position_m.y / cellSize_m);
-    const currentKey = terrainKey(cx, cy);
-    if (currentKey !== e.action.lastCellKey) {
-      const tags = ctx.terrainTagGrid.get(currentKey) ?? [];
-      for (const source of e.capabilitySources) {
-        if (source.regenModel.type !== "event") continue;
-        for (const trig of source.regenModel.triggers) {
-          if (trig.on === "terrain" && tags.includes(trig.tag)) {
-            source.reserve_J = Math.min(source.maxReserve_J, source.reserve_J + trig.amount_J);
-          }
-        }
-      }
-    }
-    e.action.lastCellKey = currentKey;
-  }
-}
-
-/**
- * Phase 12B effect chains: apply chainPayload from each active FieldEffect to every
- * living entity within its radius. Runs before expiry so the final tick still fires.
- */
-function stepChainEffects(world: WorldState, trace: TraceSink, tick: number): void {
-  if (!world.activeFieldEffects?.length) return;
-  for (const fe of world.activeFieldEffects) {
-    if (!fe.chainPayload) continue;
-    const actor = world.entities.find(e => e.id === fe.placedByEntityId);
-    if (!actor) continue;
-    const payloads: EffectPayload[] = Array.isArray(fe.chainPayload)
-      ? fe.chainPayload
-      : [fe.chainPayload];
-    const radSq = fe.radius_m * fe.radius_m;
-    for (const target of world.entities) {
-      if (target.injury.dead) continue;
-      const dx = target.position_m.x - fe.origin.x;
-      const dy = target.position_m.y - fe.origin.y;
-      if (dx * dx + dy * dy > radSq) continue;
-      for (const p of payloads) {
-        applyPayload(world, actor, target, p, trace, tick, fe.id);
-      }
-    }
-  }
-}
-
-/**
- * Decrement duration on timed field effects; remove expired ones.
- * Permanent effects (duration_ticks === -1) are never removed.
- */
-function stepFieldEffects(world: WorldState): void {
-  if (!world.activeFieldEffects?.length) return;
-  world.activeFieldEffects = world.activeFieldEffects.filter(fe => {
-    if (fe.duration_ticks < 0) return true; // permanent
-    fe.duration_ticks -= 1;
-    return fe.duration_ticks > 0;
-  });
-}
-
-function stepHazardEffects(entities: Entity[], grid: HazardGrid, cellSize_m: I32): void {
-  const cs = Math.max(1, cellSize_m);
-  for (const e of entities) {
-    if (e.injury.dead) continue;
-    const cx = Math.trunc(e.position_m.x / cs);
-    const cy = Math.trunc(e.position_m.y / cs);
-    const key = terrainKey(cx, cy);
-    const hazard = grid.get(key);
-    if (!hazard) continue;
-    if (hazard.intensity > 0) {
-      applyHazardDamage(e, hazard);
-    }
-    if (hazard.duration_ticks > 0) {
-      hazard.duration_ticks -= 1;
-      if (hazard.duration_ticks === 0) {
-        grid.delete(key);
-      }
-    }
-  }
-}
-
-function stepEnergy(e: Entity, ctx: KernelContext): void {
-  const BASE_IDLE_W = 80;
-
-  const speedAbs = Math.max(Math.abs(e.velocity_mps.x), Math.abs(e.velocity_mps.y), Math.abs(e.velocity_mps.z));
-  const moving = speedAbs > Math.trunc(0.05 * SCALE.mps);
-
-  // Phase 11: powered exoskeleton adds continuous power draw to metabolic demand
-  const exoForEnergy = findExoskeleton(e.loadout);
-
-  // Phase 8B: flight increases stamina demand when entity is airborne
-  const flightSpecE = e.bodyPlan?.locomotion.flight;
-  const isFlying = flightSpecE !== undefined && e.attributes.morphology.mass_kg <= flightSpecE.liftCapacity_kg;
-  const flightDemandMul: Q = (isFlying && moving) ? flightSpecE!.flightStaminaCost : SCALE.Q as Q;
-
-  const baseDemand = (moving ? 250 : BASE_IDLE_W) + (exoForEnergy ? exoForEnergy.powerDrain_W : 0);
-  const demand = mulDiv(baseDemand, flightDemandMul, SCALE.Q);
-
-  const fatigueBefore = e.energy.fatigue;
-  stepEnergyAndFatigue(e.attributes, e.energy, e.loadout, demand, DT_S, { tractionCoeff: ctx.tractionCoeff });
-
-  // Phase 7: athleticism.fatigueRateMul reduces fatigue accumulation each tick
-  const fatigueDelta = e.energy.fatigue - fatigueBefore;
-  if (fatigueDelta > 0) {
-    const athSkill = getSkill(e.skills, "athleticism");
-    if (athSkill.fatigueRateMul < SCALE.Q) {
-      e.energy.fatigue = clampQ(
-        (fatigueBefore + qMul(fatigueDelta as Q, athSkill.fatigueRateMul)) as Q,
-        0, SCALE.Q,
-      );
-    }
-  }
-
-  if (!moving && e.injury.shock < q(0.4)) {
-    e.energy.fatigue = clampQ(e.energy.fatigue - q(0.0020), 0, SCALE.Q);
   }
 }

@@ -1,9 +1,9 @@
-import type { WorldState } from "./world.js";
-import type { SpatialIndex } from "./spatial.js";
-import type { WorldIndex } from "./indexing.js";
-import { queryNearbyIds } from "./spatial.js";
-import { SCALE, clampQ } from "../units.js";
-import type { Q } from "../units.js";
+import type { WorldState } from "../world.js";
+import type { SpatialIndex } from "../spatial.js";
+import type { WorldIndex } from "../indexing.js";
+import { queryNearbyIds } from "../spatial.js";
+import { SCALE, clampQ } from "../../units.js";
+import type { Q } from "../../units.js";
 
 export interface PushTuning {
   personalRadius_m: number; // e.g. 0.45m

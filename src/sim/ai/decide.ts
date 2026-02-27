@@ -10,11 +10,10 @@ import { findWeapon } from "../../equipment.js";
 import { v3, normaliseDirCheapQ } from "../vec3.js";
 import { DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
 import { isRouting, moraleThreshold } from "../morale.js";
+import { eventSeed } from "../seeds.js";
 import { type ObstacleGrid, coverFractionAtPosition, terrainKey } from "../terrain.js";
 import { getSkill } from "../skills.js";
-
-// Local constant — avoids circular dependency with kernel.ts which exports TICK_HZ.
-const TICK_HZ = 20;
+import { TICK_HZ, DT_S } from "../tick.js";
 
 type DefenceMode = "none" | "block" | "parry" | "dodge";
 
@@ -29,6 +28,14 @@ export function decideCommandsForEntity(
   cellSize_m?: I32,
 ): readonly Command[] {
   if (self.injury.dead) return [];
+
+  // Feature 4: surrendered entities are permanently passive
+  if ((self.condition as any).surrendered) {
+    return [
+      { kind: "defend", mode: "none" as DefenceMode, intensity: q(0) },
+      { kind: "setProne", prone: true },
+    ];
+  }
 
   // tick down AI cooldowns
   if (!self.ai) self.ai = { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
@@ -56,11 +63,35 @@ export function decideCommandsForEntity(
   // Phase 5: morale states — routing flees; hesitant suppresses attacks
   const fearQ = (self.condition as any).fearQ ?? q(0);
   const distressTol = self.attributes.resilience.distressTolerance;
-  // Hesitant: >70 % of morale threshold but not yet routing — refuse to initiate attacks
-  const isHesitant = !isRouting(fearQ, distressTol) &&
+  const fearResp = (self.attributes.resilience as any).fearResponse ?? "flight";
+
+  // Feature 6: berserk entities never route or hesitate
+  const isHesitant = fearResp !== "berserk" &&
+    !isRouting(fearQ, distressTol) &&
     fearQ >= qMul(moraleThreshold(distressTol), q(0.70));
 
-  if (isRouting(fearQ, distressTol)) {
+  if (fearResp !== "berserk" && isRouting(fearQ, distressTol)) {
+    // Feature 6: freeze archetype routes by freezing instead of fleeing
+    if (fearResp === "freeze") {
+      return [];
+    }
+
+    // Feature 4: panic action variety — seeded surrender/freeze/flee roll
+    const panicSeed = eventSeed(world.seed, world.tick, self.id, 0, 0xFA115);
+    const surrenderChance = Math.trunc(qMul(q(0.10), (SCALE.Q - distressTol) as Q));
+    const freezeChance    = Math.trunc(qMul(q(0.15), (SCALE.Q - distressTol) as Q));
+    const r = panicSeed % SCALE.Q;
+    if (r < surrenderChance) {
+      (self.condition as any).surrendered = true;
+      return [
+        { kind: "defend", mode: "none" as DefenceMode, intensity: q(0) },
+        { kind: "setProne", prone: true },
+      ];
+    }
+    if (r < surrenderChance + freezeChance) {
+      return [];
+    }
+
     const nearestThreat = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
     if (nearestThreat) {
       const fdx = self.position_m.x - nearestThreat.position_m.x;
@@ -170,9 +201,10 @@ export function decideCommandsForEntity(
     });
   }
 
-  // attack when within engage range — hesitant entities hold back
+  // attack when within engage range — hesitant or rallying entities hold back
   const weapon = findWeapon(self.loadout, undefined);
-  if (weapon && !isHesitant) {
+  const isRallying = ((self.condition as any).rallyCooldownTicks ?? 0) > 0;
+  if (weapon && !isHesitant && !isRallying) {
     const reach = weapon.reach_m ?? Math.trunc(self.attributes.morphology.stature_m * 0.45);
     if (distApprox <= reach + Math.trunc(0.25 * SCALE.m)) {
       cmds.push({

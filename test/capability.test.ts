@@ -6,7 +6,9 @@
 import { describe, it, expect } from "vitest";
 import { q, SCALE, to, type Q, type I32 } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
-import { stepWorld, type KernelContext, TICK_HZ } from "../src/sim/kernel";
+import type { KernelContext } from "../src/sim/context";
+import { stepWorld } from "../src/sim/kernel";
+import { TICK_HZ } from "../src/sim/tick.js";
 import { DamageChannel } from "../src/channels";
 import { defaultInjury } from "../src/sim/injury";
 import { v3 } from "../src/sim/vec3";

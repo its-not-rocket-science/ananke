@@ -52,6 +52,9 @@ export interface Resilience {
 
   // Phase 12B: resistance to capability effects (magic / tech)
   magicResist?: Q;          // 0 = fully susceptible; q(1.0) = completely immune
+
+  // Phase 5 extensions: archetype fear response
+  fearResponse?: "flight" | "freeze" | "berserk";
 }
 
 export interface IndividualAttributes {

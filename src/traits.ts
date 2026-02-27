@@ -12,7 +12,9 @@ export type TraitId =
   | "fragileStructure"
   | "reinforcedStructure"
   | "chemicalImmune"
-  | "radiationHardened";
+  | "radiationHardened"
+  | "leader"
+  | "standardBearer";
 
 export interface TraitEffect {
   id: TraitId;
@@ -101,6 +103,16 @@ export const TRAITS: Record<TraitId, TraitEffect> = {
     description: "Resistant to radiation damage and radiation-induced control glitches.",
     resistantTo: channelMask(DamageChannel.Radiation, DamageChannel.ControlDisruption),
     mult: { controlQuality: q(1.05) },
+  },
+  leader: {
+    id: "leader",
+    name: "Leader",
+    description: "Provides morale aura to nearby allies, reducing their fear accumulation.",
+  },
+  standardBearer: {
+    id: "standardBearer",
+    name: "Standard-bearer",
+    description: "Carries a rallying standard; provides a smaller morale aura to nearby allies.",
   },
 };
 

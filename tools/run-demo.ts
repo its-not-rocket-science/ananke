@@ -8,7 +8,8 @@
 //   5. Technology spectrum — era validation, exoskeleton combat, nanomedicine gate (Phase 11)
 
 import { q, to, SCALE, type Q } from "../src/units.js";
-import { type KernelContext, stepWorld } from "../src/sim/kernel.js";
+import type { KernelContext } from "../src/sim/context";
+import { stepWorld } from "../src/sim/kernel.js";
 import { TUNING } from "../src/sim/tuning.js";
 import { mkWorld, mkHumanoidEntity } from "../src/sim/testing.js";
 import { buildWorldIndex } from "../src/sim/indexing.js";

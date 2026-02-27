@@ -21,8 +21,9 @@ import {
 import type { Weapon } from "../src/equipment";
 import { STARTER_WEAPONS, STARTER_SHIELDS } from "../src/equipment";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
-import { stepWorld, TICK_HZ } from "../src/sim/kernel";
-import type { KernelContext } from "../src/sim/kernel";
+import { stepWorld } from "../src/sim/kernel";
+import { TICK_HZ } from "../src/sim/tick.js";
+import type { KernelContext } from "../src/sim/context";
 import type { AttackCommand, BreakBindCommand, Command } from "../src/sim/commands";
 import { TUNING } from "../src/sim/tuning";
 import { TraceKinds } from "../src/sim/kinds";
@@ -159,7 +160,8 @@ describe("twoHandedAttackBonusQ", () => {
   });
 
   it("weapon with no handedness field → defaults to one-handed (1.0)", () => {
-    const noHanded: Weapon = { ...knife, handedness: undefined };
+    const { handedness, ...knifeWithoutHandedness } = knife;
+    const noHanded: Weapon = knifeWithoutHandedness;
     expect(twoHandedAttackBonusQ(noHanded, false, false, false)).toBe(q(1.0));
   });
 });
@@ -528,7 +530,7 @@ describe("kernel: two-handed attack bonus", () => {
 
   it("two-handed bonus suppressed when entity carries a shield", () => {
     const twoHandWpn: Weapon = makeWpn(1.5, 1.0, 0.65, "twoHand");
-    const shield = STARTER_SHIELDS[0];
+    const shield = STARTER_SHIELDS[0]!;
 
     let noShieldShock = 0;
     let withShieldShock = 0;

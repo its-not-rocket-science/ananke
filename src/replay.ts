@@ -8,7 +8,7 @@
 
 import type { WorldState } from "./sim/world.js";
 import type { CommandMap, Command } from "./sim/commands.js";
-import type { KernelContext } from "./sim/kernel.js";
+import type { KernelContext } from "./sim/context.js";
 import { stepWorld } from "./sim/kernel.js";
 
 /** One recorded tick: the tick number and the commands dispatched that tick. */

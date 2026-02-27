@@ -22,6 +22,7 @@ import type { SimulationTuning } from "./tuning.js";
 import type { ImpactEvent } from "./events.js";
 import type { Weapon } from "../equipment.js";
 import type { BodyRegion } from "./body.js";
+import { TICK_HZ } from "./tick.js";
 
 // ---------- Deterministic salts ----------
 const SALT_ATTEMPT   = 0x4A41B1;
@@ -33,9 +34,6 @@ const SALT_JOINTLOCK = 0x6B1D44;
 const REF_FORCE: I32 = to.N(1840);   // 184_000 fixed-point units
 const REF_MASS:  I32 = to.kg(75);    //  75_000 fixed-point units
 const REF_H:     I32 = to.m(1.75);   //  17_500 fixed-point units
-
-/** Simulation tick rate — must match TICK_HZ in kernel.ts. */
-const TICK_HZ = 20;
 
 // ---------- Grip decay per tick ----------
 // 0.5% per tick → released after ~200 ticks (10 s) without maintenance

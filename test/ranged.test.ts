@@ -12,7 +12,8 @@ import {
 import { STARTER_RANGED_WEAPONS, STARTER_ARMOUR, findRangedWeapon } from "../src/equipment";
 import { deriveFunctionalState } from "../src/sim/impairment";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
-import { stepWorld, TICK_HZ } from "../src/sim/kernel";
+import { stepWorld } from "../src/sim/kernel";
+import { TICK_HZ } from "../src/sim/tick.js";
 import { TraceKinds } from "../src/sim/kinds";
 import type { TraceEvent } from "../src/sim/trace";
 

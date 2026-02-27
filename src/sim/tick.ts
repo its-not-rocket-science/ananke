@@ -1,2 +1,4 @@
-export const TICK_RATE = 20;        // Hz (good for tactical combat)
-export const DT = 1 / TICK_RATE;    // seconds per tick
+import { to, I32 } from "../units.js";
+
+export const TICK_HZ = 20;        // Hz (good for tactical combat)
+export const DT_S: I32 = to.s(1 / TICK_HZ);    // seconds per tick
