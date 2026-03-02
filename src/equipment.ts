@@ -483,6 +483,27 @@ export const STARTER_WEAPONS: Weapon[] = [
       penetrationBias: q(0.40),
     },
   },
+  // Phase 15: boxing gloves — concussive, minimal cutting, fast punches
+  {
+    id: "wpn_boxing_gloves",
+    kind: "weapon",
+    name: "Boxing Gloves",
+    mass_kg: Math.round(0.28 * SCALE.kg),  // 10 oz ≈ 0.28 kg
+    bulk: q(0.9),
+    reach_m: Math.trunc(0.32 * SCALE.m),   // 0.32 m effective reach
+    handedness: "oneHand",
+    momentArm_m: Math.trunc(0.22 * SCALE.m),
+    handlingMul: q(0.95),
+    strikeEffectiveMassFrac: q(0.07),       // padding distributes force over larger area
+    strikeSpeedMul: q(1.20),                // fast punches
+    damage: {
+      surfaceFrac: q(0.10),                 // padding minimises cuts
+      internalFrac: q(0.60),               // concussive — brain/organ shock dominates
+      structuralFrac: q(0.08),
+      bleedFactor: q(0.04),                // almost no bleeding
+      penetrationBias: q(0.03),
+    },
+  },
 ];
 
 // Phase 11: powered exoskeletons

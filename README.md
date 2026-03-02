@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–14 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–15 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -97,10 +97,14 @@ reflective and ablative armour, sensor items, and era-gated starter items, a **c
 sources and effects** system (Clarke's Third Law — magic and advanced technology are the
 same abstraction; only the tags differ), a **deterministic replay and analytics** system
 (`ReplayRecorder`, `replayTo`, `serializeReplay`/`deserializeReplay`, `CollectingTrace`,
-`collectMetrics`, `survivalRate`, `meanTimeToIncapacitation`), and a **3D model integration
+`collectMetrics`, `survivalRate`, `meanTimeToIncapacitation`), a **3D model integration
 layer** (`deriveMassDistribution`, `deriveInertiaTensor`, `deriveAnimationHints`,
 `derivePoseModifiers`, `deriveGrappleConstraint`, `extractRigSnapshots`) for driving
-host renderer rigs from simulation state.
+host renderer rigs from simulation state, and a **named archetype and scenario library**
+(`AMATEUR_BOXER`, `PRO_BOXER`, `GRECO_WRESTLER`, `KNIGHT_INFANTRY`, `LARGE_PACIFIC_OCTOPUS`
+with corresponding `mkBoxer`/`mkWrestler`/`mkKnight`/`mkOctopus`/`mkScubaDiver` factory
+functions in `src/presets.ts`) validated against real-world biomechanics data by a
+statistical scenario test suite.
 
 See `ROADMAP.md` for the full development plan.
 
@@ -263,8 +267,9 @@ A human with seed 1 might have `peakForce_N = 1640` (below average) but
 `reserveEnergy_J = 26000` (high stamina). These values are physically meaningful and feed
 directly into combat, movement, and fatigue calculations with no intermediate conversion.
 
-Archetypes in `src/archetypes.ts`: `HUMAN_BASE`, `SERVICE_ROBOT`. Additional archetypes
-(quadruped, alien, etc.) are data additions, not code changes.
+Archetypes in `src/archetypes.ts`: `HUMAN_BASE`, `SERVICE_ROBOT`, `AMATEUR_BOXER`,
+`PRO_BOXER`, `GRECO_WRESTLER`, `KNIGHT_INFANTRY`, `LARGE_PACIFIC_OCTOPUS`. Additional
+archetypes (quadruped, alien, etc.) are data additions, not code changes.
 
 ---
 
@@ -788,9 +793,10 @@ src/
   types.ts          Core attribute interfaces (Morphology, Performance, Control, Resilience, Perception)
   channels.ts       DamageChannel enum and bitmask helpers
   traits.ts         Entity trait definitions and attribute multiplier application
-  archetypes.ts     Reference archetype baselines (HUMAN_BASE, SERVICE_ROBOT)
-  equipment.ts      Weapon, Armour, Shield, RangedWeapon, Loadout types and starter item catalogue
+  archetypes.ts     Reference archetype baselines (HUMAN_BASE, SERVICE_ROBOT, AMATEUR_BOXER, PRO_BOXER, GRECO_WRESTLER, KNIGHT_INFANTRY, LARGE_PACIFIC_OCTOPUS)
+  equipment.ts      Weapon, Armour, Shield, RangedWeapon, Loadout types and starter item catalogue (includes wpn_boxing_gloves)
   generate.ts       Procedural individual generation from archetype with variance distributions
+  presets.ts        Entity factory functions for named real-world archetypes (mkBoxer, mkWrestler, mkKnight, mkOctopus, mkScubaDiver)
   derive.ts         Movement caps and energy/fatigue derived from attributes and loadout
   replay.ts         ReplayRecorder, replayTo, serializeReplay/deserializeReplay — deterministic replay
   metrics.ts        CollectingTrace, collectMetrics, survivalRate, meanTimeToIncapacitation — analytics

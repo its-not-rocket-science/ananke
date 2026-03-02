@@ -1667,3 +1667,82 @@ Engine outputs physical state per tick; interpretation as visual motion is the h
 
 `test/model3d.test.ts` — 42 tests; `src/model3d.ts` at 99% statement coverage.
 752 tests total; all coverage thresholds met.
+
+---
+
+## Phase 15 — Named Archetypes and Scenario Validation *(COMPLETE)*
+
+**Goal**: ground Ananke's SI unit system in published sports-science and biomechanics data;
+provide ready-made entity factories for common real-world archetypes; validate statistically
+plausible outcomes for named matchups (boxing, wrestling, human vs cephalopod, armoured knight).
+
+### New archetypes (`src/archetypes.ts`)
+
+Five new `Archetype` constants calibrated to published literature:
+
+| Archetype | Source | Key parameters |
+|---|---|---|
+| `AMATEUR_BOXER` | Walilko et al., BJSM (2500–4000 N punch) | peakForce 2800 N, concussionTolerance q(0.55) |
+| `PRO_BOXER` | Elite boxing biomechanics (4000–7000 N) | peakForce 5000 N, reserveEnergy 40 kJ |
+| `GRECO_WRESTLER` | Olympic grappling literature | stability q(0.85), peakForce 2000 N |
+| `KNIGHT_INFANTRY` | Medieval warrior physiology | distressTolerance q(0.72), worn armour via loadout |
+| `LARGE_PACIFIC_OCTOPUS` | *Enteroctopus dofleini* biomechanics | controlQuality q(0.95), concussionTolerance q(0.90), visionArcDeg 300, OCTOPOID_PLAN |
+
+### New weapon (`src/equipment.ts`)
+
+`wpn_boxing_gloves` added to `STARTER_WEAPONS`:
+- mass 0.28 kg (10 oz), reach 0.32 m
+- `internalFrac q(0.60)` — concussive profile dominates
+- `bleedFactor q(0.04)` — near-zero laceration (padding)
+- `strikeSpeedMul q(1.20)` — fast punches
+
+### Entity factory module (`src/presets.ts`)
+
+New production module (no dependency on `src/sim/testing.ts`). Five factories:
+
+```
+mkBoxer(id, teamId, x, y, level: "amateur"|"pro"): Entity
+  - PRO_BOXER or AMATEUR_BOXER archetype
+  - loadout: [wpn_boxing_gloves]
+  - skills: meleeCombat, meleeDefence, athleticism scaled by level
+
+mkWrestler(id, teamId, x, y): Entity
+  - GRECO_WRESTLER archetype
+  - loadout: [] (grapple only)
+  - skills: { grappling: q(1.50), athleticism fatigueRateMul q(0.85) }
+
+mkKnight(id, teamId, x, y): Entity
+  - KNIGHT_INFANTRY archetype
+  - loadout: [wpn_longsword, arm_plate (resist_J=800)]
+  - skills: { meleeCombat q(1.25), meleeDefence q(1.25) }
+
+mkOctopus(id, teamId, x, y): Entity
+  - LARGE_PACIFIC_OCTOPUS archetype
+  - bodyPlan: OCTOPOID_PLAN (mantle + 8 arms)
+  - skills: { grappling: q(1.60) }
+
+mkScubaDiver(id, teamId, x, y): Entity
+  - HUMAN_BASE archetype, no weapon, no skills
+  - baseline reference opponent for octopus scenarios
+```
+
+### Scenario test suite (`test/scenarios.test.ts`)
+
+22 tests across 6 describe blocks, validated by 50-seed statistical sweeps:
+
+- **Archetype & weapon sanity** (4): pure data ordering checks
+  (PRO_BOXER > AMATEUR_BOXER peakForce; octopus controlQuality > human; boxing gloves bleedFactor < knife)
+- **Grapple score comparisons** (3): nominal attribute overrides confirm ordering
+  (wrestler > octopus > untrained human; all pure maths, no RNG variance)
+- **Boxing match** (4): kernel integration — pro boxer wins > 60% vs amateur; gloves produce
+  near-zero bleeding; determinism check (same seed → identical outcome)
+- **Wrestling bout** (3): wrestler holds target in > 70% of 50-seed sweep; achieves prone in
+  > 50%; wrestler vs wrestler hold rate < wrestler vs untrained
+- **Human vs Octopus** (5): octopus wins grapple vs diver in > 55% of sweeps; octopus arm
+  injury appears in byRegion; single-arm damage does not kill octopus (distributed CNS);
+  wrestler beats octopus in > 65% of sweeps
+- **Knight vs Swordsman** (3): knight with plate armour survives > 2× longer than unarmoured
+  equivalent; longsword knight defeats club-armed unarmoured in > 65% of sweeps;
+  armoured-hit trace events (armoured=true) visible in combat log
+
+836 tests total; all coverage thresholds met (statements 97%, branches 87%, functions 95%, lines 97%).
