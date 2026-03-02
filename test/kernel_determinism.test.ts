@@ -3,13 +3,14 @@ import { generateIndividual } from "../src/generate";
 import { HUMAN_BASE } from "../src/archetypes";
 import { q } from "../src/units";
 
-import { stepWorld, DT_S } from "../src/sim/kernel";
+import { stepWorld } from "../src/sim/kernel";
 import { defaultCondition } from "../src/sim/condition";
 import { defaultInjury } from "../src/sim/injury";
 import { defaultIntent } from "../src/sim/intent";
 import { v3 } from "../src/sim/vec3";
 import type { WorldState } from "../src/sim/world";
 import { defaultAction } from "../src/sim/action";
+import type { GrappleState } from "../src/sim/entity";
 
 test("kernel determinism: same initial state => same after N ticks", () => {
   const attrs = generateIndividual(123, HUMAN_BASE);
@@ -29,6 +30,8 @@ test("kernel determinism: same initial state => same after N ticks", () => {
       action: defaultAction(),
       condition: defaultCondition(),
       injury: defaultInjury(),
+      teamId: 0,
+      grapple: {} as GrappleState,
     }],
   });
 

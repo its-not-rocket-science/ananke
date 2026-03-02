@@ -212,7 +212,7 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
     stepWorld(world, new Map(), { tractionCoeff: q(0.9) });
 
     const e = world.entities[0]!;
-    const torsoSurf = e.injury.byRegion.torso.surfaceDamage;
+    const torsoSurf = e.injury.byRegion.torso!.surfaceDamage;
     expect(torsoSurf).toBeGreaterThan(0);
     expect(e.injury.shock).toBeGreaterThan(0);
   });
@@ -229,8 +229,8 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
     stepWorld(world, new Map(), { tractionCoeff: q(0.9) });
 
     const e = world.entities[0]!;
-    expect(e.injury.byRegion.torso.surfaceDamage).toBeGreaterThan(0);
-    expect(e.injury.byRegion.torso.internalDamage).toBeGreaterThan(0);
+    expect(e.injury.byRegion.torso!.surfaceDamage).toBeGreaterThan(0);
+    expect(e.injury.byRegion.torso!.internalDamage).toBeGreaterThan(0);
   });
 
   test("electricalOverload increases internal damage and stun after one tick", async () => {
@@ -245,7 +245,7 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
     stepWorld(world, new Map(), { tractionCoeff: q(0.9) });
 
     const e = world.entities[0]!;
-    expect(e.injury.byRegion.torso.internalDamage).toBeGreaterThan(0);
+    expect(e.injury.byRegion.torso!.internalDamage).toBeGreaterThan(0);
     expect(e.condition.stunned).toBeGreaterThan(0);
   });
 
@@ -261,7 +261,7 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
     stepWorld(world, new Map(), { tractionCoeff: q(0.9) });
 
     const e = world.entities[0]!;
-    expect(e.injury.byRegion.torso.internalDamage).toBeGreaterThan(0);
+    expect(e.injury.byRegion.torso!.internalDamage).toBeGreaterThan(0);
     expect(e.injury.shock).toBeGreaterThan(0);
   });
 

@@ -12,11 +12,11 @@ test("tactical/sim: severe leg damage forces prone; arcade does not", () => {
   const worldTac = mkWorld(10, { items: [] });
   const worldArc = mkWorld(10, { items: [] });
 
-  worldTac.entities[0]!.injury.byRegion.leftLeg.structuralDamage = q(0.95);
-  worldTac.entities[0]!.injury.byRegion.rightLeg.structuralDamage = q(0.95);
+  worldTac.entities[0]!.injury!.byRegion.leftLeg!.structuralDamage = q(0.95);
+  worldTac.entities[0]!.injury!.byRegion.rightLeg!.structuralDamage = q(0.95);
 
-  worldArc.entities[0]!.injury.byRegion.leftLeg.structuralDamage = q(0.95);
-  worldArc.entities[0]!.injury.byRegion.rightLeg.structuralDamage = q(0.95);
+  worldArc.entities[0]!.injury!.byRegion.leftLeg!.structuralDamage = q(0.95);
+  worldArc.entities[0]!.injury!.byRegion.rightLeg!.structuralDamage = q(0.95);
 
   const cmds: CommandMap = new Map();
   cmds.set(1, [{ kind: "move", dir: v3(SCALE.Q, 0, 0), intensity: q(1.0), mode: "walk" }]);
@@ -43,8 +43,8 @@ test("unconscious threshold prevents attacks (tactical)", () => {
 
   // target should remain unharmed
   const tgt = world.entities[1]!.injury;
-  const total = tgt.byRegion.head.surfaceDamage + tgt.byRegion.torso.surfaceDamage +
-    tgt.byRegion.leftArm.surfaceDamage + tgt.byRegion.rightArm.surfaceDamage +
-    tgt.byRegion.leftLeg.surfaceDamage + tgt.byRegion.rightLeg.surfaceDamage;
+  const total = tgt.byRegion.head!.surfaceDamage + tgt.byRegion.torso!.surfaceDamage +
+    tgt.byRegion.leftArm!.surfaceDamage + tgt.byRegion.rightArm!.surfaceDamage +
+    tgt.byRegion.leftLeg!.surfaceDamage + tgt.byRegion.rightLeg!.surfaceDamage;
   expect(total).toBe(0);
 });

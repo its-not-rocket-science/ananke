@@ -214,11 +214,12 @@ describe("kernel stepWorld with terrainGrid", () => {
     ]);
 
     for (let i = 0; i < steps; i++) {
-      stepWorld(world, cmds, {
+      const context = {
         tractionCoeff: q(0.80) as Q,
-        terrainGrid: grid,
         cellSize_m: CELL_SIZE,
-      });
+        ...(grid && { terrainGrid: grid }),
+      };
+      stepWorld(world, cmds, context);
     }
 
     return Math.abs(world.entities[0]!.velocity_mps.x);
@@ -263,7 +264,12 @@ describe("kernel stepWorld with terrainGrid", () => {
       [2, [{ kind: "move", dir: { x: SCALE.Q, y: 0, z: 0 }, intensity: q(1.0) as Q, mode: "sprint" as const }]],
     ]);
 
-    stepWorld(world, cmds, { tractionCoeff: q(0.80) as Q, terrainGrid: grid, cellSize_m: CELL_SIZE });
+    const context = {
+      tractionCoeff: q(0.80) as Q,
+      cellSize_m: CELL_SIZE,
+      ...(grid && { terrainGrid: grid }),
+    };
+    stepWorld(world, cmds, context);
 
     const vNormal = Math.abs(world.entities[0]!.velocity_mps.x);
     const vMud    = Math.abs(world.entities[1]!.velocity_mps.x);
@@ -297,8 +303,8 @@ describe("kernel stepWorld with terrainGrid", () => {
       for (let i = 0; i < steps; i++) {
         stepWorld(world, cmds, {
           tractionCoeff: q(0.80) as Q,
-          terrainGrid: grid,
           cellSize_m: CELL_SIZE,
+          ...(grid && { terrainGrid: grid }),
         });
       }
 

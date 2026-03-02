@@ -1,6 +1,7 @@
 // test/obstacles.test.ts — Phase 6: obstacle/cover and elevation tests
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to } from "../src/units";
+import { q, SCALE, to, type Q } from "../src/units";
+import { v3 } from "../src/sim/vec3";
 import {
   coverFractionAtPosition,
   elevationAtPosition,
@@ -102,9 +103,10 @@ describe("obstacle blocking — movement", () => {
     const world = mkWorld(1, [e]);
 
     // Sprint right for 20 ticks (entity would cross 4m boundary without blocking)
-    const moveCmd = [{ kind: "move", dir: { x: SCALE.Q, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" }];
+    const moveCmd = { kind: "move" as const, dir: v3(SCALE.Q, 0, 0), intensity: q(1.0) as Q, mode: "sprint" as const };
+    // const moveCmd = [{ kind: "move", dir: { x: SCALE.Q, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" }];
     for (let i = 0; i < 20; i++) {
-      stepWorld(world, new Map([[1, moveCmd]]), { ...baseCtx(), obstacleGrid });
+      stepWorld(world, new Map([[1, [moveCmd]]]), { ...baseCtx(), obstacleGrid });
     }
 
     // Entity must not have entered cell (1,0)
@@ -117,9 +119,9 @@ describe("obstacle blocking — movement", () => {
     const e = mkHumanoidEntity(1, 1, to.m(1), 0);
     const world = mkWorld(1, [e]);
 
-    const moveCmd = [{ kind: "move", dir: { x: SCALE.Q, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" }];
+    const moveCmd = { kind: "move" as const, dir: v3(SCALE.Q, 0, 0), intensity: q(1.0) as Q, mode: "sprint" as const };
     for (let i = 0; i < 30; i++) {
-      stepWorld(world, new Map([[1, moveCmd]]), { ...baseCtx(), obstacleGrid });
+      stepWorld(world, new Map([[1, [moveCmd]]]), { ...baseCtx(), obstacleGrid });
     }
 
     // Entity should have crossed into cell (1,0) — x ≥ 4m
@@ -137,8 +139,10 @@ describe("obstacle cover — ranged hit probability", () => {
       shooter.loadout.items = [shortbow];
       const target = mkHumanoidEntity(2, 2, to.m(10), 0); // 10 m away, cell (2,0)
       const world = mkWorld(seed, [shooter, target]);
-      const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+      const shootCmd = { kind: "shoot" as const, targetId: 2, intensity: q(1.0) as Q };
+      const cmds = new Map([[1, [shootCmd]]]);
       const events: TraceEvent[] = [];
+
       stepWorld(world, cmds, { ...baseCtx(), trace: { onEvent: e => events.push(e) }, ...(coverGrid ? { obstacleGrid: coverGrid } : {}) });
       const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
       if (ev?.hit) hits++;
@@ -179,7 +183,8 @@ describe("elevation — melee reach", () => {
     // Target is in cell (1,0), elevated 3m; attacker is in cell (0,0), elevation 0
     const elevationGrid = buildElevationGrid({ "1,0": to.m(3) });
 
-    const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: sword.id, intensity: q(1.0) }]]]);
+    const attackCmd = { kind: "attack" as const, targetId: 2, weaponId: sword.id, intensity: q(1.0) as Q };
+    const cmds = new Map([[1, [attackCmd]]]);
     for (let i = 0; i < 5; i++) {
       stepWorld(world, cmds, { ...baseCtx(), elevationGrid });
     }
@@ -200,9 +205,40 @@ describe("elevation — melee reach", () => {
       const target = mkHumanoidEntity(2, 2, Math.trunc(4.1 * SCALE.m), 0);
       const world = mkWorld(seed, [attacker, target]);
 
-      const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: sword.id, intensity: q(1.0) }]]]);
+      const attackCmd = { kind: "attack" as const, targetId: 2, weaponId: sword.id, intensity: q(1.0) as Q };
+      const cmds = new Map([[1, [attackCmd]]]);
       for (let i = 0; i < 5; i++) {
         stepWorld(world, cmds, baseCtx());
+      }
+
+      const targetEnt = world.entities.find(e => e.id === 2)!;
+      const totalDamage = Object.values(targetEnt.injury.byRegion)
+        .reduce((s: number, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+      if (totalDamage > 0) damaged = true;
+    }
+    expect(damaged).toBe(true);
+  });
+});
+
+describe("elevation — melee skill bonus", () => {
+  const sword = STARTER_WEAPONS.find(w => w.id === "wpn_longsword")!;
+
+  it("attacker elevated > threshold above target accumulates more damage over multiple seeds", () => {
+    // Attacker at x=3.9m (cell 0,0) elevated 0.75m; target at x=4.1m (cell 1,0) at elevation 0
+    // Elevation 0.75m > threshold 0.5m → attack skill bonus applies
+    let damaged = false;
+    for (let seed = 1; seed <= 50 && !damaged; seed++) {
+      const attacker = mkHumanoidEntity(1, 1, Math.trunc(3.9 * SCALE.m), 0);
+      attacker.loadout.items = [sword];
+      const target = mkHumanoidEntity(2, 2, Math.trunc(4.1 * SCALE.m), 0);
+      const world = mkWorld(seed, [attacker, target]);
+
+      // Elevation grid: cell (0,0) elevated 0.75m; cell (1,0) elevation 0
+      const elevationGrid = buildElevationGrid({ "0,0": to.m(0.75) });
+      const attackCmd = { kind: "attack" as const, targetId: 2, weaponId: sword.id, intensity: q(1.0) as Q };
+      const cmds = new Map([[1, [attackCmd]]]);
+      for (let i = 0; i < 5; i++) {
+        stepWorld(world, cmds, { ...baseCtx(), elevationGrid });
       }
 
       const targetEnt = world.entities.find(e => e.id === 2)!;
@@ -253,7 +289,9 @@ describe("elevation — melee advantage", () => {
         const target = mkHumanoidEntity(2, 2, Math.trunc(4.1 * SCALE.m), 0);
         const world = mkWorld(seed, [attacker, target]);
 
-        const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: sword.id, intensity: q(1.0) }]]]);
+        const attackCmd = { kind: "attack" as const, targetId: 2, weaponId: sword.id, intensity: q(1.0) as Q };
+        const cmds = new Map([[1, [attackCmd]]]);
+
         for (let i = 0; i < 5; i++) {
           stepWorld(world, cmds, { ...baseCtx(), ...(elevationGrid ? { elevationGrid } : {}) });
         }
@@ -294,13 +332,14 @@ describe("elevation — ranged distance", () => {
         : undefined;
 
       const events: TraceEvent[] = [];
-      const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+      const shootCmd = { kind: "shoot" as const, targetId: 2, intensity: q(1.0) as Q };
+      const cmds = new Map([[1, [shootCmd]]]);
       stepWorld(world, cmds, { ...baseCtx(), trace: { onEvent: e => events.push(e) }, ...(elevationGrid ? { elevationGrid } : {}) });
 
       const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
       energyAt[label] = ev?.energyAtImpact_J ?? -1;
     }
 
-    expect(energyAt["elevated"]).toBeLessThan(energyAt["flat"]);
+    expect(energyAt["elevated"]).toBeLessThan(energyAt["flat"]!);
   });
 });

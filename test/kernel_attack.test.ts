@@ -12,6 +12,7 @@ import { defaultAction } from "../src/sim/action";
 import { v3 } from "../src/sim/vec3";
 import type { WorldState } from "../src/sim/world";
 import type { CommandMap } from "../src/sim/commands";
+import { GrappleState } from "../src";
 
 test("attack produces injury and bleeding deterministically (find a seed that hits)", () => {
   const aAttrs = generateIndividual(123, HUMAN_BASE);
@@ -32,6 +33,7 @@ test("attack produces injury and bleeding deterministically (find a seed that hi
       entities: [
         {
           id: 1,
+          teamId: 1,
           attributes: aAttrs,
           energy: { reserveEnergy_J: aAttrs.performance.reserveEnergy_J, fatigue: q(0) },
           loadout: loadoutA,
@@ -42,9 +44,11 @@ test("attack produces injury and bleeding deterministically (find a seed that hi
           action: defaultAction(),
           condition: defaultCondition(),
           injury: defaultInjury(),
+          grapple: {} as GrappleState,
         },
         {
           id: 2,
+          teamId: 2,
           attributes: bAttrs,
           energy: { reserveEnergy_J: bAttrs.performance.reserveEnergy_J, fatigue: q(0) },
           loadout: loadoutB,
@@ -55,6 +59,7 @@ test("attack produces injury and bleeding deterministically (find a seed that hi
           action: defaultAction(),
           condition: defaultCondition(),
           injury: defaultInjury(),
+          grapple: {} as GrappleState,
         },
       ],
     };
@@ -62,11 +67,11 @@ test("attack produces injury and bleeding deterministically (find a seed that hi
     stepWorld(world, cmds, { tractionCoeff: q(0.9) });
 
     const target = world.entities.find(e => e.id === 2)!;
-    const dmg = target.injury.byRegion.torso.surfaceDamage + target.injury.byRegion.torso.structuralDamage + target.injury.byRegion.torso.internalDamage;
+    const dmg = target.injury.byRegion.torso!.surfaceDamage + target.injury.byRegion.torso!.structuralDamage + target.injury.byRegion.torso!.internalDamage;
     if (dmg > 0) {
       found = true;
       expect(dmg).toBeGreaterThan(0);
-      expect(target.injury.byRegion.torso.bleedingRate).toBeGreaterThanOrEqual(0);
+      expect(target.injury.byRegion.torso!.bleedingRate).toBeGreaterThanOrEqual(0);
       break;
     }
   }

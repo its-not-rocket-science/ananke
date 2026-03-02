@@ -2,8 +2,6 @@ import { expect, test, describe } from "vitest";
 import { q, SCALE, to } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
-import { defaultCondition } from "../src/sim/condition";
-import { defaultAction } from "../src/sim/action";
 import { TUNING } from "../src/sim/tuning";
 import { deriveFunctionalState } from "../src/sim/impairment";
 import {
@@ -62,8 +60,8 @@ describe("grappleContestScore", () => {
   test("impaired entity scores lower than healthy counterpart", () => {
     const healthy   = mkHumanoidEntity(20, 1, 0, 0);
     const impaired  = mkHumanoidEntity(20, 1, 0, 0); // same seed → same attrs
-    impaired.injury.byRegion.leftArm.structuralDamage = q(0.80);
-    impaired.injury.byRegion.rightArm.structuralDamage = q(0.80);
+    impaired.injury.byRegion.leftArm!.structuralDamage = q(0.80);
+    impaired.injury.byRegion.rightArm!.structuralDamage = q(0.80);
 
     const funcH = deriveFunctionalState(healthy,  TUNING.tactical);
     const funcI = deriveFunctionalState(impaired, TUNING.tactical);
@@ -604,10 +602,10 @@ describe("grapple via stepWorld", () => {
       const world = mkWorld(seed, [a, b]);
 
       // Pre-establish grapple
-      world.entities[0].grapple.holdingTargetId = 2;
-      world.entities[0].grapple.gripQ = q(0.20); // weak grip
-      world.entities[1].grapple.heldByIds = [1];
-      world.entities[1].attributes.performance.peakForce_N = to.N(4000); // strong breaker
+      world.entities[0]!.grapple.holdingTargetId = 2;
+      world.entities[0]!.grapple.gripQ = q(0.20); // weak grip
+      world.entities[1]!.grapple.heldByIds = [1];
+      world.entities[1]!.attributes.performance.peakForce_N = to.N(4000); // strong breaker
 
       const cmds: CommandMap = new Map([
         [2, [{ kind: "breakGrapple", intensity: q(1.0) }]],
@@ -633,10 +631,10 @@ describe("grapple via stepWorld", () => {
       const world = mkWorld(seed, [a, b]);
 
       // Pre-establish grapple
-      world.entities[0].grapple.holdingTargetId = 2;
-      world.entities[0].grapple.gripQ = q(0.75);
-      world.entities[0].grapple.position = "standing";
-      world.entities[1].grapple.heldByIds = [1];
+      world.entities[0]!.grapple.holdingTargetId = 2;
+      world.entities[0]!.grapple.gripQ = q(0.75);
+      world.entities[0]!.grapple.position = "standing";
+      world.entities[1]!.grapple.heldByIds = [1];
 
       const cmds: CommandMap = new Map([
         [1, [{ kind: "grapple", targetId: 2, intensity: q(1.0), mode: "throw" }]],
@@ -644,7 +642,7 @@ describe("grapple via stepWorld", () => {
       stepWorld(world, cmds, { tractionCoeff: q(0.9) });
 
       const wb = world.entities.find(e => e.id === 2)!;
-      const torso = wb.injury.byRegion.torso;
+      const torso = wb.injury.byRegion.torso!;
       const damage = torso.surfaceDamage + torso.internalDamage + torso.structuralDamage;
       if (damage > 0 && wb.condition.prone) {
         expect(damage).toBeGreaterThan(0);
@@ -660,11 +658,11 @@ describe("grapple via stepWorld", () => {
     const world = mkWorld(42, [a, b]);
 
     // Pre-establish grapple on ground
-    world.entities[0].grapple.holdingTargetId = 2;
-    world.entities[0].grapple.gripQ = q(0.80);
-    world.entities[0].grapple.position = "prone";
-    world.entities[1].grapple.heldByIds = [1];
-    world.entities[1].condition.suffocation = q(0);
+    world.entities[0]!.grapple.holdingTargetId = 2;
+    world.entities[0]!.grapple.gripQ = q(0.80);
+    world.entities[0]!.grapple.position = "prone";
+    world.entities[1]!.grapple.heldByIds = [1];
+    world.entities[1]!.condition.suffocation = q(0);
 
     const cmds: CommandMap = new Map([
       [1, [{ kind: "grapple", targetId: 2, intensity: q(1.0), mode: "choke" }]],

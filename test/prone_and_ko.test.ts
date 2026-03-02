@@ -32,8 +32,8 @@ test("tactical: standing is delayed; arcade: standing is instant", () => {
   a.condition.prone = true;
 
   // injure legs heavily
-  a.injury.byRegion.leftLeg.structuralDamage = q(0.9);
-  a.injury.byRegion.rightLeg.structuralDamage = q(0.9);
+  a.injury.byRegion.leftLeg!.structuralDamage = q(0.9);
+  a.injury.byRegion.rightLeg!.structuralDamage = q(0.9);
 
   const worldA = { tick: 0, seed: 1, entities: [structuredClone(a)] };
   const worldT = { tick: 0, seed: 1, entities: [structuredClone(a)] };

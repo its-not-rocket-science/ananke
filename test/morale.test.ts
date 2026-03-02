@@ -192,8 +192,8 @@ describe("fearQ initialised to 0 by default", () => {
     delete (e.condition as any).fearQ;
     const world = mkWorld(42, [e]);
     runTick(world, noCmd());
-    expect(world.entities[0].condition.fearQ).toBeDefined();
-    expect(world.entities[0].condition.fearQ).toBeGreaterThanOrEqual(0);
+    expect(world.entities[0]!.condition.fearQ).toBeDefined();
+    expect(world.entities[0]!.condition.fearQ).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -204,9 +204,9 @@ describe("fear accumulation from suppression", () => {
     e.condition.fearQ = q(0.10);
     const world = mkWorld(42, [e]);
 
-    const before = world.entities[0].condition.fearQ;
+    const before = world.entities[0]!.condition.fearQ;
     runTick(world, noCmd());
-    const after = world.entities[0].condition.fearQ;
+    const after = world.entities[0]!.condition.fearQ;
 
     // FEAR_PER_SUPPRESSION_TICK = q(0.020) added; decay removes ~q(0.004) → net positive
     expect(after).toBeGreaterThan(before);
@@ -218,7 +218,7 @@ describe("fear accumulation from suppression", () => {
     e.condition.fearQ = q(0);
     const world = mkWorld(42, [e]);
     runTick(world, noCmd());
-    expect(world.entities[0].condition.fearQ).toBe(0);
+    expect(world.entities[0]!.condition.fearQ).toBe(0);
   });
 });
 
@@ -229,7 +229,7 @@ describe("fear decay", () => {
     const world = mkWorld(42, [e]);
     // Run for many ticks
     for (let i = 0; i < 60; i++) runTick(world, noCmd());
-    expect(world.entities[0].condition.fearQ).toBeLessThan(q(0.30));
+    expect(world.entities[0]!.condition.fearQ).toBeLessThan(q(0.30));
   });
 });
 
@@ -373,7 +373,7 @@ describe("routing causes AI to flee", () => {
 
 describe("pain blocking in resolveAttack", () => {
   it("high shock reduces attack rate vs no shock", () => {
-    const wpn = STARTER_WEAPONS[0]; // wpn_club — guaranteed to exist
+    const wpn = STARTER_WEAPONS[0]!; // wpn_club — guaranteed to exist
 
     let hitsNoShock = 0;
     let hitsHighShock = 0;
@@ -426,7 +426,7 @@ describe("surprise adds fear to defender", () => {
     const attacker = mkHumanoidEntity(1, 1, -Math.trunc(0.5 * M), 0); // 0.5m behind target
     const target = mkHumanoidEntity(2, 2, 0, 0); // at origin, default facing +x
 
-    const wpn = STARTER_WEAPONS[0]; // wpn_club
+    const wpn = STARTER_WEAPONS[0]!; // wpn_club
     attacker.loadout.items = [wpn];
     target.condition.fearQ = q(0);
 
@@ -450,7 +450,7 @@ describe("surprise adds fear to defender", () => {
     const attacker = mkHumanoidEntity(1, 1, Math.trunc(0.5 * M), 0); // 0.5m in front
     const target = mkHumanoidEntity(2, 2, 0, 0); // facing +x → attacker is visible
 
-    const wpn = STARTER_WEAPONS[0];
+    const wpn = STARTER_WEAPONS[0]!;
     attacker.loadout.items = [wpn];
     target.condition.fearQ = q(0);
 
@@ -548,7 +548,7 @@ describe("hesitant state suppresses AI attacks", () => {
     const spatial = buildSpatialIndex(world, Math.trunc(4 * M));
 
     // Add a weapon so the entity would normally attack
-    const wpn = STARTER_WEAPONS[0];
+    const wpn = STARTER_WEAPONS[0]!;
     self.loadout.items = [wpn];
 
     const cmds = decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
@@ -569,7 +569,7 @@ describe("hesitant state suppresses AI attacks", () => {
     // Low fear: well below hesitant threshold
     self.condition.fearQ = q(0.10) as Q;
 
-    const wpn = STARTER_WEAPONS[0];
+    const wpn = STARTER_WEAPONS[0]!;
     self.loadout.items = [wpn];
 
     const world = mkWorld(42, [self, enemy]);
@@ -635,7 +635,7 @@ describe("decide.ts branch coverage", () => {
     const self  = mkHumanoidEntity(1, 1, 0, 0);
     const enemy = mkHumanoidEntity(2, 2, 0, Math.trunc(0.5 * M)); // 0.5m along Y
 
-    const wpn = STARTER_WEAPONS[0];
+    const wpn = STARTER_WEAPONS[0]!;
     self.loadout.items = [wpn];
 
     const world   = mkWorld(42, [self, enemy]);

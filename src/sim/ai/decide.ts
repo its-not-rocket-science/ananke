@@ -13,7 +13,7 @@ import { isRouting, moraleThreshold } from "../morale.js";
 import { eventSeed } from "../seeds.js";
 import { type ObstacleGrid, coverFractionAtPosition, terrainKey } from "../terrain.js";
 import { getSkill } from "../skills.js";
-import { TICK_HZ, DT_S } from "../tick.js";
+import { TICK_HZ } from "../tick.js";
 
 type DefenceMode = "none" | "block" | "parry" | "dodge";
 

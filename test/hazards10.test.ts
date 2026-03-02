@@ -1,13 +1,15 @@
 // test/hazards10.test.ts — Phase 10: fall damage, explosions, pharmacokinetics, ambient temperature
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to, qMul, mulDiv } from "../src/units";
+import { q, SCALE, to } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld, applyFallDamage, applyExplosion } from "../src/sim/kernel";
 import { blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy, type BlastSpec } from "../src/sim/explosion";
 import { STARTER_SUBSTANCES, hasSubstanceType, type ActiveSubstance } from "../src/sim/substance";
 import { canDetect, DEFAULT_SENSORY_ENV } from "../src/sim/sensory";
 import { v3 } from "../src/sim/vec3";
+import { TraceEvent } from "../src";
+import { TraceKinds } from "../src/sim/kinds";
 
 const BASE_CTX = { tractionCoeff: q(0.80) };
 
@@ -174,7 +176,7 @@ describe("applyExplosion", () => {
   it("emits BlastHit trace event for entity within radius", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     const world = mkWorld(1, [e]);
-    const events: any[] = [];
+    const events: TraceEvent[] = [];
 
     applyExplosion(world, v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => events.push(ev) });
 
@@ -195,7 +197,7 @@ describe("applyExplosion", () => {
   it("entity outside radius is unaffected and no trace emitted", () => {
     const e = mkHumanoidEntity(1, 1, to.m(15), 0);  // 15m away from epicentre at origin
     const world = mkWorld(1, [e]);
-    const events: any[] = [];
+    const events: TraceEvent[] = [];
     const injuryBefore = JSON.stringify(e.injury);
 
     applyExplosion(world, v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => events.push(ev) });
@@ -208,34 +210,34 @@ describe("applyExplosion", () => {
     const eNear = mkHumanoidEntity(1, 1, 0, 0);
     const eFar  = mkHumanoidEntity(2, 1, to.m(8), 0);
     const world = mkWorld(1, [eNear, eFar]);
-    const events: any[] = [];
+    const events: TraceEvent[] = [];
 
     applyExplosion(world, v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => events.push(ev) });
 
-    const nearEv = events.find(ev => ev.kind === "blastHit" && ev.entityId === 1);
-    const farEv  = events.find(ev => ev.kind === "blastHit" && ev.entityId === 2);
-    expect(nearEv.blastEnergy_J).toBeGreaterThan(farEv.blastEnergy_J);
+    const nearEv = events.find(ev => ev.kind === TraceKinds.BlastHit && ev.entityId === 1) as any;
+    const farEv  = events.find(ev => ev.kind === TraceKinds.BlastHit && ev.entityId === 2) as any;
+    expect(nearEv!.blastEnergy_J).toBeGreaterThan(farEv!.blastEnergy_J);
   });
 
   it("dead entities are skipped", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     e.injury.dead = true;
     const world = mkWorld(1, [e]);
-    const events: any[] = [];
+    const events: TraceEvent[] = [];
 
     applyExplosion(world, v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => events.push(ev) });
 
-    expect(events.filter(ev => ev.kind === "blastHit")).toHaveLength(0);
+    expect(events.filter(ev => ev.kind === TraceKinds.BlastHit)).toHaveLength(0);
   });
 
   it("blastEnergy_J in trace event matches computed delivery", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     const world = mkWorld(1, [e]);
-    const events: any[] = [];
+    const events: TraceEvent[] = [];
 
     applyExplosion(world, v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => events.push(ev) });
 
-    const ev = events.find(e => e.kind === "blastHit");
+    const ev = events.find(e => e.kind === TraceKinds.BlastHit)!;
     expect(ev.blastEnergy_J).toBeGreaterThan(0);
     expect(ev.blastEnergy_J).toBeLessThanOrEqual(GRENADE_SPEC.blastEnergy_J);
   });
@@ -257,8 +259,8 @@ describe("applyExplosion", () => {
     applyExplosion(wToward, v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => evToward.push(ev) });
     applyExplosion(wAway,   v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => evAway.push(ev) });
 
-    const blastToward = evToward.find(e => e.kind === "blastHit")!.blastEnergy_J;
-    const blastAway   = evAway.find(e => e.kind === "blastHit")!.blastEnergy_J;
+    const blastToward = evToward.find(e => e.kind === TraceKinds.BlastHit)!.blastEnergy_J;
+    const blastAway   = evAway.find(e => e.kind === TraceKinds.BlastHit)!.blastEnergy_J;
     expect(blastToward).toBeGreaterThan(blastAway);
     // Away should be exactly 70% of toward
     expect(blastAway).toBeCloseTo(blastToward * 0.70, -1);

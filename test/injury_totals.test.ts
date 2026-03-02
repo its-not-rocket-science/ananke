@@ -12,10 +12,10 @@ import {
 test("injury totals sum across all regions", () => {
   const inj = defaultInjury();
 
-  inj.byRegion.head.surfaceDamage = q(0.1);
-  inj.byRegion.torso.internalDamage = q(0.2);
-  inj.byRegion.leftLeg.structuralDamage = q(0.3);
-  inj.byRegion.rightArm.bleedingRate = q(0.4);
+  inj.byRegion.head!.surfaceDamage = q(0.1);
+  inj.byRegion.torso!.internalDamage = q(0.2);
+  inj.byRegion.leftLeg!.structuralDamage = q(0.3);
+  inj.byRegion.rightArm!.bleedingRate = q(0.4);
 
   expect(totalSurfaceDamage(inj)).toBe(q(0.1));
   expect(totalInternalDamage(inj)).toBe(q(0.2));

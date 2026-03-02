@@ -1,9 +1,10 @@
 // test/tech.test.ts — Phase 11: Technology Spectrum
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to } from "../src/units";
+import { q, SCALE, to, type Q } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
+import { KernelContext } from "../src/sim/context";
 import {
   TechEra,
   defaultTechContext,
@@ -26,7 +27,7 @@ import {
 import { canDetect, DEFAULT_SENSORY_ENV } from "../src/sim/sensory";
 import { v3 } from "../src/sim/vec3";
 
-const BASE_CTX = { tractionCoeff: q(0.80) };
+const BASE_CTX: KernelContext = { tractionCoeff: q(0.80) as Q };
 
 // ── defaultTechContext ────────────────────────────────────────────────────────
 

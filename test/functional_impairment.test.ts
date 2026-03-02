@@ -12,6 +12,7 @@ import { v3 } from "../src/sim/vec3";
 import type { WorldState } from "../src/sim/world";
 import type { CommandMap } from "../src/sim/commands";
 import { ALL_REGIONS } from "../src/sim/body";
+import { GrappleState } from "../src";
 
 function mkWorld(seed: number, aAttrs: any, bAttrs: any, loadoutA: Loadout): WorldState {
   return {
@@ -31,6 +32,7 @@ function mkWorld(seed: number, aAttrs: any, bAttrs: any, loadoutA: Loadout): Wor
         action: defaultAction(),
         condition: defaultCondition(),
         injury: defaultInjury(),
+        grapple: {} as GrappleState,
       },
       {
         id: 2,
@@ -45,6 +47,7 @@ function mkWorld(seed: number, aAttrs: any, bAttrs: any, loadoutA: Loadout): Wor
         action: defaultAction(),
         condition: defaultCondition(),
         injury: defaultInjury(),
+        grapple: {} as GrappleState,
       },
     ],
   };
@@ -58,7 +61,7 @@ function totalDamage(w: WorldState): number {
   const inj = w.entities[1]!.injury;
   let sum = 0;
   for (const r of ALL_REGIONS) {
-    const rr = inj.byRegion[r];
+    const rr = inj.byRegion[r]!;
     sum += rr.surfaceDamage + rr.internalDamage + rr.structuralDamage;
   }
   return sum;
@@ -72,8 +75,8 @@ test("leg structural damage reduces movement distance", () => {
   const healthy = mkWorld(100, aAttrs, bAttrs, loadoutA);
   const injured = mkWorld(100, aAttrs, bAttrs, loadoutA);
 
-  injured.entities[0]!.injury.byRegion.leftLeg.structuralDamage = q(0.9);
-  injured.entities[0]!.injury.byRegion.rightLeg.structuralDamage = q(0.9);
+  injured.entities[0]!.injury.byRegion.leftLeg!.structuralDamage = q(0.9);
+  injured.entities[0]!.injury.byRegion.rightLeg!.structuralDamage = q(0.9);
 
   const cmds: CommandMap = new Map();
   cmds.set(1, [{ kind: "move", dir: v3(SCALE.Q, 0, 0), intensity: q(1.0), mode: "sprint" }]);
@@ -96,8 +99,8 @@ test("arm structural damage reduces attack effectiveness", () => {
   const healthy = mkWorld(500, aAttrs, bAttrs, loadoutA);
   const injured = mkWorld(500, aAttrs, bAttrs, loadoutA);
 
-  injured.entities[0]!.injury.byRegion.leftArm.structuralDamage = q(0.9);
-  injured.entities[0]!.injury.byRegion.rightArm.structuralDamage = q(0.9);
+  injured.entities[0]!.injury.byRegion.leftArm!.structuralDamage = q(0.9);
+  injured.entities[0]!.injury.byRegion.rightArm!.structuralDamage = q(0.9);
 
   const cmds: CommandMap = new Map();
   cmds.set(1, [{ kind: "attack", targetId: 2, weaponId: wpn.id, intensity: q(1.0) }]);

@@ -1,5 +1,6 @@
 // test/replay.test.ts — Phase 13: deterministic replay system
 
+import { WorldState } from "../src";
 import { describe, it, expect } from "vitest";
 import { q, to } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
@@ -10,7 +11,6 @@ import {
   replayTo,
   serializeReplay,
   deserializeReplay,
-  type Replay,
 } from "../src/replay";
 
 const BASE_CTX = { tractionCoeff: q(0.80) };
@@ -111,7 +111,7 @@ describe("replayTo", () => {
       stepWorld(world, cmds, BASE_CTX);
     }
 
-    const liveDmg = (world: typeof world, id: number) => {
+    const liveDmg = (world: WorldState, id: number) => {
       const t = world.entities.find(e => e.id === id)!;
       return Object.values(t.injury.byRegion).reduce(
         (s, r) => s + r.structuralDamage + r.internalDamage + r.surfaceDamage, 0,

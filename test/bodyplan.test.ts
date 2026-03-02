@@ -218,7 +218,7 @@ describe("deriveFunctionalState (data-driven)", () => {
 
   it("undamaged entity: full functional state", () => {
     const e = makeEntityWithPlan(HUMANOID_PLAN);
-    const fs = deriveFunctionalState(e as any, TUNING.tactical);
+    const fs = deriveFunctionalState(e, TUNING.tactical);
     expect(fs.mobilityMul).toBe(q(1.0));
     expect(fs.manipulationMul).toBe(q(1.0));
     expect(fs.canAct).toBe(true);

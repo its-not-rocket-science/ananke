@@ -18,7 +18,7 @@ function totalDamage(world: WorldState): number {
 
   let sum = 0;
   for (const r of ALL_REGIONS) {
-    const rr = inj.byRegion[r];
+    const rr = inj.byRegion[r]!;
     sum += rr.surfaceDamage + rr.internalDamage + rr.structuralDamage;
   }
   return sum;

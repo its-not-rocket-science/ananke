@@ -29,7 +29,7 @@ describe("encumbrance", () => {
   test("derived movement caps incorporate armour + encumbrance", () => {
     const a = generateIndividual(999, HUMAN_BASE);
     const none: Loadout = { items: [] };
-    const arm: Loadout = { items: [STARTER_ARMOUR[1]] };
+    const arm: Loadout = { items: [STARTER_ARMOUR[1]!] };
 
     const caps0 = deriveMovementCaps(a, none, { tractionCoeff: q(0.9) });
     const caps1 = deriveMovementCaps(a, arm, { tractionCoeff: q(0.9) });
