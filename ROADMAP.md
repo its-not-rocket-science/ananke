@@ -2491,7 +2491,7 @@ brings them together for calibration, testing, and scenario design.
 
 ---
 
-## Phase 21 — Character Progression
+## Phase 21 — Character Progression *(COMPLETE)*
 
 ### Overview
 

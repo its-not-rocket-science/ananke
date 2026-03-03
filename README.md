@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–18 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–21 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -111,10 +111,20 @@ English descriptions grounded in real-world benchmarks, a **historical weapons d
 (`src/weapons.ts`) covering ~70 weapons across six eras (Prehistoric through Contemporary)
 with two combat extensions: flexible/chain weapon **shield bypass** (`shieldBypassQ` reduces
 effective blocking coverage for flails and morning stars) and **magazine tracking**
-(`magCapacity` + `shotInterval_s` give magazine firearms per-shot and reload cooldowns), and
-a **combat narrative layer** (`src/narrative.ts`) that converts trace event streams into
+(`magCapacity` + `shotInterval_s` give magazine firearms per-shot and reload cooldowns), a
+**combat narrative layer** (`src/narrative.ts`) that converts trace event streams into
 human-readable combat logs with configurable verbosity, physics-grounded verb selection, and
-injury/outcome summaries.
+injury/outcome summaries, a **downtime and recovery simulation** (`src/downtime.ts`) that
+bridges combat-resolution time (20 Hz) and campaign time (hours to weeks) via a compressed
+1 Hz loop with tiered care levels, resource tracking, and recovery projection, an **arena
+simulation framework** (`src/arena.ts`) providing a declarative scenario DSL, batch trial
+runner, expectation system, and six physics-calibrated built-in scenarios for validating
+simulation realism, and a **character progression system** (`src/progression.ts`) that adds
+the temporal axis to entity attributes: XP/milestone-driven skill advancement using geometric
+thresholds, physical training drift bounded by genetic ceiling, physiologically-grounded
+ageing curves, and permanent injury sequelae.
+
+**1058 tests.** All coverage thresholds met (statements 97.1 %, branches 85.8 %, functions 95.5 %, lines 97.1 %).
 
 See `ROADMAP.md` for the full development plan.
 
@@ -935,6 +945,122 @@ Set an entity's name to `"you"` in `nameMap` for second-person verb conjugation
 
 ---
 
+## Downtime & Recovery simulation (Phase 19)
+
+`src/downtime.ts` bridges the gap between 20 Hz combat and hours-to-weeks campaign time.
+It runs a compressed 1 Hz loop applying the same healing physics as the kernel, suitable
+for computing wound outcomes, resource consumption, and recovery timelines between sessions.
+
+```typescript
+import { stepDowntime, MEDICAL_RESOURCES } from "./src/downtime.js";
+
+const reports = stepDowntime(world, 3600, {
+  treatments: new Map([
+    [1, { careLevel: "first_aid" }],
+    [2, { careLevel: "field_medicine", onsetDelay_s: 120 }],
+  ]),
+  rest: true,
+});
+
+for (const r of reports) {
+  console.log(`Entity ${r.entityId}: died=${r.died}, bleedingStopped=${r.bleedingStopped}`);
+  console.log(`  Fluid loss: ${r.injuryAtStart.fluidLoss} → ${r.injuryAtEnd.fluidLoss}`);
+  console.log(`  Resources used: ${r.totalCostUnits} cost units`);
+  console.log(`  Combat ready in: ${r.combatReadyAt_s}s`);
+}
+```
+
+**Care levels:** `"none"` | `"first_aid"` | `"field_medicine"` | `"hospital"` | `"autodoc"` | `"nanomedicine"`
+
+**Resource catalogue** (`MEDICAL_RESOURCES`): 7 items from field bandage (1 unit) to nanomed dose (2000 units). All items have `costUnits` and `massGrams` for encumbrance and economy integration.
+
+**Calibration:** `q(0.06)` bleedingRate → fatal in ~267 simulated seconds without treatment. First aid stops bleeding in under 60 seconds. Untreated infection fatal within 21 simulated days.
+
+---
+
+## Arena simulation framework (Phase 20)
+
+`src/arena.ts` provides a declarative scenario DSL for batch-running combat trials with statistical expectations. Use it to validate simulation realism, balance archetypes, and author calibration tests.
+
+```typescript
+import { runArena, expectWinRate, expectSurvivalRate, formatArenaReport }
+  from "./src/arena.js";
+import { mkKnight, mkBoxer } from "./src/presets.js";
+
+const scenario = {
+  name: "Knight vs Boxer",
+  combatants: [
+    { id: 1, teamId: 1, factory: () => mkKnight(1, 1, 0, 0) },
+    { id: 2, teamId: 2, factory: () => mkBoxer(2, 2, 1, 0) },
+  ],
+  maxTicks: 400,
+  expectations: [
+    expectWinRate(1, 0.70),           // knight wins ≥ 70% of trials
+    expectSurvivalRate(1, 1, 0.90),   // knight survives ≥ 90%
+  ],
+};
+
+const result = runArena(scenario, 50);
+console.log(formatArenaReport(result));
+```
+
+**Six built-in calibration scenarios** validate core physics:
+`CALIBRATION_ARMED_VS_UNARMED`, `CALIBRATION_UNTREATED_KNIFE_WOUND`,
+`CALIBRATION_FIRST_AID_SAVES_LIVES`, `CALIBRATION_FRACTURE_RECOVERY`,
+`CALIBRATION_INFECTION_UNTREATED`, `CALIBRATION_PLATE_ARMOUR`.
+
+**Recovery integration:** supply `scenario.recovery` to run `stepDowntime` post-combat and get `recoveryStats` (mean days to combat-ready, p90 resource cost, etc.).
+
+---
+
+## Character progression (Phase 21)
+
+`src/progression.ts` adds the temporal axis: how entities improve through training and experience, decline through ageing, and carry permanent marks from injury. No simulation dependencies — safe to use in save-game serialisation and UI layers.
+
+```typescript
+import {
+  createProgressionState, awardXP, advanceSkill,
+  applyTrainingSession, stepAgeing, applyAgeingDelta,
+  deriveSequelae, serialiseProgression,
+} from "./src/progression.js";
+import { buildSkillMap } from "./src/sim/skills.js";
+import { to, q } from "./src/units.js";
+
+// XP and milestones
+const prog = createProgressionState();
+const milestones = awardXP(prog, "meleeCombat", 1, world.tick);  // +1 XP per combat
+for (const m of milestones) {
+  entity.skills = advanceSkill(entity.skills ?? buildSkillMap({}), m.domain, m.delta);
+}
+
+// Physical training (peakForce_N ceiling 3500 N)
+const plan   = { sessions: [], frequency_d: 3/7, ceiling: to.N(3500) };
+const sess   = { attribute: "peakForce_N", intensity_Q: q(0.50), duration_s: 3600 };
+entity.attributes.performance.peakForce_N =
+  applyTrainingSession(entity.attributes.performance.peakForce_N, plan, sess, 3);
+
+// Annual ageing
+const delta = stepAgeing(entity.attributes, entity.ageYears ?? 30);
+applyAgeingDelta(entity.attributes, delta);
+
+// Injury sequelae after a bad fracture
+const seqs = deriveSequelae(entity.injury.byRegion["leftLeg"]!, entity.bodyPlan!);
+for (const s of seqs) prog.sequelae.push({ region: "leftLeg", ...s });
+
+// Persist
+const json = serialiseProgression(prog);  // Map-aware JSON
+```
+
+**Milestone thresholds** grow geometrically (`BASE_XP=20`, `GROWTH_FACTOR=1.80`): milestone 0 at 20 XP, milestone 1 at 36, milestone 2 at 65, milestone 3 at 117… Calibrated so 100 combats (1 XP each) reduce `meleeCombat` reaction time by ~80 ms.
+
+**Training calibration:** 12-week strength programme (3×/week, moderate intensity) raises `peakForce_N` by 150–300 N. Overtraining penalty applies above 5 sessions/week.
+
+**Ageing:** 1 %/year performance decline after 35; +2 ms decision latency per year after 45. Integrating from age 20 to 70 always stays above zero (physically plausible minimum).
+
+**Sequelae types:** `fracture_malunion` (−15 % peak force), `nerve_damage` (−10 % fine control), `scar_tissue` (surface bleed threshold −5 %).
+
+---
+
 ## Project layout
 
 ```
@@ -955,6 +1081,9 @@ src/
   describe.ts       describeCharacter, formatCharacterSheet, formatOneLine — SI→human-readable translation layer (no sim dependencies)
   weapons.ts        Historical weapons database — ~70 weapons across 6 eras (Prehistoric → Contemporary); shieldBypassQ for flexible weapons; magCapacity + shotInterval_s for magazine firearms
   narrative.ts      narrateEvent, buildCombatLog, describeInjuries, describeCombatOutcome — combat narrative layer (no sim dependencies)
+  downtime.ts       stepDowntime(), MEDICAL_RESOURCES — 1 Hz wound recovery bridge (hours-to-weeks scale)
+  arena.ts          runArena(), expectWinRate/SurvivalRate/MeanDuration/Recovery/ResourceCost, formatArenaReport, 6 calibration scenarios
+  progression.ts    createProgressionState(), awardXP(), advanceSkill(), applyTrainingSession(), stepAgeing(), applyAgeingDelta(), deriveSequelae()
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
