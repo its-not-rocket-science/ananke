@@ -74,20 +74,20 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–17 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–18 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
 basics, deterministic AI scaffolding,
 perception/cognition (sensory model, decision latency, surprise mechanics), morale and
-psychological state (fear accumulation, routing, pain blocking), terrain systems (surface
-friction, obstacle/cover grids, elevation, slope direction, dynamic hazard cells, AI
-cover-seeking, cover morale bonus, elevation melee advantage), a physics-grounded skill
-system, a universal data-driven body plan system (humanoid, quadruped, theropod, sauropod,
-avian, vermiform, centaur, octopoid — adding a new species requires only a BodyPlan data
-file and an Archetype baseline, no kernel changes), a full injury and medical simulation
-layer (fractures, infection, permanent damage, natural clotting, fatal fluid loss, and a
-`TreatCommand` system with tiered medical equipment and skill-scaled treatment rates),
+psychological state (fear accumulation, routing, panic variety, leader/banner auras, rally
+mechanic), terrain systems (surface friction, obstacle/cover grids, elevation, slope direction,
+dynamic hazard cells, AI cover-seeking, cover morale bonus, elevation melee advantage), a
+physics-grounded skill system, a universal data-driven body plan system (humanoid, quadruped,
+theropod, sauropod, avian, vermiform, centaur, octopoid — adding a new species requires only a
+BodyPlan data file and an Archetype baseline, no kernel changes), a full injury and medical
+simulation layer (fractures, infection, permanent damage, natural clotting, fatal fluid loss,
+and a `TreatCommand` system with tiered medical equipment and skill-scaled treatment rates),
 environmental physics including blast and fragmentation explosions, fall damage,
 pharmacokinetics with substance interactions (stimulant/haemostatic/anaesthetic/poison
 cross-effects, temperature-dependent metabolism), flash blindness from explosions, ambient
@@ -107,11 +107,14 @@ functions in `src/presets.ts`) validated against real-world biomechanics data by
 statistical scenario test suite, a **character description layer** (`describeCharacter`,
 `formatCharacterSheet`, `formatOneLine` in `src/describe.ts`) that translates SI fixed-point
 attributes into human-readable summaries with tier ratings, labelled comparisons, and plain
-English descriptions grounded in real-world benchmarks, and a **historical weapons database**
+English descriptions grounded in real-world benchmarks, a **historical weapons database**
 (`src/weapons.ts`) covering ~70 weapons across six eras (Prehistoric through Contemporary)
 with two combat extensions: flexible/chain weapon **shield bypass** (`shieldBypassQ` reduces
 effective blocking coverage for flails and morning stars) and **magazine tracking**
-(`magCapacity` + `shotInterval_s` give magazine firearms per-shot and reload cooldowns).
+(`magCapacity` + `shotInterval_s` give magazine firearms per-shot and reload cooldowns), and
+a **combat narrative layer** (`src/narrative.ts`) that converts trace event streams into
+human-readable combat logs with configurable verbosity, physics-grounded verb selection, and
+injury/outcome summaries.
 
 See `ROADMAP.md` for the full development plan.
 
@@ -854,6 +857,84 @@ formatOneLine(desc: CharacterDescription): string
 
 ---
 
+## Combat narrative layer (Phase 18)
+
+`src/narrative.ts` converts raw `TraceEvent` streams into human-readable text. Like
+`src/describe.ts`, it has no simulation dependencies — safe to import from UI code or CLI tools.
+
+```typescript
+import { narrateEvent, buildCombatLog, describeInjuries, describeCombatOutcome }
+  from "./src/narrative.js";
+import { CollectingTrace } from "./src/metrics.js";
+import { ALL_HISTORICAL_MELEE } from "./src/weapons.js";
+
+const tracer = new CollectingTrace();
+for (let i = 0; i < 10 * TICK_HZ; i++) stepWorld(world, cmds, { ...ctx, trace: tracer });
+
+// Build weapon profile lookup for verb selection
+const profiles = new Map(ALL_HISTORICAL_MELEE.map(w => [w.id, w.damage]));
+
+const cfg = {
+  verbosity: "normal" as const,
+  nameMap: new Map([[1, "Sir Roland"], [2, "the orc"]]),
+  weaponProfiles: profiles,
+};
+
+// Per-event narration
+for (const ev of tracer.events) {
+  const line = narrateEvent(ev, cfg);
+  if (line) console.log(line);
+}
+// → "Sir Roland stabs the orc in the torso"
+// → "the orc attacks Sir Roland — parried"
+// → "Sir Roland powerfully stabs the orc in the head"
+// → "the orc is knocked unconscious"
+
+// Batch log
+const log = buildCombatLog(tracer.events, cfg);
+
+// Injury summary
+const orc = world.entities.find(e => e.id === 2)!;
+console.log(describeInjuries(orc.injury));
+// → "Unconscious; Significant blood loss; head fractured"
+
+// Outcome
+const summary = describeCombatOutcome(
+  world.entities.map(e => ({ id: e.id, teamId: e.teamId, injury: e.injury })),
+  200,
+);
+console.log(summary);
+// → "Team 1 wins — Team 2 defeated (200 ticks)"
+```
+
+### Verbosity levels
+
+| Level | What is included |
+|-------|-----------------|
+| `terse` | Landed hits, KO, death, morale route/rally, fractures, blasts — nothing else |
+| `normal` | Adds blocked/parried/shield notes, misses, grapple start/break, weapon bind, treatment |
+| `verbose` | Adds grapple maintenance ticks, capability events |
+
+### Verb selection
+
+Verb is chosen from the weapon's `WeaponDamageProfile` (supplied via `weaponProfiles` config):
+
+| Profile dominant field | Verb |
+|------------------------|------|
+| `penetrationBias ≥ q(0.65)` | stab(s) |
+| `structuralFrac ≥ q(0.50)` | bludgeon(s) |
+| `surfaceFrac ≥ q(0.50)` | slash(es) |
+| Default | strike(s) |
+
+Ranged: `penetrationBias ≥ q(0.80)` → snipe(s); `surfaceFrac ≥ q(0.55)` → blast(s); default → shoot(s).
+
+Energy qualifiers: `< 10J` → "barely grazes"; `≥ 200J` → "powerfully"; `≥ 500J` → "devastatingly".
+
+Set an entity's name to `"you"` in `nameMap` for second-person verb conjugation
+("you strike" rather than "you strikes").
+
+---
+
 ## Project layout
 
 ```
@@ -873,12 +954,13 @@ src/
   model3d.ts        deriveMassDistribution, deriveInertiaTensor, deriveAnimationHints, derivePoseModifiers, deriveGrappleConstraint, extractRigSnapshots — 3D rig integration
   describe.ts       describeCharacter, formatCharacterSheet, formatOneLine — SI→human-readable translation layer (no sim dependencies)
   weapons.ts        Historical weapons database — ~70 weapons across 6 eras (Prehistoric → Contemporary); shieldBypassQ for flexible weapons; magCapacity + shotInterval_s for magazine firearms
+  narrative.ts      narrateEvent, buildCombatLog, describeInjuries, describeCombatOutcome — combat narrative layer (no sim dependencies)
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
     entity.ts           Entity type (all mutable simulation state)
     world.ts            WorldState type
-    kinds.ts            CommandKind, TraceKind, MoveMode, DefenceMode enums
+    kinds.ts            CommandKind, TraceKind, MoveMode, DefenceMode enums (includes MoraleRally)
     body.ts             BodyRegion type, region weights, hit-to-region mapping
     injury.ts           InjuryState, per-region damage, bleeding rate helpers
     medical.ts          MedicalTier, MedicalAction, tier rank/multiplier tables

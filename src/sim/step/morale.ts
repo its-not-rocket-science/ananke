@@ -142,7 +142,9 @@ export function stepMoraleForEntity(
   e.condition.fearQ = fearQ;
 
   // Emit trace when routing state crosses threshold
-  if (nowRouting !== wasRouting) {
+  if (!wasRouting && nowRouting) {
     trace.onEvent({ kind: TraceKinds.MoraleRoute, tick: world.tick, entityId: e.id, fearQ });
+  } else if (wasRouting && !nowRouting) {
+    trace.onEvent({ kind: TraceKinds.MoraleRally, tick: world.tick, entityId: e.id, fearQ }); // Phase 18
   }
 }

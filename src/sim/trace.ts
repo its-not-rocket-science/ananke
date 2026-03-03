@@ -25,6 +25,7 @@ export type TraceEvent =
       tick: number;
       attackerId: number;
       targetId: number;
+      weaponId?: string;             // Phase 18: weapon used; optional for back-compat
       region: string;
       energy_J: number;
       blocked: boolean;
@@ -81,6 +82,7 @@ export type TraceEvent =
       tick: number;
       shooterId: number;
       targetId: number;
+      weaponId?: string;             // Phase 18: weapon used; optional for back-compat
       hit: boolean;
       region?: string;               // only when hit=true
       distance_m: I32;
@@ -89,6 +91,12 @@ export type TraceEvent =
     }
   | {
       kind: typeof TraceKinds.MoraleRoute;    // Phase 5
+      tick: number;
+      entityId: number;
+      fearQ: Q;
+    }
+  | {
+      kind: typeof TraceKinds.MoraleRally;    // Phase 18: entity recovers from routing
       tick: number;
       entityId: number;
       fearQ: Q;

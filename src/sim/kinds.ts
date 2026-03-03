@@ -33,6 +33,7 @@ export const TraceKinds = {
   WeaponBindBreak: "weaponBindBreak", // Phase 2C
   ProjectileHit: "projectileHit",    // Phase 3
   MoraleRoute: "moraleRoute",         // Phase 5
+  MoraleRally: "moraleRally",         // Phase 18
   Fracture: "fracture",               // Phase 9
   TreatmentApplied: "treatmentApplied", // Phase 9
   BlastHit: "blastHit",               // Phase 10

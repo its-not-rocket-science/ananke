@@ -1933,132 +1933,109 @@ New optional fields on `RangedWeapon` and `roundsInMag` on `ActionState`. Behavi
 
 ---
 
-## Phase 18 — Combat Narrative Layer
+## Phase 18 — Combat Narrative Layer *(COMPLETE)*
 
 **Goal**: a pure translation module (`src/narrative.ts`) that converts `TraceEvent` streams
-and entity state into human-readable combat text. The companion to Phase 16's character
-description layer. No simulation dependencies beyond `src/units.ts` and the trace/entity
-types — safe to import from UI or server code.
+into human-readable combat text. The companion to Phase 16's character description layer.
+No simulation dependencies — safe to import from UI or server code.
 
-### Design principles
+### Prior-phase additions (from Phase 17/18 border work)
 
-- **No kernel dependency** — reads `TraceEvent[]` and `Entity` snapshots only; never calls
-  `stepWorld`.
-- **Composable** — each function operates on a single event or entity; the caller decides
-  what to assemble into a log.
-- **Configurable** — verbosity and POV are runtime options, not compile-time variants.
-- **Physics-grounded vocabulary** — severity, verb choice, and anatomical precision all
-  derive from SI values, not arbitrary thresholds.
+- `src/sim/kinds.ts` — `MoraleRally: "moraleRally"` added (was missing; routing end had
+  erroneously re-used `MoraleRoute`)
+- `src/sim/trace.ts` — `weaponId?: string` added to both `Attack` and `ProjectileHit` events
+  (optional for back-compat); `MoraleRally` event type added
+- `src/sim/kernel.ts` — `weaponId: ev.weaponId` now emitted in `Attack` trace; `weaponId: wpn.id`
+  in `ProjectileHit` trace
+- `src/sim/step/morale.ts` — routing-start → `MoraleRoute`; routing-end → `MoraleRally`
+  (previously both used `MoraleRoute`)
 
-### `src/narrative.ts` — API
+### `src/narrative.ts` — implemented API
 
 ```typescript
 export interface NarrativeConfig {
   verbosity: "terse" | "normal" | "verbose";
-  // "terse"   → one clause per event: "John strikes the orc's torso."
-  // "normal"  → two clauses with outcome: "John's longsword carves into the orc's torso; blood wells from the wound."
-  // "verbose" → full sentence with severity, region, and consequence.
-  pov: "second" | "third";
-  // "second"  → "You drive your rapier into…"  (player as attacker)
-  // "third"   → "John drives his rapier into…"
-  nameOf?: (entityId: number) => string;   // defaults to "Entity <id>"
-  weaponNameOf?: (weaponId: string) => string;
+  nameMap?: Map<number, string>;        // entity id → display name; "you" enables 2nd-person verbs
+  weaponProfiles?: Map<string, WeaponDamageProfile>;  // weaponId → profile for verb selection
 }
 
-// Narrate a single trace event. Returns null for events with no narrative (e.g. tick bookkeeping).
-export function narrateEvent(
-  event: TraceEvent,
-  entities: ReadonlyMap<number, Entity>,
-  cfg?: NarrativeConfig,
-): string | null;
-
-// Convert an entire event array into a time-ordered log with tick timestamps.
-export interface CombatLogEntry {
-  tick: number;
-  category: "attack" | "defence" | "grapple" | "ranged" | "morale" | "injury" | "medical";
-  text: string;
+export interface CombatantSummary {
+  id: number; teamId: number; injury: { dead: boolean; consciousness: Q };
 }
-export function buildCombatLog(
-  events: TraceEvent[],
-  entities: ReadonlyMap<number, Entity>,
-  cfg?: NarrativeConfig,
-): CombatLogEntry[];
 
-// Describe the current injury state of an entity in plain text.
-// e.g. "Deep laceration to the left arm, actively bleeding. Right leg fractured."
-export function describeInjuries(entity: Entity, cfg?: NarrativeConfig): string;
+// Single event → string | null (null = omit at this verbosity level)
+export function narrateEvent(ev: TraceEvent, cfg: NarrativeConfig): string | null;
 
-// One-paragraph outcome summary at the end of a combat.
-// e.g. "After 8 seconds of fighting, John collapsed unconscious from blood loss. The orc
-//      sustained a fractured left arm and moderate torso damage but remained standing."
-export function describeCombatOutcome(
-  entities: ReadonlyMap<number, Entity>,
-  participantIds: number[],
-  elapsedTicks: number,
-  cfg?: NarrativeConfig,
-): string;
+// Filter + collect log lines from an event array
+export function buildCombatLog(events: TraceEvent[], cfg: NarrativeConfig): string[];
+
+// Injury state → short descriptive phrase
+export function describeInjuries(injury: InjuryState): string;
+
+// Per-team outcome summary
+export function describeCombatOutcome(combatants: CombatantSummary[], tickCount?: number): string;
 ```
 
-### Vocabulary design
+### Verbosity matrix
 
-**Weapon category → verb set** (derived from `Weapon.damage` profile):
-- High `penetrationBias` (> q(0.60)): *pierces / drives through / punches into / skewers*
-- High `surfaceFrac` (> q(0.50)): *slashes / cuts / carves / hacks*
-- High `structuralFrac` (> q(0.40)): *smashes / shatters / hammers / bludgeons*
-- High `bleedFactor` + medium fracs: *bites into / tears / rakes*
-- `shieldBypassQ` > 0: *loops around / wraps past / coils through*
+| Event | terse | normal | verbose |
+|-------|-------|--------|---------|
+| Attack hit | ✓ | ✓ | ✓ |
+| Attack blocked/parried/shield | — | ✓ | ✓ |
+| ProjectileHit hit | ✓ | ✓ | ✓ |
+| ProjectileHit miss/suppress | — | ✓ | ✓ |
+| KO, Death | ✓ | ✓ | ✓ |
+| MoraleRoute, MoraleRally | ✓ | ✓ | ✓ |
+| Fracture, BlastHit | ✓ | ✓ | ✓ |
+| Grapple start/break | — | ✓ | ✓ |
+| Grapple tick | — | — | ✓ |
+| WeaponBind/Break | — | ✓ | ✓ |
+| Treatment | — | — | ✓ |
+| Capability events | — | — | ✓ |
 
-**Energy magnitude → severity tier** (relative to target `mass_kg / SCALE.kg`):
-| Energy (J) | Tier | Qualifiers |
-|---|---|---|
-| < 10 | grazing | "barely catches", "glances off", "grazes" |
-| 10–50 | light | "catches", "strikes", "clips" |
-| 50–200 | moderate | "drives into", "lands solidly on", "bites deep into" |
-| 200–500 | heavy | "hammers", "cleaves into", "devastating blow to" |
-| > 500 | extreme | "catastrophic", "shattering", "ruinous" |
+### Verb selection
 
-**Region → anatomical descriptor** (side + region → specific noun):
-- head → "skull / temple / jaw / cranium"
-- torso → "chest / ribs / abdomen / flank"
-- left/right arm → "left/right shoulder / upper arm / forearm"
-- left/right leg → "left/right thigh / knee / shin"
+Derived from `WeaponDamageProfile` (supplied via `weaponProfiles` map; falls back to `"strike"`):
 
-**Injury consequence phrases** (appended in normal/verbose modes):
-- `bleedingRate` newly > 0: *"blood wells from the wound"* / *"a serious bleed opens"*
-- `fractured` newly true: *"the bone gives way with a sickening crack"*
-- `consciousness` newly < q(0.50): *"they reel, vision dimming"*
-- `dead` newly true: *"they collapse and do not rise"*
-- `blocked` true: *"the shield catches the blow"* / *"turned aside on the buckler"*
-- `parried` true: *"the blade is deflected"* / *"knocked wide on the parry"*
+| Condition | Melee verb | Ranged verb |
+|-----------|-----------|------------|
+| `penetrationBias ≥ q(0.65)` | stab | — |
+| `penetrationBias ≥ q(0.80)` | — | snipe |
+| `structuralFrac ≥ q(0.50)` | bludgeon | — |
+| `surfaceFrac ≥ q(0.50)` | slash | — |
+| `surfaceFrac ≥ q(0.55)` | — | blast |
+| Default | strike | shoot |
 
-**Grapple narration** — position-aware:
-- Take-down: *"John drives the orc to the ground"* (standing → prone)
-- Pin: *"John pins the orc beneath him"* (prone → pinned)
-- Choke: *"John's arm locks around the orc's throat"*
-- Throw: *"John hurls the orc across the ground"*
+Energy qualifiers: `< 10J` → "barely grazes {target}"; `≥ 200J` → "powerfully {verb}";
+`≥ 500J` → "devastatingly {verb}".
+
+Second-person support: set `nameMap.get(id) === "you"` for bare-infinitive conjugation
+("you strike" instead of "you strikes").
 
 ### Files
 
 | File | Description |
 |------|-------------|
 | `src/narrative.ts` | Pure translation module; no kernel deps |
-| `test/narrative.test.ts` | ~30 tests: verb selection, severity tiers, log assembly, injury description, outcome summary |
+| `test/narrative.test.ts` | 56 tests: verb selection, severity tiers, region phrasing, all trace event kinds, log assembly, injury description, outcome summary |
 
-### Tests (~30)
+### Tests
 
-- **Verb selection (8)**: rapier hit → thrust verb; axe hit → slash verb; mace hit → blunt verb;
-  flail hit (shieldBypassQ > 0) → wrap verb; blocked → shield phrase; parried → deflect phrase;
-  ranged hit → appropriate verb; grapple take-down → positional phrase
-- **Severity tiers (6)**: energy 5J → grazing; 30J → light; 120J → moderate; 350J → heavy;
-  600J → extreme; scaled consistently across weapon types
-- **Injury consequence phrases (5)**: bleeding onset → bleeding phrase present; fracture →
-  crack phrase present; consciousness below threshold → dazed phrase present; death →
-  collapse phrase present; no new consequence → phrase absent
-- **Log assembly (5)**: `buildCombatLog` entries in tick order; categories correctly tagged;
-  terse config omits consequence phrases; verbose adds them; null returned for non-narrative events
-- **Injury description (3)**: multiple active regions listed; fractured regions named; clean
-  entity produces empty/healthy string
-- **Outcome summary (3)**: survivor name present; KO reason mentioned; elapsed time in seconds
+56 tests across seven groups:
+- **Attack blocked/parried/shield (6)**: normal shows phrase, terse returns null for each
+- **Attack hit quality (4)**: armoured note, barely/powerfully/devastatingly qualifiers
+- **Verb selection (5)**: penetration→stab, structural→bludgeon, surface→slash, no profile→strike, 2nd-person bare infinitive
+- **Region phrasing (3)**: head/leg/custom segment
+- **ProjectileHit (8)**: name inclusion, distance, region, suppress/miss in terse vs normal, snipe verb
+- **KO/Death/Morale (6)**: each event kind + custom names + fallback names
+- **Grapple (5)**: start in normal/terse, tick in normal/verbose, break
+- **Other events (7)**: WeaponBind terse/normal, BindBreak reason, Fracture, BlastHit, TickStart→null
+- **buildCombatLog (4)**: entry count, skip nulls, ordering, terse < normal length
+- **describeInjuries (5)**: fatal, healthy, hemorrhage, unconscious, fractured region
+- **describeCombatOutcome (4)**: winner named, all down, standing counts, tickCount suffix
+
+890 tests after Phase 17; **946 tests after Phase 18**. All coverage thresholds met
+(statements 97.68%, branches 86.54%, functions 95.4%, lines 97.68%).
 
 ---
 

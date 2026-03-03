@@ -1,11 +1,12 @@
 // tools/run-demo.ts  — Ananke engine demo
 //
-// Runs five scenarios:
+// Runs six scenarios:
 //   1. Melee brawl (2 vs 2) — AI-driven commands, morale, weapon binds, stamina
 //   2. Ranged engagement — archer vs two swordsmen approaching through mud
 //   3. Skill showcase — expert vs novice swordsman (Phase 7)
 //   4. Field medicine — treated vs untreated soldier (Phase 9)
 //   5. Technology spectrum — era validation, exoskeleton combat, nanomedicine gate (Phase 11)
+//   6. Combat narrative  — human-readable log, injury descriptions, outcome summary (Phase 18)
 
 import { q, to, SCALE, type Q } from "../src/units.js";
 import type { KernelContext } from "../src/sim/context";
@@ -37,6 +38,13 @@ import {
 import { buildTerrainGrid } from "../src/sim/terrain.js";
 import { buildSkillMap, combineSkillLevels, defaultSkillLevel } from "../src/sim/skills.js";
 import type { WorldState } from "../src/sim/world.js";
+import { CollectingTrace } from "../src/metrics.js";
+import {
+  buildCombatLog,
+  describeInjuries,
+  describeCombatOutcome,
+  type NarrativeConfig,
+} from "../src/narrative.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -637,6 +645,118 @@ function scenarioTech(): void {
   runGateTest("nanomedicine  (DeepSpace, gate OFF)",  "nanomedicine", TechEra.DeepSpace);
 }
 
+// ─── scenario 6: combat narrative (Phase 18) ─────────────────────────────────
+//
+// Same 2v2 melee brawl as scenario 1, but output is rendered through the
+// narrative layer instead of raw trace numbers.
+//
+// What the output shows:
+//   terse log   — only the decisive moments (hits, KOs, deaths, fractures)
+//   normal log  — adds blocked/parried/misses/grapple events  (much more text)
+//   injuries    — English-language injury summary per entity at end
+//   outcome     — one-line fight result with tick count
+
+function scenarioNarrative(): void {
+  const club  = STARTER_WEAPONS.find(w => w.id === "wpn_club")!;
+  const sword = STARTER_WEAPONS.find(w => w.id === "wpn_longsword")
+             ?? STARTER_WEAPONS[1]!;
+
+  const a1 = mkHumanoidEntity(1, 1, Math.trunc(0.0 * M), 0);
+  const a2 = mkHumanoidEntity(2, 1, Math.trunc(0.8 * M), 0);
+  a1.loadout = { items: [sword, STARTER_ARMOUR[0]!] };
+  a2.loadout = { items: [club,  STARTER_SHIELDS[0]!] };
+
+  const b1 = mkHumanoidEntity(3, 2, Math.trunc(4.0 * M), 0);
+  const b2 = mkHumanoidEntity(4, 2, Math.trunc(4.8 * M), 0);
+  b1.loadout = { items: [sword] };
+  b2.loadout = { items: [club, STARTER_ARMOUR[1]!] };
+
+  const world = mkWorld(42, [a1, a2, b1, b2]);
+
+  // Build weapon profiles map for verb selection in narrative
+  const allWeapons = [...STARTER_WEAPONS, ...STARTER_RANGED_WEAPONS];
+  const weaponProfiles = new Map(
+    allWeapons
+      .filter(w => (w as any).damage)
+      .map(w => [w.id, (w as any).damage]),
+  );
+
+  // Name map — entity 1 is "you" for second-person demonstration
+  const nameMap = new Map([
+    [1, "you"],
+    [2, "your ally"],
+    [3, "the enemy"],
+    [4, "the brute"],
+  ]);
+
+  const collecting = new CollectingTrace();
+  let lastTick = 0;
+
+  const cellSize = Math.trunc(4 * M);
+  for (let tick = 0; tick < 300; tick++) {
+    const index   = buildWorldIndex(world);
+    const spatial = buildSpatialIndex(world, cellSize);
+
+    const cmds: CommandMap = new Map();
+    for (const e of world.entities) {
+      if (e.injury.dead) continue;
+      const policy = e.teamId === 1 ? AI_PRESETS["lineInfantry"]! : AI_PRESETS["skirmisher"]!;
+      const entityCmds = decideCommandsForEntity(world, index, spatial, e, policy);
+      if (entityCmds.length > 0) cmds.set(e.id, [...entityCmds]);
+    }
+
+    stepWorld(world, cmds, {
+      tractionCoeff: q(0.80) as Q,
+      tuning: TUNING.tactical,
+      trace: collecting,
+    });
+
+    lastTick = tick;
+    if (allDead(world, 1) || allDead(world, 2)) break;
+  }
+
+  const events = collecting.events;
+
+  console.log(`\n${"═".repeat(60)}`);
+  console.log("  Combat Narrative (Phase 18) — same 2v2 brawl, human-readable");
+  console.log(`  seed=42  entities: you(1/t1), your ally(2/t1), 2× enemies`);
+  console.log(`${"═".repeat(60)}`);
+
+  // ── Terse log ────────────────────────────────────────────────────────────────
+  console.log("\n── Terse log (hits, KOs, deaths, fractures only) ──");
+  const terseCfg: NarrativeConfig = { verbosity: "terse", nameMap, weaponProfiles };
+  const terseLines = buildCombatLog(events, terseCfg);
+  for (const line of terseLines) console.log(`  ${line}`);
+  if (terseLines.length === 0) console.log("  (no notable events)");
+
+  // ── Normal log ───────────────────────────────────────────────────────────────
+  console.log("\n── Normal log (adds blocks, parries, misses, grapple) ──");
+  const normalCfg: NarrativeConfig = { verbosity: "normal", nameMap, weaponProfiles };
+  const normalLines = buildCombatLog(events, normalCfg);
+  // Print first 20 lines to keep output manageable
+  const shown = normalLines.slice(0, 20);
+  for (const line of shown) console.log(`  ${line}`);
+  if (normalLines.length > 20) {
+    console.log(`  … (${normalLines.length - 20} more lines at normal verbosity)`);
+  }
+
+  // ── Injury summaries ─────────────────────────────────────────────────────────
+  console.log("\n── Injury summaries ──");
+  for (const e of world.entities) {
+    const name = nameMap.get(e.id) ?? `combatant ${e.id}`;
+    console.log(`  ${name}: ${describeInjuries(e.injury)}`);
+  }
+
+  // ── Outcome ──────────────────────────────────────────────────────────────────
+  console.log("\n── Outcome ──");
+  const combatants = world.entities.map(e => ({
+    id:     e.id,
+    teamId: e.teamId,
+    injury: { dead: e.injury.dead, consciousness: e.injury.consciousness },
+  }));
+  console.log(`  ${describeCombatOutcome(combatants, lastTick + 1)}`);
+}
+
 // ─── main ─────────────────────────────────────────────────────────────────────
 
 scenarioMelee();
@@ -644,3 +764,4 @@ scenarioRanged();
 scenarioSkills();
 scenarioMedical();
 scenarioTech();
+scenarioNarrative();

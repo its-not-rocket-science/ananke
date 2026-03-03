@@ -360,6 +360,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
       tick: world.tick,
       attackerId: ev.attackerId,
       targetId: ev.targetId,
+      weaponId: ev.weaponId,        // Phase 18
       region: ev.region,
       energy_J: ev.energy_J,
       blocked: ev.blocked,
@@ -1294,6 +1295,7 @@ function resolveShoot(
     tick: world.tick,
     shooterId: shooter.id,
     targetId: target.id,
+    weaponId: wpn.id,               // Phase 18
     hit,
     ...(hitRegion !== undefined ? { region: hitRegion } : {}),
     distance_m: dist_m,
