@@ -1930,3 +1930,586 @@ New optional fields on `RangedWeapon` and `roundsInMag` on `ActionState`. Behavi
 
 858 tests after Phase 16; **890 tests after Phase 17**. All coverage thresholds met
 (statements 97.78%, branches 86.53%, functions 95.18%, lines 97.78%).
+
+---
+
+## Phase 18 — Combat Narrative Layer
+
+**Goal**: a pure translation module (`src/narrative.ts`) that converts `TraceEvent` streams
+and entity state into human-readable combat text. The companion to Phase 16's character
+description layer. No simulation dependencies beyond `src/units.ts` and the trace/entity
+types — safe to import from UI or server code.
+
+### Design principles
+
+- **No kernel dependency** — reads `TraceEvent[]` and `Entity` snapshots only; never calls
+  `stepWorld`.
+- **Composable** — each function operates on a single event or entity; the caller decides
+  what to assemble into a log.
+- **Configurable** — verbosity and POV are runtime options, not compile-time variants.
+- **Physics-grounded vocabulary** — severity, verb choice, and anatomical precision all
+  derive from SI values, not arbitrary thresholds.
+
+### `src/narrative.ts` — API
+
+```typescript
+export interface NarrativeConfig {
+  verbosity: "terse" | "normal" | "verbose";
+  // "terse"   → one clause per event: "John strikes the orc's torso."
+  // "normal"  → two clauses with outcome: "John's longsword carves into the orc's torso; blood wells from the wound."
+  // "verbose" → full sentence with severity, region, and consequence.
+  pov: "second" | "third";
+  // "second"  → "You drive your rapier into…"  (player as attacker)
+  // "third"   → "John drives his rapier into…"
+  nameOf?: (entityId: number) => string;   // defaults to "Entity <id>"
+  weaponNameOf?: (weaponId: string) => string;
+}
+
+// Narrate a single trace event. Returns null for events with no narrative (e.g. tick bookkeeping).
+export function narrateEvent(
+  event: TraceEvent,
+  entities: ReadonlyMap<number, Entity>,
+  cfg?: NarrativeConfig,
+): string | null;
+
+// Convert an entire event array into a time-ordered log with tick timestamps.
+export interface CombatLogEntry {
+  tick: number;
+  category: "attack" | "defence" | "grapple" | "ranged" | "morale" | "injury" | "medical";
+  text: string;
+}
+export function buildCombatLog(
+  events: TraceEvent[],
+  entities: ReadonlyMap<number, Entity>,
+  cfg?: NarrativeConfig,
+): CombatLogEntry[];
+
+// Describe the current injury state of an entity in plain text.
+// e.g. "Deep laceration to the left arm, actively bleeding. Right leg fractured."
+export function describeInjuries(entity: Entity, cfg?: NarrativeConfig): string;
+
+// One-paragraph outcome summary at the end of a combat.
+// e.g. "After 8 seconds of fighting, John collapsed unconscious from blood loss. The orc
+//      sustained a fractured left arm and moderate torso damage but remained standing."
+export function describeCombatOutcome(
+  entities: ReadonlyMap<number, Entity>,
+  participantIds: number[],
+  elapsedTicks: number,
+  cfg?: NarrativeConfig,
+): string;
+```
+
+### Vocabulary design
+
+**Weapon category → verb set** (derived from `Weapon.damage` profile):
+- High `penetrationBias` (> q(0.60)): *pierces / drives through / punches into / skewers*
+- High `surfaceFrac` (> q(0.50)): *slashes / cuts / carves / hacks*
+- High `structuralFrac` (> q(0.40)): *smashes / shatters / hammers / bludgeons*
+- High `bleedFactor` + medium fracs: *bites into / tears / rakes*
+- `shieldBypassQ` > 0: *loops around / wraps past / coils through*
+
+**Energy magnitude → severity tier** (relative to target `mass_kg / SCALE.kg`):
+| Energy (J) | Tier | Qualifiers |
+|---|---|---|
+| < 10 | grazing | "barely catches", "glances off", "grazes" |
+| 10–50 | light | "catches", "strikes", "clips" |
+| 50–200 | moderate | "drives into", "lands solidly on", "bites deep into" |
+| 200–500 | heavy | "hammers", "cleaves into", "devastating blow to" |
+| > 500 | extreme | "catastrophic", "shattering", "ruinous" |
+
+**Region → anatomical descriptor** (side + region → specific noun):
+- head → "skull / temple / jaw / cranium"
+- torso → "chest / ribs / abdomen / flank"
+- left/right arm → "left/right shoulder / upper arm / forearm"
+- left/right leg → "left/right thigh / knee / shin"
+
+**Injury consequence phrases** (appended in normal/verbose modes):
+- `bleedingRate` newly > 0: *"blood wells from the wound"* / *"a serious bleed opens"*
+- `fractured` newly true: *"the bone gives way with a sickening crack"*
+- `consciousness` newly < q(0.50): *"they reel, vision dimming"*
+- `dead` newly true: *"they collapse and do not rise"*
+- `blocked` true: *"the shield catches the blow"* / *"turned aside on the buckler"*
+- `parried` true: *"the blade is deflected"* / *"knocked wide on the parry"*
+
+**Grapple narration** — position-aware:
+- Take-down: *"John drives the orc to the ground"* (standing → prone)
+- Pin: *"John pins the orc beneath him"* (prone → pinned)
+- Choke: *"John's arm locks around the orc's throat"*
+- Throw: *"John hurls the orc across the ground"*
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/narrative.ts` | Pure translation module; no kernel deps |
+| `test/narrative.test.ts` | ~30 tests: verb selection, severity tiers, log assembly, injury description, outcome summary |
+
+### Tests (~30)
+
+- **Verb selection (8)**: rapier hit → thrust verb; axe hit → slash verb; mace hit → blunt verb;
+  flail hit (shieldBypassQ > 0) → wrap verb; blocked → shield phrase; parried → deflect phrase;
+  ranged hit → appropriate verb; grapple take-down → positional phrase
+- **Severity tiers (6)**: energy 5J → grazing; 30J → light; 120J → moderate; 350J → heavy;
+  600J → extreme; scaled consistently across weapon types
+- **Injury consequence phrases (5)**: bleeding onset → bleeding phrase present; fracture →
+  crack phrase present; consciousness below threshold → dazed phrase present; death →
+  collapse phrase present; no new consequence → phrase absent
+- **Log assembly (5)**: `buildCombatLog` entries in tick order; categories correctly tagged;
+  terse config omits consequence phrases; verbose adds them; null returned for non-narrative events
+- **Injury description (3)**: multiple active regions listed; fractured regions named; clean
+  entity produces empty/healthy string
+- **Outcome summary (3)**: survivor name present; KO reason mentioned; elapsed time in seconds
+
+---
+
+## Phase 19 — Downtime & Recovery Simulation
+
+**Goal**: a time-scale bridge between the 20 Hz combat kernel and the days-to-weeks timescale
+of wound recovery. `stepDowntime` re-uses the existing injury, clotting, substance, and
+medical treatment systems at a compressed time scale without running the full kernel loop.
+
+### Design principles
+
+- **No new physics** — all healing rates, clotting curves, infection progression, and substance
+  metabolism are the same values already in the kernel. Only the time scale changes.
+- **Treatment schedule** — caller specifies what medical actions occur and when; the function
+  applies them at the right simulated times.
+- **Resource tracking** — each treatment action consumes items from a `MedicalInventory`; the
+  function reports what was used and what it cost.
+- **Recovery projection** — the report includes a data-driven estimate of time to full
+  combat-readiness based on injury state and care level.
+
+### Medical resource model
+
+```typescript
+export interface MedicalResource {
+  id: string;
+  name: string;
+  tier: MedicalTier;         // bandage | surgicalKit | autodoc | nanomedicine
+  costUnits: number;         // abstract value (host maps to gold/credits/etc.)
+  massGrams: number;         // for encumbrance tracking
+}
+
+export const MEDICAL_RESOURCES: MedicalResource[] = [
+  { id: "bandage",         name: "Field bandage",      tier: "bandage",     costUnits: 1,   massGrams: 50   },
+  { id: "suture_kit",      name: "Suture kit",         tier: "bandage",     costUnits: 8,   massGrams: 100  },
+  { id: "surgical_kit",    name: "Surgical kit",       tier: "surgicalKit", costUnits: 60,  massGrams: 2000 },
+  { id: "antibiotic_dose", name: "Antibiotic dose",    tier: "surgicalKit", costUnits: 15,  massGrams: 50   },
+  { id: "iv_fluid_bag",    name: "IV fluid bag",       tier: "autodoc",     costUnits: 25,  massGrams: 500  },
+  { id: "autodoc_pack",    name: "Autodoc consumable", tier: "autodoc",     costUnits: 250, massGrams: 500  },
+  { id: "nanomed_dose",    name: "Nanomed dose",       tier: "nanomedicine",costUnits: 2000,massGrams: 50   },
+];
+```
+
+### `src/downtime.ts` — API
+
+```typescript
+// Preset care levels: what treatment is available and applied automatically.
+export type CareLevel =
+  | "none"          // natural clotting only; no intervention
+  | "first_aid"     // bandage to each bleeding region as soon as possible
+  | "field_medicine"// first_aid + surgical kit for fractures + antibiotics for infection
+  | "hospital"      // field_medicine + IV fluid replacement for shock/fluid loss
+  | "autodoc"       // all of the above at maximum tier + nanomedicine
+
+export interface TreatmentSchedule {
+  careLevel: CareLevel;
+  // Optional: override when first treatment can be applied (seconds post-combat; 0 = immediate)
+  onsetDelay_s?: number;
+  // Optional: explicit item inventory; if omitted, assume unlimited supply
+  inventory?: Map<string, number>;  // resourceId → count available
+}
+
+export interface DowntimeConfig {
+  treatments: Map<number, TreatmentSchedule>;  // entityId → schedule
+  ambientTemperature_Q?: Q;
+  rest: boolean;                               // entities resting (recovery rate × 1.5)
+}
+
+export interface ResourceUsage {
+  resourceId: string;
+  name: string;
+  count: number;
+  totalCost: number;
+}
+
+export interface EntityRecoveryReport {
+  entityId: number;
+  elapsedSeconds: number;
+  // Injury snapshots
+  injuryAtStart: InjurySummary;
+  injuryAtEnd: InjurySummary;
+  // Outcomes
+  died: boolean;
+  bleedingStopped: boolean;    // all bleedingRates reached 0
+  infectionCleared: boolean;
+  fracturesSet: boolean;       // at least partially repaired
+  combatReadyAt_s: number | null;  // projected seconds to resume light activity (null if fatal)
+  fullRecoveryAt_s: number | null; // projected seconds to full structural recovery
+  // Resource cost
+  resourcesUsed: ResourceUsage[];
+  totalCostUnits: number;
+  // Narrative (if narrative module is present)
+  log: Array<{ second: number; text: string }>;
+}
+
+export function stepDowntime(
+  world: WorldState,
+  elapsedSeconds: number,
+  config: DowntimeConfig,
+): EntityRecoveryReport[];
+```
+
+### Implementation approach
+
+`stepDowntime` runs a compressed inner loop:
+
+1. Divide `elapsedSeconds` into 1-second slices (not 1/20-second ticks).
+2. Each slice: apply natural clotting (`bleedingRate × clotRate`), infection progression,
+   substance metabolism — the same rate constants as the kernel but at 1 Hz.
+3. Apply scheduled treatments at the appropriate second (bandage on onset, antibiotics on
+   second day if infection present, etc.).
+4. Track resource consumption from the `inventory` map.
+5. Project forward: once all rates are known, estimate remaining time to zero-bleed and
+   zero-structural-damage thresholds.
+
+The "1 Hz slice" is the key trade-off: the same physics at 1/20th the resolution is accurate
+enough for hour-to-week scale recovery without requiring full kernel passes.
+
+### Real-world calibration targets
+
+These are the ground-truth expectations the function's output should approximate:
+
+| Scenario | Expected outcome |
+|---|---|
+| Superficial cut, no treatment | Bleeding stops naturally in 5–15 min; healed in 3–7 days |
+| Deep laceration, no treatment | Bleeding may not stop; fatal in 30–90 min in 40–60% of cases (historical data) |
+| Deep laceration, immediate first aid | Bleeding stops within 5 min; combat-ready in 7–14 days |
+| Long bone fracture, no setting | Malunion; −30% mobility permanently in affected limb |
+| Long bone fracture, surgical setting | Combat-ready in 6–10 weeks |
+| Infection (untreated) | Sepsis onset in 3–7 days; fatal in 7–21 days |
+| Infection + antibiotics (within 24 h) | Clears in 5–10 days; no permanent damage |
+| Severe fluid loss (> 0.60), no treatment | Fatal within 30–60 min |
+| Severe fluid loss, IV fluids | Stabilised in 30–60 min; recovery in 2–4 weeks |
+
+These targets are encoded as `DowntimeExpectation` constants (see Phase 20) and verified by
+the arena calibration suite.
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/downtime.ts` | Time-scale bridge; no kernel import beyond types and healing rate constants |
+| `test/downtime.test.ts` | ~25 tests: care level outcomes, resource counting, projection accuracy, calibration targets |
+
+### Tests (~25)
+
+- **Care level outcomes (8)**: `none` → bleeding may not stop; `first_aid` → bleeding stops
+  within 5 min simulated; `field_medicine` → fractures set; `hospital` → fluid loss recovered;
+  `autodoc` → all conditions resolved fastest; treatment delayed by onset_delay_s; inventory
+  exhaustion handled gracefully; rest flag accelerates recovery
+- **Resource tracking (5)**: bandage consumed per bleeding region; surgical kit consumed once per
+  fracture treatment; antibiotics consumed on infection detection; running out of inventory
+  degrades to lower care level; total cost sum is correct
+- **Recovery projection (5)**: combat-ready estimate within ±20% of actual simulated time for
+  moderate wounds; null returned for fatal trajectory; projection consistent across multiple
+  calls on same wound state; full-recovery projection > combat-ready projection; fractures
+  add weeks to full recovery
+- **Calibration anchors (7)**: deep cut + no treatment → ≥40% fatal in 60 min simulated;
+  deep cut + immediate first_aid → ≥90% survive 60 min; fracture + field_medicine → combat-ready
+  in 6–12 weeks; infection + antibiotics within 24 h → clears in ≤10 days; untreated infection
+  → fatal in ≤21 days; severe fluid loss + none → fatal in ≤60 min; severe fluid loss +
+  hospital → stabilised in ≤60 min
+
+---
+
+## Phase 20 — Arena Simulation Framework
+
+**Goal**: a declarative scenario system that makes it easy to define a fight (or a fight +
+recovery), run it statistically over many seeds, validate outcomes against expectations, and
+produce both machine-readable summaries and human-readable reports. Integrates Phase 18
+(narrative) and Phase 19 (downtime) into a single ergonomic tool.
+
+### Design goals
+
+- **Replace boilerplate** — the 50-seed sweep pattern currently repeated manually in
+  `test/scenarios.test.ts` becomes a one-call API.
+- **Encode real-world calibration** — built-in `ArenaCalibration` constants encode documented
+  combat and medical outcomes; host applications can verify their scenario results against
+  published data.
+- **Full lifecycle** — a scenario covers combat, immediate triage, recovery, and cost in one
+  pass.
+- **Composable output** — `ArenaResult` is a plain data object; narrative output is a separate
+  formatting step.
+
+### `src/arena.ts` — API
+
+```typescript
+// ── Scenario definition ──────────────────────────────────────────────────────
+
+export interface ArenaCombatant {
+  id: number;
+  teamId: number;
+  archetype: Archetype;
+  seed?: number;             // if omitted, derived from trial seed + id
+  loadout: Loadout;
+  skills?: SkillMap;
+  position_m: Vec3;
+  aiPolicy?: AIPolicy;
+}
+
+export interface ArenaScenario {
+  name: string;
+  description?: string;
+  combatants: ArenaCombatant[];
+  terrain?: {
+    terrainGrid?: TerrainGrid;
+    obstacleGrid?: ObstacleGrid;
+    elevationGrid?: ElevationGrid;
+    hazardGrid?: HazardGrid;
+    cellSize_m?: number;
+  };
+  maxTicks?: number;         // per-trial timeout (default: 30 s × TICK_HZ = 600 ticks)
+  // Post-combat recovery phase
+  recovery?: {
+    careLevel: CareLevel;                          // applies to all combatants
+    careByTeam?: Map<number, CareLevel>;           // override per team (victors may get better care)
+    recoveryHours: number;                         // how many hours of downtime to simulate
+    inventory?: Map<string, number>;               // shared item pool across all combatants
+  };
+  // Statistical expectations — checked against aggregate results
+  expectations?: ArenaExpectation[];
+}
+
+// ── Expectations ────────────────────────────────────────────────────────────
+
+export interface ArenaExpectation {
+  description: string;
+  // Receives aggregate result; return true if expectation is met.
+  check: (result: ArenaResult) => boolean;
+}
+
+// Convenience builders:
+export function expectWinRate(teamId: number, min: number, max?: number): ArenaExpectation;
+// e.g. expectWinRate(1, 0.55) → "team 1 wins at least 55% of trials"
+
+export function expectSurvivalRate(entityId: number, min: number): ArenaExpectation;
+// e.g. expectSurvivalRate(1, 0.80) → "entity 1 alive at end in ≥ 80% of trials"
+
+export function expectMeanDuration(minSeconds: number, maxSeconds: number): ArenaExpectation;
+// e.g. expectMeanDuration(5, 30) → "average fight lasts 5–30 s"
+
+export function expectRecovery(entityId: number, maxDays: number, careLevel: CareLevel): ArenaExpectation;
+// e.g. expectRecovery(1, 14, "first_aid") → "entity 1 combat-ready within 14 days with first aid"
+
+export function expectResourceCost(teamId: number, maxCostUnits: number): ArenaExpectation;
+// e.g. expectResourceCost(2, 100) → "total medical resource cost for team 2 ≤ 100 units"
+
+// ── Per-trial and aggregate results ─────────────────────────────────────────
+
+export interface InjurySummary {
+  entityId: number;
+  dead: boolean;
+  unconscious: boolean;
+  consciousness: number;            // 0.0–1.0
+  fluidLoss: number;
+  shock: number;
+  activeBleedingRegions: string[];
+  fracturedRegions: string[];
+  infectedRegions: string[];
+  maxStructuralDamage: number;      // 0.0–1.0 across all regions
+}
+
+export interface RecoveryOutcome {
+  entityId: number;
+  died: boolean;
+  combatReadyAt_s: number | null;
+  fullRecoveryAt_s: number | null;
+  resourcesUsed: ResourceUsage[];
+  totalCostUnits: number;
+}
+
+export interface ArenaTrialResult {
+  trialIndex: number;
+  seed: number;
+  ticks: number;                    // combat ticks elapsed
+  outcome: "team1_wins" | "team2_wins" | "draw" | "timeout";
+  survivors: number[];              // entity ids still alive at end of combat
+  injuries: InjurySummary[];
+  recoveryOutcomes?: RecoveryOutcome[];   // present if scenario.recovery defined
+  combatLog?: CombatLogEntry[];          // present if narrative config supplied to runArena
+}
+
+export interface ArenaResult {
+  scenario: ArenaScenario;
+  trials: number;
+  // Per-trial data
+  trialResults: ArenaTrialResult[];
+  // Aggregate statistics
+  winRateByTeam: Map<number, number>;
+  drawRate: number;
+  timeoutRate: number;
+  meanCombatDuration_s: number;
+  p50CombatDuration_s: number;
+  survivalRateByEntity: Map<number, number>;
+  meanTTI_s: Map<number, number>;          // mean time to incapacitation per entity
+  injuryDistribution: {
+    entityId: number;
+    meanFluidLoss: number;
+    fractureProbability: number;
+    deathProbability: number;
+  }[];
+  // Recovery aggregate (if scenario.recovery defined)
+  recoveryStats?: {
+    entityId: number;
+    survivalRatePostRecovery: number;
+    meanCombatReadyDays: number | null;
+    meanFullRecoveryDays: number | null;
+    meanResourceCostUnits: number;
+    p90ResourceCostUnits: number;
+  }[];
+  // Expectation results
+  expectationResults: Array<{
+    description: string;
+    passed: boolean;
+    detail?: string;    // e.g. "actual win rate: 0.72, expected ≥ 0.55"
+  }>;
+}
+
+// ── Runner ───────────────────────────────────────────────────────────────────
+
+export function runArena(
+  scenario: ArenaScenario,
+  trials: number,
+  options?: {
+    narrativeCfg?: NarrativeConfig;  // include combat log in each trial result
+    ctx?: KernelContext;
+    seedOffset?: number;             // shift seed range (default 0)
+  },
+): ArenaResult;
+
+// ── Reporting ────────────────────────────────────────────────────────────────
+
+// Machine-readable summary (JSON-safe)
+export function summariseArena(result: ArenaResult): object;
+
+// Human-readable statistical report
+export function formatArenaReport(result: ArenaResult): string;
+
+// Full narrative of the median-duration trial (representative fight)
+export function narrateRepresentativeTrial(
+  result: ArenaResult,
+  cfg?: NarrativeConfig,
+): string;
+```
+
+### Built-in calibration scenarios
+
+Pre-built `ArenaScenario` constants ground the system in real-world data. Running
+`runArena(CALIBRATION_X, 50)` should always pass its embedded expectations.
+
+```typescript
+export const CALIBRATION_ARMED_VS_UNARMED: ArenaScenario;
+// Armed trained human vs. unarmed untrained human.
+// Expectations: armed wins ≥ 85% within mean 15 s; unarmed rarely survives uninjured.
+// Source: criminal assault literature, self-defence training studies.
+
+export const CALIBRATION_UNTREATED_KNIFE_WOUND: ArenaScenario;
+// Simulates a post-combat entity with a severe knife wound (deep torso laceration, bleedingRate
+// set to a lethal-trajectory value), no treatment, 60 min downtime.
+// Expectations: ≥ 40% fatal within 60 min; ≥ 80% fatal within 3 h.
+// Source: Sperry (2013) untreated penetrating abdominal trauma mortality.
+
+export const CALIBRATION_FIRST_AID_SAVES_LIVES: ArenaScenario;
+// Same wound, first_aid applied within 2 min.
+// Expectations: ≥ 90% survive 60 min; mean combat-ready in 7–14 days.
+// Source: TCCC (Tactical Combat Casualty Care) tourniquet outcome data.
+
+export const CALIBRATION_FRACTURE_RECOVERY: ArenaScenario;
+// Entity with a fresh long-bone fracture (structural damage q(0.75) to one leg),
+// field_medicine care, 12-week downtime.
+// Expectations: ≥ 95% full mobility by 12 weeks; < 5% full mobility by 2 weeks.
+// Source: orthopaedic rehabilitation literature (femur fracture, surgical fixation).
+
+export const CALIBRATION_INFECTION_UNTREATED: ArenaScenario;
+// Moderate internal wound (bleedDuration_ticks already > 100 ticks → infection imminent),
+// no antibiotics, 21-day downtime.
+// Expectations: ≥ 60% fatal within 14 days.
+// Source: pre-antibiotic era wound infection mortality (Ogston, Lister era data).
+
+export const CALIBRATION_PLATE_ARMOUR: ArenaScenario;
+// Armoured knight (arm_plate) vs. unarmoured swordsman, matched skill.
+// Expectations: knight survives ≥ 2.5× longer; armoured hit trace events present.
+// Source: HEMA literature on plate armour effectiveness, Wallace Collection studies.
+```
+
+### Resource cost reference values
+
+The `costUnits` field in `MedicalResource` uses an abstract scale. The arena report can render
+these as any currency a host chooses. Reference conversion for a pseudo-medieval setting:
+
+| Item | Cost units | ~Medieval equivalent | ~Modern USD |
+|---|---|---|---|
+| Field bandage | 1 | 1 sp | $5 |
+| Suture kit | 8 | 8 sp | $40 |
+| Surgical kit | 60 | 6 gp | $300 |
+| Antibiotic dose | 15 | 1.5 gp | $75 |
+| IV fluid bag | 25 | — | $125 |
+| Autodoc pack | 250 | — | $1 250 |
+| Nanomed dose | 2 000 | — | $10 000 |
+
+A typical lightly-wounded fighter (one deep cut, no fracture) receiving first aid costs
+**1–2 bandages = 1–2 units**. A severely wounded fighter needing surgery and antibiotics
+costs **60–80 units** over 2–3 days. Full autodoc resuscitation after near-fatal injuries
+costs **500–1 000 units**.
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/arena.ts` | Scenario DSL, batch runner, statistics, calibration constants, report formatter |
+| `test/arena.test.ts` | ~35 tests: scenario definition, runner output, expectation framework, all 6 calibration scenarios |
+
+### Tests (~35)
+
+- **Scenario API (8)**: `runArena` with 10 trials produces correct trial count; seeds differ
+  per trial; `winRateByTeam` sums to ≤ 1.0; `survivalRateByEntity` in [0, 1]; timeout fires
+  at `maxTicks`; draw detected when both teams dead simultaneously; recovery stats present
+  when scenario.recovery defined; narrative log present when `narrativeCfg` supplied
+- **Expectation builders (6)**: `expectWinRate(1, 0.5)` passes when team 1 wins 60%; fails
+  at 40%; `expectMeanDuration` passes/fails at boundaries; `expectRecovery` passes when
+  median days within range; `expectResourceCost` passes when mean cost within limit;
+  failing expectation includes detail string; passing expectation detail is absent/empty
+- **Calibration scenarios (6)**: each of the 6 built-in calibration scenarios passes all
+  its embedded expectations over 50 trials (these are integration tests and set the bar
+  for physical realism)
+- **Report formatting (5)**: `formatArenaReport` output contains scenario name, win rates
+  as percentages, mean duration in seconds, expectation pass/fail table, and recovery cost
+  table when applicable; `narrateRepresentativeTrial` produces text with weapon names and
+  body regions; `summariseArena` is JSON.stringify-safe
+- **Recovery stats (5)**: `meanCombatReadyDays` increases with injury severity; `none` care
+  produces higher mean cost (death) than `first_aid`; resource inventory exhaustion caps
+  care level; care by team applies different resources to each team; p90 cost > mean cost
+- **Edge cases (5)**: single-combatant scenario runs without crash; all combatants same team
+  → draw or timeout; zero-recovery-hours produces trivial report; missing narrative module
+  omits log without error; scenario with no expectations still returns empty expectationResults
+
+---
+
+### Narrative RPG track — summary and sequencing
+
+The three phases above form a coherent stack:
+
+```
+Phase 18 — narrative.ts       pure text translation (no physics)
+    ↓ feeds
+Phase 19 — downtime.ts        time-scale bridge (no new physics)
+    ↓ feeds
+Phase 20 — arena.ts           scenario runner (uses both above)
+```
+
+Each phase is useful independently. A host application that only needs combat logs can stop
+at Phase 18. One that only needs recovery simulation can implement Phase 19 alone. Phase 20
+brings them together for calibration, testing, and scenario design.
+
+**Expected test growth**: ~90 new tests (30 + 25 + 35), reaching ~980 total.
