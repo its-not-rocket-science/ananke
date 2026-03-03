@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–15 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–16 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -100,11 +100,14 @@ same abstraction; only the tags differ), a **deterministic replay and analytics*
 `collectMetrics`, `survivalRate`, `meanTimeToIncapacitation`), a **3D model integration
 layer** (`deriveMassDistribution`, `deriveInertiaTensor`, `deriveAnimationHints`,
 `derivePoseModifiers`, `deriveGrappleConstraint`, `extractRigSnapshots`) for driving
-host renderer rigs from simulation state, and a **named archetype and scenario library**
+host renderer rigs from simulation state, a **named archetype and scenario library**
 (`AMATEUR_BOXER`, `PRO_BOXER`, `GRECO_WRESTLER`, `KNIGHT_INFANTRY`, `LARGE_PACIFIC_OCTOPUS`
 with corresponding `mkBoxer`/`mkWrestler`/`mkKnight`/`mkOctopus`/`mkScubaDiver` factory
 functions in `src/presets.ts`) validated against real-world biomechanics data by a
-statistical scenario test suite.
+statistical scenario test suite, and a **character description layer** (`describeCharacter`,
+`formatCharacterSheet`, `formatOneLine` in `src/describe.ts`) that translates SI fixed-point
+attributes into human-readable summaries with tier ratings, labelled comparisons, and plain
+English descriptions grounded in real-world benchmarks.
 
 See `ROADMAP.md` for the full development plan.
 
@@ -785,6 +788,68 @@ const pastHeatmap = extractConditionSamples(past);
 
 ---
 
+## Character description layer (Phase 16)
+
+`src/describe.ts` translates raw SI fixed-point attributes into human-readable summaries.
+No simulation dependencies — safe to import from any host application.
+
+```typescript
+import { describeCharacter, formatCharacterSheet, formatOneLine } from "./src/describe.js";
+import { generateIndividual } from "./src/generate.js";
+import { PRO_BOXER } from "./src/archetypes.js";
+
+const attrs = generateIndividual(7, PRO_BOXER);
+const desc  = describeCharacter(attrs);
+
+console.log(formatOneLine(desc));
+// → "Tall (1.83 m), 86.4 kg; strength excellent (4982 N), reaction quick (180 ms), resilience tough."
+
+console.log(formatCharacterSheet(desc));
+// Body
+//   Stature:      1.83 m — tall
+//   Mass:         86.4 kg — average build
+//
+// Performance
+//   Strength:     4982 N      [excellent]    elite level — professional fighter strength
+//   Power:        2214 W      [excellent]    elite explosive output
+//   Endurance:    398 W       [strong]       strong sustained performance
+//   Stamina:      40 kJ       [strong]       good combat energy reserves
+// ...
+```
+
+### Tier system
+
+Every attribute is rated 1–6 using breakpoints grounded in sports-science literature:
+
+| Tier | Label | Meaning |
+|------|-------|---------|
+| 1 | feeble / sluggish / fragile | Well below human baseline |
+| 2 | weak / slow / low | Below-average adult |
+| 3 | average | Baseline healthy adult (HUMAN_BASE anchor) |
+| 4 | strong / precise / resilient | Trained athlete or competitive fighter |
+| 5 | excellent / fast / tough | Elite / professional level |
+| 6 | exceptional / instant / ironclad | Superhuman, mechanical, or distributed biology |
+
+Reaction time and decision latency use an **inverted** scale (lower value = higher tier).
+`SERVICE_ROBOT` (80 ms reaction, 50 ms decision) → tier 6 "instant" / "machine-like" in both.
+`LARGE_PACIFIC_OCTOPUS` (no enclosed skull) → tier 6 "ironclad" concussion resistance.
+
+### API
+
+```typescript
+describeCharacter(attrs: IndividualAttributes): CharacterDescription
+// Returns a structured object with tier, label, comparison string, and formatted value
+// for every attribute. Vision and hearing are formatted strings (e.g. "200 m, 120° arc").
+
+formatCharacterSheet(desc: CharacterDescription): string
+// Multi-line columnar output suitable for a character screen or debug log.
+
+formatOneLine(desc: CharacterDescription): string
+// Single sentence, no newlines — suitable for tooltips or list views.
+```
+
+---
+
 ## Project layout
 
 ```
@@ -802,6 +867,7 @@ src/
   metrics.ts        CollectingTrace, collectMetrics, survivalRate, meanTimeToIncapacitation — analytics
   debug.ts          extractMotionVectors, extractHitTraces, extractConditionSamples — visual debug layer
   model3d.ts        deriveMassDistribution, deriveInertiaTensor, deriveAnimationHints, derivePoseModifiers, deriveGrappleConstraint, extractRigSnapshots — 3D rig integration
+  describe.ts       describeCharacter, formatCharacterSheet, formatOneLine — SI→human-readable translation layer (no sim dependencies)
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points

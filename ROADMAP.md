@@ -1745,4 +1745,92 @@ mkScubaDiver(id, teamId, x, y): Entity
   equivalent; longsword knight defeats club-armed unarmoured in > 65% of sweeps;
   armoured-hit trace events (armoured=true) visible in combat log
 
-836 tests total; all coverage thresholds met (statements 97%, branches 87%, functions 95%, lines 97%).
+836 tests after Phase 15; 858 tests after Phase 16. All coverage thresholds met (statements 97%, branches 87%, functions 95%, lines 97%).
+
+---
+
+## Phase 16 — Character Description Layer *(COMPLETE)*
+
+**Goal**: translate Ananke's SI fixed-point attributes into human-readable summaries grounded
+in real-world benchmarks, providing the narrative layer that RPG and game host applications need.
+
+### Design principles
+
+- **No simulation dependency** — `src/describe.ts` imports only `src/units.ts` and `src/types.ts`.
+  Safe to use from UI code, server-side generators, or CLI tools without pulling in the kernel.
+- **Tier system** — every quantitative attribute is rated 1–6 using breakpoints derived from
+  sports-science literature; tier 3 anchors to the documented `HUMAN_BASE` nominal values.
+- **Inverted tiers for latency** — reaction time and decision latency use an inverted scale
+  (lower value = better = higher tier).
+
+### Tier breakpoints
+
+| Attribute | T1 | T2 | T3 | T4 | T5 | T6 |
+|-----------|----|----|----|----|----|----|
+| Strength (N) | <500 | 500–1100 | 1100–2000 | 2000–3500 | 3500–5500 | >5500 |
+| Peak power (W) | <400 | 400–800 | 800–1400 | 1400–2000 | 2000–3000 | >3000 |
+| Endurance (W) | <80 | 80–150 | 150–260 | 260–380 | 380–600 | >600 |
+| Stamina (kJ) | <8 | 8–15 | 15–23 | 23–38 | 38–58 | >58 |
+| Reaction (ms, inv.) | >450 | 300–450 | 220–300 | 170–220 | 120–170 | <120 |
+| Coordination/Q (0–1) | <0.35 | 0.35–0.58 | 0.58–0.78 | 0.78–0.87 | 0.87–0.93 | >0.93 |
+| Resilience/Q (0–1) | <0.25 | 0.25–0.45 | 0.45–0.62 | 0.62–0.75 | 0.75–0.88 | >0.88 |
+| Decision (ms, inv.) | >800 | 560–800 | 460–560 | 300–460 | 80–300 | <80 |
+
+**Anchors**: `HUMAN_BASE` nominal values (1840 N / 1200 W / 200 W / 20 kJ / 200 ms / Q=0.75 /
+res=0.50 / 500 ms) all map to tier 3. `PRO_BOXER` strength (5000 N) → tier 5 "excellent".
+`SERVICE_ROBOT` reaction (80 ms) → tier 6 "instant". `LARGE_PACIFIC_OCTOPUS` concussion
+tolerance (0.90, no enclosed skull) → tier 6 "ironclad".
+
+### API
+
+```typescript
+// src/describe.ts
+export function describeCharacter(attrs: IndividualAttributes): CharacterDescription;
+export function formatCharacterSheet(desc: CharacterDescription): string;
+export function formatOneLine(desc: CharacterDescription): string;
+```
+
+`CharacterDescription` contains:
+
+| Field | Type | Content |
+|-------|------|---------|
+| `stature` | string | `"1.75 m — average height"` |
+| `mass` | string | `"75.0 kg — average build"` |
+| `strength` … `concussionResistance` | `AttributeRating` | tier (1–6), label, comparison string, formatted value |
+| `visionRange` | string | `"200 m, 120° arc"` |
+| `hearingRange` | string | `"50 m"` |
+| `decisionSpeed` | `AttributeRating` | inverted tier for `decisionLatency_s` |
+
+`AttributeRating`:
+```typescript
+{ tier: Tier; label: string; comparison: string; value: string }
+// e.g. { tier: 5, label: "excellent", comparison: "elite level — professional fighter strength", value: "4982 N" }
+```
+
+Body tier labels — stature: very short (<1.40m) / short (≤1.60m) / average height (<1.80m) /
+tall (<1.95m) / very tall. Mass: slight (<50kg) / lean (<65kg) / average (<90kg) / heavy
+(<115kg) / very heavy.
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/describe.ts` | Pure translation module — no sim dependencies |
+| `test/describe.test.ts` | 22 tests using `nominalAttrs` helper for absolute tier assertions |
+
+### Tests
+
+22 tests in four groups:
+
+- **Tier ordering (8)**: PRO_BOXER strength > HUMAN_BASE; SERVICE_ROBOT reaction > HUMAN_BASE;
+  OCTOPUS concussion > HUMAN_BASE; OCTOPUS stamina < HUMAN_BASE; etc.
+- **Label and value content (6)**: nominal HUMAN_BASE strength tier 3 / label "average";
+  SERVICE_ROBOT reaction "instant"; PRO_BOXER strength "excellent" or "exceptional"
+- **Formatting (5)**: sheet contains section headers and numeric values; one-liner has no newlines
+- **Body description (3)**: nominal HUMAN_BASE shows "1.75 m" and "average height"; OCTOPUS
+  mass contains "15" and "slight"; SERVICE_ROBOT (1.60 m) does not show "average height"
+
+**Implementation note**: absolute tier/label tests use a `nominalAttrs(arch)` helper that
+constructs `IndividualAttributes` directly from archetype nominal values (no RNG variance),
+because `generateIndividual(1, HUMAN_BASE)` with force-coupling factors produces a strength
+value above the 2000 N tier-3 ceiling. Ordering tests continue to use generated individuals.
