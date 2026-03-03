@@ -50,6 +50,10 @@ export interface Weapon extends ItemBase {
 
   /** Phase 11C: energy weapon type — routes damage through DamageChannel.Energy; resisted by reflectivity. */
   energyType?: "plasma" | "laser" | "sonic";
+
+  /** Phase 17: flexible/chain weapons (flail, morning star) that loop around shields.
+   *  q(0) = no bypass; q(0.50) = 50% reduction in effective shield coverageQ. */
+  shieldBypassQ?: Q;
 }
 
 export interface Shield extends ItemBase {
@@ -129,7 +133,11 @@ export interface RangedWeapon extends ItemBase {  // Phase 3
   projectileMass_kg: I32;   // projectile mass for reference
   dragCoeff_perM: Q;        // q(0.007) → 0.7% energy loss per metre
   dispersionQ: Q;           // base angular error at 1m (radians in Q)
-  recycleTime_s: I32;       // time between shots (reload + ready)
+  recycleTime_s: I32;       // time between shots (reload + ready); used for reload when mag empties
+  /** Phase 17: rounds per magazine; undefined = muzzle-loader (no tracking). */
+  magCapacity?: number;
+  /** Phase 17: SCALE.s — cooldown between shots within magazine; recycleTime_s used only when mag empties. */
+  shotInterval_s?: I32;
   damage: WeaponDamageProfile;
   /** Phase 11C: energy weapon type — routes damage through DamageChannel.Energy; resisted by reflectivity. */
   energyType?: "plasma" | "laser" | "sonic";

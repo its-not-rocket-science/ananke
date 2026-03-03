@@ -699,8 +699,14 @@ function resolveAttack(world: WorldState,
     }
   }
 
+  // Phase 17: flexible weapons (flail, morning star) partially bypass shield blocks
+  const meleeBypassQ = (wpn as any).shieldBypassQ ?? 0;
+  const defenceIntensityForHit = (meleeBypassQ > 0 && defenceModeEffective === "block")
+    ? (qMul(defenceIntensityEffective, SCALE.Q - meleeBypassQ) as Q)
+    : defenceIntensityEffective;
+
   const seed = eventSeed(world.seed, world.tick, attacker.id, target.id, 0xA11AC);
-  const res = resolveHit(seed, attackSkill, defenceSkill, geomDot, defenceModeEffective, defenceIntensityEffective);
+  const res = resolveHit(seed, attackSkill, defenceSkill, geomDot, defenceModeEffective, defenceIntensityForHit);
   const defenderBlocking = (target.intent.defence.mode === "block"); // or cmd-derived if you do that elsewhere
   const shield = findShield(target.loadout);
   const shieldBlocked =
@@ -1176,8 +1182,26 @@ function resolveShoot(
     0,
     shooter.energy.reserveEnergy_J - shootCost_J(wpn, intensity, shooter.attributes.performance.peakPower_W),
   );
-  shooter.action.shootCooldownTicks = recycleTicks(wpn, TICK_HZ);
   shooter.action.aimTicks = 0;  // Phase 3 extension: reset aim after each shot
+
+  // Phase 17: magazine-based cooldown (modern/revolver firearms)
+  if (wpn.magCapacity !== undefined) {
+    if (shooter.action.roundsInMag === undefined) {
+      shooter.action.roundsInMag = wpn.magCapacity; // first draw: full mag
+    }
+    shooter.action.roundsInMag -= 1;
+    if (shooter.action.roundsInMag <= 0) {
+      shooter.action.roundsInMag = wpn.magCapacity; // magazine empty — reload
+      shooter.action.shootCooldownTicks = recycleTicks(wpn, TICK_HZ);
+    } else {
+      shooter.action.shootCooldownTicks =
+        wpn.shotInterval_s !== undefined
+          ? Math.ceil((wpn.shotInterval_s * TICK_HZ) / SCALE.s)
+          : recycleTicks(wpn, TICK_HZ);
+    }
+  } else {
+    shooter.action.shootCooldownTicks = recycleTicks(wpn, TICK_HZ);
+  }
 
   if (suppressed) {
     target.condition.suppressedTicks = Math.max(target.condition.suppressedTicks, 4);
@@ -1199,11 +1223,15 @@ function resolveShoot(
       hitRegion = regionFromHit(hitArea, sideBit);
     }
 
-    // Shield interposition
+    // Shield interposition — Phase 17: projectile bypass for flexible weapons
     const shield = findShield(target.loadout);
     const shieldSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15D);
+    const projBypassQ = (wpn as any).shieldBypassQ ?? 0;
+    const effectiveCoverageQ = projBypassQ > 0
+      ? Math.max(0, qMul((shield as any)?.coverageQ ?? 0, SCALE.Q - projBypassQ))
+      : ((shield as any)?.coverageQ ?? 0);
     const shieldHit = shield && hitArea && shieldCovers(shield, hitArea)
-      && ((shieldSeed % SCALE.Q) < (shield as any).coverageQ);
+      && ((shieldSeed % SCALE.Q) < effectiveCoverageQ);
 
     // Armour
     const armour = deriveArmourProfile(target.loadout, target.armourState);

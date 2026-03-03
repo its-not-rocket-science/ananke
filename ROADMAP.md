@@ -1834,3 +1834,99 @@ tall (<1.95m) / very tall. Mass: slight (<50kg) / lean (<65kg) / average (<90kg)
 constructs `IndividualAttributes` directly from archetype nominal values (no RNG variance),
 because `generateIndividual(1, HUMAN_BASE)` with force-coupling factors produces a strength
 value above the 2000 N tier-3 ceiling. Ordering tests continue to use generated individuals.
+
+---
+
+## Phase 17 — Historical Weapons Database + Combat Extensions *(COMPLETE)*
+
+**Goal**: provide a comprehensive, physically calibrated weapons catalogue spanning six historical
+eras and close two combat gaps the new weapons expose: flexible/chain weapons bypassing shields,
+and magazine firearms with per-shot vs reload cooldowns.
+
+### New file: `src/weapons.ts`
+
+~70 historical weapons organised into 12 period arrays (6 melee + 6 ranged) plus two aggregate
+exports (`ALL_HISTORICAL_MELEE`, `ALL_HISTORICAL_RANGED`). All units follow the project SI
+fixed-point conventions; values calibrated against archaeological and biomechanics literature.
+
+#### Melee eras and counts
+
+| Era | Array | Count | Example weapons |
+|-----|-------|-------|-----------------|
+| Prehistoric | `PREHISTORIC_MELEE` | 5 | hand axe, war club, flint knife, flint spear, bone dagger |
+| Classical | `CLASSICAL_MELEE` | 8 | pugio, gladius, xiphos, kopis, spatha, dory, sarissa, pilum |
+| Medieval | `MEDIEVAL_MELEE` | 12 | arming sword, dane axe, flanged mace, war flail, morning star, military pick, warhammer, halberd, glaive, bastard sword, zweihänder |
+| Renaissance | `RENAISSANCE_MELEE` | 6 | rapier, sidesword, estoc, main gauche, infantry pike, poleaxe |
+| Early Modern | `EARLY_MODERN_MELEE` | 4 | cavalry saber, smallsword, socket bayonet, entrenching tool |
+| Contemporary | `CONTEMPORARY_MELEE` | 3 | combat knife, tactical tomahawk, riot baton |
+
+#### Ranged eras and counts
+
+| Era | Array | Count | Example weapons |
+|-----|-------|-------|-----------------|
+| Prehistoric | `PREHISTORIC_RANGED` | 2 | atlatl dart, simple selfbow |
+| Classical | `CLASSICAL_RANGED` | 4 | light javelin, pilum (thrown), composite bow, English warbow |
+| Medieval | `MEDIEVAL_RANGED` | 3 | arbalest, hand cannon, arquebus |
+| Renaissance | `RENAISSANCE_RANGED` | 2 | wheellock pistol, flintlock rifle |
+| Early Modern | `EARLY_MODERN_RANGED` | 4 | percussion rifle, early revolver, breech rifle, handgun 9mm |
+| Contemporary | `CONTEMPORARY_RANGED` | 6 | assault rifle, battle rifle, sniper rifle, shotgun 12g, submachine gun |
+
+### Combat extension A — Shield bypass (`shieldBypassQ`)
+
+New optional field on `Weapon`. Flexible/chain weapons loop around shield edges, reducing the
+shield's effective `coverageQ` in both melee and ranged interposition rolls:
+
+```
+effectiveIntensity = qMul(defenceIntensity, SCALE.Q − bypassQ)   // melee block
+effectiveCoverage  = qMul(shield.coverageQ,  SCALE.Q − bypassQ)  // ranged shield roll
+```
+
+Values: `wpn_war_flail` = q(0.55), `wpn_morning_star` = q(0.40). All other weapons omit the
+field (treated as 0 — no bypass). Standard swords, axes, and spears are unaffected.
+
+### Combat extension B — Magazine cooldown (`magCapacity` / `shotInterval_s`)
+
+New optional fields on `RangedWeapon` and `roundsInMag` on `ActionState`. Behaviour:
+
+- `magCapacity` undefined → muzzle-loader; existing `recycleTicks` logic unchanged.
+- `magCapacity` defined → `roundsInMag` tracks rounds remaining (initialised to full on first shot).
+- Between shots within a magazine: cooldown = `Math.ceil(shotInterval_s × TICK_HZ / SCALE.s)`.
+- When the last round fires: reload to full; cooldown = `recycleTicks(wpn, TICK_HZ)`.
+
+| Weapon | magCapacity | shotInterval_s | Reload |
+|--------|-------------|----------------|--------|
+| Early revolver | 6 | 0.8 s | 20.0 s |
+| Handgun 9mm | 15 | 0.2 s | 2.5 s |
+| Assault rifle | 30 | 0.1 s | 3.0 s |
+| Battle rifle | 20 | 0.2 s | 3.5 s |
+| Sniper rifle | 10 | 2.5 s | 8.0 s |
+| Shotgun 12g | 6 | 0.5 s | 8.0 s |
+| Submachine gun | 30 | 0.1 s | 2.5 s |
+
+### Files
+
+| File | Change |
+|------|--------|
+| `src/weapons.ts` | New — historical weapons database |
+| `src/equipment.ts` | `shieldBypassQ?: Q` on `Weapon`; `magCapacity?: number` + `shotInterval_s?: I32` on `RangedWeapon` |
+| `src/sim/action.ts` | `roundsInMag?: number` on `ActionState` |
+| `src/sim/kernel.ts` | Shield bypass (melee + ranged) + magazine cooldown logic (~25 lines) |
+| `test/weapons.test.ts` | New — 32 tests (data integrity, damage ordering, shield bypass, magazine mechanics, energy ordering) |
+
+### Tests
+
+32 new tests in five groups:
+
+- **Data integrity (8)**: mass/id/damage present for all weapons; fracs in [0, SCALE.Q]; period
+  arrays non-empty; magazine weapons have both fields; reach/mass/recycle orderings
+- **Damage profile ordering (6)**: military pick strF > flanged mace; estoc penBias > rapier >
+  arming sword; warbow penBias > composite bow; shotgun surfF > sniper; sniper penBias > shotgun
+- **Shield bypass mechanics (4)**: war flail bypassQ > morning star > 0; standard weapons have
+  none; direct unit test of qMul reduction formula; zero bypass leaves intensity unchanged
+- **Magazine mechanics (6)**: magCapacity values; arquebus undefined; after 14 shots roundsInMag=1;
+  15th shot reloads to 15 with recycleTicks cooldown; shotInterval ordering; arquebus unchanged
+- **Energy ordering (6)**: assault > handgun; sniper ≥ battle rifle; arbalest > warbow > composite;
+  arbalest > arquebus; shotgun drag > sniper; assault dispersion < shotgun
+
+858 tests after Phase 16; **890 tests after Phase 17**. All coverage thresholds met
+(statements 97.78%, branches 86.53%, functions 95.18%, lines 97.78%).

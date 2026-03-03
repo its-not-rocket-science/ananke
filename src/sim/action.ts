@@ -20,6 +20,9 @@ export interface ActionState {
   aimTicks: number;             // ticks spent aiming at current target (0..20)
   aimTargetId: number;          // entity ID currently being aimed at (0 = none)
 
+  // Phase 17: magazine tracking (modern/revolver firearms)
+  roundsInMag?: number;  // undefined until weapon first fired; resets to magCapacity on reload
+
   // Phase 12B: per-capability cooldown. Key = "sourceId:effectId"; value = ticks remaining.
   capabilityCooldowns?: Map<string, number>;
 

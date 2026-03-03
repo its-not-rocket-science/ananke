@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–16 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–17 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -104,10 +104,14 @@ host renderer rigs from simulation state, a **named archetype and scenario libra
 (`AMATEUR_BOXER`, `PRO_BOXER`, `GRECO_WRESTLER`, `KNIGHT_INFANTRY`, `LARGE_PACIFIC_OCTOPUS`
 with corresponding `mkBoxer`/`mkWrestler`/`mkKnight`/`mkOctopus`/`mkScubaDiver` factory
 functions in `src/presets.ts`) validated against real-world biomechanics data by a
-statistical scenario test suite, and a **character description layer** (`describeCharacter`,
+statistical scenario test suite, a **character description layer** (`describeCharacter`,
 `formatCharacterSheet`, `formatOneLine` in `src/describe.ts`) that translates SI fixed-point
 attributes into human-readable summaries with tier ratings, labelled comparisons, and plain
-English descriptions grounded in real-world benchmarks.
+English descriptions grounded in real-world benchmarks, and a **historical weapons database**
+(`src/weapons.ts`) covering ~70 weapons across six eras (Prehistoric through Contemporary)
+with two combat extensions: flexible/chain weapon **shield bypass** (`shieldBypassQ` reduces
+effective blocking coverage for flails and morning stars) and **magazine tracking**
+(`magCapacity` + `shotInterval_s` give magazine firearms per-shot and reload cooldowns).
 
 See `ROADMAP.md` for the full development plan.
 
@@ -868,6 +872,7 @@ src/
   debug.ts          extractMotionVectors, extractHitTraces, extractConditionSamples — visual debug layer
   model3d.ts        deriveMassDistribution, deriveInertiaTensor, deriveAnimationHints, derivePoseModifiers, deriveGrappleConstraint, extractRigSnapshots — 3D rig integration
   describe.ts       describeCharacter, formatCharacterSheet, formatOneLine — SI→human-readable translation layer (no sim dependencies)
+  weapons.ts        Historical weapons database — ~70 weapons across 6 eras (Prehistoric → Contemporary); shieldBypassQ for flexible weapons; magCapacity + shotInterval_s for magazine firearms
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
