@@ -90,4 +90,13 @@ export interface Entity {
 
   /** Phase 12B: active concentration aura — cleared when reserve depletes or shock interrupts. */
   activeConcentration?: ConcentrationState;
+
+  /** Phase 24: faction this entity belongs to (factionId string). */
+  faction?: string;
+
+  /**
+   * Phase 24: entity-level standing overrides toward specific factions.
+   * Map<factionId, Q> — takes priority over faction-default standings when set.
+   */
+  reputations?: Map<string, number>;
 }

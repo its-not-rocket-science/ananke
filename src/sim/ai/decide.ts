@@ -14,6 +14,7 @@ import { eventSeed } from "../seeds.js";
 import { type ObstacleGrid, coverFractionAtPosition, terrainKey } from "../terrain.js";
 import { getSkill } from "../skills.js";
 import { TICK_HZ } from "../tick.js";
+import { effectiveStanding, STANDING_FRIENDLY_THRESHOLD, type FactionRegistry } from "../../faction.js";
 
 type DefenceMode = "none" | "block" | "parry" | "dodge";
 
@@ -119,7 +120,22 @@ export function decideCommandsForEntity(
     return suppCmds;
   }
 
-  const target = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
+  let target = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
+
+  // Phase 24: faction standing — suppress attack on friendly entities.
+  // Self-defence override: if self has taken damage (shock > 0 or fluid loss > 0),
+  // faction check is bypassed (attacker is fought back regardless of standing).
+  if (target && self.faction) {
+    const factionRegistry = (world as any).__factionRegistry as FactionRegistry | undefined;
+    if (factionRegistry) {
+      const standing = effectiveStanding(factionRegistry, self, target);
+      const selfDefence = self.injury.shock > 0 || self.injury.fluidLoss > 0;
+      if (!selfDefence && standing >= STANDING_FRIENDLY_THRESHOLD) {
+        target = undefined;
+      }
+    }
+  }
+
   updateFocus(self, target, policy);
 
   // Default defend
