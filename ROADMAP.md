@@ -2489,4 +2489,1335 @@ Each phase is useful independently. A host application that only needs combat lo
 at Phase 18. One that only needs recovery simulation can implement Phase 19 alone. Phase 20
 brings them together for calibration, testing, and scenario design.
 
+---
+
+## Phase 21 — Character Progression
+
+### Overview
+
+Entities in Ananke have physical attributes with real SI units. Phase 21 adds the *temporal
+axis*: attributes change over time due to training, ageing, injury sequelae, and substance
+use. This is the bridge between individual encounters (Phases 1–20) and campaign-length play.
+
+The design principle: a training regimen that raises `peakForce_N` by 200 N per month does
+so at a physically plausible rate derived from exercise physiology literature. There is no
+"level-up" abstraction — only scheduled attribute drift bounded by genetic ceiling.
+
+---
+
+### Concepts
+
+**Experience and milestones**
+
+A skill domain (Phase 7) accrues *experience points* proportional to contested use:
+- Landing a successful parry → `+1 XP` in `weaponTechnique`
+- Treating a wound successfully → `+2 XP` in `medicalSkill`
+- Missed shot on moving target → `+0.5 XP` in `rangedTechnique`
+
+Milestones are *thresholds* on the XP counter that trigger a discrete skill increment.
+Milestone spacing increases geometrically (logarithmic mastery curve), reflecting diminishing
+returns on practice at high skill levels.
+
+```
+Milestone n threshold = BASE_XP × GROWTH_FACTOR^n
+BASE_XP       = 20   (first milestone is quick — novice to competent)
+GROWTH_FACTOR = 1.80  (each successive milestone requires 80% more XP)
+```
+
+**Physical training**
+
+`TrainingPlan` records scheduled sessions that produce attribute drift:
+
+```typescript
+interface TrainingSession {
+  attribute:   "peakForce_N" | "peakPower_W" | "reserveEnergy_J" | "continuousPower_W";
+  intensity_Q: Q;          // training load: q(0.50)=moderate, q(1.0)=near-maximal
+  duration_s:  number;     // session length in seconds
+}
+
+interface TrainingPlan {
+  sessions:     TrainingSession[];
+  frequency_d:  number;    // sessions per day (may be fractional: 0.5 = every other day)
+  ceiling_N:    number;    // genetic/pharmacological ceiling (absolute, same unit as attribute)
+}
+```
+
+Attribute gain per session follows an S-curve with fatigue penalty for overtraining:
+
+```
+δForce = baseRate × intensity_Q × (1 − currentForce / ceiling) × (1 − fatiguePenalty)
+baseRate ≈ 3 N per session at moderate intensity for a deconditioned human
+fatiguePenalty = clamp((sessionsInLast7d − 5) × 0.08, 0, 0.50)
+```
+
+**Skill advancement**
+
+`SkillLevel` maps domain → current value. On milestone:
+
+```typescript
+function advanceSkill(
+  skills: SkillMap,
+  domain: SkillDomain,
+  delta: SkillDelta,        // e.g. { reactionTimeOffset_s: -0.005 }
+): SkillMap
+```
+
+Physical effects of skill levels are the same as in Phase 7. Phase 21 adds the *how skills
+are acquired* layer on top.
+
+**Ageing**
+
+Age in years drives a slow attribute drift function:
+- Peak physical performance: rises until ~25, plateau ~25–35, decline ~0.5%/year after 35
+- Cognitive speed (decision latency): stable until ~45, then +2 ms/year
+- Resilience (pain/distress tolerance): stable throughout adult life
+
+Ageing is optional; host sets `entity.ageYears?: number`.
+
+**Injury sequelae**
+
+After structural damage events, a permanent `sequela` may be recorded:
+- Bone fracture with malunion → permanent −15% peak force in affected limb
+- Nerve damage → permanent fine-control penalty in affected region
+- Scar tissue → surface bleed threshold lower in scarred region
+
+These feed back into `IndividualAttributes` as additive modifiers.
+
+---
+
+### Interfaces
+
+```typescript
+// src/progression.ts
+
+export interface XPLedger {
+  entries: Map<SkillDomain, number>;  // domain → cumulative XP
+}
+
+export interface MilestoneRecord {
+  domain:    SkillDomain;
+  milestone: number;   // which milestone (0-indexed)
+  tick:      number;   // world tick when achieved
+  delta:     SkillDelta;
+}
+
+export interface ProgressionState {
+  xp:           XPLedger;
+  milestones:   MilestoneRecord[];
+  trainingLog:  Array<{ tick: number; attribute: string; delta: number }>;
+  sequelae:     Array<{ region: string; type: string; penalty: number }>;
+}
+
+// Award XP and check for milestone triggers.
+export function awardXP(
+  state:  ProgressionState,
+  domain: SkillDomain,
+  amount: number,
+  tick:   number,
+): MilestoneRecord[];   // newly triggered milestones
+
+// Apply one training session; returns updated attribute value.
+export function applyTrainingSession(
+  currentValue: number,
+  plan:         TrainingPlan,
+  session:      TrainingSession,
+  sessionsInLast7d: number,
+): number;
+
+// Step ageing for one in-world day.
+export function stepAgeing(
+  attrs: IndividualAttributes,
+  ageYears: number,
+): Partial<IndividualAttributes>;   // attribute deltas (caller merges)
+
+// Derive permanent sequelae from an injury at region resolution.
+export function deriveSequelae(
+  regionInjury: RegionInjury,
+  bodyPlan:     BodyPlan,
+): Array<{ type: string; penalty: number }>;
+```
+
+---
+
+### Real-world calibration targets
+
+| Scenario | Expected outcome |
+|---|---|
+| Novice fighter, 100 combats | `weaponTechnique.reactionTimeOffset_s` reduced by ~80 ms |
+| 12-week strength programme (3×/week moderate) | `peakForce_N` rises ~150–300 N |
+| Elite athlete 35 → 45 years | `peakPower_W` decreases ~8–12% |
+| Femur fracture with malunion | Permanent −10–20% leg force on affected side |
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/progression.ts` | XP ledger, milestone triggers, training simulation, ageing drift, sequelae derivation |
+| `test/progression.test.ts` | ~30 tests: XP/milestone, training gain curve, ageing, sequelae, integration with `advanceSkill` |
+
+### Tests (~30)
+
+- **XP and milestones (8)**: awarding XP below threshold yields no milestone; crossing threshold yields one; multiple milestones in one call; XP is cumulative across calls; milestone delta applied to SkillMap; growth factor produces geometric spacing; separately tracked per domain; XP ledger serialises cleanly
+- **Training gains (8)**: gain decreases as value approaches ceiling; overtraining penalty applies above 5 sessions/week; zero-intensity session produces zero gain; deconditioned entity gains faster than conditioned; moderate-intensity gain ≈ 3 N/session (calibration); gain is deterministic (no RNG); fractional day frequency; ceiling enforced strictly
+- **Ageing (6)**: attributes stable under 35; decline rate ≈ 0.5%/year above 35; decision latency increases above 45; ageing step produces only valid physical values; integrating from age 20 to 70 stays above minimum viable; ageYears = undefined → no change
+- **Sequelae (5)**: fractured high-structural-damage region → permanent force penalty; surface-dominant damage → scar tissue flag; deriveSequelae returns empty for healthy regions; penalties are additive; sequelae serialise round-trip
+- **Integration (3)**: full match + XP award + training → attributes shift in expected direction; arena + progression for 50 rounds shows monotonic skill improvement; progression state is JSON-serialisable
+
+---
+
+## Phase 22 — Campaign & World State
+
+### Overview
+
+Phase 22 is the persistence layer. Between encounters, the world must remember: which entities
+survived, what injuries they carry, which items were consumed, and what time has passed. Phase 22
+provides a minimal but complete state container and the functions to advance it between sessions.
+
+This phase does **not** model geopolitics, NPC schedules, or quest tracking — those are host
+responsibilities. It provides the *physical substrate* for any such system: time, location,
+entity persistence, and downtime integration.
+
+---
+
+### Concepts
+
+**World clock**
+
+`worldTime_s: number` — absolute simulated seconds since campaign epoch.
+
+`stepCampaignTime(campaign, delta_s)` advances the clock and:
+- Applies natural healing (delegates to Phase 19 `stepDowntime` at rest).
+- Applies environmental exposure (temperature, humidity — if Phase 29 active).
+- Drains food stores if Phase 30 is active.
+
+**Location registry**
+
+A location is a named region with environmental parameters:
+
+```typescript
+interface Location {
+  id:          string;
+  name:        string;
+  ambientTemp_Q?: Q;      // Phase 29 integration
+  elevation_m:  number;
+  travelCost:  Map<string, number>;  // locationId → travel time in seconds
+}
+```
+
+Entities track `locationId?: string`. Travel moves an entity between locations, consuming time
+and (if Phase 30 is active) calories.
+
+**Entity registry**
+
+`CampaignState.entities` is a `Map<number, Entity>` — the master record for all persistent
+beings. After each `stepWorld` call the host merges updated entity state back into the registry.
+Phase 22 provides `mergeEntityState(registry, worldEntities)` to do this cleanly.
+
+**Persistent inventory**
+
+Items consumed in encounters (arrows, bandages) are debited from the entity's campaign
+inventory. `debitInventory(entity, itemId, count)` enforces non-negative counts and logs
+the transaction.
+
+---
+
+### Interfaces
+
+```typescript
+// src/campaign.ts
+
+export interface CampaignState {
+  id:          string;
+  epoch:       string;          // ISO timestamp of campaign start (display only)
+  worldTime_s: number;
+  entities:    Map<number, Entity>;
+  locations:   Map<string, Location>;
+  log:         Array<{ worldTime_s: number; text: string }>;
+}
+
+export function createCampaign(id: string, entities: Entity[]): CampaignState;
+
+// Advance world clock; apply rest healing, environmental effects.
+export function stepCampaignTime(
+  campaign: CampaignState,
+  delta_s:  number,
+  opts?:    { downtimeConfig?: DowntimeConfig },
+): EntityRecoveryReport[];   // reports for entities that changed
+
+// Merge updated entity states from a completed encounter back into the registry.
+export function mergeEntityState(
+  campaign:      CampaignState,
+  worldEntities: Entity[],
+): void;
+
+// Move entity to new location; returns travel time consumed.
+export function travel(
+  campaign:     CampaignState,
+  entityId:     number,
+  toLocationId: string,
+): number;   // seconds elapsed
+
+// Debit item from entity's campaign inventory.
+export function debitInventory(
+  campaign: CampaignState,
+  entityId: number,
+  itemId:   string,
+  count:    number,
+): boolean;  // false if insufficient stock
+
+export function serialiseCampaign(campaign: CampaignState): string;
+export function deserialiseCampaign(json: string): CampaignState;
+```
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/campaign.ts` | Campaign state container, time stepping, entity registry, travel, serialisation |
+| `test/campaign.test.ts` | ~28 tests: time advancement, healing integration, travel, inventory, serialisation |
+
+### Tests (~28)
+
+- **State management (6)**: `createCampaign` initialises clock at 0; `mergeEntityState` overwrites entity fields; entities added after creation appear in registry; `stepCampaignTime` advances clock by exact delta; clock is monotone; log entries timestamped correctly
+- **Healing integration (6)**: 24h rest with wounds → bleeding reduced; no care → bleeding persists; hospital care over 7 days → structural damage decreased; `stepCampaignTime` calls `stepDowntime` internally; recovery reports returned; multiple entities handled independently
+- **Travel (5)**: entity moves to new location; travel time matches travelCost; unknown locationId returns error; travel during starvation (Phase 30) drains more calories; travel time added to worldTime_s
+- **Inventory (5)**: debitInventory returns true when stock available; false when insufficient; stock reaches 0 but not negative; multiple item types tracked independently; debits logged
+- **Serialisation (6)**: round-trip preserves all fields; Map fields survive; entity injury state preserved; log array preserved; empty campaign round-trips; large campaign (100 entities) round-trips
+
+---
+
+## Phase 23 — Dialogue & Negotiation Layer
+
+### Overview
+
+Many encounters resolve without physical combat. Phase 23 provides a structured non-combat
+resolution system grounded in the same physical and psychological attributes as the combat
+engine — the "strong, intimidating fighter" mechanically intimidates because their
+`peakForce_N` is genuinely high, not because they have a Charisma stat.
+
+This phase is deliberately minimal. It does **not** model complex social webs or quest
+dialogue trees — those are host-side. It provides the *resolution mechanics* for social
+challenges, giving hosts probabilistic outcomes that compose with the morale, fear, and
+cognition systems already present.
+
+---
+
+### Concepts
+
+**Dialogue actions**
+
+```typescript
+type DialogueAction =
+  | { kind: "intimidate"; intensity_Q: Q }       // back off or we fight
+  | { kind: "persuade";   argument: string }      // reason together
+  | { kind: "deceive";    plausibility_Q: Q }     // claim something false
+  | { kind: "surrender";  terms?: string }        // lay down arms
+  | { kind: "negotiate";  offer: TradeOffer }     // propose exchange
+```
+
+**Resolution**
+
+Each action is resolved against the target's psychological state and cognitive attributes:
+
+- **Intimidate**: succeeds with probability `P = clamp(q(source.peakForce_N / 4000) + feardelta − target.distressTolerance, 0, 1)`. Current `fearQ` of target acts as a bonus. Target's leader aura (Phase 5) reduces effectiveness.
+- **Persuade**: base chance `q(0.40)`; modified by `learningRate` (proxy for general reasoning); increased by shared faction (Phase 24); decreased by prior failed persuasion attempts.
+- **Deceive**: `plausibility_Q` × `(SCALE.Q − target.attentionDepth_Q)` — sharper minds detect deception more readily.
+- **Surrender**: always succeeds as an offer; target accepts with `P = clamp(target.fearQ − q(0.40), 0, 1)`. A fearless entity never accepts surrender terms.
+- **Negotiate**: trade offer accepted if utility is positive for target; utility is computed from `TradeOffer` item values (Phase 25).
+
+**Outcomes**
+
+```typescript
+type DialogueOutcome =
+  | { result: "success";  moraleDelta?: Q; fearDelta?: Q }
+  | { result: "failure";  cooldown_s: number }       // retry penalty
+  | { result: "escalate" }                           // target attacks
+```
+
+Escalation occurs when intimidation fails and target's fearQ < q(0.20): they interpret the
+attempt as an insult and become hostile.
+
+---
+
+### Interfaces
+
+```typescript
+// src/dialogue.ts
+
+export interface DialogueContext {
+  initiator: Entity;
+  target:    Entity;
+  worldSeed: number;
+  tick:      number;
+}
+
+export function resolveDialogue(
+  action:  DialogueAction,
+  ctx:     DialogueContext,
+): DialogueOutcome;
+
+// Bulk: apply outcome morale/fear deltas back to entities.
+export function applyDialogueOutcome(
+  outcome: DialogueOutcome,
+  target:  Entity,
+): void;
+
+// Describe outcome in natural language (wraps narrative.ts style).
+export function narrateDialogue(
+  action:  DialogueAction,
+  outcome: DialogueOutcome,
+  cfg:     NarrativeConfig,
+): string;
+```
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/dialogue.ts` | Action resolution, outcome generation, narrative helper |
+| `test/dialogue.test.ts` | ~24 tests: each action type, boundary cases, escalation, deterministism |
+
+### Tests (~24)
+
+- **Intimidate (5)**: very strong entity vs. fearful target → high success rate; weak entity vs. unfearful → low; current high fearQ increases success; leader aura reduces success; deterministic (same seed = same outcome)
+- **Persuade (5)**: base ~40% success; high learningRate boosts; same-faction bonus; repeated failure penalty applied; persuasion log serialises
+- **Deceive (4)**: low plausibility → fails against high attentionDepth; high plausibility + low attention → passes; result is deterministic; deception outcome is "success" or "failure" only (no escalate)
+- **Surrender (4)**: fearful target accepts; fearless target rejects; accepted surrender sets `surrendered = true`; offer always returns success (own side)
+- **Escalation (3)**: intimidate failure + fearQ < q(0.20) → escalate; persuade does not escalate; escalate outcome triggers no morale delta
+- **Narrative (3)**: `narrateDialogue` returns non-empty string; includes entity descriptors from describe.ts; terse vs. verbose modes differ in length
+
+---
+
+## Phase 24 — Faction & Reputation System
+
+### Overview
+
+Entities act on behalf of factions, and factions remember. Phase 24 tracks faction
+membership, inter-faction standing, entity reputation within factions, and the witness system
+that propagates information about events.
+
+Like Phase 23, this phase is deliberately thin: it provides structured data and resolution
+functions rather than complex politics simulations. The host builds narrative faction logic
+on top.
+
+---
+
+### Concepts
+
+**Factions**
+
+```typescript
+interface Faction {
+  id:     string;
+  name:   string;
+  rivals: Set<string>;    // faction ids with default hostility
+  allies: Set<string>;    // faction ids with default friendship
+}
+```
+
+**Standing**
+
+`Standing` is a `Q`-valued score in `[0, SCALE.Q]`:
+- `q(0.0)` = Kill on sight
+- `q(0.30)` = Hostile / distrusted
+- `q(0.50)` = Neutral
+- `q(0.70)` = Friendly
+- `q(1.0)` = Exalted
+
+Entities have `reputations: Map<string, Q>` (factionId → standing) stored on the entity.
+Default standing for a rival faction is `q(0.20)`; for an ally faction `q(0.70)`.
+
+**Witness system**
+
+When a significant event occurs (kill, robbery, surrender, healing), witnesses (entities
+within perception range with `detectionQ ≥ q(0.60)`) propagate a reputation delta to the
+relevant factions:
+
+```typescript
+interface WitnessEvent {
+  actorId:    number;
+  eventType:  "kill" | "assault" | "theft" | "aid" | "surrender";
+  targetId:   number;
+  factionId:  string;     // faction that cares
+  delta:      Q;          // positive = reputation increase, negative = decrease
+}
+```
+
+**AI policy modulation**
+
+The AI decision layer (Phase 4 / `decide.ts`) checks faction standing before choosing
+`"attack"` intent. Standing below `q(0.30)` with the target's faction → default hostile.
+Standing above `q(0.70)` → will not initiate combat unless attacked. This is opt-in via
+`entity.faction?: string`.
+
+---
+
+### Interfaces
+
+```typescript
+// src/faction.ts
+
+export interface FactionRegistry {
+  factions:    Map<string, Faction>;
+  globalStanding: Map<string, Map<string, Q>>;   // factionId → (factionId → Q)
+}
+
+export function createFactionRegistry(factions: Faction[]): FactionRegistry;
+
+// Compute effective standing of entity A toward entity B
+// (considers entity personal reputation, faction defaults, rival/ally relations).
+export function effectiveStanding(
+  registry: FactionRegistry,
+  a:        Entity,
+  b:        Entity,
+): Q;
+
+// Apply a witness event: update actor's reputation within the witnessing faction.
+export function applyWitnessEvent(
+  registry: FactionRegistry,
+  event:    WitnessEvent,
+): void;
+
+// Collect witness events from a world event stream (e.g., arena trial combatLog).
+export function extractWitnessEvents(
+  events:    TraceEvent[],
+  world:     WorldState,
+  factions:  Map<number, string>,   // entityId → factionId
+): WitnessEvent[];
+```
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/faction.ts` | Registry, standing computation, witness event processing |
+| `test/faction.test.ts` | ~26 tests: standing computation, rival/ally defaults, witness propagation, AI policy integration |
+
+### Tests (~26)
+
+- **Standing (6)**: default neutral for unknown factions; rival faction default q(0.20); ally default q(0.70); personal reputation overrides faction default; combined standing uses max of entity vs. faction; standing clamped to [0, SCALE.Q]
+- **Witness events (7)**: kill of ally member → large negative delta; aid of faction member → positive; theft → negative; multiple witnesses don't stack (deduplication by actor+event type per tick); delta proportional to severity; only entities with detectionQ ≥ q(0.60) witness; events logged
+- **AI modulation (5)**: entity with standing < q(0.30) to target faction → hostile intent; standing > q(0.70) → non-hostile; entity without faction set → neutral behaviour unchanged; faction set but no faction in registry → graceful default; hostility overridden by self-defence (attacked first)
+- **Registry (5)**: `createFactionRegistry` with rival/ally sets; `effectiveStanding` handles entities from same faction (exalted); faction not in registry → q(0.50) default; registry serialises with Map fields; large registry (20 factions) still O(1) per lookup
+- **Integration (3)**: arena trial with two factions → witness events extracted; reputation updated; subsequent encounter AI acts on updated standing
+
+---
+
+## Phase 25 — Loot & Economy
+
+### Overview
+
+Physical encounters produce physical consequences, including items: weapons dropped by
+defeated combatants, armour damaged and salvageable, medical supplies consumed. Phase 25
+provides item value, degradation, trade, and drop mechanics that compose with the equipment,
+medical, and arena systems.
+
+The economic unit (`costUnits`) already exists in `MedicalResource` (Phase 19). Phase 25
+generalises this to all equipment and adds a trade interface.
+
+---
+
+### Concepts
+
+**Item value**
+
+`ItemValue` extends equipment with market pricing:
+
+```typescript
+interface ItemValue {
+  itemId:       string;
+  baseValue:    number;    // cost units (same scale as MEDICAL_RESOURCES)
+  condition_Q:  Q;         // q(1.0) = new; q(0) = worthless debris
+  sellFraction: number;    // fraction of baseValue a vendor will pay (typically 0.40–0.60)
+}
+```
+
+**Equipment degradation**
+
+Melee weapons accumulate *use-wear* on each strike (successful or blocked):
+- Weapon `wear_Q` starts at 0; increments by `q(0.001)` per strike, scaled by opponent hardness.
+- At `wear_Q ≥ q(0.30)`: performance penalty begins (−5% effective mass for damage calculation).
+- At `wear_Q ≥ q(0.70)`: weapon becomes unreliable (20% chance per strike of fumble — counts as miss).
+- At `wear_Q ≥ q(1.0)`: weapon breaks and is removed from entity inventory.
+
+Armour degrades via `resistRemaining_J` already tracked (Phase 11C). Phase 25 maps this to
+`condition_Q` for economic reporting.
+
+**Drop tables**
+
+When an entity is killed or incapacitated:
+
+```typescript
+interface DropTable {
+  guaranteed:  string[];          // itemIds always dropped
+  probabilistic: Array<{ itemId: string; chance_Q: Q }>;
+}
+```
+
+`resolveDrops(entity, seed)` returns the list of items that drop. Weapons and armour are
+guaranteed drops (in degraded condition). Medical supplies have probabilistic yields.
+
+**Trade**
+
+`TradeOffer` is used by Phase 23 (negotiate) and economic simulations:
+
+```typescript
+interface TradeOffer {
+  give: Array<{ itemId: string; count: number }>;
+  want: Array<{ itemId: string; count: number }>;
+}
+
+function evaluateTradeOffer(offer: TradeOffer, inventory: ItemInventory): {
+  netValue:     number;   // positive = advantageous for accepting party
+  feasible:     boolean;  // accepting party has all "want" items
+}
+```
+
+---
+
+### Interfaces
+
+```typescript
+// src/economy.ts
+
+export function computeItemValue(item: Equipment | MedicalResource, wear_Q?: Q): ItemValue;
+export function resolveDrops(entity: Entity, seed: number): string[];
+export function applyWear(weapon: Weapon, actionIntensity_Q: Q): { wear_Q: Q; broke: boolean };
+export function evaluateTradeOffer(offer: TradeOffer, inventory: ItemInventory): TradeEvaluation;
+export function totalInventoryValue(inventory: ItemInventory): number;
+```
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/economy.ts` | Item value, wear mechanics, drop resolution, trade evaluation |
+| `test/economy.test.ts` | ~26 tests: value computation, wear accumulation, drop resolution, trade evaluation |
+
+### Tests (~26)
+
+- **Item value (5)**: fresh weapon has condition q(1.0); worn weapon has lower value; armour value scales with resistRemaining_J; MEDICAL_RESOURCES map correctly; total inventory value sums correctly
+- **Wear mechanics (7)**: single strike adds q(0.001); hard opponent (plate) adds more than soft; wear ≥ q(0.30) triggers penalty; wear ≥ q(0.70) triggers fumble chance; fumble is deterministic with seed; wear ≥ q(1.0) → broke=true; armour wear updates resistRemaining_J proportionally
+- **Drop resolution (6)**: guaranteed items always drop; probabilistic item at q(1.0) always drops; at q(0) never drops; deterministic with seed; dead entity drops all equipped; incapacitated drops nothing by default (configurable)
+- **Trade (5)**: positive net value → feasible offer accepted; negative → rejected; infeasible (want item not in inventory) → feasible=false; zero-value exchange still feasible; `evaluateTradeOffer` is deterministic
+- **Integration (3)**: arena trial → drops resolved for losers; wear accumulates over multi-round arena; economy report includes total loot value
+
+---
+
+## Phase 26 — Momentum Transfer & Knockback
+
+### Overview
+
+The current engine correctly models *energy* delivered on impact but ignores *momentum*.
+This phase adds the second half of Newtonian mechanics: `p = mv`. When a massive blow lands,
+the target recoils. Knockback can cause staggering, prone checks, and is essential for
+realistic wrestling throws, artillery concussion, and large-creature vs. small-creature
+scenarios.
+
+**Design principle**: knockback is derived purely from classical impulse-momentum. No tunable
+knockback multiplier is added. If the numbers feel wrong, the root cause is the energy or
+mass inputs, and those should be corrected.
+
+---
+
+### Physics model
+
+**Impulse from a melee strike**
+
+Contact time for a blunt impact ≈ 5–15 ms. For a blade slash ≈ 1–3 ms (higher peak force,
+shorter contact). Impulse = force × contact time = 2 × KE / velocity_of_head.
+
+For practical implementation, derive from energy and projectile/weapon head velocity:
+
+```
+v_head ≈ sqrt(2 × E_delivered / mass_effective)
+impulse_Ns = 2 × E_delivered / v_head       (elastic collision upper bound)
+           = mass_effective × v_head         (equivalent)
+knockback_Δv = impulse_Ns / target.mass_kg
+```
+
+In fixed-point:
+```typescript
+const v_head_mps  = Math.sqrt((2 * energy_J * SCALE.mps * SCALE.mps) / mass_eff_kg);  // careful: mixed units
+const impulse_Ns  = Math.trunc((2 * energy_J * SCALE.mps) / Math.max(1, v_head_mps));
+const knockback_v = Math.trunc((impulse_Ns * SCALE.mps) / target.attrs.mass_kg);       // in SCALE.mps units
+```
+
+**Projectile momentum**
+
+For ranged impacts, v_projectile is already implied by `launchEnergy_J` and `projectileMass_kg`:
+```
+v_proj = sqrt(2E / m_proj)
+impulse = m_proj × v_proj = sqrt(2 × E × m_proj)
+```
+
+A 5.56 mm round (4 g, 1760 J) delivers ~3.8 Ns → knockback on a 75 kg human ≈ 0.05 m/s.
+Physically correct: modern rifle rounds cause negligible knockback. A 12.7 mm API round
+(45 g, 20 000 J) → 60 Ns → 0.8 m/s knockback on 75 kg — a meaningful stagger.
+
+**Stagger and prone checks**
+
+```typescript
+const STAGGER_THRESHOLD_mps = 0.5 * SCALE.mps;   // 0.5 m/s — stumble
+const PRONE_THRESHOLD_mps   = 2.0 * SCALE.mps;   // 2.0 m/s — knocked down
+
+// Stability coefficient reduces effective knockback:
+const effective_v = Math.trunc(qMul(knockback_v, SCALE.Q - entity.attrs.stabilityQ));
+if (effective_v >= PRONE_THRESHOLD_mps)  → setProne(entity)
+if (effective_v >= STAGGER_THRESHOLD_mps) → setStagger(entity, 3)  // 3-tick stagger window
+```
+
+**Grapple throw integration**
+
+Phase 2A throw already moves the thrown entity. Phase 26 adds velocity continuity:
+the throw imparts `knockback_v` in the throw direction, which is then dissipated against
+ground-contact damping. This produces realistic slide distances on hard surfaces vs. soft.
+
+---
+
+### Interfaces
+
+```typescript
+// src/sim/knockback.ts
+
+export interface KnockbackResult {
+  impulse_Ns:  number;   // raw impulse in fixed-point Newton-seconds (SCALE.N × SCALE.s units)
+  knockback_v: number;   // SCALE.mps velocity delta applied to target
+  staggered:   boolean;
+  prone:       boolean;
+}
+
+export function computeKnockback(
+  energy_J:    number,
+  massEff_kg:  number,   // weapon head mass or projectile mass
+  target:      Entity,
+): KnockbackResult;
+
+export function applyKnockback(
+  entity: Entity,
+  result: KnockbackResult,
+  dir:    { dx: number; dy: number },   // unit vector in SCALE.m coordinates
+): void;
+```
+
+The kernel calls `computeKnockback` inside `resolveHit` (melee) and `resolveShoot` (ranged),
+then calls `applyKnockback` to update entity velocity.
+
+---
+
+### Real-world calibration targets
+
+| Scenario | Expected outcome |
+|---|---|
+| Punch from 1840 N human (fist mass 0.4 kg) | Knockback Δv ≈ 0.3–0.6 m/s; no prone |
+| Zweihander blow (blade mass 0.8 kg, 300 J) | Knockback Δv ≈ 0.9–1.4 m/s; stagger likely |
+| 5.56 mm rifle round (4 g, 1760 J) | Knockback < 0.1 m/s; stagger only at point-blank |
+| 12-gauge slug (28 g, 2100 J) | Knockback Δv ≈ 0.8–1.2 m/s; stagger near-certain |
+| Octopus arm strike (1200 N) | Each arm: moderate knockback; combined: significant displacement |
+| Large creature (500 kg) kick | Knockback Δv ≈ 3–6 m/s on human → prone |
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/sim/knockback.ts` | Impulse calculation, stagger/prone check, apply function |
+| `src/sim/kernel.ts` | Integrate `computeKnockback` / `applyKnockback` into melee and ranged resolution |
+| `test/knockback.test.ts` | ~24 tests: impulse formula, stagger/prone thresholds, stability modifier, integration |
+
+### Tests (~24)
+
+- **Impulse calculation (6)**: formula produces correct Ns for known energy/mass pairs; zero mass → graceful (no divide-by-zero); high-mass projectile produces higher impulse than low-mass same energy; calibration: 5.56mm ≈ 3–4 Ns; calibration: zweihander ≈ 8–12 Ns; impulse is deterministic
+- **Thresholds (5)**: below STAGGER_THRESHOLD → no stagger; above → stagger=true; above PRONE_THRESHOLD → prone=true; stability q(0.90) prevents prone on borderline hit; stability q(0.10) → prone on moderate hit
+- **Apply (5)**: velocity delta added in correct direction; entity velocity bounded by max allowed; prone entity position updated; stagger sets actionState staggerTicks; velocity decays over terrain friction
+- **Calibration (4)**: rifle round produces Δv < 0.15 m/s on 75 kg human; shotgun slug produces stagger; large creature kick → prone; punch from human → no prone on stable target
+- **Integration (4)**: melee hit in arena produces non-zero knockback; ranged hit from rifle produces small Δv; grapple throw velocity matches knockback formula; backward compatibility: entities with no velocity state still work
+
+---
+
+## Phase 27 — Hydrostatic Shock & Cavitation
+
+### Overview
+
+High-velocity projectiles (above ~600 m/s) create two wound channels in tissue:
+
+1. **Permanent cavity** — the physical path of the projectile through tissue. Already
+   modelled by the current `resolveHit` damage distribution.
+
+2. **Temporary cavity** — a radial stretching wave that propagates outward from the permanent
+   cavity and then collapses. In elastic tissue (muscle) this leaves only bruising. In
+   inelastic tissue (liver, brain, bone) it causes tearing — modelled as a multiplier on
+   `internalFrac` damage.
+
+3. **Cavitation** — in highly fluid-saturated tissue (lungs, vascularised muscle), at extreme
+   velocities the pressure wave creates momentary vacuum bubbles. Bubble collapse causes
+   additional haemorrhage — modelled as a bleedingRate multiplier.
+
+This phase matters for: sniper rifle vs. armour gaps; high-velocity round vs. helmet; any
+scenario comparing subsonic pistol to supersonic rifle lethality.
+
+---
+
+### Physics model
+
+Temporary cavity size ∝ `(v_proj / 600_mps)² × (1 − tissue_compliance)`:
+
+```
+tempCavityMul = clamp(
+  1 + (v_proj_mps² / (600² × SCALE.mps²)) × (SCALE.Q − tissueCompliance_Q),
+  1,
+  3    // upper bound: ~3× internal damage at 1000 m/s in inelastic tissue
+)
+```
+
+Tissue compliance by region (lower = less elastic = more vulnerable to stretch injury):
+- `liver`, `spleen`, `brain` → compliance q(0.10) — very inelastic
+- `lung` → compliance q(0.30)
+- `muscle` (torso, thigh) → compliance q(0.60) — moderately elastic
+- `bone` regions → compliance q(0.05) — extremely brittle; cavitation causes shattering
+
+Cavitation bleed multiplier (only applies at v > 900 m/s):
+```
+cavitationBleedMul = v_proj_mps > 900_mps ? 1 + ((v_proj - 900) / 300) : 1
+```
+
+For practical implementation: projectile velocity at impact is derived from `launchEnergy_J`
+and `projectileMass_kg` after drag has been applied (already computed in `resolveShoot`):
+```
+v_impact_mps = sqrt(2 × E_remaining_J / projectileMass_kg)
+```
+
+---
+
+### Activation gate
+
+These effects only apply when **all** of:
+1. `projectileMass_kg` is defined on the weapon (requires Phase 3 ammo tracking or Phase 17 weapons)
+2. `v_impact_mps > HYDROSTATIC_THRESHOLD_mps = 600 * SCALE.mps / 1000` (adjusted for units)
+3. Hit region is not heavy armour (armour reflectivity or high resist reduces the effect)
+
+---
+
+### Interfaces
+
+```typescript
+// src/sim/hydrostatic.ts
+
+export const TISSUE_COMPLIANCE: Partial<Record<string, Q>>;  // regionId → compliance
+
+export function computeTemporaryCavityMul(
+  v_impact: number,    // SCALE.mps units
+  region:   string,
+): number;             // multiplier on internalFrac damage, ≥ 1.0
+
+export function computeCavitationBleed(
+  v_impact:      number,
+  currentBleed:  number,
+): number;             // new bleedingRate
+```
+
+Kernel integration: inside `resolveShoot`, after computing `internalInc`, multiply by
+`computeTemporaryCavityMul` when projectile velocity exceeds threshold.
+
+---
+
+### Real-world calibration targets
+
+| Scenario | Expected outcome |
+|---|---|
+| 9mm (370 m/s, 8 g) hitting torso muscle | No temp cavity multiplier (below threshold) |
+| 5.56mm (960 m/s, 4 g) hitting liver | tempCavityMul ≈ 2.5–3.0× internal damage |
+| .338 Lapua (900 m/s, 9.7 g) hitting thigh | tempCavityMul ≈ 1.8–2.2× + cavitation bleed |
+| Subsonic .45 ACP (270 m/s) vs. M193 5.56 | M193 → ≥ 2× more internal damage in soft tissue |
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/sim/hydrostatic.ts` | Tissue compliance table, temp cavity multiplier, cavitation bleed |
+| `src/sim/kernel.ts` | Integrate into resolveShoot (post-drag, pre-damage application) |
+| `test/hydrostatic.test.ts` | ~20 tests: compliance table, multiplier formula, cavitation, calibration comparisons |
+
+### Tests (~20)
+
+- **Tissue compliance (4)**: brain has lower compliance than muscle; bone lowest of all; lung intermediate; unknown region defaults to muscle-level
+- **Temporary cavity (6)**: below 600 m/s → multiplier = 1.0; at 960 m/s in liver → ≈ 2.5–3.0; bounded at 3.0; inelastic region always greater than elastic at same velocity; zero-mass projectile → no effect; compliant tissue (muscle) multiplier stays near 1.0 at 600 m/s
+- **Cavitation bleed (4)**: below 900 m/s → no added bleed; at 1000 m/s → bleed multiplier applies; not applied to non-fluid tissue (bone); deterministic
+- **Calibration (6)**: 9mm subsonic → same internal as pre-phase; 5.56mm → ≥ 2× internal in liver vs. 9mm; subsonic .45 < M193 5.56 internal damage; .338 Lapua produces highest internal of modern rifles; sniper round to brain is more lethal than same energy to thigh; armour full-stop prevents all temporary cavity
+
+---
+
+## Phase 28 — Cone AoE: Breath Weapons, Fire, Gas
+
+### Overview
+
+The existing AoE system (Phase 10) uses spherical explosions. Many real and fictional
+effects are *directional*: a dragon exhales fire in a cone, a flamethrower projects a
+narrow stream, a gas dispenser releases a cloud in the wind direction.
+
+Phase 28 adds **cone geometry** to the capability system (Phase 12), enabling breath
+weapons, cones of gas, blinding flashes forward of a weapon, and sonic disorientation
+blasts — all using the existing `CapabilitySource` infrastructure.
+
+---
+
+### Geometry
+
+A cone is defined by:
+```typescript
+interface Cone {
+  origin:    { x: number; y: number };   // SCALE.m
+  dir:       { dx: number; dy: number }; // unit vector (normalised in SCALE.m space)
+  halfAngle_rad: number;                 // radians; π/6 = 30° = typical breath
+  range_m:   number;                     // SCALE.m; max length of cone
+}
+```
+
+**Entity in cone check**:
+```typescript
+function entityInCone(entity: Entity, cone: Cone): boolean {
+  const ex = entity.pos.x - cone.origin.x;
+  const ey = entity.pos.y - cone.origin.y;
+  const dist = Math.sqrt(ex*ex + ey*ey);           // SCALE.m
+  if (dist > cone.range_m) return false;
+  // dot product with direction
+  const dotNorm = (ex * cone.dir.dx + ey * cone.dir.dy) / (dist || 1);
+  return dotNorm >= Math.cos(cone.halfAngle_rad);
+}
+```
+
+**Fixed-point note**: The `dir` vector and `halfAngle_rad` live outside the fixed-point
+domain (they are configuration constants, not per-tick simulation values). The `dist`
+computation uses SCALE.m integers; the cosine comparison uses pre-computed integer threshold:
+`cosThreshold = Math.round(Math.cos(halfAngle_rad) * SCALE.Q)` then compare
+`dotNorm_Q = mulDiv(dot, SCALE.Q, dist)` against `cosThreshold`.
+
+---
+
+### Capability integration
+
+`CapabilitySource` gains two new optional fields:
+
+```typescript
+// Appended to CapabilitySource (src/sim/capability.ts)
+coneHalfAngle_rad?: number;     // if set, AoE is a cone rather than sphere
+coneDir?: "facing" | "fixed";   // "facing" = entity facing direction; "fixed" = fixed dir
+coneDirFixed?: { dx: number; dy: number };  // used when coneDir = "fixed"
+```
+
+When a capability with `coneHalfAngle_rad` fires, the kernel replaces the spherical AoE
+loop with the cone loop, applying the payload to each entity within the cone.
+
+**Sustained emission**
+
+A breath weapon is not instantaneous. Phase 28 adds `sustainedTicks?: number` to
+`CapabilitySource`. When active:
+- Capability activates normally (cast time, cooldown apply).
+- `sustainedTicks` counts down each tick the capability fires, applying the payload each tick.
+- If the entity takes damage during sustained emission, there is a concentration break check
+  (same mechanism as Phase 12B concentration aura, `castTime = -1`).
+
+**Fuel tracking**
+
+`CapabilitySource` already has regen models (Phase 12). A flame-breath uses `ambient` regen
+(zero — no regeneration) and a finite resource pool (`regenModel.type = "boundless"` is
+wrong here; use `"rest"` with `totalCharge_J`). The existing regen infrastructure handles
+depletion naturally.
+
+---
+
+### Dragon scenario: knight vs. fire-breathing dragon
+
+```typescript
+// DRAGON_FIRE_BREATH: CapabilitySource
+const DRAGON_FIRE_BREATH: CapabilitySource = {
+  id:              "dragon_fire_breath",
+  name:            "Fire Breath",
+  payload:         {
+    kind:         "impact",
+    damage: {
+      surfaceFrac:    q(0.60),   // fire burns surface heavily
+      internalFrac:   q(0.30),   // convective heat reaches internal tissue
+      structuralFrac: q(0.10),   // flash heating can crack bone
+      bleedFactor:    q(0.05),   // little bleeding from fire
+      penetrationBias: q(0.05),
+    },
+    energyPerTick_J: 800,        // 800 J/tick = 16 kJ/s — empirically hot fire
+  },
+  range_m:         10 * SCALE.m,
+  coneHalfAngle_rad: Math.PI / 6,   // 60° cone
+  sustainedTicks:  20,              // 1-second burst
+  castTime_ticks:  5,
+  cooldown_ticks:  100,
+  regenModel: { type: "rest", restorePerTick: 0, maxCharge_J: 32_000 },
+  energyType:      "thermal",       // uses existing Energy damage channel
+};
+```
+
+A plated knight facing this breath:
+- Plate armour (arm_plate) has resist_J = 800 and no `reflectivity` for thermal.
+- Phase 11C Energy channel: thermal damage bypasses reflectivity (only configured for energy beams).
+- `surfaceFrac` damage applies over 20 ticks → surface injury accumulates; `internalFrac`
+  passes through metal (heat conduction) as full damage.
+- Net effect: a sustained full-breath attack against a plate-armoured knight will cause
+  significant internal heat injury within ~0.5 seconds. This is physically plausible
+  (metal conducts heat rapidly).
+
+To model heat resistance, armour or entities can have a `thermalResist_Q` modifier checked
+by the kernel against the `"thermal"` energyType tag.
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/sim/cone.ts` | Cone geometry, `entityInCone`, cone AoE loop |
+| `src/sim/capability.ts` | Add `coneHalfAngle_rad`, `coneDir`, `sustainedTicks` fields |
+| `src/sim/kernel.ts` | Route capability AoE through cone loop when configured |
+| `test/cone.test.ts` | ~22 tests: geometry, sustained emission, fuel depletion, dragon calibration |
+
+### Tests (~22)
+
+- **Geometry (7)**: entity at origin+dir within range → in cone; entity behind → not in cone; entity at exact half-angle → in cone; entity past range → not in cone; entity at right angles → not in cone (for 30° half-angle); large half-angle (π/2) captures hemisphere; zero range → nothing in cone
+- **Sustained emission (5)**: sustainedTicks = 20 → damage applied 20 consecutive ticks; damage interrupt on shock ≥ q(0.30); each tick deducts from charge; cone rotates with entity facing on "facing" mode; fixed dir stays constant
+- **Integration (5)**: DRAGON_FIRE_BREATH applied to knight in cone → surface injury accumulates; knight outside cone (90° off) → no damage; breath weapon depletes after 40 ticks (2 × sustainedTicks); cooldown prevents immediate re-use; non-cone (spherical) capability unaffected
+- **Dragon scenario (5)**: knight + PLATE_ARMOUR in 10m cone → internal damage > 0 within 20 ticks; knight outside cone → no damage; unarmoured entity → higher surface damage than knight; knight retreats beyond range → damage stops; dragon vs. octopus (soft tissue) → octopus takes more surface damage than knight
+
+---
+
+## Phase 29 — Environmental Stress: Staged Hypothermia & Hyperthermia
+
+### Overview
+
+The existing temperature system (Phase 10C) applies direct damage from extreme heat and cold.
+Phase 29 replaces this with a physiologically accurate core-temperature model. Instead of
+instant damage, temperature stress follows a staged progression over minutes to hours, with
+reversible early-stage impairment and irreversible late-stage injury.
+
+This enables realistic scenarios: a soldier surviving a blizzard for hours before incapacitation;
+a desert march causing heat exhaustion before sundown; a diver in 4°C water having 30–90
+minutes before incapacitation (and this varying realistically with insulation).
+
+---
+
+### Physics model
+
+**Core temperature tracking**
+
+```typescript
+// Added to ConditionState
+coreTemp_Q: Q;   // q(0.5) = 37°C; linear map: 0=10°C, SCALE.Q=64°C
+                 // so 1°C = 185.2 Q units; 37°C = q(0.5)
+```
+
+Initial value: `q(0.50)` (37.0 °C) for all warm-blooded entities.
+
+**Heat balance equation (per second, at 1 Hz)**
+
+```
+ΔT = (metabolicHeat − conductiveLoss − evaporativeLoss) / thermalMass
+metabolicHeat  = entity.peakPower_W × activityFraction × (1 − efficiency)  [W]
+conductiveLoss = (coreTemp_C − ambientTemp_C) / thermalResistance            [W]
+thermalMass    = entity.mass_kg × 3500                                       [J/°C; specific heat of tissue]
+thermalResistance = 0.09 + armourInsulation                                  [°C/W; ≈ 0.09 for unclothed human]
+armourInsulation  = (sum of armour pieces' insulation_m2KW rating)
+```
+
+**Staged effects**
+
+| Core temp (°C) | Stage | Effect |
+|---|---|---|
+| 37.0–38.0 | Normal | None |
+| 38.0–39.0 | Mild hyperthermia | −5% peakPower_W effective; sweat penalty on desert terrain |
+| 39.0–40.0 | Heat exhaustion | −15% peakPower_W; fine-control penalty q(0.10) |
+| 40.0–41.0 | Heat stroke | −40% peakPower_W; decision latency ×2; possible collapse |
+| > 41.0 | Critical | Death trajectory (injury.fluidLoss accelerates) |
+| 36.0–37.0 | Mild hypothermia | Shivering: +10% metabolic load, −5% fine control |
+| 34.0–36.0 | Moderate hypothermia | −20% peakPower_W; −15% fine control; reaction time +20% |
+| 32.0–34.0 | Severe hypothermia | −50% peakPower_W; decision latency ×3; confusion |
+| < 32.0 | Critical | Cardiac arrest risk; death trajectory |
+
+**Entity property extensions**
+
+```typescript
+// Added to Weapon / Armour type (equipment.ts)
+insulation_m2KW?: number;   // thermal insulation for armour pieces (0 = none; 0.20 = heavy wool)
+```
+
+Plate armour with no liner: insulation ≈ 0.02 m²K/W (metal conducts heat rapidly — bad in extreme cold and heat).
+Heavy fur cloak: insulation ≈ 0.25 m²K/W.
+
+---
+
+### Interfaces
+
+```typescript
+// src/sim/thermoregulation.ts
+
+export const CORE_TEMP_NORMAL_Q:    Q;   // q(0.500) = 37.0°C
+export const CORE_TEMP_HEAT_MILD:   Q;   // q(0.515)
+export const CORE_TEMP_HEAT_EXHAUS: Q;   // q(0.529)
+export const CORE_TEMP_HEAT_STROKE: Q;   // q(0.544)
+export const CORE_TEMP_HYPOTHERMIA_MILD:   Q;  // q(0.485) = 36.0°C
+export const CORE_TEMP_HYPOTHERMIA_MOD:    Q;  // q(0.456) = 34.0°C
+export const CORE_TEMP_HYPOTHERMIA_SEVERE: Q;  // q(0.426) = 32.0°C
+
+export function stepCoreTemp(
+  entity:      Entity,
+  ambientTemp: Q,         // same Q-coded temperature
+  delta_s:     number,    // seconds (downtime) or 1/TICK_HZ (kernel)
+): Q;                     // new coreTemp_Q
+
+export function deriveTempModifiers(coreTemp_Q: Q): {
+  powerMul:       Q;    // effective multiplier on peakPower_W
+  fineControlPen: Q;    // subtracted from controlQuality
+  latencyMul:     Q;    // multiplied against decision latency
+  dead:           boolean;
+};
+```
+
+The kernel calls `stepCoreTemp` once per tick (at 1/20 Hz accuracy; acceptable for a
+minutes-scale process). `stepDowntime` calls at 1 Hz for recovery simulation.
+
+---
+
+### Real-world calibration targets
+
+| Scenario | Expected outcome |
+|---|---|
+| Unclothed human, 0°C ambient, resting | Core temp reaches 34°C (severe hypothermia) in ~60–90 min |
+| Unclothed human, 0°C ambient, marching | Core temp stabilises ~35–36°C (mild hypothermia) |
+| Desert soldier (30°C ambient), full exertion | Core temp reaches 40°C (heat exhaustion) in ~30–60 min |
+| Diver in 4°C water (wetsuit insulation 0.05) | Severe hypothermia in 30–45 min |
+| Knight in plate (metal, 0.02 insulation), blizzard | Moderate hypothermia in 20–40 min |
+| Knight in plate with wool liner (0.15 insulation), blizzard | Mild hypothermia only after 2+ h |
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/sim/thermoregulation.ts` | Core temperature model, staged thresholds, modifier derivation |
+| `src/sim/kernel.ts` | Call `stepCoreTemp` per tick; apply `deriveTempModifiers` to action resolution |
+| `src/downtime.ts` | Call `stepCoreTemp` at 1 Hz during recovery simulation |
+| `test/thermoregulation.test.ts` | ~26 tests: heat balance, stage thresholds, armour insulation, calibration |
+
+### Tests (~26)
+
+- **Heat balance (5)**: resting human in 37°C ambient → stable core temp; resting human in 0°C → core cools; exerting human in cold → core stabilises higher than resting; plate armour (low insulation) cools faster than fur cloak; entity with zero mass graceful (no divide)
+- **Stage thresholds (6)**: at normal temp → all modifiers = identity; mild hyperthermia → powerMul reduced; heat exhaustion → fineControlPen > 0; heat stroke → latencyMul > 1; critical hyperthermia → dead=true; critical hypothermia → dead=true
+- **Armour insulation (5)**: plate armour produces faster cooling than no armour (metal conduction); fur cloak produces slower cooling; stacked insulation values sum correctly; insulation never makes cooling negative (can't overheat from insulation in cold); insulation values are physically plausible
+- **Calibration (7)**: unclothed rest 0°C → severe hypothermia in 3600–5400 s; unclothed marching 0°C → mild only; desert soldier exertion → heat exhaustion in 1800–3600 s; diver 4°C → severe in 1800–2700 s; knight plate blizzard → moderate in 1200–2400 s; knight plate+wool → mild only after 7200 s; all calibrations deterministic
+- **Integration (3)**: downtime with cold environment → core temp decreases; kernel integration → powerMul affects strike energy; thermoregulation interacts with existing temperature-damage channel without double-counting
+
+---
+
+## Phase 30 — Nutrition & Starvation
+
+### Overview
+
+All energy in the simulation ultimately comes from metabolism. The existing stamina system
+(Phase 2B) models short-term energy reserves (`reserveEnergy_J`) but treats them as instantly
+replenished. Phase 30 adds the long-term layer: food stores, basal metabolic demand, and
+the staged consequences of caloric deprivation across hours to weeks.
+
+This phase completes the survivability stack: entities can now die from dehydration (fluid
+loss), blood loss (injury), infection (Phase 9), temperature (Phase 29), *or* starvation.
+Each operates on a different time scale and requires different intervention — which is the
+design goal.
+
+---
+
+### Physics model
+
+**Metabolic demand**
+
+Basal metabolic rate (BMR) for a warm-blooded entity:
+
+```
+BMR_W ≈ 80 × (mass_kg / 75)^0.75    [Kleiber's law]
+```
+
+In fixed-point: `BMR_W = mulDiv(80, (mass_kg)^0.75_approx, (75000)^0.75_approx)`
+(pre-tabulated for common masses to avoid floating-point in the sim path).
+
+Active metabolic rate during combat: `AMR_W = BMR_W + peakPower_W × intensity × 0.15`
+
+Over a day at rest: `dailyCalories_J = BMR_W × 86400` ≈ 6.9 MJ/day for 75 kg human.
+
+**Food items**
+
+```typescript
+interface FoodItem {
+  id:           string;
+  name:         string;
+  energy_J:     number;   // caloric energy; 1 ration bar ≈ 2 MJ
+  massGrams:    number;
+}
+
+const FOOD_ITEMS: FoodItem[] = [
+  { id: "ration_bar",   name: "Ration bar",   energy_J: 2_000_000, massGrams: 500 },
+  { id: "dried_meat",   name: "Dried meat",   energy_J: 1_500_000, massGrams: 300 },
+  { id: "hardtack",     name: "Hardtack",     energy_J:   800_000, massGrams: 200 },
+  { id: "fresh_bread",  name: "Fresh bread",  energy_J:   700_000, massGrams: 250 },
+  { id: "berry_handful",name: "Berries",      energy_J:   150_000, massGrams:  50 },
+  { id: "water_flask",  name: "Water flask",  energy_J:         0, massGrams: 500,
+    hydration_J: 500_000 },   // rehydration prevents fluid loss accumulation
+];
+```
+
+**Hunger state**
+
+```typescript
+type HungerState = "sated" | "hungry" | "starving" | "critical";
+```
+
+| State | Onset | Combat effect |
+|---|---|---|
+| `sated` | Caloric surplus ≥ 0 | None |
+| `hungry` | 12–24 h caloric deficit | −10% effective stamina power |
+| `starving` | 24–72 h deficit | −25% stamina; −10% peakForce_N effective; morale penalty q(0.030)/tick |
+| `critical` | > 72 h deficit | −50% stamina; −20% peakForce_N; decision latency ×1.5; collapse risk |
+
+**Mass loss**
+
+During starvation:
+- First 24h: glycogen depletion (negligible mass loss ~100 g)
+- 24–72h: fat catabolism ~300 g/day at BMR; higher with activity
+- 72h+: muscle catabolism → permanent reduction in `peakForce_N` at rate ≈ 0.5 N/hour
+
+Mass loss is tracked and reduces `entity.attrs.mass_kg` accordingly.
+
+**Nutrition state tracking**
+
+```typescript
+// Added to ConditionState
+caloricBalance_J:  number;  // accumulated surplus/deficit in joules; negative = deficit
+hydrationBalance_J: number; // accumulated water balance
+lastMealTick:       number;
+hungerState:        HungerState;
+```
+
+---
+
+### Interfaces
+
+```typescript
+// src/sim/nutrition.ts
+
+export const FOOD_ITEMS: FoodItem[];
+
+export function computeBMR(mass_kg: number): number;   // watts (fixed-point W)
+
+export function stepNutrition(
+  entity:    Entity,
+  delta_s:   number,   // seconds elapsed (1 Hz in downtime, 0.05s in kernel)
+  activity:  Q,        // current activity intensity (for AMR calculation)
+): void;               // mutates entity.condition.caloricBalance_J, hungerState
+
+export function consumeFood(
+  entity:    Entity,
+  foodId:    string,
+  tick:      number,
+): boolean;            // false if food not in inventory
+
+export function deriveHungerModifiers(hungerState: HungerState): {
+  staminaMul:     Q;
+  forceMul:       Q;
+  latencyMul:     Q;
+  moraleDecay:    Q;
+};
+```
+
+---
+
+### Real-world calibration targets
+
+| Scenario | Expected outcome |
+|---|---|
+| 75 kg human, BMR only | BMR ≈ 80 W ≈ 6.9 MJ/day |
+| 75 kg human, 24h without food | `hungry` state; −10% stamina |
+| 75 kg human, 72h without food | `starving` state; mass −0.6–1.0 kg |
+| 75 kg human, 7 days without food | `critical` → collapse; mass −2–3 kg |
+| Warrior in full combat, 4h | caloric demand ≈ 3× BMR; food reserve depletes ~3× faster |
+| Ration bar consumption | Restores `sated` state from `hungry` for ~1 day at rest |
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/sim/nutrition.ts` | BMR computation, hunger state machine, food items, modifier derivation |
+| `src/sim/kernel.ts` | Call `stepNutrition` per tick (at reduced resolution: 1 Hz via accumulator) |
+| `src/downtime.ts` | Call `stepNutrition` during recovery simulation |
+| `test/nutrition.test.ts` | ~26 tests: BMR, hunger states, food consumption, mass loss, calibration |
+
+### Tests (~26)
+
+- **BMR (4)**: 75 kg entity → BMR ≈ 80 W; heavier entity has higher BMR; lighter entity has lower; BMR is deterministic and integer-valued
+- **Hunger states (6)**: fresh entity starts sated; 12h deficit → hungry; 24h → starving; 72h → critical; food consumption from hungry → sated; food consumption from starving only partially recovers if severe deficit
+- **Food consumption (5)**: consuming unknown food returns false; consuming food in inventory succeeds; energy_J added to caloricBalance_J correctly; ration bar from hungry → sated; water flask reduces hydrationBalance and fluidLoss
+- **Mass loss (5)**: no loss in first 24h; fat loss at expected rate 24–72h; muscle loss after 72h; mass_kg decreases in attrs; mass loss reduces effective peakForce_N (muscle catabolism)
+- **Modifiers (3)**: sated → identity modifiers; starving → staminaMul < SCALE.Q; critical → moraleDecay > 0
+- **Calibration (3)**: warrior 4h combat → 3× BMR; 7-day starvation → critical + mass loss ≈ 2–3 kg; ration bar + 1 day rest → sated
+
+---
+
+## Physics Realism Summary (Post-Phase 30)
+
+After Phase 30, Ananke will handle the following real-world physics scenarios:
+
+### Man wrestling an octopus (Phase 2A + Phase 8B + Phase 26)
+- Octopus: LARGE_PACIFIC_OCTOPUS archetype, 8 arms, controlQuality q(0.95), stability q(0.98)
+- `grappleScore` accounts for force (1200 N × 8 arms), suction friction (modelled as stability bonus)
+- Phase 26 knockback: each arm strike displaces human ≈ 0.2–0.5 m/s; combined pressure overwhelming
+- Physically realistic: a 40 kg octopus can overpower a 75 kg human in water (reduced human stability)
+- Gap remaining: individual arm tracking (all 8 arms treated as one force pool)
+
+### Boxer versus giant insect (Phase 8B + Phase 26 + Phase 27)
+- Giant insect modelled via GRASSHOPPER_PLAN body plan; exoskeleton `structureType`
+- Boxer: PRO_BOXER archetype (5000 N force); punch targets shell segments
+- Shell breach threshold gate (Phase 8B): boxer must exceed breachThreshold to cause internal damage
+- After breach: internal fluid → hemolymphLoss → death (Phase 8B)
+- Hydrostatic shock (Phase 27): irrelevant (punches are low-velocity vs. threshold); knockback pushes insect
+- Gap remaining: insect venom, chemical defence not modelled
+
+### Knight versus fire-breathing dragon (Phase 17 + Phase 28 + Phase 29)
+- Knight: KNIGHT_INFANTRY archetype + arm_plate armour (resist_J = 800)
+- Dragon: custom entity with DRAGON_FIRE_BREATH capability (Phase 28)
+- Fire cone: 60° half-angle, 10m range, 800 J/tick × 20 ticks = 16 kJ per breath
+- Plate armour absorbs 800 J (Phase 11C energy channel); remaining heat causes internal damage
+- Phase 29 thermoregulation: metal plate provides insulation_m2KW ≈ 0.02 → rapid core heating
+- Knight counter: longsword (Phase 17 MEDIEVAL_MELEE) at reach 0.85m; dragon must be at melee range to use breath
+- Physically plausible: sustained fire breath would overheat a plated knight in ~30–60 s
+- Gap remaining: dragon flight (locomotion), tail sweep, claw attacks need standard archetype definition
+
+### Hunger and starvation (Phase 30)
+- Full metabolic demand model with Kleiber's law BMR
+- Staged hunger: sated → hungry (12h) → starving (24h) → critical (72h)
+- Mass loss, strength loss, morale decay all physics-derived
+
+### Hypothermia and hyperthermia (Phase 29)
+- Core temperature modelled via heat balance equation
+- Staged impairment: mild → moderate → severe → critical
+- Armour insulation values determine survival time in cold/heat
+- Diver in 4°C water: ~30–45 min (matches empirical dive medicine data)
+- Knight in blizzard without insulation: ~20–40 min (matches historical cases)
+
 **Expected test growth**: ~90 new tests (30 + 25 + 35), reaching ~980 total.
