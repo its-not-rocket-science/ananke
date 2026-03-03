@@ -2200,7 +2200,7 @@ the arena calibration suite.
 
 ---
 
-## Phase 20 — Arena Simulation Framework
+## Phase 20 — Arena Simulation Framework *(COMPLETE)*
 
 **Goal**: a declarative scenario system that makes it easy to define a fight (or a fight +
 recovery), run it statistically over many seeds, validate outcomes against expectations, and
