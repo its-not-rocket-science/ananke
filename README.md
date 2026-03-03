@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–22 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–25 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -131,9 +131,20 @@ full campaign state round-trips cleanly, and a **dialogue and negotiation layer*
 deception, surrender, and trade negotiation — using the same physical and psychological
 attributes as the combat engine: intimidation strength derives from `peakForce_N`, deception
 is defeated by `attentionDepth`, and escalation triggers when a fearless target interprets
-an intimidation attempt as an insult.
+an intimidation attempt as an insult, and a **faction and reputation system**
+(`src/faction.ts`) that tracks faction membership, inter-faction standing, entity reputation,
+and a witness system that propagates reputation deltas from combat events: kills reduce the
+actor's standing with the victim's faction, aid increases it, and the AI decision layer
+suppresses attacks on entities with standing above `STANDING_FRIENDLY_THRESHOLD`, with a
+self-defence override when the attacker has already taken damage, and a **loot and economy
+layer** (`src/economy.ts`) that adds item valuation, equipment degradation, drop resolution,
+and trade mechanics: `computeItemValue` derives cost-unit prices from physical properties
+(mass, reach, armour resist), `applyWear` tracks cumulative use-wear on melee weapons
+(penalty at q(0.30), fumble at q(0.70), breaks at q(1.0)), `resolveDrops` produces
+deterministic loot from dead or incapacitated entities, and `evaluateTradeOffer` evaluates
+trades from the accepting party's perspective.
 
-**1128 tests.** All coverage thresholds met (statements 97.0 %, branches 85.8 %, functions 95.7 %, lines 97.0 %).
+**1185 tests.** All coverage thresholds met (statements 96.9 %, branches 85.8 %, functions 95.9 %, lines 96.9 %).
 
 See `ROADMAP.md` for the full development plan.
 

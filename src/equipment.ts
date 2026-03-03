@@ -54,6 +54,9 @@ export interface Weapon extends ItemBase {
   /** Phase 17: flexible/chain weapons (flail, morning star) that loop around shields.
    *  q(0) = no bypass; q(0.50) = 50% reduction in effective shield coverageQ. */
   shieldBypassQ?: Q;
+
+  /** Phase 25: cumulative use-wear (0 = new, q(1.0) = broken). Updated by applyWear(). */
+  wear_Q?: Q;
 }
 
 export interface Shield extends ItemBase {

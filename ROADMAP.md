@@ -3011,7 +3011,7 @@ export function extractWitnessEvents(
 
 ---
 
-## Phase 25 — Loot & Economy
+## Phase 25 — Loot & Economy *(COMPLETE)*
 
 ### Overview
 
