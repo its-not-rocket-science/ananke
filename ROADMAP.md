@@ -2790,7 +2790,7 @@ export function deserialiseCampaign(json: string): CampaignState;
 
 ---
 
-## Phase 23 — Dialogue & Negotiation Layer
+## Phase 23 — Dialogue & Negotiation Layer *(COMPLETE)*
 
 ### Overview
 

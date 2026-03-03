@@ -126,9 +126,14 @@ ageing curves, and permanent injury sequelae, and a **campaign and world state l
 (`src/campaign.ts`) that persists entity state, location, and inventory between sessions:
 world clock advancement with integrated downtime healing, a location registry with
 travelCost routing, campaign-level item stockpiles, and Map-aware JSON serialisation so
-full campaign state round-trips cleanly.
+full campaign state round-trips cleanly, and a **dialogue and negotiation layer**
+(`src/dialogue.ts`) that resolves non-combat social actions — intimidation, persuasion,
+deception, surrender, and trade negotiation — using the same physical and psychological
+attributes as the combat engine: intimidation strength derives from `peakForce_N`, deception
+is defeated by `attentionDepth`, and escalation triggers when a fearless target interprets
+an intimidation attempt as an insult.
 
-**1098 tests.** All coverage thresholds met (statements 97.1 %, branches 85.9 %, functions 95.6 %, lines 97.1 %).
+**1128 tests.** All coverage thresholds met (statements 97.0 %, branches 85.8 %, functions 95.7 %, lines 97.0 %).
 
 See `ROADMAP.md` for the full development plan.
 
@@ -1131,6 +1136,64 @@ entityInventories, entity skills, armourState, and location travelCost all survi
 
 ---
 
+## Dialogue & Negotiation (Phase 23)
+
+`src/dialogue.ts` resolves non-combat social encounters. No Charisma stat — intimidation
+strength comes from `peakForce_N`, persuasion from cognitive depth, deception is beaten by
+sharp minds. Fully deterministic when given a seed.
+
+```typescript
+import {
+  resolveDialogue, applyDialogueOutcome, narrateDialogue, dialogueProbability,
+  type DialogueContext,
+} from "./src/dialogue.js";
+
+const ctx: DialogueContext = {
+  initiator:  knight,
+  target:     bandit,
+  worldSeed:  world.seed,
+  tick:       world.tick,
+};
+
+// Check probability before rolling
+const P = dialogueProbability({ kind: "intimidate", intensity_Q: q(0.80) }, ctx);
+// → q(0.72) for a 2800N knight vs. a mid-fear bandit
+
+// Roll the outcome
+const outcome = resolveDialogue({ kind: "intimidate", intensity_Q: q(0.80) }, ctx);
+// → { result: "success", fearDelta: q(0.15) }  or  { result: "failure", cooldown_s: 30 }
+// → { result: "escalate" }  if target.fearQ < q(0.20) and failed
+
+// Write deltas back to entities
+applyDialogueOutcome(outcome, bandit);
+
+// Natural language description
+const line = narrateDialogue(
+  { kind: "intimidate", intensity_Q: q(0.80) }, outcome,
+  { verbosity: "verbose", nameMap: new Map([[1, "Sir Roland"], [2, "the bandit"]]) },
+  { initiatorId: 1, targetId: 2 },
+);
+// → "Sir Roland attempted intimidation on the bandit — the target was cowed by the show of force."
+```
+
+### Action types
+
+| Action | Resolution | Escalates? |
+|--------|-----------|------------|
+| `intimidate` | `q(peakForce_N/4000) + fearQ − distressTolerance`; leader trait −q(0.15) | Yes, if fearQ < q(0.20) |
+| `persuade` | base q(0.40) + learningBonus(attentionDepth) + factionBonus − failurePenalty | No |
+| `deceive` | `plausibility_Q × (1 − attentionDepth/10)` | No |
+| `surrender` | Deterministic: accepted if `target.fearQ > q(0.40)` | No |
+| `negotiate` | Deterministic: accepted if trade utility is positive for target | No |
+
+**`dialogueProbability(action, ctx)`** — exported helper that returns the success probability
+without rolling RNG. Useful for UI previews, AI decision-making, and testing.
+
+**Verbosity levels** match the narrative layer: `terse` (label: result), `normal` (one sentence),
+`verbose` (entity names + full outcome description). Entity names resolved from `cfg.nameMap`.
+
+---
+
 ## Project layout
 
 ```
@@ -1155,6 +1218,7 @@ src/
   arena.ts          runArena(), expectWinRate/SurvivalRate/MeanDuration/Recovery/ResourceCost, formatArenaReport, 6 calibration scenarios
   progression.ts    createProgressionState(), awardXP(), advanceSkill(), applyTrainingSession(), stepAgeing(), applyAgeingDelta(), deriveSequelae()
   campaign.ts       createCampaign(), addLocation(), travel(), mergeEntityState(), stepCampaignTime(), debitInventory/creditInventory/getInventoryCount(), serialiseCampaign/deserialiseCampaign()
+  dialogue.ts       resolveDialogue(), applyDialogueOutcome(), narrateDialogue(), dialogueProbability() — social encounter resolution (intimidate/persuade/deceive/surrender/negotiate)
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
