@@ -2039,7 +2039,7 @@ Second-person support: set `nameMap.get(id) === "you"` for bare-infinitive conju
 
 ---
 
-## Phase 19 — Downtime & Recovery Simulation
+## Phase 19 — Downtime & Recovery Simulation *(COMPLETE)*
 
 **Goal**: a time-scale bridge between the 20 Hz combat kernel and the days-to-weeks timescale
 of wound recovery. `stepDowntime` re-uses the existing injury, clotting, substance, and
