@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–21 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–22 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -122,9 +122,13 @@ runner, expectation system, and six physics-calibrated built-in scenarios for va
 simulation realism, and a **character progression system** (`src/progression.ts`) that adds
 the temporal axis to entity attributes: XP/milestone-driven skill advancement using geometric
 thresholds, physical training drift bounded by genetic ceiling, physiologically-grounded
-ageing curves, and permanent injury sequelae.
+ageing curves, and permanent injury sequelae, and a **campaign and world state layer**
+(`src/campaign.ts`) that persists entity state, location, and inventory between sessions:
+world clock advancement with integrated downtime healing, a location registry with
+travelCost routing, campaign-level item stockpiles, and Map-aware JSON serialisation so
+full campaign state round-trips cleanly.
 
-**1058 tests.** All coverage thresholds met (statements 97.1 %, branches 85.8 %, functions 95.5 %, lines 97.1 %).
+**1098 tests.** All coverage thresholds met (statements 97.1 %, branches 85.9 %, functions 95.6 %, lines 97.1 %).
 
 See `ROADMAP.md` for the full development plan.
 
@@ -1061,6 +1065,72 @@ const json = serialiseProgression(prog);  // Map-aware JSON
 
 ---
 
+## Campaign & World State (Phase 22)
+
+`src/campaign.ts` is the persistence layer for multi-session campaigns. It tracks world time,
+entity state, location, and item stockpiles between encounters, and delegates wound recovery
+to `stepDowntime`.
+
+```typescript
+import {
+  createCampaign, addLocation, travel,
+  creditInventory, debitInventory, getInventoryCount,
+  stepCampaignTime, mergeEntityState,
+  serialiseCampaign, deserialiseCampaign,
+} from "./src/campaign.js";
+
+// Create a campaign with starting entities
+const campaign = createCampaign("my-campaign", [fighter1, fighter2], "2025-01-01T00:00:00Z");
+
+// Register locations with travel costs (seconds)
+addLocation(campaign, { id: "town", name: "Town", elevation_m: 50, travelCost: new Map() });
+addLocation(campaign, { id: "dungeon", name: "Dungeon", elevation_m: 20,
+  travelCost: new Map([["town", 1800]]) });  // 30 min from dungeon to town
+
+// Move an entity — advances worldTime_s by travel cost
+const travelTime = travel(campaign, fighter1.id, "dungeon");  // 1800
+
+// After an encounter, merge updated entity states back into the registry
+mergeEntityState(campaign, [fighter1, fighter2]);
+
+// Advance time with wound recovery (delegates to stepDowntime)
+const reports = stepCampaignTime(campaign, 3600, {
+  downtimeConfig: {
+    treatments: new Map([[fighter1.id, { careLevel: "first_aid" }]]),
+    rest: true,
+  },
+});
+
+// Campaign inventory (arrows, bandages, rations, etc.)
+creditInventory(campaign, fighter1.id, "arrow", 30);
+debitInventory(campaign, fighter1.id, "arrow", 5);   // returns false if insufficient
+getInventoryCount(campaign, fighter1.id, "arrow");   // 25
+
+// Persist across sessions (Map-aware JSON)
+const json = serialiseCampaign(campaign);
+const restored = deserialiseCampaign(json);
+```
+
+**`CampaignState` fields:**
+- `id`, `epoch` — campaign identity and ISO start timestamp
+- `worldTime_s` — absolute simulated seconds since epoch (monotonically increasing)
+- `entities: Map<number, Entity>` — master registry; deep-cloned on write
+- `locations: Map<string, Location>` — registered locations with travel routing
+- `entityLocations: Map<number, string>` — current locationId per entity
+- `entityInventories: Map<number, Map<string, number>>` — campaign item stockpiles (separate from `entity.loadout`)
+- `log: Array<{ worldTime_s, text }>` — timestamped event log
+
+**Healing integration:** `stepCampaignTime` builds a minimal `WorldState`, calls `stepDowntime`,
+then writes the healed `InjuryState` back into the entity registry. The optional
+`downtimeConfig` matches `stepDowntime`'s `DowntimeConfig` exactly; if omitted, all entities
+rest with `careLevel: "none"` (natural clotting only).
+
+**Serialisation:** `serialiseCampaign`/`deserialiseCampaign` handle all nested `Map` fields
+using the `__ananke_map__` marker pattern — entities, locations, entityLocations,
+entityInventories, entity skills, armourState, and location travelCost all survive round-trip.
+
+---
+
 ## Project layout
 
 ```
@@ -1084,6 +1154,7 @@ src/
   downtime.ts       stepDowntime(), MEDICAL_RESOURCES — 1 Hz wound recovery bridge (hours-to-weeks scale)
   arena.ts          runArena(), expectWinRate/SurvivalRate/MeanDuration/Recovery/ResourceCost, formatArenaReport, 6 calibration scenarios
   progression.ts    createProgressionState(), awardXP(), advanceSkill(), applyTrainingSession(), stepAgeing(), applyAgeingDelta(), deriveSequelae()
+  campaign.ts       createCampaign(), addLocation(), travel(), mergeEntityState(), stepCampaignTime(), debitInventory/creditInventory/getInventoryCount(), serialiseCampaign/deserialiseCampaign()
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points

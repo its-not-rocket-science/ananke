@@ -99,6 +99,12 @@ export interface EntityRecoveryReport {
   resourcesUsed: ResourceUsage[];
   totalCostUnits: number;
   log: Array<{ second: number; text: string }>;
+  /**
+   * Full final injury state after the simulated recovery period.
+   * Use this in campaign/persistence layers to update `entity.injury`
+   * with the healed state between sessions.
+   */
+  finalInjury?: InjuryState;
 }
 
 // ── Internal rate constants ───────────────────────────────────────────────────
@@ -521,7 +527,8 @@ export function stepDowntime(
       fullRecoveryAt_s,
       resourcesUsed,
       totalCostUnits,
-      log: state.log,
+      log:         state.log,
+      finalInjury: injClone,
     });
   }
 

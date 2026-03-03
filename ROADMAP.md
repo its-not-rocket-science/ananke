@@ -2667,7 +2667,7 @@ export function deriveSequelae(
 
 ---
 
-## Phase 22 — Campaign & World State
+## Phase 22 — Campaign & World State *(COMPLETE)*
 
 ### Overview
 
