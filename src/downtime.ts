@@ -14,6 +14,12 @@ import type { MedicalTier } from "./sim/medical.js";
 import { TIER_MUL } from "./sim/medical.js";
 import type { WorldState } from "./sim/world.js";
 import { DT_S } from "./sim/tick.js";
+import {
+  computeNewCoreQ,
+  sumArmourInsulation,
+  CORE_TEMP_NORMAL_Q,
+} from "./sim/thermoregulation.js";
+import { stepNutrition } from "./sim/nutrition.js";
 
 // ── Medical resource catalogue ───────────────────────────────────────────────
 
@@ -64,6 +70,9 @@ export interface DowntimeConfig {
   ambientTemperature_Q?: Q;
   /** Entities at rest heal 1.5× faster. */
   rest: boolean;
+  /** Phase 29: ambient temperature in Phase 29 Q encoding (q(0.5) = 37°C).
+   *  When present, stepCoreTemp is called once per simulated second. */
+  thermalAmbient_Q?: Q;
 }
 
 export interface ResourceUsage {
@@ -105,6 +114,9 @@ export interface EntityRecoveryReport {
    * with the healed state between sessions.
    */
   finalInjury?: InjuryState;
+
+  /** Phase 29: final core temperature Q after simulated recovery period. */
+  finalCoreTemp_Q?: Q;
 }
 
 // ── Internal rate constants ───────────────────────────────────────────────────
@@ -487,10 +499,24 @@ export function stepDowntime(
       }
     }
 
+    // Phase 29: initialise core temperature tracking (entity is resting during recovery)
+    const massReal_kg = entity.attributes.morphology.mass_kg / SCALE.kg;
+    const armourInsul = sumArmourInsulation(entity.loadout.items as any[]);
+    let coreTempQ: Q  = ((entity.condition as any).coreTemp_Q as Q | undefined) ?? CORE_TEMP_NORMAL_Q;
+
     // Simulation loop
     for (let sec = 0; sec < elapsedSeconds; sec++) {
       if (injClone.dead) break;
       stepSecond(state, sec, config);
+      // Phase 29: step core temperature once per simulated second (always resting during downtime)
+      if (config.thermalAmbient_Q !== undefined) {
+        coreTempQ = computeNewCoreQ(
+          coreTempQ, massReal_kg, armourInsul,
+          false /* resting */, config.thermalAmbient_Q, 1.0,
+        );
+      }
+      // Phase 30: nutrition drain once per simulated second (entity resting, activity = 0)
+      stepNutrition(entity, 1.0, q(0) as Q);
     }
 
     const injuryAtEnd = captureInjurySummary(injClone);
@@ -527,8 +553,9 @@ export function stepDowntime(
       fullRecoveryAt_s,
       resourcesUsed,
       totalCostUnits,
-      log:         state.log,
-      finalInjury: injClone,
+      log:            state.log,
+      finalInjury:    injClone,
+      ...(config.thermalAmbient_Q !== undefined ? { finalCoreTemp_Q: coreTempQ } : {}),
     });
   }
 

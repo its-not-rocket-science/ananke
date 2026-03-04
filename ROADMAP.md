@@ -3499,7 +3499,7 @@ by the kernel against the `"thermal"` energyType tag.
 
 ---
 
-## Phase 29 — Environmental Stress: Staged Hypothermia & Hyperthermia
+## Phase 29 — Environmental Stress: Staged Hypothermia & Hyperthermia *(COMPLETE)*
 
 ### Overview
 
@@ -3627,7 +3627,7 @@ minutes-scale process). `stepDowntime` calls at 1 Hz for recovery simulation.
 
 ---
 
-## Phase 30 — Nutrition & Starvation
+## Phase 30 — Nutrition & Starvation ✓ COMPLETE
 
 ### Overview
 

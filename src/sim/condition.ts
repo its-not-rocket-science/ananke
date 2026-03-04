@@ -1,5 +1,8 @@
 import { q, type Q, SCALE } from "../units.js";
 
+/** Phase 30: staged hunger/starvation state derived from caloricBalance_J. */
+export type HungerState = "sated" | "hungry" | "starving" | "critical";
+
 export interface ConditionState {
   // Intensities are 0..1 in Q unless otherwise noted
   onFire: Q;              // thermal exposure intensity
@@ -36,6 +39,19 @@ export interface ConditionState {
   // Phase 12: temporary energy-absorbing shield from capability armourLayer effects
   shieldReserve_J?: number;    // remaining absorption capacity (joules)
   shieldExpiry_tick?: number;  // tick at which the shield expires
+
+  // Phase 29: core temperature (Q-coded; q(0.5) = 37°C normal body temp)
+  coreTemp_Q?: Q;
+
+  // Phase 30: nutritional state
+  /** Caloric surplus / deficit in joules; starts at 0, goes negative as deficit grows. */
+  caloricBalance_J?:   number;
+  /** Hydration surplus / deficit in hydration_J units; negative = dehydrated. */
+  hydrationBalance_J?: number;
+  /** World tick of last food or water consumption. */
+  lastMealTick?:       number;
+  /** Derived from caloricBalance_J; updated by stepNutrition / consumeFood. */
+  hungerState?:        HungerState;
 }
 
 export const defaultCondition = (): ConditionState => ({

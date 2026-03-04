@@ -98,6 +98,11 @@ export interface Armour extends ItemBase {
   reflectivity?: Q;
   /** Phase 11C: ablative plating — resist_J degrades each time the armour absorbs a hit. */
   ablative?: boolean;
+
+  /** Phase 29: thermal insulation value (m²K/W).
+   *  0 = none; 0.02 = plate metal; 0.15 = heavy wool; 0.25 = heavy fur.
+   *  Added to the 0.09 baseline in the heat-balance equation. */
+  insulation_m2KW?: number;
 }
 
 export interface Gear extends ItemBase {

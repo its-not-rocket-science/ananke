@@ -63,4 +63,11 @@ export interface KernelContext {
    * { on: "terrain"; tag: string } triggers — fires once per cell-boundary crossing.
    */
   terrainTagGrid?: Map<string, string[]>;
+
+  /**
+   * Phase 29: ambient temperature in the Phase 29 Q encoding.
+   * q(0.5) = 37°C (comfortable); cToQ(0) ≈ -1852 (0°C); cToQ(30) ≈ 3704 (30°C).
+   * When absent, stepCoreTemp is not called and core temperature is not updated.
+   */
+  thermalAmbient_Q?: Q;
 }
