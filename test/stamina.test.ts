@@ -22,6 +22,7 @@ import { TUNING } from "../src/sim/tuning";
 import { HUMAN_BASE } from "../src/archetypes";
 import { generateIndividual } from "../src/generate";
 import type { Loadout } from "../src/equipment";
+import { CommandMap } from "../src";
 
 /** DT per tick (same as kernel's DT_S). */
 const DT_S = to.s(1 / 20); // 500 in fixed-point
@@ -62,12 +63,12 @@ describe("Phase 2B: strike stamina cost", () => {
     const b = mkHumanoidEntity(2, 2, B_X, 0);
     const world = mkWorld(42, [a, b]);
 
-    const startEnergy = world.entities[0].energy.reserveEnergy_J;
+    const startEnergy = world.entities[0]!.energy.reserveEnergy_J;
 
-    const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "sword", intensity: q(1.0) }]]]);
+    const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "sword", intensity: q(1.0) }]]]);
     stepWorld(world, cmds, { tractionCoeff: q(1.0), tuning: TUNING.tactical });
 
-    expect(world.entities[0].energy.reserveEnergy_J).toBeLessThan(startEnergy);
+    expect(world.entities[0]!.energy.reserveEnergy_J).toBeLessThan(startEnergy);
   });
 
   it("strike cost scales with intensity: higher intensity drains more", () => {
@@ -76,10 +77,10 @@ describe("Phase 2B: strike stamina cost", () => {
       a.loadout = makeBasicLoadout();
       const b = mkHumanoidEntity(2, 2, B_X, 0);
       const world = mkWorld(42, [a, b]);
-      const start = world.entities[0].energy.reserveEnergy_J;
-      const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "sword", intensity }]]]);
+      const start = world.entities[0]!.energy.reserveEnergy_J;
+      const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "sword", intensity }]]]);
       stepWorld(world, cmds, { tractionCoeff: q(1.0), tuning: TUNING.tactical });
-      return start - world.entities[0].energy.reserveEnergy_J;
+      return start - world.entities[0]!.energy.reserveEnergy_J;
     };
 
     expect(drainAt(q(1.0))).toBeGreaterThan(drainAt(q(0.2)));
@@ -90,12 +91,12 @@ describe("Phase 2B: strike stamina cost", () => {
     a.loadout = makeBasicLoadout();
     const b = mkHumanoidEntity(2, 2, B_X, 0);
     const world = mkWorld(42, [a, b]);
-    const startEnergy = world.entities[0].energy.reserveEnergy_J;
+    const startEnergy = world.entities[0]!.energy.reserveEnergy_J;
 
-    const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "sword", intensity: q(1.0) }]]]);
+    const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "sword", intensity: q(1.0) }]]]);
     stepWorld(world, cmds, { tractionCoeff: q(1.0), tuning: TUNING.arcade });
 
-    expect(world.entities[0].energy.reserveEnergy_J).toBeLessThan(startEnergy);
+    expect(world.entities[0]!.energy.reserveEnergy_J).toBeLessThan(startEnergy);
   });
 });
 
@@ -108,15 +109,15 @@ describe("Phase 2B: defence stamina cost", () => {
       a.loadout = makeBasicLoadout();
       const b = mkHumanoidEntity(2, 2, B_X, 0);
       const world = mkWorld(s, [a, b]);
-      const startDefE = world.entities[1].energy.reserveEnergy_J;
+      const startDefE = world.entities[1]!.energy.reserveEnergy_J;
 
-      const cmds = new Map<number, any[]>([
+      const cmds: CommandMap = new Map([
         [1, [{ kind: "attack", targetId: 2, weaponId: "sword", intensity: q(1.0) }]],
         [2, [{ kind: "defend", mode: "block", intensity: q(1.0) }]],
       ]);
       stepWorld(world, cmds, { tractionCoeff: q(1.0), tuning: TUNING.tactical });
 
-      const endDefE = world.entities[1].energy.reserveEnergy_J;
+      const endDefE = world.entities[1]!.energy.reserveEnergy_J;
       // Defence cost ≥ 5 J; regen ≤ 3 J/tick → net drain > 2 if defence fired.
       if (startDefE - endDefE > 2) { found = true; break; }
     }
@@ -133,13 +134,15 @@ describe("Phase 2B: defence stamina cost", () => {
         a.loadout = makeBasicLoadout();
         const b = mkHumanoidEntity(2, 2, B_X, 0);
         const world = mkWorld(s, [a, b]);
-        const cmds = new Map<number, any[]>([
+        const cmds: CommandMap = new Map([
           [1, [{ kind: "attack", targetId: 2, weaponId: "sword", intensity: q(1.0) }]],
-          ...(defend ? [[2, [{ kind: "defend", mode: "block", intensity: q(1.0) }]]] as any : []),
         ]);
-        const start = world.entities[1].energy.reserveEnergy_J;
+        if (defend) {
+          cmds.set(2, [{ kind: "defend", mode: "block", intensity: q(1.0) }]);
+        }
+        const start = world.entities[1]!.energy.reserveEnergy_J;
         stepWorld(world, cmds, { tractionCoeff: q(1.0), tuning: TUNING.tactical });
-        return start - world.entities[1].energy.reserveEnergy_J;
+        return start - world.entities[1]!.energy.reserveEnergy_J;
       };
 
       const drainBlock   = buildWorld(true);
@@ -327,7 +330,7 @@ describe("Phase 2B: exhaustion collapse", () => {
 
     stepWorld(world, new Map(), { tractionCoeff: q(1.0), tuning: TUNING.tactical });
 
-    expect(world.entities[0].condition.prone).toBe(true);
+    expect(world.entities[0]!.condition.prone).toBe(true);
   });
 
   it("entity with zero reserve has defence intent cleared in tactical mode", () => {
@@ -336,10 +339,10 @@ describe("Phase 2B: exhaustion collapse", () => {
     const world = mkWorld(1, [a]);
 
     // Issue defend command — should be overridden by collapse gate
-    const cmds = new Map([[1, [{ kind: "defend", mode: "block", intensity: q(1.0) }]]]);
+    const cmds: CommandMap = new Map([[1, [{ kind: "defend", mode: "block", intensity: q(1.0) }]]]);
     stepWorld(world, cmds, { tractionCoeff: q(1.0), tuning: TUNING.tactical });
 
-    expect(world.entities[0].intent.defence.mode).toBe("none");
+    expect(world.entities[0]!.intent.defence.mode).toBe("none");
   });
 
   it("no collapse in arcade mode even with zero reserve", () => {
@@ -350,7 +353,7 @@ describe("Phase 2B: exhaustion collapse", () => {
     stepWorld(world, new Map(), { tractionCoeff: q(1.0), tuning: TUNING.arcade });
 
     // Arcade: no forced prone from energy depletion
-    expect(world.entities[0].condition.prone).toBe(false);
+    expect(world.entities[0]!.condition.prone).toBe(false);
   });
 
   it("entity with positive (non-zero) reserve does not collapse", () => {
@@ -360,7 +363,7 @@ describe("Phase 2B: exhaustion collapse", () => {
 
     stepWorld(world, new Map(), { tractionCoeff: q(1.0), tuning: TUNING.tactical });
 
-    expect(world.entities[0].condition.prone).toBe(false);
+    expect(world.entities[0]!.condition.prone).toBe(false);
   });
 
   it("attack on entity with 0 reserve: entity is forced prone before commands execute", () => {
@@ -371,13 +374,13 @@ describe("Phase 2B: exhaustion collapse", () => {
     b.energy.reserveEnergy_J = 0; // b is depleted
 
     const world = mkWorld(42, [a, b]);
-    const cmds = new Map<number, any[]>([
+    const cmds: CommandMap = new Map([
       [1, [{ kind: "attack", targetId: 2, weaponId: "sword", intensity: q(1.0) }]],
       [2, [{ kind: "defend", mode: "block", intensity: q(1.0) }]], // should be cleared by collapse
     ]);
     stepWorld(world, cmds, { tractionCoeff: q(1.0), tuning: TUNING.tactical });
 
-    const bAfter = world.entities.find((e: any) => e.id === 2)!;
+    const bAfter = world.entities.find((e) => e.id === 2)!;
     expect(bAfter.condition.prone).toBe(true);
     expect(bAfter.intent.defence.mode).toBe("none");
   });

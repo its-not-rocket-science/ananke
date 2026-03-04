@@ -12,9 +12,9 @@ import { v3 } from "../src/sim/vec3";
 import type { WorldState } from "../src/sim/world";
 import type { CommandMap } from "../src/sim/commands";
 import { ALL_REGIONS } from "../src/sim/body";
-import { GrappleState } from "../src";
+import { GrappleState, IndividualAttributes } from "../src";
 
-function mkWorld(seed: number, aAttrs: any, bAttrs: any, loadoutA: Loadout): WorldState {
+function mkWorld(seed: number, aAttrs: IndividualAttributes, bAttrs: IndividualAttributes, loadoutA: Loadout): WorldState {
   return {
     tick: 0,
     seed,

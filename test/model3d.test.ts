@@ -428,8 +428,8 @@ describe("getCanonicalOffset coverage", () => {
 
   it("unrecognised move mode with nonzero intensity: falls back to idle", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
-    (e.intent.move as any).mode      = "hover";
-    (e.intent.move as any).intensity = q(1.0);
+    (e.intent.move).mode      = "hover";
+    (e.intent.move).intensity = q(1.0);
     const h = deriveAnimationHints(e);
     expect(h.idle).toBe(SCALE.Q);
   });

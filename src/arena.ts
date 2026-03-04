@@ -418,7 +418,7 @@ export function runArena(
       const lines: CombatLogEntry[] = [];
       for (const ev of tracer.events) {
         const text = buildCombatLog([ev], options.narrativeCfg)[0];
-        if (text) lines.push({ tick: (ev as any).tick ?? 0, text });
+        if (text) lines.push({ tick: (ev).tick ?? 0, text });
       }
       combatLog = lines;
     }
@@ -671,7 +671,6 @@ export function formatArenaReport(result: ArenaResult): string {
  */
 export function narrateRepresentativeTrial(
   result:  ArenaResult,
-  cfg?:    NarrativeConfig,
 ): string {
   if (result.trialResults.length === 0) return "(no trials)";
 

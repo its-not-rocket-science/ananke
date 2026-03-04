@@ -10,7 +10,7 @@ import { decideCommandsForEntity } from "../src/sim/ai/decide";
 import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";
 import type { AIPolicy } from "../src/sim/ai/types";
-import { TUNING } from "../src/sim/tuning";
+import { CommandMap } from "../src";
 
 const shortbow = STARTER_RANGED_WEAPONS.find(w => w.id === "rng_shortbow")!;
 const pistol   = STARTER_RANGED_WEAPONS.find(w => w.id === "rng_pistol")!;
@@ -18,7 +18,7 @@ const pistol   = STARTER_RANGED_WEAPONS.find(w => w.id === "rng_pistol")!;
 // A pistol with all starter ammo types attached
 const armedPistol: RangedWeapon = { ...pistol, ammo: STARTER_AMMO };
 
-function runTick(world: ReturnType<typeof mkWorld>, cmds: Map<number, any[]>): TraceEvent[] {
+function runTick(world: ReturnType<typeof mkWorld>, cmds: CommandMap): TraceEvent[] {
   const events: TraceEvent[] = [];
   const trace = { onEvent: (ev: TraceEvent) => events.push(ev) };
   stepWorld(world, cmds, { tractionCoeff: q(0.9), trace });
@@ -49,7 +49,7 @@ describe("Aiming time accumulation", () => {
     const target = mkHumanoidEntity(2, 2, to.m(10), 0);
     const world = mkWorld(1, [shooter, target]);
 
-    const shootCmd = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
+    const shootCmd: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
 
     // Tick 1: fires the shot (cooldown = 0 before firing), aimTicks reset to 0
     runTick(world, shootCmd);
@@ -73,14 +73,14 @@ describe("Aiming time accumulation", () => {
     const world = mkWorld(1, [shooter, target]);
 
     // Pre-set aimTargetId and max aimTicks to simulate long aim
-    const shootCmd = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
+    const shootCmd: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
 
     // Fire first to set aimTargetId
     runTick(world, shootCmd);
     const e1 = world.entities.find(e => e.id === 1)!;
 
     // Directly set aimTicks to 19 and run 5 more ticks
-    (e1.action as any).aimTicks = 19;
+    (e1.action).aimTicks = 19;
     runTick(world, shootCmd);
     expect(e1.action.aimTicks).toBe(20); // incremented to 20
 
@@ -95,13 +95,13 @@ describe("Aiming time accumulation", () => {
     const target3 = mkHumanoidEntity(3, 2, to.m(10), to.m(1));
     const world = mkWorld(1, [shooter, target2, target3]);
 
-    const shootAt2 = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
-    const shootAt3 = new Map([[1, [{ kind: "shoot", targetId: 3, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
+    const shootAt2: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
+    const shootAt3: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 3, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
 
     // Fire at target 2, accumulate 2 aim ticks
     runTick(world, shootAt2);
     const e1 = world.entities.find(e => e.id === 1)!;
-    (e1.action as any).aimTicks = 5; // manually set
+    (e1.action).aimTicks = 5; // manually set
 
     // Switch to target 3 → aimTicks should reset
     runTick(world, shootAt3);
@@ -114,7 +114,7 @@ describe("Aiming time accumulation", () => {
     const target = mkHumanoidEntity(2, 2, to.m(10), 0);
     const world = mkWorld(1, [shooter, target]);
 
-    const shootCmd = new Map([[1, [
+    const shootCmd: CommandMap = new Map([[1, [
       { kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) },
       // Sprint command keeps entity moving through stepMovement
       { kind: "move", dir: { x: 10_000, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" },
@@ -141,15 +141,15 @@ describe("Aiming time accumulation", () => {
     const target = mkHumanoidEntity(2, 2, to.m(10), 0);
     const world = mkWorld(1, [shooter, target]);
 
-    const shootCmd = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
+    const shootCmd: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
 
     // Fire once
     runTick(world, shootCmd);
     const e1 = world.entities.find(e => e.id === 1)!;
 
     // Accumulate some aim ticks
-    (e1.action as any).aimTicks = 15;
-    (e1.action as any).aimTargetId = 2;
+    (e1.action).aimTicks = 15;
+    (e1.action).aimTargetId = 2;
 
     // Manually expire the cooldown and fire
     e1.action.shootCooldownTicks = 0;
@@ -168,11 +168,11 @@ describe("Aiming time accumulation", () => {
       // With full aim
       const shooterA = mkHumanoidEntity(1, 1, 0, 0);
       shooterA.loadout.items = [shortbow];
-      (shooterA.action as any).aimTicks = 20;
-      (shooterA.action as any).aimTargetId = 2;
+      (shooterA.action).aimTicks = 20;
+      (shooterA.action).aimTargetId = 2;
       const wA = mkWorld(seed, [shooterA, mkHumanoidEntity(2, 2, TARGET_DIST, 0)]);
       const evA = runTick(wA, new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]));
-      const hitA = (evA.find(e => e.kind === TraceKinds.ProjectileHit) as any)?.hit;
+      const hitA = (evA.find(e => e.kind === TraceKinds.ProjectileHit))?.hit;
       if (hitA) hitsWithAim++;
 
       // Without aim
@@ -181,7 +181,7 @@ describe("Aiming time accumulation", () => {
       // aimTicks = 0 (default)
       const wB = mkWorld(seed, [shooterB, mkHumanoidEntity(2, 2, TARGET_DIST, 0)]);
       const evB = runTick(wB, new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]));
-      const hitB = (evB.find(e => e.kind === TraceKinds.ProjectileHit) as any)?.hit;
+      const hitB = (evB.find(e => e.kind === TraceKinds.ProjectileHit))?.hit;
       if (hitB) hitsNoAim++;
     }
 
@@ -220,7 +220,7 @@ describe("Moving target penalty", () => {
       // velocity stays 0
       const wA = mkWorld(seed, [shooterA, targetA]);
       const evA = runTick(wA, new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]));
-      if ((evA.find(e => e.kind === TraceKinds.ProjectileHit) as any)?.hit) hitsStationary++;
+      if ((evA.find(e => e.kind === TraceKinds.ProjectileHit))?.hit) hitsStationary++;
 
       // Sprinting target at 5 m/s
       const shooterB = mkHumanoidEntity(1, 1, 0, 0);
@@ -229,7 +229,7 @@ describe("Moving target penalty", () => {
       targetB.velocity_mps.y = to.m(5); // 5 m/s lateral
       const wB = mkWorld(seed, [shooterB, targetB]);
       const evB = runTick(wB, new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]));
-      if ((evB.find(e => e.kind === TraceKinds.ProjectileHit) as any)?.hit) hitsSprinting++;
+      if ((evB.find(e => e.kind === TraceKinds.ProjectileHit))?.hit) hitsSprinting++;
     }
 
     // Stationary should be notably easier to hit
@@ -251,7 +251,7 @@ describe("Moving target penalty", () => {
       tgtSlow.velocity_mps.x = to.m(1); // 1 m/s
       const wA = mkWorld(seed, [shooterA, tgtSlow]);
       const evA = runTick(wA, new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]));
-      if ((evA.find(e => e.kind === TraceKinds.ProjectileHit) as any)?.hit) hitsSlow++;
+      if ((evA.find(e => e.kind === TraceKinds.ProjectileHit))?.hit) hitsSlow++;
 
       // Fast target: 5 m/s (5× the slow target)
       const shooterB = mkHumanoidEntity(1, 1, 0, 0);
@@ -260,7 +260,7 @@ describe("Moving target penalty", () => {
       tgtFast.velocity_mps.x = to.m(5); // 5 m/s
       const wB = mkWorld(seed, [shooterB, tgtFast]);
       const evB = runTick(wB, new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]));
-      if ((evB.find(e => e.kind === TraceKinds.ProjectileHit) as any)?.hit) hitsFast++;
+      if ((evB.find(e => e.kind === TraceKinds.ProjectileHit))?.hit) hitsFast++;
     }
 
     // Slow target should be easier to hit than fast target
@@ -298,11 +298,11 @@ describe("Suppression → AI behaviour", () => {
       const world = mkWorld(seed, [shooter, target]);
 
       const events = runTick(world, new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]));
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       const t = world.entities.find(e => e.id === 2)!;
 
       if (ev && ev.suppressed && !ev.hit) {
-        expect((t.condition as any).suppressedTicks).toBeGreaterThan(0);
+        expect((t.condition).suppressedTicks).toBeGreaterThan(0);
         suppressFound = true;
         break;
       }
@@ -313,20 +313,20 @@ describe("Suppression → AI behaviour", () => {
   it("suppressedTicks decrements by 1 per tick (min 0)", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     const world = mkWorld(1, [e]);
-    (e.condition as any).suppressedTicks = 5;
+    (e.condition).suppressedTicks = 5;
 
     runTick(world, new Map());
-    expect((e.condition as any).suppressedTicks).toBe(4);
+    expect((e.condition).suppressedTicks).toBe(4);
 
     // Run until zero
     for (let i = 0; i < 10; i++) runTick(world, new Map());
-    expect((e.condition as any).suppressedTicks).toBe(0);
+    expect((e.condition).suppressedTicks).toBe(0);
   });
 
   it("low distressTol entity goes prone after >= 3 suppression ticks", () => {
     const self = mkHumanoidEntity(1, 1, 0, 0);
     self.attributes.resilience.distressTolerance = q(0.20); // low tolerance
-    (self.condition as any).suppressedTicks = 3;
+    (self.condition).suppressedTicks = 3;
     self.condition.prone = false;
 
     const enemy = mkHumanoidEntity(2, 2, to.m(5), 0);
@@ -336,13 +336,13 @@ describe("Suppression → AI behaviour", () => {
     const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
     const cmds = decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
-    expect(cmds.some(c => c.kind === "setProne" && (c as any).prone === true)).toBe(true);
+    expect(cmds.some(c => c.kind === "setProne" && (c).prone === true)).toBe(true);
   });
 
   it("high distressTol entity does NOT go prone from suppression", () => {
     const self = mkHumanoidEntity(1, 1, 0, 0);
     self.attributes.resilience.distressTolerance = q(0.90); // high tolerance
-    (self.condition as any).suppressedTicks = 3;
+    (self.condition).suppressedTicks = 3;
     self.condition.prone = false;
 
     const enemy = mkHumanoidEntity(2, 2, to.m(5), 0);
@@ -361,7 +361,7 @@ describe("Suppression → AI behaviour", () => {
     // A suppressed entity at 40% cover WOULD seek more cover (40% < 50%).
     const selfSuppressed = mkHumanoidEntity(1, 1, 0, 0);
     selfSuppressed.attributes.resilience.distressTolerance = q(0.90); // high — won't go prone
-    (selfSuppressed.condition as any).suppressedTicks = 1; // suppressed but not enough for prone
+    (selfSuppressed.condition).suppressedTicks = 1; // suppressed but not enough for prone
 
     // Enemy within 25m (well within the 30m detection range)
     const enemy = mkHumanoidEntity(2, 2, to.m(20), 0);
@@ -380,17 +380,17 @@ describe("Suppression → AI behaviour", () => {
     // Suppressed: threshold = q(0.50), and 40% < 50% → should seek cover
     const suppCmds = decideCommandsForEntity(world, index, spatial, selfSuppressed, defaultPolicy(), undefined, obstacleGrid, cellSize_m);
     const suppMoves = suppCmds.filter(c => c.kind === "move");
-    expect(suppMoves.some(c => (c as any).intensity > 0)).toBe(true);
+    expect(suppMoves.some(c => (c).intensity > 0)).toBe(true);
 
     // Non-suppressed: threshold = q(0.30), and 40% > 30% → should NOT seek cover due to threshold
     const selfNormal = mkHumanoidEntity(1, 1, 0, 0);
     selfNormal.attributes.resilience.distressTolerance = q(0.90);
-    (selfNormal.condition as any).suppressedTicks = 0; // not suppressed
+    (selfNormal.condition).suppressedTicks = 0; // not suppressed
 
     const normalCmds = decideCommandsForEntity(world, index, spatial, selfNormal, defaultPolicy(), undefined, obstacleGrid, cellSize_m);
     const normalMoves = normalCmds.filter(c => c.kind === "move");
     // Non-suppressed at 40% cover: threshold is 30%, and 40% > 30%, so no cover-seeking
-    expect(normalMoves.some(c => (c as any).intensity > 0 && (c as any).mode === "run")).toBe(false);
+    expect(normalMoves.some(c => (c).intensity > 0 && (c).mode === "run")).toBe(false);
   });
 });
 
@@ -427,7 +427,7 @@ describe("Ammo types", () => {
       const target = mkHumanoidEntity(2, 2, TARGET_DIST, 0);
       const world = mkWorld(seed, [shooter, target]);
       const events = runTick(world, new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_pistol", intensity: q(1.0) }]]]));
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       if (ev?.hit) { energyBase = ev.energyAtImpact_J; break; }
     }
 
@@ -438,7 +438,7 @@ describe("Ammo types", () => {
       const target = mkHumanoidEntity(2, 2, TARGET_DIST, 0);
       const world = mkWorld(seed, [shooter, target]);
       const events = runTick(world, new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_pistol", intensity: q(1.0), ammoId: "ammo_hv" }]]]));
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       if (ev?.hit) { energyHV = ev.energyAtImpact_J; break; }
     }
 
@@ -470,7 +470,8 @@ describe("Ammo types", () => {
 
       const t = world.entities.find(e => e.id === 2)!;
       let totalBleed = 0;
-      for (const reg of Object.values(t.injury.byRegion) as any[]) {
+      const regions = Object.values(t.injury.byRegion);
+      for (const reg of regions) {
         totalBleed += reg.bleedingRate ?? 0;
       }
       if (totalBleed > 0) {

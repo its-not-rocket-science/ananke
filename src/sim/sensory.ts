@@ -5,8 +5,8 @@
  * Light, smoke, and noise modifiers are Q values (SCALE.Q = full normal conditions).
  */
 
-import type { Q, I32 } from "../units.js";
-import { SCALE, q, clampQ, qMul, mulDiv } from "../units.js";
+import type { Q } from "../units.js";
+import { SCALE, q, mulDiv } from "../units.js";
 import type { Entity } from "./entity.js";
 import type { Vec3 } from "./vec3.js";
 import type { Perception } from "../types.js";
@@ -58,10 +58,10 @@ export function canDetect(
   /** Phase 11C: optional sensor boost from the observer's loadout. */
   sensorBoost?: { visionRangeMul: Q; hearingRangeMul: Q },
 ): Q {
-  const perc: Perception = (observer.attributes as any).perception ?? DEFAULT_PERCEPTION;
+  const perc: Perception = (observer.attributes).perception ?? DEFAULT_PERCEPTION;
 
   // Phase 10C: blinded observer cannot see
-  const isBlind = (observer.condition as any).blindTicks > 0;
+  const isBlind = (observer.condition).blindTicks > 0;
 
   const dx = subject.position_m.x - observer.position_m.x;
   const dy = subject.position_m.y - observer.position_m.y;

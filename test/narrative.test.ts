@@ -1,6 +1,6 @@
 // test/narrative.test.ts — Phase 18: Combat Narrative Layer
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to } from "../src/units.js";
+import { q, to } from "../src/units.js";
 import type { Q } from "../src/units.js";
 import type { WeaponDamageProfile } from "../src/equipment.js";
 import { defaultInjury } from "../src/sim/injury.js";
@@ -389,13 +389,13 @@ describe("describeInjuries", () => {
 
   it("high fluid loss mentions hemorrhage", () => {
     const inj = defaultInjury();
-    (inj as any).fluidLoss = q(0.70);
+    (inj).fluidLoss = q(0.70);
     expect(describeInjuries(inj)).toContain("hemorrhage");
   });
 
   it("low consciousness mentions unconscious or semi-conscious", () => {
     const inj = defaultInjury();
-    (inj as any).consciousness = q(0.10);
+    (inj).consciousness = q(0.10);
     expect(describeInjuries(inj)).toMatch(/[Uu]nconscious/);
   });
 

@@ -49,7 +49,7 @@ describe("parryLeverageQ", () => {
       reach_m: Math.trunc(3.5 * SCALE.m),
       momentArm_m: Math.trunc(2.5 * SCALE.m),
     };
-    const lev = parryLeverageQ(pike as any, attacker);
+    const lev = parryLeverageQ(pike, attacker);
     expect(lev).toBeLessThanOrEqual(q(1.20));
     expect(lev).toBeGreaterThanOrEqual(q(0.85));
   });
@@ -64,8 +64,8 @@ describe("parryLeverageQ", () => {
   test("two-handed leverage scales with moment arm", () => {
     const shortArm = { ...STARTER_WEAPONS[0]!, momentArm_m: Math.trunc(0.3 * SCALE.m) };
     const longArm  = { ...STARTER_WEAPONS[0]!, momentArm_m: Math.trunc(1.0 * SCALE.m) };
-    const levShort = parryLeverageQ(shortArm as any, attacker);
-    const levLong  = parryLeverageQ(longArm  as any, attacker);
+    const levShort = parryLeverageQ(shortArm, attacker);
+    const levLong  = parryLeverageQ(longArm , attacker);
     // Longer moment arm → closer to ref → leverage ≥ short within the clamped range
     expect(levLong).toBeGreaterThanOrEqual(levShort);
   });
@@ -249,7 +249,7 @@ describe("shieldCovers", () => {
   });
 
   test("respects explicit covers override on shield item", () => {
-    const customShield = { ...shield, covers: ["leg", "arm"] } as any;
+    const customShield = { ...shield, covers: ["leg", "arm"] };
     expect(shieldCovers(customShield, "leg")).toBe(true);
     expect(shieldCovers(customShield, "arm")).toBe(true);
     expect(shieldCovers(customShield, "torso")).toBe(false);

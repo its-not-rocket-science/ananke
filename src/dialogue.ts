@@ -151,7 +151,7 @@ export function dialogueProbability(
       const failed = ctx.priorFailedAttempts ?? 0;
       return clampQ(
         PERSUADE_BASE
-          + learningBonus(target.attributes.perception.attentionDepth)
+          + learningBonus(target.attributes.perception?.attentionDepth ?? 0)
           + (ctx.sharedFaction ? PERSUADE_FACTION_BONUS : 0)
           - (failed * PERSUADE_FAILURE_PENALTY),
         0, SCALE.Q,
@@ -161,7 +161,7 @@ export function dialogueProbability(
     case "deceive":
       return qMul(
         action.plausibility_Q,
-        (SCALE.Q - attentionDepthQ(target.attributes.perception.attentionDepth)) as Q,
+        (SCALE.Q - attentionDepthQ(target.attributes.perception?.attentionDepth ?? 0)) as Q,
       );
 
     case "surrender":

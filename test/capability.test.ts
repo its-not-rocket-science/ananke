@@ -4,7 +4,7 @@
 // All effects resolve through identical engine primitives — only tags differ.
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to, type Q, type I32 } from "../src/units";
+import { q, SCALE, to, type Q } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import type { KernelContext } from "../src/sim/context";
 import { stepWorld } from "../src/sim/kernel";
@@ -379,7 +379,7 @@ describe("structuralRepair payload", () => {
   it("does not repair below permanentDamage floor", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     e.injury.byRegion["torso"]!.structuralDamage = q(0.30);
-    (e.injury.byRegion["torso"] as any).permanentDamage = q(0.25); // floor
+    (e.injury.byRegion["torso"]!).permanentDamage = q(0.25); // floor
 
     e.capabilitySources = [makeSource({
       reserve_J: 100_000,

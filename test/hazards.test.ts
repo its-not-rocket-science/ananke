@@ -1,13 +1,13 @@
 // test/hazards.test.ts — Phase 6: dynamic terrain hazard tests
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to } from "../src/units";
+import { q, SCALE } from "../src/units";
 import { buildHazardGrid, type HazardCell } from "../src/sim/terrain";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
 
 const CELL = Math.trunc(4 * SCALE.m);
 
-function baseCtx(extra: Record<string, any> = {}) {
+function baseCtx(extra = {}) {
   return { tractionCoeff: q(0.80), cellSize_m: CELL, ...extra };
 }
 

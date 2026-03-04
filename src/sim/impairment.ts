@@ -160,11 +160,11 @@ export function deriveFunctionalState(e: Entity, tuning: SimulationTuning = TUNI
   const heldQ:   Q = (e.grapple?.heldByIds?.length ?? 0) > 0 ? SCALE.Q : 0;
 
   // Phase 3: suppression from near-miss ranged fire
-  const suppressedQ: Q = ((e.condition as any).suppressedTicks ?? 0) > 0 ? SCALE.Q : 0;
+  const suppressedQ: Q = ((e.condition).suppressedTicks ?? 0) > 0 ? SCALE.Q : 0;
 
   // Phase 5: fear impairs coordination and fine control
   // At routing threshold (~q(0.65) for average human) → ~10% penalty on each multiplier.
-  const fearQ: Q = (e.condition as any).fearQ ?? q(0);
+  const fearQ: Q = (e.condition).fearQ ?? q(0);
 
   // Phase 2B: exhaustion signal — penalty ramps in below 15 % of baseline reserve.
   // exhaustionQ = 0 when reserve ≥ 15 %, up to 1 when reserve = 0.

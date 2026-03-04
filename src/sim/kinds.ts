@@ -51,6 +51,7 @@ export const MoveModes = {
     Run: "run",
     Sprint: "sprint",
     Crawl: "crawl",
+    Hover: "hover",
 } as const;
 
 export type MoveMode = typeof MoveModes[keyof typeof MoveModes];

@@ -13,7 +13,7 @@
  *   6. Knight vs Swordsman           (kernel integration, 3 tests)
  */
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to, mulDiv } from "../src/units";
+import { q, SCALE, mulDiv } from "../src/units";
 import {
   HUMAN_BASE,
   AMATEUR_BOXER,
@@ -40,7 +40,7 @@ const M = SCALE.m;
 
 function runTick(world: ReturnType<typeof mkWorld>, cmds: CommandMap): TraceEvent[] {
   const events: TraceEvent[] = [];
-  stepWorld(world as any, cmds, {
+  stepWorld(world, cmds, {
     tractionCoeff: q(0.9),
     trace: { onEvent: (ev: TraceEvent) => events.push(ev) },
   });
@@ -153,8 +153,8 @@ describe("boxing match", () => {
     const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, intensity: q(1.0) }]]]);
 
     for (let t = 0; t < TICKS; t++) {
-      stepWorld(worldA as any, cmds, { tractionCoeff: q(0.9) });
-      stepWorld(worldB as any, cmds, { tractionCoeff: q(0.9) });
+      stepWorld(worldA, cmds, { tractionCoeff: q(0.9) });
+      stepWorld(worldB, cmds, { tractionCoeff: q(0.9) });
     }
 
     const boxerDmg = totalInternalDamage(worldA.entities.find(e => e.id === 2)!);
@@ -170,7 +170,7 @@ describe("boxing match", () => {
     const world  = mkWorld(42, [boxer, target]);
     const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, intensity: q(1.0) }]]]);
 
-    for (let t = 0; t < TICKS; t++) stepWorld(world as any, cmds, { tractionCoeff: q(0.9) });
+    for (let t = 0; t < TICKS; t++) stepWorld(world, cmds, { tractionCoeff: q(0.9) });
 
     const tgt   = world.entities.find(e => e.id === 2)!;
     const bleed = totalBleedingRate(tgt);
@@ -200,7 +200,7 @@ describe("boxing match", () => {
 
       for (let t = 0; t < TICKS; t++) {
         if (pro.injury.dead && amateur.injury.dead) break;
-        stepWorld(world as any, cmds, { tractionCoeff: q(0.9) });
+        stepWorld(world, cmds, { tractionCoeff: q(0.9) });
       }
 
       const pF = world.entities.find(e => e.id === 1)!;
@@ -223,7 +223,7 @@ describe("boxing match", () => {
         [1, [{ kind: "attack", targetId: 2, intensity: q(1.0) }]],
         [2, [{ kind: "attack", targetId: 1, intensity: q(1.0) }]],
       ]);
-      for (let t = 0; t < 100; t++) stepWorld(world as any, cmds, { tractionCoeff: q(0.9) });
+      for (let t = 0; t < 100; t++) stepWorld(world, cmds, { tractionCoeff: q(0.9) });
       return {
         c1: world.entities.find(e => e.id === 1)!.injury.consciousness,
         c2: world.entities.find(e => e.id === 2)!.injury.consciousness,
@@ -256,7 +256,7 @@ describe("wrestling bout", () => {
       const cmds: CommandMap = new Map([[1, [{ kind: "grapple", targetId: 2, intensity: q(1.0) }]]]);
 
       for (let t = 0; t < TICKS; t++) {
-        stepWorld(world as any, cmds, { tractionCoeff: q(0.9) });
+        stepWorld(world, cmds, { tractionCoeff: q(0.9) });
         const w = world.entities.find(e => e.id === 1)!;
         if (w.grapple.holdingTargetId !== 0) { holds++; break; }
       }
@@ -282,7 +282,7 @@ describe("wrestling bout", () => {
         // Dynamic mode: throw if already holding, grapple if not
         const mode = (w.grapple.holdingTargetId === 2) ? "throw" : "grapple";
         const cmds: CommandMap = new Map([[1, [{ kind: "grapple", targetId: 2, intensity: q(1.0), mode }]]]);
-        stepWorld(world as any, cmds, { tractionCoeff: q(0.9) });
+        stepWorld(world, cmds, { tractionCoeff: q(0.9) });
         if (h.condition.prone || h.condition.pinned || h.injury.dead) {
           proneCount++;
           break;
@@ -344,7 +344,7 @@ describe("human vs octopus", () => {
       const cmds: CommandMap = new Map([[1, [{ kind: "grapple", targetId: 2, intensity: q(1.0) }]]]);
 
       for (let t = 0; t < TICKS; t++) {
-        stepWorld(world as any, cmds, { tractionCoeff: q(0.9) });
+        stepWorld(world, cmds, { tractionCoeff: q(0.9) });
         const oct = world.entities.find(e => e.id === 1)!;
         if (oct.grapple.holdingTargetId !== 0) { holds++; break; }
       }
@@ -363,14 +363,10 @@ describe("human vs octopus", () => {
       [2, [{ kind: "attack",  targetId: 1, intensity: q(1.0) }]],
     ]);
 
-    for (let t = 0; t < 20; t++) stepWorld(world as any, cmds, { tractionCoeff: q(0.9) });
+    for (let t = 0; t < 20; t++) stepWorld(world, cmds, { tractionCoeff: q(0.9) });
 
     const oct = world.entities.find(e => e.id === 1)!;
-    const armSegments = ["arm1","arm2","arm3","arm4","arm5","arm6","arm7","arm8"];
-    const totalArmDmg = armSegments.reduce((s, id) => {
-      const r = oct.injury.byRegion[id];
-      return s + (r ? r.surfaceDamage + r.internalDamage + r.structuralDamage : 0);
-    }, 0);
+
     // Diver has been attacking; hits should distribute across octopus body/arms
     expect(oct.injury.byRegion).toBeDefined();
     expect(Object.keys(oct.injury.byRegion).length).toBeGreaterThanOrEqual(9); // mantle + 8 arms
@@ -401,7 +397,7 @@ describe("human vs octopus", () => {
       const cmds: CommandMap = new Map([[1, [{ kind: "grapple", targetId: 2, intensity: q(1.0) }]]]);
 
       for (let t = 0; t < TICKS; t++) {
-        stepWorld(world as any, cmds, { tractionCoeff: q(0.9) });
+        stepWorld(world, cmds, { tractionCoeff: q(0.9) });
         const w = world.entities.find(e => e.id === 1)!;
         if (w.grapple.holdingTargetId !== 0) { holds++; break; }
       }
@@ -424,7 +420,7 @@ describe("human vs octopus", () => {
       const cOct: CommandMap = new Map([[1, [{ kind: "grapple", targetId: 2, intensity: q(1.0) }]]]);
 
       for (let t = 0; t < TICKS; t++) {
-        stepWorld(wOct as any, cOct, { tractionCoeff: q(0.9) });
+        stepWorld(wOct, cOct, { tractionCoeff: q(0.9) });
         const o = wOct.entities.find(e => e.id === 1)!;
         if (o.grapple.holdingTargetId !== 0) {
           octGripSum += o.grapple.gripQ;
@@ -440,7 +436,7 @@ describe("human vs octopus", () => {
       const cHum: CommandMap = new Map([[1, [{ kind: "grapple", targetId: 2, intensity: q(1.0) }]]]);
 
       for (let t = 0; t < TICKS; t++) {
-        stepWorld(wHum as any, cHum, { tractionCoeff: q(0.9) });
+        stepWorld(wHum, cHum, { tractionCoeff: q(0.9) });
         const h = wHum.entities.find(e => e.id === 1)!;
         if (h.grapple.holdingTargetId !== 0) {
           humGripSum += h.grapple.gripQ;
@@ -488,8 +484,8 @@ describe("knight vs swordsman", () => {
       const cmds: CommandMap = new Map([[2, [{ kind: "attack", targetId: 1, intensity: q(1.0) }]]]);
 
       for (let t = 0; t < TICKS; t++) {
-        stepWorld(wKnight   as any, cmds, { tractionCoeff: q(0.9) });
-        stepWorld(wUnarmored as any, cmds, { tractionCoeff: q(0.9) });
+        stepWorld(wKnight  , cmds, { tractionCoeff: q(0.9) });
+        stepWorld(wUnarmored, cmds, { tractionCoeff: q(0.9) });
       }
 
       const kF = wKnight.entities.find(e => e.id === 1)!;
@@ -520,7 +516,7 @@ describe("knight vs swordsman", () => {
 
       for (let t = 0; t < TICKS; t++) {
         if (isIncapacitated(knight) || isIncapacitated(clubber)) break;
-        stepWorld(world as any, cmds, { tractionCoeff: q(0.9) });
+        stepWorld(world, cmds, { tractionCoeff: q(0.9) });
       }
 
       const kF = world.entities.find(e => e.id === 1)!;
@@ -546,7 +542,7 @@ describe("knight vs swordsman", () => {
       const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, intensity: q(1.0) }]]]);
       const events = runTick(world, cmds);
       for (const ev of events) {
-        if (ev.kind === TraceKinds.Attack && (ev as any).armoured === true) {
+        if (ev.kind === TraceKinds.Attack && (ev).armoured === true) {
           armouredHitFound = true;
           break;
         }

@@ -2,7 +2,6 @@ import type { Entity } from "./entity.js";
 import type { WorldIndex } from "./indexing.js";
 import type { SpatialIndex } from "./spatial.js";
 import { queryNearbyIds } from "./spatial.js";
-import { SCALE } from "../units.js";
 import { isEnemy } from "./team.js";
 
 export interface OcclusionQuery {

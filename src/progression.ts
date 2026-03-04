@@ -319,7 +319,7 @@ export function applyAgeingDelta(
   if (delta.reserveEnergy_J !== undefined)
     attrs.performance.reserveEnergy_J = Math.max(0, attrs.performance.reserveEnergy_J + delta.reserveEnergy_J) as I32;
   if (delta.decisionLatency_s !== undefined)
-    attrs.perception.decisionLatency_s = (attrs.perception.decisionLatency_s + delta.decisionLatency_s) as I32;
+    if (attrs.perception) attrs.perception.decisionLatency_s = (attrs.perception.decisionLatency_s + delta.decisionLatency_s) as I32;
 }
 
 // ── Injury sequelae ───────────────────────────────────────────────────────────

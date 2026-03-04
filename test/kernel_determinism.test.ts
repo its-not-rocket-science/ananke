@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { expect, test } from "vitest";
 import { generateIndividual } from "../src/generate";
 import { HUMAN_BASE } from "../src/archetypes";
 import { q } from "../src/units";

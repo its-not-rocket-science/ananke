@@ -4,12 +4,13 @@ import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { q, SCALE } from "../src/units";
 import type { CommandMap } from "../src/sim/commands";
 import { stepWorld } from "../src/sim/kernel";
+import { WorldState } from "../src";
 
-function snapshot(world: any) {
+function snapshot(world: WorldState) {
   return world.entities
     .slice()
-    .sort((a: any, b: any) => a.id - b.id)
-    .map((e: any) => ({
+    .sort((a, b) => a.id - b.id)
+    .map((e) => ({
       id: e.id,
       x: e.position_m.x,
       y: e.position_m.y,
@@ -50,8 +51,8 @@ test("push/repulsion is deterministic regardless of entity insertion order", () 
   const wB = mkWorld(seed, shuffled);
 
   for (let i = 0; i < 10; i++) {
-    stepWorld(wA, cmds, ctx as any);
-    stepWorld(wB, cmds, ctx as any);
+    stepWorld(wA, cmds, ctx);
+    stepWorld(wB, cmds, ctx);
   }
 
   expect(snapshot(wA)).toEqual(snapshot(wB));

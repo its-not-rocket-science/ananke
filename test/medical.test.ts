@@ -95,7 +95,7 @@ describe("fracture detection", () => {
   it("fractured = true when structuralDamage >= FRACTURE_THRESHOLD", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     e.injury.byRegion["leftLeg"]!.structuralDamage = q(0.70) as Q;
-    const world = mkWorld(1, [e]);
+    const _world = mkWorld(1, [e]);
     // Trigger the init guard which won't set fractured; we set it manually via direct struct damage
     // Fracture is SET in applyImpactToInjury. Test it via direct field.
     // Here we just test the field exists and defaults to false at q(0.69)
@@ -109,7 +109,7 @@ describe("fracture detection", () => {
     // Use a world tick to trigger an attack that crosses the threshold.
     // We test this by observing the trace events.
     const events: TraceEvent[] = [];
-    const trace = { onEvent: (ev: TraceEvent) => events.push(ev) };
+    const _trace = { onEvent: (ev: TraceEvent) => events.push(ev) };
 
     const attacker = mkHumanoidEntity(1, 1, 0, 0);
     const target   = mkHumanoidEntity(2, 2, to.m(0.3), 0); // within reach
@@ -134,7 +134,7 @@ describe("fracture detection", () => {
     };
     attacker.loadout.items.push(heavyWpn);
 
-    const world = mkWorld(1, [attacker, target]);
+    const _world = mkWorld(1, [attacker, target]);
     // Run enough seeds to land a hit on leftLeg
     let found = false;
     for (let seed = 1; seed <= 500 && !found; seed++) {
@@ -152,7 +152,7 @@ describe("fracture detection", () => {
         found = true;
         const fracEv = evs.find(e => e.kind === "fracture")!;
         expect(fracEv.kind).toBe("fracture");
-        expect((fracEv as any).entityId).toBe(2);
+        expect((fracEv).entityId).toBe(2);
       }
     }
     expect(found).toBe(true);

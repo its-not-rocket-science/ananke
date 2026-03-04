@@ -172,13 +172,12 @@ describe("computeCavitationBleed", () => {
 
 describe("hydrostatic — kernel integration", () => {
   const wpnRifle = ALL_HISTORICAL_RANGED.find(w => w.id === "rng_assault_rifle")!;
-  const wpnHandgun = ALL_HISTORICAL_RANGED.find(w => w.id === "rng_handgun_9mm")!;
 
   it("rifle shot runs without error and target receives some damage", () => {
     // Smoke test: high-velocity rifle path exercises tempCavMul and cavitation bleed without crash
     const shooter = mkHumanoidEntity(1, 1, 0, 0);
     const target  = mkHumanoidEntity(2, 2, SCALE.m, 0); // 1 m away
-    shooter.loadout.items = [{ ...wpnRifle } as any];
+    shooter.loadout.items = [{ ...wpnRifle }];
     const world = mkWorld(42, [shooter, target]);
     const cmds: CommandMap = new Map([[1, [{ kind: "shoot", weaponId: wpnRifle.id, targetId: 2, intensity: q(1.0) }]]]);
     stepWorld(world, cmds, { tractionCoeff: q(0.9) });

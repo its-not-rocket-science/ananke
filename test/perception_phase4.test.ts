@@ -101,7 +101,7 @@ describe("canDetect", () => {
   it("360° arc entity (robot) detects target directly behind itself", () => {
     const robotAttrs = generateIndividual(1, SERVICE_ROBOT);
     const observer   = mkHumanoidEntity(1, 1, 0, 0);
-    (observer.attributes as any).perception = robotAttrs.perception;
+    (observer.attributes).perception = robotAttrs.perception!;
 
     const target = mkHumanoidEntity(2, 2, Math.trunc(-5 * M), 0); // directly behind
 
@@ -136,30 +136,30 @@ describe("generateIndividual: perception attributes", () => {
   it("human has expected perception fields", () => {
     const attrs = generateIndividual(42, HUMAN_BASE);
     expect(attrs.perception).toBeDefined();
-    expect(attrs.perception.visionRange_m).toBe(Math.trunc(200 * M));
-    expect(attrs.perception.visionArcDeg).toBe(120);
-    expect(attrs.perception.hearingRange_m).toBe(Math.trunc(50 * M));
-    expect(attrs.perception.decisionLatency_s).toBe(Math.trunc(0.5 * SCALE.s));
-    expect(attrs.perception.attentionDepth).toBe(4);
-    expect(attrs.perception.threatHorizon_m).toBe(Math.trunc(40 * M));
+    expect(attrs.perception!.visionRange_m).toBe(Math.trunc(200 * M));
+    expect(attrs.perception!.visionArcDeg).toBe(120);
+    expect(attrs.perception!.hearingRange_m).toBe(Math.trunc(50 * M));
+    expect(attrs.perception!.decisionLatency_s).toBe(Math.trunc(0.5 * SCALE.s));
+    expect(attrs.perception!.attentionDepth).toBe(4);
+    expect(attrs.perception!.threatHorizon_m).toBe(Math.trunc(40 * M));
     // halfArcCosQ ≈ cos(60°) × SCALE.Q ≈ 5000
-    expect(attrs.perception.halfArcCosQ).toBeGreaterThan(4800);
-    expect(attrs.perception.halfArcCosQ).toBeLessThan(5200);
+    expect(attrs.perception!.halfArcCosQ).toBeGreaterThan(4800);
+    expect(attrs.perception!.halfArcCosQ).toBeLessThan(5200);
   });
 
   it("robot has wider vision and shorter decision latency than human", () => {
     const humanAttrs = generateIndividual(42, HUMAN_BASE);
     const robotAttrs = generateIndividual(42, SERVICE_ROBOT);
-    expect(robotAttrs.perception.visionRange_m).toBeGreaterThan(humanAttrs.perception.visionRange_m);
-    expect(robotAttrs.perception.visionArcDeg).toBe(360);
-    expect(robotAttrs.perception.decisionLatency_s).toBeLessThan(humanAttrs.perception.decisionLatency_s);
-    expect(robotAttrs.perception.attentionDepth).toBeGreaterThan(humanAttrs.perception.attentionDepth);
+    expect(robotAttrs.perception!.visionRange_m).toBeGreaterThan(humanAttrs.perception!.visionRange_m);
+    expect(robotAttrs.perception!.visionArcDeg).toBe(360);
+    expect(robotAttrs.perception!.decisionLatency_s).toBeLessThan(humanAttrs.perception!.decisionLatency_s);
+    expect(robotAttrs.perception!.attentionDepth).toBeGreaterThan(humanAttrs.perception!.attentionDepth);
   });
 
   it("halfArcCosQ for 360° arc is cos(180°) = negative", () => {
     const attrs = generateIndividual(1, SERVICE_ROBOT);
     // cos(180°) = -1 → halfArcCosQ ≈ -10000, but any dotQ >= that so always in arc
-    expect(attrs.perception.halfArcCosQ).toBeLessThanOrEqual(0);
+    expect(attrs.perception!.halfArcCosQ).toBeLessThanOrEqual(0);
   });
 });
 
@@ -187,7 +187,7 @@ describe("perceiveLocal: sensory filtering", () => {
 
     const p = perceiveLocal(self, idx, spt, Math.trunc(100 * M), 24, DEFAULT_SENSORY_ENV);
     expect(p.enemies.length).toBe(1);
-    expect(p.enemies[0].id).toBe(2);
+    expect(p.enemies[0]!.id).toBe(2);
   });
 
   it("enemy behind observer (outside arc) within hearing is still included", () => {
@@ -238,13 +238,13 @@ describe("decideCommandsForEntity: decision latency", () => {
 
   it("human decision latency is 10 ticks (0.5s × 20Hz)", () => {
     const attrs = generateIndividual(1, HUMAN_BASE);
-    const ticks = Math.max(1, Math.trunc((attrs.perception.decisionLatency_s * 20) / SCALE.s));
+    const ticks = Math.max(1, Math.trunc((attrs.perception!.decisionLatency_s * 20) / SCALE.s));
     expect(ticks).toBe(10);
   });
 
   it("robot decision latency is 1 tick (0.05s × 20Hz = 1)", () => {
     const attrs = generateIndividual(1, SERVICE_ROBOT);
-    const ticks = Math.max(1, Math.trunc((attrs.perception.decisionLatency_s * 20) / SCALE.s));
+    const ticks = Math.max(1, Math.trunc((attrs.perception!.decisionLatency_s * 20) / SCALE.s));
     expect(ticks).toBe(1);
   });
 
@@ -299,7 +299,7 @@ describe("surprise mechanics", () => {
 
   it("rear attack (partial surprise) causes at least as much injury as frontal in aggregate", () => {
     // Aggregate test: over 30 seeds, rear attacks should produce >= frontal injury total
-    const sword = STARTER_WEAPONS[0];
+    const sword = STARTER_WEAPONS[0]!;
     let rearTotal = 0;
     let frontTotal = 0;
 
@@ -334,18 +334,19 @@ describe("surprise mechanics", () => {
 describe("kernel: Phase 4 init guard", () => {
   it("entities without perception get DEFAULT_PERCEPTION after stepWorld", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
-    delete (e.attributes as any).perception;
+    delete (e.attributes).perception;
 
     const world = mkWorld(1, [e]);
     stepWorld(world, new Map(), { tractionCoeff: q(1.0) });
 
-    expect((e.attributes as any).perception).toBeDefined();
-    expect((e.attributes as any).perception.visionRange_m).toBe(DEFAULT_PERCEPTION.visionRange_m);
+    expect((e.attributes).perception).toBeDefined();
+    expect((e.attributes).perception!.visionRange_m).toBe(DEFAULT_PERCEPTION.visionRange_m);
   });
 
   it("entities with ai but missing decisionCooldownTicks get it initialized", () => {
-    const e = mkHumanoidEntity(1, 1, 0, 0);
-    e.ai = { focusTargetId: 0, retargetCooldownTicks: 0 } as any;
+    const e = mkHumanoidEntity(1, 1, 0, 0)
+    expect((e.attributes).perception!.visionRange_m).toBe(DEFAULT_PERCEPTION.visionRange_m);
+    e.ai = { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
 
     const world = mkWorld(1, [e]);
     stepWorld(world, new Map(), { tractionCoeff: q(1.0) });

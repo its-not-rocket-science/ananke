@@ -20,12 +20,12 @@ import {
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
 import type { TraceEvent } from "../src/sim/trace";
-
+import type { CommandMap } from "../src/sim/commands";
 // Helpers to find specific weapons
 const mFind = (id: string) => ALL_HISTORICAL_MELEE.find(w => w.id === id)!;
 const rFind = (id: string) => ALL_HISTORICAL_RANGED.find(w => w.id === id)!;
 
-function runTick(world: ReturnType<typeof mkWorld>, cmds: Map<number, any[]>): TraceEvent[] {
+function runTick(world: ReturnType<typeof mkWorld>, cmds: CommandMap): TraceEvent[] {
   const events: TraceEvent[] = [];
   const trace = { onEvent: (ev: TraceEvent) => events.push(ev) };
   stepWorld(world, cmds, { tractionCoeff: q(0.9), trace });
@@ -228,18 +228,18 @@ describe("Magazine mechanics — simulation", () => {
   function shootNTimes(n: number) {
     const handgun = { ...rFind("rng_handgun_9mm") };
     const shooter = mkHumanoidEntity(1, 1, 0, 0);
-    shooter.loadout.items = [handgun as any];
+    shooter.loadout.items = [handgun];
     const target = mkHumanoidEntity(2, 2, FAR_DIST, 0);
     const world = mkWorld(7, [shooter, target]);
 
-    const cmds = new Map([[
+    const cmds: CommandMap = new Map([[
       1,
       [{ kind: "shoot", targetId: 2, weaponId: handgun.id, intensity: q(1.0) }],
     ]]);
 
     for (let i = 0; i < n; i++) {
       const e = world.entities.find(e => e.id === 1)!;
-      (e as any).action.shootCooldownTicks = 0;
+      (e).action.shootCooldownTicks = 0;
       runTick(world, cmds);
     }
 
@@ -249,36 +249,36 @@ describe("Magazine mechanics — simulation", () => {
   it("after 14 shots roundsInMag === 1 and cooldown equals shotInterval ticks", () => {
     const handgun = rFind("rng_handgun_9mm");
     const shooter = shootNTimes(14);
-    expect((shooter as any).action.roundsInMag).toBe(1);
+    expect((shooter).action.roundsInMag).toBe(1);
     const expectedCooldown = Math.ceil((handgun.shotInterval_s! * TICK_HZ) / SCALE.s);
-    expect((shooter as any).action.shootCooldownTicks).toBe(expectedCooldown);
+    expect((shooter).action.shootCooldownTicks).toBe(expectedCooldown);
   });
 
   it("after 15th shot roundsInMag reloads to magCapacity and cooldown = recycleTicks", () => {
     const handgun = rFind("rng_handgun_9mm");
     const shooter = shootNTimes(15);
-    expect((shooter as any).action.roundsInMag).toBe(handgun.magCapacity!);
+    expect((shooter).action.roundsInMag).toBe(handgun.magCapacity!);
     // Reload cooldown = Math.max(1, Math.trunc(recycleTime_s * TICK_HZ / SCALE.s))
     const expectedReload = Math.max(1, Math.trunc((handgun.recycleTime_s * TICK_HZ) / SCALE.s));
-    expect((shooter as any).action.shootCooldownTicks).toBe(expectedReload);
+    expect((shooter).action.shootCooldownTicks).toBe(expectedReload);
   });
 
   it("firing muzzle-loader (arquebus) leaves roundsInMag undefined", () => {
     const arquebus = { ...rFind("rng_arquebus") };
     const shooter  = mkHumanoidEntity(1, 1, 0, 0);
-    shooter.loadout.items = [arquebus as any];
+    shooter.loadout.items = [arquebus];
     const target   = mkHumanoidEntity(2, 2, FAR_DIST, 0);
     const world    = mkWorld(7, [shooter, target]);
-    const cmds     = new Map([[
+    const cmds: CommandMap = new Map([[
       1,
       [{ kind: "shoot", targetId: 2, weaponId: arquebus.id, intensity: q(1.0) }],
     ]]);
 
     const e = world.entities.find(e => e.id === 1)!;
-    (e as any).action.shootCooldownTicks = 0;
+    (e).action.shootCooldownTicks = 0;
     runTick(world, cmds);
 
-    expect((e as any).action.roundsInMag).toBeUndefined();
+    expect((e).action.roundsInMag).toBeUndefined();
   });
 });
 

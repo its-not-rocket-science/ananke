@@ -105,7 +105,7 @@ describe("getExposureWeight", () => {
 
   it("returns q(0) for segment with no exposureWeight at all", () => {
     const seg = { id: "test", parent: null, mass_kg: 1000, exposureWeight: {} };
-    expect(getExposureWeight(seg as any, DamageChannel.Kinetic)).toBe(q(0));
+    expect(getExposureWeight(seg, DamageChannel.Kinetic)).toBe(q(0));
   });
 });
 
@@ -113,7 +113,7 @@ describe("getExposureWeight", () => {
 
 describe("resolveHitSegment", () => {
   it("returns a valid segment id from the plan", () => {
-    const id = resolveHitSegment(HUMANOID_PLAN, q(0.5) as any);
+    const id = resolveHitSegment(HUMANOID_PLAN, q(0.5));
     expect(HUMANOID_PLAN.segments.map(s => s.id)).toContain(id);
   });
 
@@ -123,7 +123,7 @@ describe("resolveHitSegment", () => {
     const N = 100;
     for (let i = 0; i < N; i++) {
       // spread r01 over 0..9999
-      const r01 = Math.trunc(i * SCALE.Q / N) as any;
+      const r01 = Math.trunc(i * SCALE.Q / N);
       if (resolveHitSegment(HUMANOID_PLAN, r01) === "torso") torsoCount++;
     }
     // ~50 out of 100 should be torso (between 40 and 60 with uniform sampling)
@@ -132,19 +132,19 @@ describe("resolveHitSegment", () => {
   });
 
   it("r01=0 hits the first segment", () => {
-    expect(resolveHitSegment(HUMANOID_PLAN, q(0) as any)).toBe("head");
+    expect(resolveHitSegment(HUMANOID_PLAN, q(0))).toBe("head");
   });
 
   it("r01=SCALE.Q-1 hits the last segment", () => {
     const last = HUMANOID_PLAN.segments[HUMANOID_PLAN.segments.length - 1]!.id;
-    expect(resolveHitSegment(HUMANOID_PLAN, (SCALE.Q - 1) as any)).toBe(last);
+    expect(resolveHitSegment(HUMANOID_PLAN, (SCALE.Q - 1))).toBe(last);
   });
 
   it("octopoid arms are hit proportionally (8 arms = 72% of hits)", () => {
     let armCount = 0;
     const N = 1000;
     for (let i = 0; i < N; i++) {
-      const r01 = Math.trunc(i * SCALE.Q / N) as any;
+      const r01 = Math.trunc(i * SCALE.Q / N);
       const id = resolveHitSegment(OCTOPOID_PLAN, r01);
       if (id.startsWith("arm")) armCount++;
     }
@@ -228,7 +228,7 @@ describe("deriveFunctionalState (data-driven)", () => {
   it("quadruped: locomotion impairment from frontLeftLeg damage", () => {
     const e = makeEntityWithPlan(QUADRUPED_PLAN);
     e.injury.byRegion["frontLeftLeg"]!.structuralDamage = q(0.80);
-    const fs = deriveFunctionalState(e as any, TUNING.tactical);
+    const fs = deriveFunctionalState(e, TUNING.tactical);
     // frontLeftLeg is primary loco → legStr > 0 → mobilityMul < 1.0
     expect(fs.mobilityMul).toBeLessThan(q(1.0));
   });
@@ -236,7 +236,7 @@ describe("deriveFunctionalState (data-driven)", () => {
   it("octopoid: manipulation impairment from arm1 damage", () => {
     const e = makeEntityWithPlan(OCTOPOID_PLAN);
     e.injury.byRegion["arm1"]!.structuralDamage = q(1.0);
-    const fs = deriveFunctionalState(e as any, TUNING.tactical);
+    const fs = deriveFunctionalState(e, TUNING.tactical);
     // arm1 is primary manipulation → armStr > 0 → manipulationMul < 1.0
     expect(fs.manipulationMul).toBeLessThan(q(1.0));
   });
@@ -245,9 +245,9 @@ describe("deriveFunctionalState (data-driven)", () => {
     const e = makeEntityWithPlan(VERMIFORM_PLAN);
     e.injury.byRegion["midBody"]!.structuralDamage = q(0.80);
     // midBody is primary loco → mobility impaired; no manipulation segs
-    const fsVerm = deriveFunctionalState(e as any, TUNING.tactical);
+    const fsVerm = deriveFunctionalState(e, TUNING.tactical);
     const eClean = makeEntityWithPlan(VERMIFORM_PLAN);
-    const fsClean = deriveFunctionalState(eClean as any, TUNING.tactical);
+    const fsClean = deriveFunctionalState(eClean, TUNING.tactical);
     expect(fsVerm.mobilityMul).toBeLessThan(fsClean.mobilityMul);
     expect(fsVerm.manipulationMul).toBe(fsClean.manipulationMul); // unchanged
   });
@@ -256,7 +256,7 @@ describe("deriveFunctionalState (data-driven)", () => {
     const e = makeEntityWithPlan(CENTAUR_PLAN);
     // Set leftArm structural damage above arm disable threshold
     e.injury.byRegion["leftArm"]!.structuralDamage = q(0.85);
-    const fs = deriveFunctionalState(e as any, TUNING.tactical);
+    const fs = deriveFunctionalState(e, TUNING.tactical);
     expect(fs.leftArmDisabled).toBe(true);
     expect(fs.rightArmDisabled).toBe(false);
   });
@@ -269,8 +269,8 @@ describe("deriveFunctionalState (data-driven)", () => {
     delete (withoutPlan as any).bodyPlan;
     withoutPlan.injury.byRegion["rightLeg"]!.structuralDamage = q(0.50);
 
-    const fsWithPlan    = deriveFunctionalState(withPlan as any, TUNING.tactical);
-    const fsWithoutPlan = deriveFunctionalState(withoutPlan as any, TUNING.tactical);
+    const fsWithPlan    = deriveFunctionalState(withPlan, TUNING.tactical);
+    const fsWithoutPlan = deriveFunctionalState(withoutPlan, TUNING.tactical);
 
     // Both paths should produce the same mobilityMul for humanoid
     expect(fsWithPlan.mobilityMul).toBe(fsWithoutPlan.mobilityMul);

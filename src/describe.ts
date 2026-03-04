@@ -261,7 +261,7 @@ export function describeCharacter(attrs: IndividualAttributes): CharacterDescrip
   const toughTier  = rateTier(resilience.shockTolerance, RES_BREAKS);
   const concTier   = rateTier(resilience.concussionTolerance, RES_BREAKS);
 
-  const decTier    = rateInverted(perception.decisionLatency_s, DECISION_BREAKS);
+  const decTier    = rateInverted(perception?.decisionLatency_s ?? 0, DECISION_BREAKS);
 
   return {
     stature: describeStature(morphology.stature_m),
@@ -281,9 +281,9 @@ export function describeCharacter(attrs: IndividualAttributes): CharacterDescrip
     toughness:            makeRating(toughTier, RES_LABELS, SHOCK_COMPARISONS, fmtQ(resilience.shockTolerance)),
     concussionResistance: makeRating(concTier,  RES_LABELS, CONC_COMPARISONS,  fmtQ(resilience.concussionTolerance)),
 
-    visionRange:  `${Math.round(perception.visionRange_m / SCALE.m)} m, ${perception.visionArcDeg}\u00b0 arc`,
-    hearingRange: `${Math.round(perception.hearingRange_m / SCALE.m)} m`,
-    decisionSpeed: makeRating(decTier, COG_LABELS, DECISION_COMPARISONS, fmtMs(perception.decisionLatency_s)),
+    visionRange:  `${Math.round((perception?.visionRange_m ?? 0) / SCALE.m)} m, ${perception?.visionArcDeg ?? 0}\u00b0 arc`,
+    hearingRange: `${Math.round((perception?.hearingRange_m ?? 0) / SCALE.m)} m`,
+    decisionSpeed: makeRating(decTier, COG_LABELS, DECISION_COMPARISONS, fmtMs(perception?.decisionLatency_s ?? 0)),
   };
 }
 

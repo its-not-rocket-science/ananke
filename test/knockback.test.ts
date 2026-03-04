@@ -1,7 +1,7 @@
 // test/knockback.test.ts — Phase 26: Momentum Transfer & Knockback
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to, qMul } from "../src/units.js";
+import { q, SCALE, to } from "../src/units.js";
 import {
   computeKnockback,
   applyKnockback,
@@ -12,8 +12,9 @@ import {
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
 import { stepWorld } from "../src/sim/kernel.js";
 import { TICK_HZ } from "../src/sim/tick.js";
-import { STARTER_WEAPONS, STARTER_ARMOUR } from "../src/equipment.js";
+import { STARTER_WEAPONS } from "../src/equipment.js";
 import { ALL_HISTORICAL_MELEE, ALL_HISTORICAL_RANGED } from "../src/weapons.js";
+import { CommandMap } from "../src/index.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -249,10 +250,7 @@ describe("integration", () => {
     attacker.loadout = { items: [wpn_club] };
 
     const world = mkWorld(42, [attacker, defender]);
-    const cmds = new Map([[1, [{ kind: "attack" as const, targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" as const }]]]);
-
-    const initialVy = defender.velocity_mps.y;
-    const initialVx = defender.velocity_mps.x;
+    const cmds: CommandMap = new Map([[1, [{ kind: "attack" as const, targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" as const }]]]);
 
     for (let i = 0; i < 5 * TICK_HZ; i++) {
       stepWorld(world, cmds, { tractionCoeff: q(0.9) });
@@ -299,7 +297,7 @@ describe("integration", () => {
     // Manually set staggerTicks to verify it decrements
     defender.action.staggerTicks = 5;
     const world = mkWorld(10, [attacker, defender]);
-    const cmds = new Map<number, any[]>([[1, []]]);
+    const cmds: CommandMap = new Map([[1, []]]);
 
     stepWorld(world, cmds, { tractionCoeff: q(0.9) });
     expect(defender.action.staggerTicks).toBe(4);

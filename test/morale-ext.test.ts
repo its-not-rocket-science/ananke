@@ -13,9 +13,6 @@ import { describe, it, expect } from "vitest";
 import { q, SCALE, qMul, type Q } from "../src/units";
 import {
   FEAR_PER_SUPPRESSION_TICK,
-  FEAR_FOR_ALLY_DEATH,
-  LEADER_AURA_FEAR_REDUCTION,
-  BANNER_AURA_FEAR_REDUCTION,
   RALLY_COOLDOWN_TICKS,
   isRouting,
 } from "../src/sim/morale";
@@ -28,7 +25,6 @@ import type { CommandMap } from "../src/sim/commands";
 import type { TraceEvent } from "../src/sim/trace";
 import { decideCommandsForEntity } from "../src/sim/ai/decide";
 import type { AIPolicy } from "../src/sim/ai/types";
-import { TUNING } from "../src/sim/tuning";
 
 const M = SCALE.m;
 
@@ -41,7 +37,7 @@ function runTick(
 ): TraceEvent[] {
   const events: TraceEvent[] = [];
   const trace = { onEvent: (ev: TraceEvent) => events.push(ev) };
-  stepWorld(world, cmds, { tractionCoeff: q(0.80), trace, ...ctx } as any);
+  stepWorld(world, cmds, { tractionCoeff: q(0.80), trace, ...ctx });
   return events;
 }
 
@@ -64,8 +60,8 @@ function defaultPolicy(): AIPolicy {
 
 // Builds a minimal world/index/spatial for calling decideCommandsForEntity
 function mkDecideCtx(world: ReturnType<typeof mkWorld>) {
-  const index = buildWorldIndex(world as any);
-  const spatial = buildSpatialIndex(world as any, Math.trunc(4 * M));
+  const index = buildWorldIndex(world);
+  const spatial = buildSpatialIndex(world, Math.trunc(4 * M));
   return { world, index, spatial };
 }
 
@@ -138,7 +134,7 @@ describe("caliber-based suppression fear", () => {
     let suppressionFound = false;
     for (let seed = 1; seed <= 500 && !suppressionFound; seed++) {
       const shooter = mkHumanoidEntity(1, 1, 0, 0);
-      shooter.loadout.items = [bow as any];
+      shooter.loadout.items = [bow];
       // At 50m the grouping radius exceeds body half-width, making suppression possible.
       // At 8m the error circle is too small — the shot always hits.
       const target = mkHumanoidEntity(2, 2, Math.trunc(50 * M), 0);
@@ -228,7 +224,7 @@ describe("leader and standard-bearer morale auras", () => {
     const e2 = mkHumanoidEntity(1, 1, 0, 0);
     e2.condition.fearQ = q(0.40);
     const leader = mkHumanoidEntity(2, 1, Math.trunc(10 * M), 0);
-    (leader as any).traits = ["leader"];
+    (leader).traits = ["leader"];
     const wLead = mkWorld(42, [e2, leader]);
     runTick(wLead, noCmd());
     const fearWithLeader = wLead.entities.find(e => e.id === 1)!.condition.fearQ;
@@ -241,7 +237,7 @@ describe("leader and standard-bearer morale auras", () => {
     const eLeader = mkHumanoidEntity(1, 1, 0, 0);
     eLeader.condition.fearQ = q(0.40);
     const leader = mkHumanoidEntity(2, 1, Math.trunc(10 * M), 0);
-    (leader as any).traits = ["leader"];
+    (leader).traits = ["leader"];
     const wLead = mkWorld(42, [eLeader, leader]);
     runTick(wLead, noCmd());
     const fearWithLeader = wLead.entities.find(e => e.id === 1)!.condition.fearQ;
@@ -250,7 +246,7 @@ describe("leader and standard-bearer morale auras", () => {
     const eBanner = mkHumanoidEntity(1, 1, 0, 0);
     eBanner.condition.fearQ = q(0.40);
     const banner = mkHumanoidEntity(2, 1, Math.trunc(10 * M), 0);
-    (banner as any).traits = ["standardBearer"];
+    (banner).traits = ["standardBearer"];
     const wBanner = mkWorld(42, [eBanner, banner]);
     runTick(wBanner, noCmd());
     const fearWithBanner = wBanner.entities.find(e => e.id === 1)!.condition.fearQ;
@@ -271,7 +267,7 @@ describe("leader and standard-bearer morale auras", () => {
     const eClose = mkHumanoidEntity(1, 1, 0, 0);
     eClose.condition.fearQ = q(0.40);
     const closeLeader = mkHumanoidEntity(2, 1, Math.trunc(10 * M), 0);
-    (closeLeader as any).traits = ["leader"];
+    (closeLeader).traits = ["leader"];
     const wClose = mkWorld(42, [eClose, closeLeader]);
     runTick(wClose, noCmd());
     const fearClose = wClose.entities.find(e => e.id === 1)!.condition.fearQ;
@@ -280,7 +276,7 @@ describe("leader and standard-bearer morale auras", () => {
     const eFar = mkHumanoidEntity(1, 1, 0, 0);
     eFar.condition.fearQ = q(0.40);
     const farLeader = mkHumanoidEntity(2, 1, Math.trunc(25 * M), 0);
-    (farLeader as any).traits = ["leader"];
+    (farLeader).traits = ["leader"];
     const wFar = mkWorld(42, [eFar, farLeader]);
     runTick(wFar, noCmd());
     const fearFar = wFar.entities.find(e => e.id === 1)!.condition.fearQ;
@@ -301,7 +297,7 @@ describe("leader and standard-bearer morale auras", () => {
     const e2 = mkHumanoidEntity(1, 1, 0, 0);
     e2.condition.fearQ = q(0.40);
     const enemyLeader = mkHumanoidEntity(2, 2, Math.trunc(10 * M), 0); // DIFFERENT team
-    (enemyLeader as any).traits = ["leader"];
+    (enemyLeader).traits = ["leader"];
     const wEnemy = mkWorld(42, [e2, enemyLeader]);
     runTick(wEnemy, noCmd());
     const fearEnemyLeader = wEnemy.entities.find(e => e.id === 1)!.condition.fearQ;
@@ -316,17 +312,17 @@ describe("leader and standard-bearer morale auras", () => {
 describe("panic action variety", () => {
   it("surrendered entity always returns passive commands (defend-none + prone)", () => {
     const self = mkHumanoidEntity(1, 1, 0, 0);
-    (self.condition as any).surrendered = true;
+    (self.condition).surrendered = true;
     const world = mkWorld(42, [self]);
-    const { index, spatial } = mkDecideCtx(world as any);
+    const { index, spatial } = mkDecideCtx(world);
 
     for (let tick = 0; tick < 5; tick++) {
-      (world as any).tick = tick;
+      (world).tick = tick;
       const cmds = decideCommandsForEntity(
-        world as any, index, spatial, self, defaultPolicy(),
+        world, index, spatial, self, defaultPolicy(),
       );
-      expect(cmds.some(c => c.kind === "defend" && (c as any).mode === "none")).toBe(true);
-      expect(cmds.some(c => c.kind === "setProne" && (c as any).prone === true)).toBe(true);
+      expect(cmds.some(c => c.kind === "defend" && (c).mode === "none")).toBe(true);
+      expect(cmds.some(c => c.kind === "setProne" && (c).prone === true)).toBe(true);
       expect(cmds.some(c => c.kind === "attack")).toBe(false);
     }
   });
@@ -339,21 +335,21 @@ describe("panic action variety", () => {
     self.condition.fearQ = q(0.90) as Q;
     const enemy = mkHumanoidEntity(2, 2, Math.trunc(5 * M), 0);
     const world = mkWorld(42, [self, enemy]);
-    const { index, spatial } = mkDecideCtx(world as any);
+    const { index, spatial } = mkDecideCtx(world);
 
     // Sweep over seeds — reset AI cooldown each time so routing path is always reached
     for (let seed = 1; seed <= 100; seed++) {
-      (world as any).seed = seed;
-      (world as any).tick = seed; // vary tick too
-      ((self as any).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0; // reset so routing check runs
-      (self.condition as any).surrendered = false;
+      (world).seed = seed;
+      (world).tick = seed; // vary tick too
+      ((self).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0; // reset so routing check runs
+      (self.condition).surrendered = false;
       const cmds = decideCommandsForEntity(
-        world as any, index, spatial, self, defaultPolicy(),
+        world, index, spatial, self, defaultPolicy(),
       );
       // Must never surrender (chance = 0 with distressTol = q(1.0))
-      expect((self.condition as any).surrendered).toBe(false);
+      expect((self.condition).surrendered).toBe(false);
       // Should include a flee move command when there's a target
-      const hasMove = cmds.some(c => c.kind === "move" && (c as any).intensity > 0);
+      const hasMove = cmds.some(c => c.kind === "move" && (c).intensity > 0);
       expect(hasMove).toBe(true);
     }
   });
@@ -365,17 +361,17 @@ describe("panic action variety", () => {
     self.condition.fearQ = q(0.70) as Q;
     const enemy = mkHumanoidEntity(2, 2, Math.trunc(5 * M), 0);
     const world = mkWorld(1, [self, enemy]);
-    const { index, spatial } = mkDecideCtx(world as any);
+    const { index, spatial } = mkDecideCtx(world);
 
     let surrenderFound = false;
     for (let seed = 1; seed <= 500 && !surrenderFound; seed++) {
       // Reset per-iteration state so routing block runs each time
-      (self.condition as any).surrendered = false;
-      ((self as any).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0;
-      (world as any).seed = seed;
-      (world as any).tick = 0;
-      decideCommandsForEntity(world as any, index, spatial, self, defaultPolicy());
-      if ((self.condition as any).surrendered) surrenderFound = true;
+      (self.condition).surrendered = false;
+      ((self).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0;
+      (world).seed = seed;
+      (world).tick = 0;
+      decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
+      if ((self.condition).surrendered) surrenderFound = true;
     }
     expect(surrenderFound).toBe(true);
   });
@@ -386,17 +382,17 @@ describe("panic action variety", () => {
     self.condition.fearQ = q(0.70) as Q;
     const enemy = mkHumanoidEntity(2, 2, Math.trunc(5 * M), 0);
     const world = mkWorld(1, [self, enemy]);
-    const { index, spatial } = mkDecideCtx(world as any);
+    const { index, spatial } = mkDecideCtx(world);
 
     let freezeFound = false;
     for (let seed = 1; seed <= 500 && !freezeFound; seed++) {
-      (self.condition as any).surrendered = false;
-      ((self as any).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0;
-      (world as any).seed = seed;
-      (world as any).tick = 0;
-      const cmds = decideCommandsForEntity(world as any, index, spatial, self, defaultPolicy());
+      (self.condition).surrendered = false;
+      ((self).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0;
+      (world).seed = seed;
+      (world).tick = 0;
+      const cmds = decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
       // Freeze = returns [] (empty commands; not surrendered)
-      if (cmds.length === 0 && !(self.condition as any).surrendered) freezeFound = true;
+      if (cmds.length === 0 && !(self.condition).surrendered) freezeFound = true;
     }
     expect(freezeFound).toBe(true);
   });
@@ -407,19 +403,19 @@ describe("panic action variety", () => {
     self.condition.fearQ = q(0.70) as Q;
     const enemy = mkHumanoidEntity(2, 2, Math.trunc(5 * M), 0);
     const world = mkWorld(99, [self, enemy]);
-    const { index, spatial } = mkDecideCtx(world as any);
+    const { index, spatial } = mkDecideCtx(world);
 
     // First call — reset cooldown so routing block is always reached
-    (world as any).tick = 5;
-    (self.condition as any).surrendered = false;
-    ((self as any).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0;
-    const cmds1 = decideCommandsForEntity(world as any, index, spatial, self, defaultPolicy());
+    (world).tick = 5;
+    (self.condition).surrendered = false;
+    ((self).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0;
+    const cmds1 = decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
 
     // Second call with identical state
-    (world as any).tick = 5;
-    (self.condition as any).surrendered = false;
-    ((self as any).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0;
-    const cmds2 = decideCommandsForEntity(world as any, index, spatial, self, defaultPolicy());
+    (world).tick = 5;
+    (self.condition).surrendered = false;
+    ((self).ai ??= { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 }).decisionCooldownTicks = 0;
+    const cmds2 = decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
 
     expect(cmds1.length).toBe(cmds2.length);
     for (let i = 0; i < cmds1.length; i++) {
@@ -469,9 +465,9 @@ describe("rally mechanic", () => {
 
     const target = mkHumanoidEntity(2, 2, Math.trunc(0.3 * M), 0); // very close — within reach
     const world = mkWorld(42, [self, target]);
-    const { index, spatial } = mkDecideCtx(world as any);
+    const { index, spatial } = mkDecideCtx(world);
 
-    const cmds = decideCommandsForEntity(world as any, index, spatial, self, defaultPolicy());
+    const cmds = decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
     expect(cmds.some(c => c.kind === "attack")).toBe(false);
   });
 
@@ -485,9 +481,9 @@ describe("rally mechanic", () => {
     const reach = weapon.reach_m ?? Math.trunc(self.attributes.morphology.stature_m * 0.45);
     const target = mkHumanoidEntity(2, 2, reach - Math.trunc(0.1 * M), 0); // within reach
     const world = mkWorld(42, [self, target]);
-    const { index, spatial } = mkDecideCtx(world as any);
+    const { index, spatial } = mkDecideCtx(world);
 
-    const cmds = decideCommandsForEntity(world as any, index, spatial, self, defaultPolicy());
+    const cmds = decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
     expect(cmds.some(c => c.kind === "attack")).toBe(true);
   });
 });
@@ -498,7 +494,7 @@ describe("berserk fear response", () => {
   it("berserk entity: fearQ stays 0 regardless of stimuli", () => {
     // Entity surrounded by enemies, suppressed, and has shock — would normally accumulate lots of fear
     const e = mkHumanoidEntity(1, 1, 0, 0);
-    (e.attributes.resilience as any).fearResponse = "berserk";
+    (e.attributes.resilience).fearResponse = "berserk";
     e.condition.fearQ = q(0.30) as Q; // start with some fear
     e.condition.suppressedTicks = 10;
     e.injury.shock = q(0.50) as Q;
@@ -515,7 +511,7 @@ describe("berserk fear response", () => {
 
   it("berserk entity: isRouting never returns true", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
-    (e.attributes.resilience as any).fearResponse = "berserk";
+    (e.attributes.resilience).fearResponse = "berserk";
     e.condition.suppressedTicks = 100;
     e.injury.shock = q(0.80) as Q;
     const en1 = mkHumanoidEntity(2, 2, Math.trunc(5 * M), 0);
@@ -531,7 +527,7 @@ describe("berserk fear response", () => {
 
   it("berserk entity: never routes or hesitates in AI", () => {
     const self = mkHumanoidEntity(1, 1, 0, 0);
-    (self.attributes.resilience as any).fearResponse = "berserk";
+    (self.attributes.resilience).fearResponse = "berserk";
     // Force berserk entity to have max fear (would normally route)
     self.condition.fearQ = q(0.99) as Q;
     const weapon = STARTER_WEAPONS[0]!;
@@ -540,9 +536,9 @@ describe("berserk fear response", () => {
     const reach = weapon.reach_m ?? Math.trunc(self.attributes.morphology.stature_m * 0.45);
     const enemy = mkHumanoidEntity(2, 2, reach - Math.trunc(0.1 * M), 0);
     const world = mkWorld(42, [self, enemy]);
-    const { index, spatial } = mkDecideCtx(world as any);
+    const { index, spatial } = mkDecideCtx(world);
 
-    const cmds = decideCommandsForEntity(world as any, index, spatial, self, defaultPolicy());
+    const cmds = decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
     // Should have attack (not routing/hesitant)
     expect(cmds.some(c => c.kind === "attack")).toBe(true);
   });
@@ -551,14 +547,14 @@ describe("berserk fear response", () => {
 describe("freeze fear response", () => {
   it("freeze archetype: returns [] when routing instead of flee commands", () => {
     const self = mkHumanoidEntity(1, 1, 0, 0);
-    (self.attributes.resilience as any).fearResponse = "freeze";
+    (self.attributes.resilience).fearResponse = "freeze";
     // moraleThreshold for distressTol ≈ 0.5: q(0.65)
     self.condition.fearQ = q(0.80) as Q; // well above threshold
     const enemy = mkHumanoidEntity(2, 2, Math.trunc(5 * M), 0);
     const world = mkWorld(42, [self, enemy]);
-    const { index, spatial } = mkDecideCtx(world as any);
+    const { index, spatial } = mkDecideCtx(world);
 
-    const cmds = decideCommandsForEntity(world as any, index, spatial, self, defaultPolicy());
+    const cmds = decideCommandsForEntity(world, index, spatial, self, defaultPolicy());
     // Freeze archetype: routing → empty commands
     expect(cmds).toHaveLength(0);
   });

@@ -699,9 +699,9 @@ describe("kernel: breakBind command", () => {
       stepWorld(world, cmds, traceCtx);
 
       const bindBreak = events.find(ev => ev.kind === TraceKinds.WeaponBindBreak);
-      if (bindBreak && (bindBreak as any).reason === "forced") {
-        expect((bindBreak as any).entityId).toBe(1);
-        expect((bindBreak as any).partnerId).toBe(2);
+      if (bindBreak && (bindBreak).reason === "forced") {
+        expect((bindBreak).entityId).toBe(1);
+        expect((bindBreak).partnerId).toBe(2);
         return;
       }
     }

@@ -76,7 +76,7 @@ describe("MEDICAL_RESOURCES catalogue", () => {
 describe("care level outcomes", () => {
   it("none: natural clotting reduces bleedingRate over time", () => {
     const world = woundedWorld({ bleedingRate: q(0.06) });
-    const [r] = stepDowntime(world, 300, cfg("none"));
+    const r = stepDowntime(world, 300, cfg("none"))[0]!;
     // After 300 seconds of natural clotting, bleed rate has dropped
     // (some structural damage means slower clot, but still reduces)
     const startBleed = r.injuryAtStart.activeBleedingRegions.length;
@@ -87,7 +87,7 @@ describe("care level outcomes", () => {
 
   it("first_aid: bleeding stops nearly immediately (tourniquet on second 0)", () => {
     const world = woundedWorld({ bleedingRate: q(0.06) });
-    const [r] = stepDowntime(world, 300, cfg("first_aid"));
+    const r = stepDowntime(world, 300, cfg("first_aid"))[0]!;
     expect(r.bleedingStopped).toBe(true);
     expect(r.injuryAtEnd.activeBleedingRegions).toHaveLength(0);
     // Minimal fluid loss once tourniquet applied
@@ -96,7 +96,7 @@ describe("care level outcomes", () => {
 
   it("field_medicine: fracture setting surgery is applied", () => {
     const world = woundedWorld({ structuralDamage: q(0.75), fractured: true });
-    const [r] = stepDowntime(world, 2000, cfg("field_medicine"));
+    const r = stepDowntime(world, 2000, cfg("field_medicine"))[0]!;
     expect(r.fracturesSet).toBe(true);
     // Surgery repairs structural damage
     expect(r.injuryAtEnd.maxStructuralDamage).toBeLessThan(r.injuryAtStart.maxStructuralDamage);
@@ -104,30 +104,30 @@ describe("care level outcomes", () => {
 
   it("field_medicine: antibiotic clears active infection immediately", () => {
     const world = woundedWorld({ infectedTick: 0 });
-    const [r] = stepDowntime(world, 100, cfg("field_medicine"));
+    const r = stepDowntime(world, 100, cfg("field_medicine"))[0]!;
     expect(r.infectionCleared).toBe(true);
     expect(r.injuryAtEnd.infectedRegions).toHaveLength(0);
   });
 
   it("hospital: IV fluid replacement reduces fluid loss", () => {
     const world = woundedWorld({ fluidLoss: q(0.50) });
-    const [r] = stepDowntime(world, 500, cfg("hospital"));
+    const r = stepDowntime(world, 500, cfg("hospital"))[0]!;
     expect(r.injuryAtEnd.fluidLoss).toBeLessThan(r.injuryAtStart.fluidLoss);
   });
 
   it("onset delay defers treatment", () => {
     const world = woundedWorld({ bleedingRate: q(0.06) });
     // With a 200-second onset delay, fluid loss accumulates for 200 seconds first
-    const [rDelayed] = stepDowntime(world, 300, cfg("first_aid", { onsetDelay_s: 200 }));
-    const [rImmediate] = stepDowntime(world, 300, cfg("first_aid"));
+    const rDelayed   = stepDowntime(world, 300, cfg("first_aid", { onsetDelay_s: 200 }))[0]!;
+    const rImmediate = stepDowntime(world, 300, cfg("first_aid"))[0]!;
     // Delayed has more fluid loss (200 seconds of uncontrolled bleeding)
     expect(rDelayed.injuryAtEnd.fluidLoss).toBeGreaterThan(rImmediate.injuryAtEnd.fluidLoss);
   });
 
   it("rest flag accelerates healing (clotting faster)", () => {
     const world = woundedWorld({ bleedingRate: q(0.04) });
-    const [rRest]   = stepDowntime(world, 500, cfg("none", {}, true));
-    const [rNoRest] = stepDowntime(world, 500, cfg("none", {}, false));
+    const rRest   = stepDowntime(world, 500, cfg("none", {}, true))[0]!;
+    const rNoRest = stepDowntime(world, 500, cfg("none", {}, false))[0]!;
     // Resting entity has lower fluid loss (bleeds out more slowly)
     expect(rRest.injuryAtEnd.fluidLoss).toBeLessThan(rNoRest.injuryAtEnd.fluidLoss);
   });
@@ -152,14 +152,14 @@ describe("resource tracking", () => {
     e.injury.byRegion["torso"]!.bleedingRate  = q(0.05) as any;
     e.injury.byRegion["leftArm"]!.bleedingRate = q(0.03) as any;
     const world = mkWorld(1, [e]);
-    const [r] = stepDowntime(world, 50, cfg("first_aid"));
+    const r = stepDowntime(world, 50, cfg("first_aid"))[0]!;
     const bandageUsage = r.resourcesUsed.find(u => u.resourceId === "bandage");
     expect(bandageUsage?.count).toBe(2);
   });
 
   it("field_medicine consumes 1 surgical_kit per fractured region", () => {
     const world = woundedWorld({ structuralDamage: q(0.75), fractured: true });
-    const [r] = stepDowntime(world, 50, cfg("field_medicine"));
+    const r = stepDowntime(world, 50, cfg("field_medicine"))[0]!;
     expect(r.fracturesSet).toBe(true);
     const kitUsage = r.resourcesUsed.find(u => u.resourceId === "surgical_kit");
     expect(kitUsage?.count).toBe(1);
@@ -167,7 +167,7 @@ describe("resource tracking", () => {
 
   it("field_medicine consumes 1 antibiotic_dose per infected region", () => {
     const world = woundedWorld({ infectedTick: 0 });
-    const [r] = stepDowntime(world, 50, cfg("field_medicine"));
+    const r = stepDowntime(world, 50, cfg("field_medicine"))[0]!;
     const abxUsage = r.resourcesUsed.find(u => u.resourceId === "antibiotic_dose");
     expect(abxUsage?.count).toBe(1);
   });
@@ -175,17 +175,17 @@ describe("resource tracking", () => {
   it("inventory exhaustion prevents further treatment", () => {
     const world = woundedWorld({ bleedingRate: q(0.06) });
     // Only 0 bandages available
-    const [rEmpty] = stepDowntime(world, 300, cfg("first_aid", {
+    const rEmpty     = stepDowntime(world, 300, cfg("first_aid", {
       inventory: new Map([["bandage", 0]]),
-    }));
-    const [rUnlimited] = stepDowntime(world, 300, cfg("first_aid"));
+    }))[0]!;
+    const rUnlimited = stepDowntime(world, 300, cfg("first_aid"))[0]!;
     // Without bandages, fluid loss is much higher
     expect(rEmpty.injuryAtEnd.fluidLoss).toBeGreaterThan(rUnlimited.injuryAtEnd.fluidLoss);
   });
 
   it("totalCostUnits is sum of individual resource costs", () => {
     const world = woundedWorld({ bleedingRate: q(0.06), structuralDamage: q(0.75), fractured: true });
-    const [r] = stepDowntime(world, 50, cfg("field_medicine"));
+    const r = stepDowntime(world, 50, cfg("field_medicine"))[0]!;
     const manual = r.resourcesUsed.reduce((sum, u) => sum + u.totalCost, 0);
     expect(r.totalCostUnits).toBe(manual);
   });
@@ -197,7 +197,7 @@ describe("recovery projection", () => {
   it("returns combatReadyAt_s = elapsedSeconds when already healed at end", () => {
     // Very minor bleed — stops within simulation window
     const world = woundedWorld({ bleedingRate: q(0.01) });
-    const [r] = stepDowntime(world, 2000, cfg("first_aid"));
+    const r = stepDowntime(world, 2000, cfg("first_aid"))[0]!;
     expect(r.bleedingStopped).toBe(true);
     expect(r.combatReadyAt_s).toBe(2000);
   });
@@ -205,7 +205,7 @@ describe("recovery projection", () => {
   it("returns null combatReadyAt_s and fullRecoveryAt_s when entity dies", () => {
     // Severe bleeding + no treatment → death
     const world = woundedWorld({ bleedingRate: q(0.15) });
-    const [r] = stepDowntime(world, 5000, cfg("none"));
+    const r = stepDowntime(world, 5000, cfg("none"))[0]!;
     expect(r.died).toBe(true);
     expect(r.combatReadyAt_s).toBeNull();
     expect(r.fullRecoveryAt_s).toBeNull();
@@ -213,15 +213,15 @@ describe("recovery projection", () => {
 
   it("fullRecoveryAt_s is null for none/first_aid (no structural treatment)", () => {
     const world = woundedWorld({ structuralDamage: q(0.50) });
-    const [rNone] = stepDowntime(world, 100, cfg("none"));
-    const [rFA]   = stepDowntime(world, 100, cfg("first_aid"));
+    const rNone = stepDowntime(world, 100, cfg("none"))[0]!;
+    const rFA   = stepDowntime(world, 100, cfg("first_aid"))[0]!;
     expect(rNone.fullRecoveryAt_s).toBeNull();
     expect(rFA.fullRecoveryAt_s).toBeNull();
   });
 
   it("fullRecoveryAt_s > combatReadyAt_s when fracture present (field_medicine)", () => {
     const world = woundedWorld({ bleedingRate: q(0.05), structuralDamage: q(0.75), fractured: true });
-    const [r] = stepDowntime(world, 50, cfg("field_medicine"));
+    const r = stepDowntime(world, 50, cfg("field_medicine"))[0]!;
     if (r.fullRecoveryAt_s !== null && r.combatReadyAt_s !== null) {
       // Fractures take longer to fully repair than stopping bleeding
       expect(r.fullRecoveryAt_s).toBeGreaterThanOrEqual(r.combatReadyAt_s);
@@ -230,8 +230,8 @@ describe("recovery projection", () => {
 
   it("projection is consistent on same wound state across calls", () => {
     const world = woundedWorld({ structuralDamage: q(0.60) });
-    const [r1] = stepDowntime(world, 100, cfg("field_medicine"));
-    const [r2] = stepDowntime(world, 100, cfg("field_medicine"));
+    const r1 = stepDowntime(world, 100, cfg("field_medicine"))[0]!;
+    const r2 = stepDowntime(world, 100, cfg("field_medicine"))[0]!;
     expect(r1.combatReadyAt_s).toBe(r2.combatReadyAt_s);
     expect(r1.fullRecoveryAt_s).toBe(r2.fullRecoveryAt_s);
   });
@@ -243,26 +243,26 @@ describe("calibration anchors", () => {
   it("deep cut + no treatment → entity dies before 3600 simulated seconds", () => {
     // bleedingRate q(0.06) → fluid per second = 30/10000 = 0.003; fatal in ~267 s
     const world = woundedWorld({ bleedingRate: q(0.06) });
-    const [r] = stepDowntime(world, 3600, cfg("none"));
+    const r = stepDowntime(world, 3600, cfg("none"))[0]!;
     expect(r.died).toBe(true);
   });
 
   it("deep cut + immediate first_aid → entity survives 3600 simulated seconds", () => {
     const world = woundedWorld({ bleedingRate: q(0.06) });
-    const [r] = stepDowntime(world, 3600, cfg("first_aid"));
+    const r = stepDowntime(world, 3600, cfg("first_aid"))[0]!;
     expect(r.died).toBe(false);
   });
 
   it("severe fluid loss + none → entity dies within 3600 simulated seconds", () => {
     // Already at q(0.60) fluid loss plus active bleeding
     const world = woundedWorld({ bleedingRate: q(0.06), fluidLoss: q(0.60) });
-    const [r] = stepDowntime(world, 3600, cfg("none"));
+    const r = stepDowntime(world, 3600, cfg("none"))[0]!;
     expect(r.died).toBe(true);
   });
 
   it("severe fluid loss + hospital → fluid loss reduced within 3600 simulated seconds", () => {
     const world = woundedWorld({ bleedingRate: q(0.06), fluidLoss: q(0.60) });
-    const [r] = stepDowntime(world, 3600, cfg("hospital"));
+    const r = stepDowntime(world, 3600, cfg("hospital"))[0]!;
     // Hospital: tourniquet stops bleed + IV restores fluid
     expect(r.died).toBe(false);
     expect(r.injuryAtEnd.fluidLoss).toBeLessThan(r.injuryAtStart.fluidLoss);
@@ -270,20 +270,20 @@ describe("calibration anchors", () => {
 
   it("infection + antibiotics within 200 seconds → infection cleared", () => {
     const world = woundedWorld({ infectedTick: 0 });
-    const [r] = stepDowntime(world, 200, cfg("field_medicine"));
+    const r = stepDowntime(world, 200, cfg("field_medicine"))[0]!;
     expect(r.infectionCleared).toBe(true);
   });
 
   it("untreated infection → entity dies within 1814400 simulated seconds (21 days)", () => {
     // Pre-infected torso with internal damage
     const world = woundedWorld({ infectedTick: 0, internalDamage: q(0.20) });
-    const [r] = stepDowntime(world, 1_814_400, cfg("none"));
+    const r = stepDowntime(world, 1_814_400, cfg("none"))[0]!;
     expect(r.died).toBe(true);
   });
 
   it("fracture + field_medicine → fracturesSet = true and structural damage reduced", () => {
     const world = woundedWorld({ structuralDamage: q(0.75), fractured: true });
-    const [r] = stepDowntime(world, 1000, cfg("field_medicine"));
+    const r = stepDowntime(world, 1000, cfg("field_medicine"))[0]!;
     expect(r.fracturesSet).toBe(true);
     expect(r.injuryAtEnd.maxStructuralDamage).toBeLessThan(r.injuryAtStart.maxStructuralDamage);
   });

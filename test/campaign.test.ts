@@ -14,10 +14,9 @@ import {
   getInventoryCount,
   serialiseCampaign,
   deserialiseCampaign,
-  type CampaignState,
   type Location,
 } from "../src/campaign.js";
-import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
+import { mkHumanoidEntity } from "../src/sim/testing.js";
 import type { Entity } from "../src/sim/entity.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -28,7 +27,7 @@ function makeEntity(id: number): Entity {
 
 function makeWoundedEntity(id: number): Entity {
   const e = makeEntity(id);
-  e.injury.byRegion["torso"]!.bleedingRate = q(0.05) as any;
+  e.injury.byRegion["torso"]!.bleedingRate = q(0.05);
   return e;
 }
 
@@ -183,7 +182,7 @@ describe("stepCampaignTime", () => {
   it("log entry added when entity dies during recovery", () => {
     const e = makeEntity(1);
     // Extreme bleeding — will die quickly
-    e.injury.byRegion["torso"]!.bleedingRate = q(0.15) as any;
+    e.injury.byRegion["torso"]!.bleedingRate = q(0.15);
     const c = createCampaign("test", [e]);
     stepCampaignTime(c, 5000, {
       downtimeConfig: {

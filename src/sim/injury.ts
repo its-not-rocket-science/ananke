@@ -81,7 +81,7 @@ function totalRegionDamage(i: InjuryState, type: DamageType): Q {
   const segs = Object.values(i.byRegion);
   let sum = 0;
   for (const r of segs) sum += r[type];
-  return clampQ(sum as any, 0, segs.length * SCALE.Q);
+  return clampQ(sum, 0, segs.length * SCALE.Q);
 }
 
 export function totalSurfaceDamage(i: InjuryState): Q {

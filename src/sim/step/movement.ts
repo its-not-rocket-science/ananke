@@ -52,7 +52,7 @@ export function stepMovement(e: Entity, world: WorldState, ctx: KernelContext, t
   const controlMul = qMul(controlMulBase, func.coordinationMul);
   const mobilityMul = qMul(mobilityMulBase, func.mobilityMul);
   const crowd = ctx.density?.crowdingQ.get(e.id) ?? 0;
-  const crowdMul = clampQ(q(1.0) - qMul(q(0.65), crowd as any), q(0.25), q(1.0));
+  const crowdMul = clampQ(q(1.0) - qMul(q(0.65), crowd), q(0.25), q(1.0));
 
   const terrainSpeedMul = speedMulAtPosition(ctx.terrainGrid, cellSize, e.position_m.x, e.position_m.y);
 
@@ -108,11 +108,11 @@ export function stepMovement(e: Entity, world: WorldState, ctx: KernelContext, t
 
   // Sim-only: stumble/fall risk when sprinting with impaired mobility/coordination
   if (tuning.realism === "sim" && intensity > 0 && e.intent.move.mode === "sprint" && !e.condition.prone) {
-    const instability = (SCALE.Q - qMul(func.mobilityMul, func.coordinationMul)) as any;
+    const instability = (SCALE.Q - qMul(func.mobilityMul, func.coordinationMul));
     const chance = clampQ(tuning.stumbleBaseChance + qMul(instability, q(0.05)), q(0), q(0.25));
     if (chance > 0) {
       const seed = eventSeed(world.seed, world.tick, e.id, 0, 0xF411);
-      const roll = (seed % SCALE.Q) as any;
+      const roll = (seed % SCALE.Q);
       if (roll < chance) {
         e.condition.prone = true;
         // a small deterministic shock spike

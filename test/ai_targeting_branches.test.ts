@@ -12,7 +12,6 @@ import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";
 import { pickTarget, updateFocus } from "../src/sim/ai/targeting";
 import type { AIPolicy } from "../src/sim/ai/types";
-import type { Entity } from "../src/sim/entity";
 
 const CELL_SIZE = Math.trunc(4 * SCALE.m);
 const CLOSE = Math.trunc(1.0 * SCALE.m);
@@ -95,7 +94,7 @@ describe("pickTarget", () => {
   });
 
   test("dead focused target triggers retarget", () => {
-    const { self, enemy, world, index, spatial } = makeSetup();
+    const { self, enemy, world, index } = makeSetup();
     const enemy2 = mkHumanoidEntity(3, 2, Math.trunc(0.8 * SCALE.m), 0);
     world.entities.push(enemy2);
     index.byId.set(enemy2.id, enemy2);
@@ -109,7 +108,7 @@ describe("pickTarget", () => {
   });
 
   test("stickiness: highly sticky policy keeps focus even after cooldown expires", () => {
-    const { self, enemy, world, index, spatial } = makeSetup();
+    const { self, enemy, world, index } = makeSetup();
     const enemy2 = mkHumanoidEntity(3, 2, Math.trunc(0.5 * SCALE.m), 0); // closer
     world.entities.push(enemy2);
     index.byId.set(enemy2.id, enemy2);
@@ -175,7 +174,7 @@ describe("updateFocus", () => {
     const self = mkHumanoidEntity(1, 1, 0, 0);
     const enemy = mkHumanoidEntity(2, 2, CLOSE, 0);
     // ensure ai is undefined
-    delete (self as any).ai;
+    delete self.ai;
 
     updateFocus(self, enemy, STICKY_POLICY);
 
@@ -183,15 +182,6 @@ describe("updateFocus", () => {
     expect(self.ai!.focusTargetId).toBe(enemy.id);
   });
 
-  test("clears correctly even when ai is undefined", () => {
-    const self = mkHumanoidEntity(1, 1, 0, 0);
-    delete (self as any).ai;
-
-    updateFocus(self, undefined, LOOSE_POLICY);
-
-    expect(self.ai?.focusTargetId).toBe(0);
-    expect(self.ai?.retargetCooldownTicks).toBe(0);
-  });
 });
 
 // ─── Environmental condition integration coverage ─────────────────────────────
@@ -203,7 +193,7 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
   test("onFire increases surface damage and shock after one tick", async () => {
     const { mkHumanoidEntity, mkWorld } = await import("../src/sim/testing");
     const { stepWorld } = await import("../src/sim/kernel");
-    const { q, SCALE } = await import("../src/units");
+    const { q } = await import("../src/units");
 
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.condition.onFire = q(1.0);

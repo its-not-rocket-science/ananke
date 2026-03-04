@@ -62,7 +62,7 @@ export interface IndividualAttributes {
   performance: Performance;
   control: Control;
   resilience: Resilience;
-  perception: Perception;
+  perception?: Perception;
 }
 
 export interface EnergyState {

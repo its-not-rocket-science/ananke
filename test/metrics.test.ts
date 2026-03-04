@@ -210,7 +210,7 @@ describe("collectMetrics — from live simulation", () => {
     const target = mkHumanoidEntity(2, 2, to.m(0.5), 0);
     // Pre-damage the target so it dies quickly
     for (const reg of Object.values(target.injury.byRegion)) {
-      reg.structuralDamage = q(0.85) as any;
+      reg.structuralDamage = q(0.85);
     }
     const world = mkWorld(1, [attacker, target]);
 
@@ -233,11 +233,11 @@ describe("collectMetrics — from live simulation", () => {
     attacker.loadout.items = [club];
     const target = mkHumanoidEntity(2, 2, to.m(0.5), 0);
     // Pre-damage deeply so any additional hit triggers death via shock/consciousness cascade
-    target.injury.shock = q(0.85) as any;
-    target.injury.consciousness = q(0.05) as any;
+    target.injury.shock = q(0.85);
+    target.injury.consciousness = q(0.05);
     for (const reg of Object.values(target.injury.byRegion)) {
-      reg.structuralDamage = q(0.90) as any;
-      reg.internalDamage   = q(0.80) as any;
+      reg.structuralDamage = q(0.90);
+      reg.internalDamage   = q(0.80);
     }
     const world = mkWorld(1, [attacker, target]);
     const tracer = new CollectingTrace();

@@ -335,7 +335,7 @@ describe("medical technology gate", () => {
   function runNanoTreat(ticks: number, techCtxArg?: typeof BASE_CTX["techCtx"]): number {
     const medic   = mkHumanoidEntity(1, 1, 0, 0);
     const patient = mkHumanoidEntity(2, 1, to.m(0.5), 0);
-    patient.injury.byRegion["torso"]!.structuralDamage = q(0.50) as any;
+    patient.injury.byRegion["torso"]!.structuralDamage = q(0.50);
 
     const world = mkWorld(1, [medic, patient]);
     const cmds = new Map([[1, [{
@@ -347,7 +347,7 @@ describe("medical technology gate", () => {
     }]]]);
 
     const ctx = { ...BASE_CTX, ...(techCtxArg !== undefined ? { techCtx: techCtxArg } : {}) };
-    for (let i = 0; i < ticks; i++) stepWorld(world, cmds, ctx as any);
+    for (let i = 0; i < ticks; i++) stepWorld(world, cmds, ctx);
     return world.entities.find(e => e.id === 2)!.injury.byRegion["torso"]!.structuralDamage;
   }
 
@@ -372,7 +372,7 @@ describe("medical technology gate", () => {
   it("lower tier (surgicalKit) still works when NanomedicalRepair is absent", () => {
     const medic   = mkHumanoidEntity(1, 1, 0, 0);
     const patient = mkHumanoidEntity(2, 1, to.m(0.5), 0);
-    patient.injury.byRegion["torso"]!.structuralDamage = q(0.50) as any;
+    patient.injury.byRegion["torso"]!.structuralDamage = q(0.50);
 
     const world = mkWorld(1, [medic, patient]);
     const cmds = new Map([[1, [{
@@ -385,7 +385,7 @@ describe("medical technology gate", () => {
 
     const techCtx = defaultTechContext(TechEra.Modern); // no NanomedicalRepair, but surgical kit is fine
     const ctx = { ...BASE_CTX, techCtx };
-    for (let i = 0; i < 20; i++) stepWorld(world, cmds, ctx as any);
+    for (let i = 0; i < 20; i++) stepWorld(world, cmds, ctx);
 
     const dmgAfter = world.entities.find(e => e.id === 2)!.injury.byRegion["torso"]!.structuralDamage;
     expect(dmgAfter).toBeLessThan(q(0.50));

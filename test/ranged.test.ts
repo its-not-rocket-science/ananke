@@ -1,6 +1,6 @@
 // test/ranged.test.ts — Phase 3: ranged combat tests
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to } from "../src/units";
+import { q, to } from "../src/units";
 import {
   energyAtRange_J,
   adjustedDispersionQ,
@@ -13,9 +13,9 @@ import { STARTER_RANGED_WEAPONS, STARTER_ARMOUR, findRangedWeapon } from "../src
 import { deriveFunctionalState } from "../src/sim/impairment";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
-import { TICK_HZ } from "../src/sim/tick.js";
 import { TraceKinds } from "../src/sim/kinds";
 import type { TraceEvent } from "../src/sim/trace";
+import { CommandMap } from "../src";
 
 // ---- helpers ----
 const shortbow = STARTER_RANGED_WEAPONS.find(w => w.id === "rng_shortbow")!;
@@ -158,7 +158,7 @@ describe("shootCost_J", () => {
 // INTEGRATION TESTS
 // ========================
 
-function collectTrace(world: ReturnType<typeof mkWorld>, cmds: Map<number, any[]>, ticks: number) {
+function collectTrace(world: ReturnType<typeof mkWorld>, cmds: CommandMap, ticks: number) {
   const events: TraceEvent[] = [];
   const sink = { onEvent: (ev: TraceEvent) => events.push(ev) };
   for (let i = 0; i < ticks; i++) stepWorld(world, cmds, { tractionCoeff: q(0.9), trace: sink });
@@ -177,7 +177,7 @@ describe("kernel: shoot command integration", () => {
     const target  = mkHumanoidEntity(2, 2, to.m(10), 0);
 
     const world = mkWorld(42, [shooter, target]);
-    const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
+    const cmds: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, weaponId: "rng_shortbow", intensity: q(1.0) }]]]);
     const events = collectTrace(world, cmds, 1);
 
     expect(events.some(e => e.kind === TraceKinds.ProjectileHit)).toBe(true);
@@ -190,9 +190,9 @@ describe("kernel: shoot command integration", () => {
       shooter.loadout.items = [shortbow];
       const target = mkHumanoidEntity(2, 2, to.m(10), 0);
       const world = mkWorld(seed, [shooter, target]);
-      const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+      const cmds: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
       const events = collectTrace(world, cmds, 1);
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       if (ev?.hit) hitCount++;
     }
     expect(hitCount).toBeGreaterThan(35); // >70%
@@ -205,9 +205,9 @@ describe("kernel: shoot command integration", () => {
       shooter.loadout.items = [shortbow];
       const target = mkHumanoidEntity(2, 2, to.m(150), 0);
       const world = mkWorld(seed, [shooter, target]);
-      const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+      const cmds: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
       const events = collectTrace(world, cmds, 1);
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       if (!ev?.hit) missCount++;
     }
     expect(missCount).toBeGreaterThan(79); // >80%
@@ -219,13 +219,13 @@ describe("kernel: shoot command integration", () => {
       shooter.loadout.items = [shortbow];
       const target = mkHumanoidEntity(2, 2, to.m(10), 0);
       const world = mkWorld(seed, [shooter, target]);
-      const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+      const cmds: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
       const events = collectTrace(world, cmds, 1);
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       if (ev?.hit) {
         const injured = world.entities.find(e => e.id === 2)!;
         const totalDamage = Object.values(injured.injury.byRegion)
-          .reduce((s, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+          .reduce((s, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
         expect(totalDamage).toBeGreaterThan(0);
         return;
       }
@@ -244,11 +244,11 @@ describe("kernel: shoot command integration", () => {
       shooter.loadout.items = [shortbow];
       const target = mkHumanoidEntity(2, 2, to.m(10), 0);
       const world = mkWorld(seed, [shooter, target]);
-      const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+      const cmds: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
       collectTrace(world, cmds, 1);
       const injured = world.entities.find(e => e.id === 2)!;
       damageUnarmoured = Object.values(injured.injury.byRegion)
-        .reduce((s, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+        .reduce((s, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
     }
     {
       const shooter = mkHumanoidEntity(1, 1, 0, 0);
@@ -256,11 +256,11 @@ describe("kernel: shoot command integration", () => {
       const target = mkHumanoidEntity(2, 2, to.m(10), 0);
       target.loadout.items = [STARTER_ARMOUR[1]!]; // mail - high resist
       const world = mkWorld(seed, [shooter, target]);
-      const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+      const cmds: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
       collectTrace(world, cmds, 1);
       const injured = world.entities.find(e => e.id === 2)!;
       damageArmoured = Object.values(injured.injury.byRegion)
-        .reduce((s, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+        .reduce((s, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
     }
 
     // Armour should never increase damage
@@ -273,9 +273,9 @@ describe("kernel: shoot command integration", () => {
       shooter.loadout.items = [shortbow];
       const target = mkHumanoidEntity(2, 2, to.m(60), 0);
       const world = mkWorld(seed, [shooter, target]);
-      const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+      const cmds: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
       const events = collectTrace(world, cmds, 1);
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       if (ev?.suppressed) {
         const t = world.entities.find(e => e.id === 2)!;
         expect(t.condition.suppressedTicks).toBeGreaterThan(0);
@@ -315,7 +315,7 @@ describe("kernel: shoot command integration", () => {
     shooter.loadout.items = [shortbow];
     const target = mkHumanoidEntity(2, 2, to.m(10), 0);
     const world = mkWorld(1, [shooter, target]);
-    const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+    const cmds: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
 
     // Tick 1: fires
     const ev1 = collectTrace(world, cmds, 1).filter(e => e.kind === TraceKinds.ProjectileHit);
@@ -345,7 +345,7 @@ describe("kernel: shoot command integration", () => {
     shooter.loadout.items = [longbow];
     const target = mkHumanoidEntity(2, 2, to.m(15), 0);
     const world = mkWorld(7, [shooter, target]);
-    const cmds = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
+    const cmds: CommandMap = new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]);
     const events = collectTrace(world, cmds, 1);
     expect(events.some(e => e.kind === TraceKinds.TickEnd)).toBe(true);
   });

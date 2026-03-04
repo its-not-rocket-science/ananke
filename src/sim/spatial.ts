@@ -1,7 +1,5 @@
-import { SCALE } from "../units.js";
 import type { Vec3 } from "./vec3.js";
 import type { WorldState } from "./world.js";
-import type { Entity } from "./entity.js";
 
 export interface SpatialIndex {
   cell_m: number; // fixed-point metres (same scale as position_m)

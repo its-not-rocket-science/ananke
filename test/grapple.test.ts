@@ -12,11 +12,11 @@ import {
   resolveGrappleJointLock,
   resolveBreakGrapple,
   stepGrappleTick,
-  releaseGrapple,
 } from "../src/sim/grapple";
 import { buildWorldIndex } from "../src/sim/indexing";
 import type { WorldState } from "../src/sim/world";
 import type { CommandMap } from "../src/sim/commands";
+import { ImpactEvent } from "../src/sim/events";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -89,7 +89,7 @@ describe("resolveGrappleAttempt", () => {
       a.attributes.performance.peakForce_N = to.N(3500); // strong
       b.attributes.performance.peakForce_N = to.N(600);  // weak
 
-      const impacts: any[] = [];
+      const impacts: ImpactEvent[] = [];
       resolveGrappleAttempt(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
 
       if (a.grapple.holdingTargetId === b.id) {
@@ -110,7 +110,7 @@ describe("resolveGrappleAttempt", () => {
       a.attributes.performance.peakForce_N = to.N(400);  // very weak
       b.attributes.performance.peakForce_N = to.N(4000); // very strong
 
-      const impacts: any[] = [];
+      const impacts: ImpactEvent[] = [];
       resolveGrappleAttempt(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
 
       if (a.grapple.holdingTargetId === 0) {
@@ -127,7 +127,7 @@ describe("resolveGrappleAttempt", () => {
     const { a, b } = getEntities(world);
     a.action.grappleCooldownTicks = 5;
 
-    const impacts: any[] = [];
+    const impacts: ImpactEvent[] = [];
     resolveGrappleAttempt(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
 
     expect(a.grapple.holdingTargetId).toBe(0);
@@ -138,7 +138,7 @@ describe("resolveGrappleAttempt", () => {
     const { a, b } = getEntities(world);
     b.position_m = { x: to.m(5.0), y: 0, z: 0 }; // 5 m away — out of range
 
-    const impacts: any[] = [];
+    const impacts: ImpactEvent[] = [];
     resolveGrappleAttempt(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
 
     expect(a.grapple.holdingTargetId).toBe(0);
@@ -150,7 +150,7 @@ describe("resolveGrappleAttempt", () => {
       const { a, b } = getEntities(world);
       const energyBefore = a.energy.reserveEnergy_J;
 
-      const impacts: any[] = [];
+      const impacts: ImpactEvent[] = [];
       resolveGrappleAttempt(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
 
       expect(a.energy.reserveEnergy_J).toBeLessThan(energyBefore);
@@ -168,7 +168,7 @@ describe("resolveGrappleAttempt", () => {
       b.attributes.performance.peakForce_N = to.N(500);
       b.attributes.morphology.stature_m    = to.m(1.40);
 
-      const impacts: any[] = [];
+      const impacts: ImpactEvent[] = [];
       resolveGrappleAttempt(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
 
       if (a.grapple.holdingTargetId === b.id && b.condition.prone) {
@@ -183,7 +183,7 @@ describe("resolveGrappleAttempt", () => {
     function runAttempt(seed: number) {
       const world = makeWorld(seed);
       const { a, b } = getEntities(world);
-      const impacts: any[] = [];
+      const impacts: ImpactEvent[] = [];
       resolveGrappleAttempt(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
       return { held: a.grapple.holdingTargetId, grip: a.grapple.gripQ };
     }
@@ -216,14 +216,14 @@ describe("resolveGrappleThrow", () => {
       b.attributes.performance.peakForce_N = to.N(800);
       b.attributes.morphology.stature_m    = to.m(1.50);
 
-      const impacts: any[] = [];
+      const impacts: ImpactEvent[] = [];
       resolveGrappleThrow(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
 
       if (b.condition.prone) {
         expect(impacts.length).toBeGreaterThan(0);
-        expect(impacts[0].targetId).toBe(b.id);
-        expect(impacts[0].energy_J).toBeGreaterThan(0);
-        expect(impacts[0].region).toBe("torso");
+        expect(impacts[0]!.targetId).toBe(b.id);
+        expect(impacts[0]!.energy_J).toBeGreaterThan(0);
+        expect(impacts[0]!.region).toBe("torso");
         return; // pass
       }
     }
@@ -235,7 +235,7 @@ describe("resolveGrappleThrow", () => {
     const { a, b } = getEntities(world);
     a.grapple.holdingTargetId = 0; // not holding
 
-    const impacts: any[] = [];
+    const impacts: ImpactEvent[] = [];
     resolveGrappleThrow(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
 
     expect(impacts).toHaveLength(0);
@@ -252,7 +252,7 @@ describe("resolveGrappleThrow", () => {
       b.grapple.heldByIds = [a.id];
       a.attributes.performance.peakForce_N = to.N(5000);
 
-      const impacts: any[] = [];
+      const impacts: ImpactEvent[] = [];
       resolveGrappleThrow(world, a, b, q(1.0), TUNING.tactical, impacts, { onEvent() {} });
 
       if (b.condition.prone) {
@@ -339,11 +339,11 @@ describe("resolveGrappleJointLock", () => {
     a.grapple.position = "prone";
     b.grapple.heldByIds = [a.id];
 
-    const impacts: any[] = [];
+    const impacts: ImpactEvent[] = [];
     resolveGrappleJointLock(world, a, b, q(1.0), TUNING.tactical, impacts);
 
     expect(impacts.length).toBeGreaterThan(0);
-    const impact = impacts[0];
+    const impact = impacts[0]!;
     const limbRegions = ["leftArm", "rightArm", "leftLeg", "rightLeg"];
     expect(limbRegions).toContain(impact.region);
     expect(impact.energy_J).toBeGreaterThan(0);
@@ -371,7 +371,7 @@ describe("resolveGrappleJointLock", () => {
     a.grapple.gripQ = q(0.70);
     a.grapple.position = "standing";
 
-    const impacts: any[] = [];
+    const impacts: ImpactEvent[] = [];
     resolveGrappleJointLock(world, a, b, q(1.0), TUNING.tactical, impacts);
 
     expect(impacts).toHaveLength(0);
@@ -385,7 +385,7 @@ describe("resolveGrappleJointLock", () => {
       a.grapple.gripQ = q(0.70);
       a.grapple.position = "prone";
       b.grapple.heldByIds = [a.id];
-      const impacts: any[] = [];
+      const impacts: ImpactEvent[] = [];
       resolveGrappleJointLock(world, a, b, q(1.0), TUNING.tactical, impacts);
       return impacts[0]?.region;
     }

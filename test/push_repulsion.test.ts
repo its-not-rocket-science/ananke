@@ -1,7 +1,6 @@
 import { expect, test } from "vitest";
 
 import { stepWorld } from "../src/sim/kernel";
-import type { WorldState } from "../src/sim/world";
 import type { CommandMap } from "../src/sim/commands";
 import { q, SCALE } from "../src/units";
 import { TUNING } from "../src/sim/tuning";
@@ -20,7 +19,7 @@ test("push/repulsion produces separating velocities for overlapping entities", (
   const cmds: CommandMap = new Map(); // no movement commands
   const ctx = { tractionCoeff: q(0.9), tuning: TUNING.tactical };
 
-  stepWorld(world, cmds, ctx as any);
+  stepWorld(world, cmds, ctx);
 
   const A = world.entities[0]!;
   const B = world.entities[1]!;

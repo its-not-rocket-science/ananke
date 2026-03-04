@@ -6,7 +6,7 @@ import type { KernelContext } from "./context.js";
 
 import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
 import { DamageChannel } from "../channels.js";
-import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, findSensor, type Weapon, type RangedWeapon, type WeaponDamageProfile } from "../equipment.js";
+import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, findSensor, type Weapon, type RangedWeapon, type WeaponDamageProfile, type Shield } from "../equipment.js";
 
 import { isCapabilityAvailable } from "./tech.js";
 import { deriveFunctionalState } from "./impairment.js";
@@ -780,7 +780,7 @@ function resolveAttack(world: WorldState,
     res.blocked &&
     defenderBlocking &&
     !!shield &&
-    shieldCovers(shield, res.area);
+    shieldCovers(shield as Shield, res.area);
 
   trace.onEvent({
     kind: TraceKinds.AttackAttempt,
@@ -1306,7 +1306,7 @@ function resolveShoot(
     const effectiveCoverageQ = projBypassQ > 0
       ? Math.max(0, qMul((shield as any)?.coverageQ ?? 0, SCALE.Q - projBypassQ))
       : ((shield as any)?.coverageQ ?? 0);
-    const shieldHit = shield && hitArea && shieldCovers(shield, hitArea)
+    const shieldHit = shield && hitArea && shieldCovers(shield as Shield, hitArea)
       && ((shieldSeed % SCALE.Q) < effectiveCoverageQ);
 
     // Armour

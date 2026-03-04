@@ -302,7 +302,7 @@ export interface ProtectionProfile {
 }
 
 function emptyCoverage(): Record<BodyRegion, Q> {
-  const out: any = {};
+  const out = {} as Record<BodyRegion, Q>;
   for (const r of ALL_REGIONS) out[r] = q(0);
   return out;
 }
@@ -359,8 +359,8 @@ export function deriveArmourProfile(
 
   return {
     protects,
-    coverageByRegion: coverageByRegion as any,
-    coverageOverall: weightedMean01(coverageByRegion as any, DEFAULT_REGION_WEIGHTS),
+    coverageByRegion: coverageByRegion as Record<BodyRegion, Q>,
+    coverageOverall: weightedMean01(coverageByRegion, DEFAULT_REGION_WEIGHTS),
     resist_J: Math.max(0, resist_J),
     protectedDamageMul: clampQ(protectedMul, q(0.05), q(1.0)),
     mobilityMul: clampQ(mobilityMul, q(0.30), q(1.0)),
@@ -386,7 +386,7 @@ export function findRangedWeapon(loadout: Loadout, weaponId?: string): RangedWea
 }
 
 
-export function findShield(loadout: Loadout): any {
+export function findShield(loadout: Loadout): Item | undefined {
   return loadout.items.find(item => item?.kind === "shield");
 }
 

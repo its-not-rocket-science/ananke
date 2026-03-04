@@ -20,18 +20,10 @@ const CELL = Math.trunc(4 * SCALE.m); // 4 m cell size
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function baseCtx(extra: Record<string, any> = {}) {
+function baseCtx(extra = {}) {
   return { tractionCoeff: q(0.80), cellSize_m: CELL, ...extra };
 }
 
-function collectTrace(world: ReturnType<typeof mkWorld>, cmds: Map<number, any[]>, ticks: number) {
-  const events: TraceEvent[] = [];
-  const sink = { onEvent: (ev: TraceEvent) => events.push(ev) };
-  for (let i = 0; i < ticks; i++) {
-    stepWorld(world, cmds, { ...baseCtx(), trace: sink });
-  }
-  return events;
-}
 
 // ========================
 // UNIT TESTS — pure funcs
@@ -144,7 +136,7 @@ describe("obstacle cover — ranged hit probability", () => {
       const events: TraceEvent[] = [];
 
       stepWorld(world, cmds, { ...baseCtx(), trace: { onEvent: e => events.push(e) }, ...(coverGrid ? { obstacleGrid: coverGrid } : {}) });
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       if (ev?.hit) hits++;
     }
     return hits;
@@ -192,7 +184,7 @@ describe("elevation — melee reach", () => {
     // No damage should have been applied — elevation puts target out of reach
     const targetEnt = world.entities.find(e => e.id === 2)!;
     const totalDamage = Object.values(targetEnt.injury.byRegion)
-      .reduce((s: number, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+      .reduce((s: number, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
     expect(totalDamage).toBe(0);
   });
 
@@ -213,7 +205,7 @@ describe("elevation — melee reach", () => {
 
       const targetEnt = world.entities.find(e => e.id === 2)!;
       const totalDamage = Object.values(targetEnt.injury.byRegion)
-        .reduce((s: number, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+        .reduce((s: number, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
       if (totalDamage > 0) damaged = true;
     }
     expect(damaged).toBe(true);
@@ -243,7 +235,7 @@ describe("elevation — melee skill bonus", () => {
 
       const targetEnt = world.entities.find(e => e.id === 2)!;
       const totalDamage = Object.values(targetEnt.injury.byRegion)
-        .reduce((s: number, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+        .reduce((s: number, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
       if (totalDamage > 0) damaged = true;
     }
     expect(damaged).toBe(true);
@@ -297,7 +289,7 @@ describe("elevation — melee advantage", () => {
         }
         const tgt = world.entities.find(e => e.id === 2)!;
         total += Object.values(tgt.injury.byRegion)
-          .reduce((s: number, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+          .reduce((s: number, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
       }
       return total;
     }
@@ -336,7 +328,7 @@ describe("elevation — ranged distance", () => {
       const cmds = new Map([[1, [shootCmd]]]);
       stepWorld(world, cmds, { ...baseCtx(), trace: { onEvent: e => events.push(e) }, ...(elevationGrid ? { elevationGrid } : {}) });
 
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       energyAt[label] = ev?.energyAtImpact_J ?? -1;
     }
 

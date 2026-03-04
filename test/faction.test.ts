@@ -26,7 +26,8 @@ import { SCALE as S } from "../src/units.js";
 import type { Entity } from "../src/sim/entity.js";
 import type { TraceEvent } from "../src/sim/trace.js";
 import { CollectingTrace } from "../src/metrics.js";
-import { stepWorld, TICK_HZ } from "../src/sim/kernel.js";
+import { stepWorld } from "../src/sim/kernel.js";
+import { TICK_HZ } from "../src/sim/tick.js";
 import { AI_PRESETS } from "../src/sim/ai/presets.js";
 import { DEFAULT_PERCEPTION } from "../src/sim/sensory.js";
 
@@ -243,7 +244,7 @@ describe("AI modulation", () => {
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
-    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS.lineInfantry);
+    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS["lineInfantry"]!);
 
     const hasAttack = cmds.some(c => c.kind === "attack");
     expect(hasAttack).toBe(false);
@@ -261,7 +262,7 @@ describe("AI modulation", () => {
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
-    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS.lineInfantry);
+    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS["lineInfantry"]!);
 
     // Guards vs bandits (rival) — should still attack
     const hasAttack = cmds.some(c => c.kind === "attack");
@@ -279,7 +280,7 @@ describe("AI modulation", () => {
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
     // Should behave as normal (attack if enemy team)
-    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS.lineInfantry);
+    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS["lineInfantry"]!);
     expect(cmds.length).toBeGreaterThan(0);  // some commands produced
   });
 
@@ -296,7 +297,7 @@ describe("AI modulation", () => {
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
     // STANDING_NEUTRAL = q(0.50) < STANDING_FRIENDLY_THRESHOLD — attack not suppressed
-    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS.lineInfantry);
+    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS["lineInfantry"]!);
     // Should not throw; commands returned
     expect(cmds.length).toBeGreaterThan(0);
   });
@@ -318,7 +319,7 @@ describe("AI modulation", () => {
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
-    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS.lineInfantry);
+    const cmds    = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS["lineInfantry"]!);
 
     // Injured entity fights back regardless of faction standing
     const hasAttack = cmds.some(c => c.kind === "attack");
@@ -383,13 +384,13 @@ describe("integration", () => {
     const attacker  = mkHumanoidEntity(1, 1,  0,     0);
     const defender  = mkHumanoidEntity(2, 2,  Math.trunc(0.6 * S.m), 0);
     const bystander = mkHumanoidEntity(3, 1,  0,     Math.trunc(1.0 * S.m));
-    attacker.loadout = { items: [{ id: "wpn_knife", name: "Knife", mass_kg: 150, reach_m: Math.trunc(0.2 * S.m), readyTime_s: Math.trunc(0.3 * S.m), momentArm_m: Math.trunc(0.1 * S.m), damage: { surfaceFrac: q(0.50), internalFrac: q(0.35), structuralFrac: q(0.15), bleedFactor: q(0.60), penetrationBias: q(0.40) } }] };
+    attacker.loadout = { items: [{ kind: "weapon" as const, id: "wpn_knife", name: "Knife", mass_kg: 150, bulk: q(0.8), reach_m: Math.trunc(0.2 * S.m), readyTime_s: Math.trunc(0.3 * S.m), momentArm_m: Math.trunc(0.1 * S.m), damage: { surfaceFrac: q(0.50), internalFrac: q(0.35), structuralFrac: q(0.15), bleedFactor: q(0.60), penetrationBias: q(0.40) } }] };
 
     const world  = mkWorld(42, [attacker, defender, bystander]);
     const tracer = new CollectingTrace();
     const cmds   = new Map([[1, [{ kind: "attack" as const, targetId: 2, weaponId: "wpn_knife", intensity: q(1.0), mode: "strike" as const }]]]);
 
-    for (let i = 0; i < 5 * TICK_HZ; i++) stepWorld(world, cmds, { tractionCoeff: q(0.9) }, tracer);
+    for (let i = 0; i < 5 * TICK_HZ; i++) stepWorld(world, cmds, { tractionCoeff: q(0.9), trace: tracer });
 
     const fMap    = new Map([[1, "guards"], [2, "bandits"], [3, "guards"]]);
     const events  = extractWitnessEvents(tracer.events, world, fMap);
@@ -411,7 +412,7 @@ describe("integration", () => {
     const target = mkHumanoidEntity(2, 2, Math.trunc(0.4 * S.m), 0);
     self.faction   = "guards";
     target.faction = "merchants";
-    self.loadout   = { items: [{ id: "wpn_club", name: "Club", mass_kg: 1000, reach_m: Math.trunc(0.7 * S.m), readyTime_s: Math.trunc(0.6 * S.m), momentArm_m: Math.trunc(0.3 * S.m), damage: { surfaceFrac: q(0.30), internalFrac: q(0.50), structuralFrac: q(0.20), bleedFactor: q(0.10), penetrationBias: q(0.15) } }] };
+    self.loadout   = { items: [{ kind: "weapon" as const, id: "wpn_club", name: "Club", mass_kg: 1000, bulk: q(1.4), reach_m: Math.trunc(0.7 * S.m), readyTime_s: Math.trunc(0.6 * S.m), momentArm_m: Math.trunc(0.3 * S.m), damage: { surfaceFrac: q(0.30), internalFrac: q(0.50), structuralFrac: q(0.20), bleedFactor: q(0.10), penetrationBias: q(0.15) } }] };
 
     const registry = createFactionRegistry([makeGuards(), makeMerchants()]);
     // Elevate guards→merchants to friendly
@@ -422,12 +423,12 @@ describe("integration", () => {
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
 
-    const cmds1 = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS.lineInfantry);
+    const cmds1 = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS["lineInfantry"]!);
     expect(cmds1.some(c => c.kind === "attack")).toBe(false);
 
     // Now lower standing below friendly threshold
     registry.globalStanding.get("guards")!.set("merchants", q(0.20));
-    const cmds2 = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS.lineInfantry);
+    const cmds2 = decideCommandsForEntity(world, index, spatial, self, AI_PRESETS["lineInfantry"]!);
     // With low standing, attack is no longer suppressed
     // (Note: decide cooldown may prevent re-decision; test structural correctness)
     expect(cmds2.length).toBeGreaterThanOrEqual(0);

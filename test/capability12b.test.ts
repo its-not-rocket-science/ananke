@@ -61,7 +61,7 @@ describe("Kill-triggered regen", () => {
     observer.capabilitySources = [source];
 
     // Pre-kill the victim by setting fatal fluid loss
-    victim.injury.fluidLoss = q(0.85) as any;
+    victim.injury.fluidLoss = q(0.85);
 
     const world = mkWorld(1, [attacker, victim, observer]);
     stepWorld(world, new Map(), BASE_CTX);
@@ -72,7 +72,7 @@ describe("Kill-triggered regen", () => {
 
   it("multiple entities each gain their own amount_J from one kill", () => {
     const victim = mkHumanoidEntity(1, 2, 0, 0);
-    victim.injury.fluidLoss = q(0.85) as any;
+    victim.injury.fluidLoss = q(0.85);
 
     const obs1 = mkHumanoidEntity(2, 1, to.m(2), 0);
     obs1.capabilitySources = [makeSource({
@@ -95,7 +95,7 @@ describe("Kill-triggered regen", () => {
 
   it("killed entity itself is excluded from kill regen", () => {
     const victim = mkHumanoidEntity(1, 2, 0, 0);
-    victim.injury.fluidLoss = q(0.85) as any;
+    victim.injury.fluidLoss = q(0.85);
     victim.capabilitySources = [makeSource({
       id: "self_src", reserve_J: 0, maxReserve_J: 50_000,
       regenModel: { type: "event", triggers: [{ on: "kill", amount_J: 999 }] },
@@ -110,7 +110,7 @@ describe("Kill-triggered regen", () => {
 
   it("entity without kill trigger is unaffected", () => {
     const victim = mkHumanoidEntity(1, 2, 0, 0);
-    victim.injury.fluidLoss = q(0.85) as any;
+    victim.injury.fluidLoss = q(0.85);
 
     const obs = mkHumanoidEntity(2, 1, to.m(2), 0);
     obs.capabilitySources = [makeSource({
@@ -126,9 +126,9 @@ describe("Kill-triggered regen", () => {
 
   it("two deaths in same tick: both trigger regen additively", () => {
     const v1 = mkHumanoidEntity(1, 2, 0, 0);
-    v1.injury.fluidLoss = q(0.85) as any;
+    v1.injury.fluidLoss = q(0.85);
     const v2 = mkHumanoidEntity(2, 2, to.m(1), 0);
-    v2.injury.fluidLoss = q(0.85) as any;
+    v2.injury.fluidLoss = q(0.85);
 
     const obs = mkHumanoidEntity(3, 1, to.m(5), 0);
     obs.capabilitySources = [makeSource({
@@ -301,7 +301,7 @@ describe("Concentration auras", () => {
     stepWorld(world, new Map(), BASE_CTX);
 
     // shieldReserve_J should have accumulated from repeated armourLayer payloads
-    const shieldVal = (world.entities[0]!.condition as any).shieldReserve_J ?? 0;
+    const shieldVal = (world.entities[0]!.condition).shieldReserve_J ?? 0;
     expect(shieldVal).toBeGreaterThan(0);
   });
 
@@ -341,7 +341,7 @@ describe("Concentration auras", () => {
     stepWorld(world, new Map([[1, [activateCmd("shock_src", "shock_eff")]]]), BASE_CTX);
 
     // Manually apply high shock to entity
-    world.entities[0]!.injury.shock = q(0.35) as any;
+    world.entities[0]!.injury.shock = q(0.35);
     stepWorld(world, new Map(), { ...BASE_CTX, trace: tracer });
 
     expect(world.entities[0]!.activeConcentration).toBeUndefined();

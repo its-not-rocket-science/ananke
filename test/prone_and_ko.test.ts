@@ -9,11 +9,13 @@ import { defaultInjury } from "../src/sim/injury";
 import { defaultIntent } from "../src/sim/intent";
 import { defaultAction } from "../src/sim/action";
 import { v3 } from "../src/sim/vec3";
+import { CommandMap, Entity, GrappleState, WorldState } from "../src";
 
-function mkEntity(id: number) {
+function mkEntity(id: number): Entity {
   const attrs = generateIndividual(id * 100, HUMAN_BASE);
   return {
     id,
+    teamId: 1,
     attributes: attrs,
     energy: { reserveEnergy_J: attrs.performance.reserveEnergy_J, fatigue: q(0) },
     loadout: { items: [] },
@@ -24,6 +26,7 @@ function mkEntity(id: number) {
     action: defaultAction(),
     condition: defaultCondition(),
     injury: defaultInjury(),
+    grapple: {} as GrappleState
   };
 }
 
@@ -35,15 +38,15 @@ test("tactical: standing is delayed; arcade: standing is instant", () => {
   a.injury.byRegion.leftLeg!.structuralDamage = q(0.9);
   a.injury.byRegion.rightLeg!.structuralDamage = q(0.9);
 
-  const worldA = { tick: 0, seed: 1, entities: [structuredClone(a)] };
-  const worldT = { tick: 0, seed: 1, entities: [structuredClone(a)] };
+  const worldA: WorldState = { tick: 0, seed: 1, entities: [structuredClone(a)] };
+  const worldT: WorldState = { tick: 0, seed: 1, entities: [structuredClone(a)] };
 
   // attempt to stand
-  const cmds = new Map<number, any[]>();
+  const cmds: CommandMap = new Map();
   cmds.set(1, [{ kind: "setProne", prone: false }]);
 
-  stepWorld(worldA as any, cmds as any, { tractionCoeff: q(0.9), tuning: TUNING.arcade });
-  stepWorld(worldT as any, cmds as any, { tractionCoeff: q(0.9), tuning: TUNING.tactical });
+  stepWorld(worldA, cmds, { tractionCoeff: q(0.9), tuning: TUNING.arcade });
+  stepWorld(worldT, cmds, { tractionCoeff: q(0.9), tuning: TUNING.tactical });
 
   expect(worldA.entities[0]?.condition.prone).toBe(false);
   expect(worldT.entities[0]?.condition.prone).toBe(true);
@@ -55,7 +58,7 @@ test("sim: unconscious drops weapons; tactical: keeps them", () => {
   const eTac = mkEntity(1);
 
   // give both a weapon
-  eSim.loadout.items = [{ kind: "weapon", id: "club", name: "Club", mass_kg: 1000, bulk: q(0.2), strikeEffectiveMassFrac: q(0.4), damage: { surfaceFrac: q(0.4), internalFrac: q(0.4), structuralFrac: q(0.2), bleedFactor: q(0.5), penetrationBias: q(0.2) } }] as any;
+  eSim.loadout.items = [{ kind: "weapon", id: "club", name: "Club", mass_kg: 1000, bulk: q(0.2), strikeEffectiveMassFrac: q(0.4), damage: { surfaceFrac: q(0.4), internalFrac: q(0.4), structuralFrac: q(0.2), bleedFactor: q(0.5), penetrationBias: q(0.2) } }];
   eTac.loadout.items = structuredClone(eSim.loadout.items);
 
   // KO them
@@ -65,12 +68,12 @@ test("sim: unconscious drops weapons; tactical: keeps them", () => {
   const wSim = { tick: 0, seed: 2, entities: [eSim] };
   const wTac = { tick: 0, seed: 2, entities: [eTac] };
 
-  stepWorld(wSim as any, new Map() as any, { tractionCoeff: q(0.9), tuning: TUNING.sim });
-  stepWorld(wTac as any, new Map() as any, { tractionCoeff: q(0.9), tuning: TUNING.tactical });
+  stepWorld(wSim, new Map(), { tractionCoeff: q(0.9), tuning: TUNING.sim });
+  stepWorld(wTac, new Map(), { tractionCoeff: q(0.9), tuning: TUNING.tactical });
 
   expect(wSim.entities[0]?.condition.unconsciousTicks).toBeGreaterThan(0);
   expect(wTac.entities[0]?.condition.unconsciousTicks).toBeGreaterThan(0);
 
-  expect(wSim.entities[0]?.loadout.items.some((it: any) => it.kind === "weapon")).toBe(false);
-  expect(wTac.entities[0]?.loadout.items.some((it: any) => it.kind === "weapon")).toBe(true);
+  expect(wSim.entities[0]?.loadout.items.some((it) => it.kind === "weapon")).toBe(false);
+  expect(wTac.entities[0]?.loadout.items.some((it) => it.kind === "weapon")).toBe(true);
 });

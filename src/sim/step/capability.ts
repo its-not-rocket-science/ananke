@@ -2,7 +2,7 @@ import type { Entity } from "../entity.js";
 import type { WorldState } from "../world.js";
 import { terrainKey } from "../terrain.js";
 import { DT_S } from "../tick.js";
-import { SCALE, q, type Q } from "../../units.js";
+import { SCALE } from "../../units.js";
 import type { KernelContext } from "../context.js";
 
 /**

@@ -118,10 +118,10 @@ describe("persuade", () => {
 
   it("high attentionDepth target boosts persuasion probability", () => {
     const lowAttn = makeContext();
-    lowAttn.target.attributes.perception.attentionDepth = 4;   // baseline
+    lowAttn.target.attributes.perception!.attentionDepth = 4;   // baseline
 
     const highAttn = makeContext();
-    highAttn.target.attributes.perception.attentionDepth = 8;   // sharp mind
+    highAttn.target.attributes.perception!.attentionDepth = 8;   // sharp mind
 
     const pLow  = dialogueProbability({ kind: "persuade" }, lowAttn);
     const pHigh = dialogueProbability({ kind: "persuade" }, highAttn);
@@ -170,14 +170,14 @@ describe("persuade", () => {
 describe("deceive", () => {
   it("low plausibility against high attentionDepth yields low probability", () => {
     const ctx = makeContext();
-    ctx.target.attributes.perception.attentionDepth = 8;  // sharp mind
+    ctx.target.attributes.perception!.attentionDepth = 8;  // sharp mind
     const P = dialogueProbability({ kind: "deceive", plausibility_Q: q(0.30) }, ctx);
     expect(P).toBeLessThan(q(0.10));
   });
 
   it("high plausibility against low attentionDepth yields high probability", () => {
     const ctx = makeContext();
-    ctx.target.attributes.perception.attentionDepth = 2;  // inattentive
+    ctx.target.attributes.perception!.attentionDepth = 2;  // inattentive
     const P = dialogueProbability({ kind: "deceive", plausibility_Q: q(0.90) }, ctx);
     expect(P).toBeGreaterThan(q(0.65));
   });

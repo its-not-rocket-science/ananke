@@ -73,9 +73,9 @@ export function stepPushAndRepulsion(
     if (overlap <= 0) continue;
 
     const strengthQ = clampQ(
-      Math.trunc((overlap * SCALE.Q) / R) as any,
-      0 as any,
-      SCALE.Q as any
+      Math.trunc((overlap * SCALE.Q) / R),
+      0,
+      SCALE.Q
     );
 
     const ax = Math.trunc((dx * tuning.repelAccel_mps2 * strengthQ) / (Math.max(1, d) * SCALE.Q));

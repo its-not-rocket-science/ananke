@@ -4,7 +4,6 @@
  * biomechanics literature.  All units follow the project SI fixed-point conventions.
  */
 
-import type { I32, Q } from "./units.js";
 import { q, to } from "./units.js";
 import type { Weapon, RangedWeapon, WeaponDamageProfile } from "./equipment.js";
 

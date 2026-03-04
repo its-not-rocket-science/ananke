@@ -1,6 +1,6 @@
 // test/progression.test.ts — Phase 21: Character Progression
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { q, SCALE, to } from "../src/units.js";
 import {
   BASE_XP,
@@ -43,23 +43,23 @@ function humanAttrs() {
 function fracturedRegion(): RegionInjury {
   const r = defaultRegionInjury();
   r.fractured        = true;
-  r.permanentDamage  = q(0.25) as any;
-  r.structuralDamage = q(0.80) as any;
+  r.permanentDamage  = q(0.25);
+  r.structuralDamage = q(0.80);
   return r;
 }
 
 /** Build a region with high internal damage (nerve territory). */
 function nerveDamagedRegion(): RegionInjury {
   const r = defaultRegionInjury();
-  r.internalDamage = q(0.75) as any;
+  r.internalDamage = q(0.75);
   return r;
 }
 
 /** Build a region with only scar tissue (permanent surface damage, no fracture). */
 function scarredRegion(): RegionInjury {
   const r = defaultRegionInjury();
-  r.permanentDamage = q(0.10) as any;
-  r.surfaceDamage   = q(0.30) as any;
+  r.permanentDamage = q(0.10);
+  r.surfaceDamage   = q(0.30);
   return r;
 }
 
@@ -383,7 +383,7 @@ describe("deriveSequelae", () => {
   it("fractured but low permanentDamage → no fracture_malunion", () => {
     const r = defaultRegionInjury();
     r.fractured       = true;
-    r.permanentDamage = q(0.05) as any;  // below q(0.20)
+    r.permanentDamage = q(0.05);  // below q(0.20)
     const sequelae    = deriveSequelae(r, HUMANOID_PLAN);
     expect(sequelae.map(s => s.type)).not.toContain("fracture_malunion");
   });
@@ -400,8 +400,8 @@ describe("deriveSequelae", () => {
 
   it("heavily damaged region can produce multiple sequelae", () => {
     const r = fracturedRegion();
-    r.internalDamage = q(0.75) as any;   // also nerve damage
-    r.surfaceDamage  = q(0.30) as any;   // also scar
+    r.internalDamage = q(0.75);   // also nerve damage
+    r.surfaceDamage  = q(0.30);   // also scar
     const sequelae   = deriveSequelae(r, HUMANOID_PLAN);
     expect(sequelae.length).toBeGreaterThanOrEqual(2);
   });

@@ -1,6 +1,6 @@
 // test/skills.test.ts — Phase 7: Skill System tests
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to, type Q } from "../src/units";
+import { q, SCALE, to } from "../src/units";
 import {
   buildSkillMap,
   getSkill,
@@ -21,6 +21,7 @@ import { decideCommandsForEntity } from "../src/sim/ai/decide";
 import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";
 import type { AIPolicy } from "../src/sim/ai/types";
+import { CommandMap } from "../src";
 
 const CELL = Math.trunc(4 * SCALE.m);
 const CTX = { tractionCoeff: q(0.80), cellSize_m: CELL };
@@ -127,7 +128,7 @@ describe("meleeCombat skill", () => {
       if (withSkill) attacker.skills = buildSkillMap({ meleeCombat: { hitTimingOffset_s: -to.s(0.3) } });
       const target = mkHumanoidEntity(2, 2, Math.trunc(0.3 * SCALE.m), 0);
       const world = mkWorld(1, [attacker, target]);
-      const cmd = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: sword.id, intensity: q(1.0) }]]]);
+      const cmd: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: sword.id, intensity: q(1.0) }]]]);
       stepWorld(world, cmd, CTX);
       return world.entities[0]!.action.attackCooldownTicks;
     }
@@ -144,11 +145,11 @@ describe("meleeCombat skill", () => {
         if (withSkill) attacker.skills = buildSkillMap({ meleeCombat: { energyTransferMul: q(1.8) } });
         const target = mkHumanoidEntity(2, 2, Math.trunc(0.3 * SCALE.m), 0);
         const world = mkWorld(seed, [attacker, target]);
-        const cmd = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: sword.id, intensity: q(1.0) }]]]);
+        const cmd: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: sword.id, intensity: q(1.0) }]]]);
         stepWorld(world, cmd, CTX);
         const tgt = world.entities.find(e => e.id === 2)!;
         total += Object.values(tgt.injury.byRegion)
-          .reduce((s: number, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+          .reduce((s: number, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
       }
       return total;
     }
@@ -169,14 +170,14 @@ describe("meleeDefence skill", () => {
         const defender = mkHumanoidEntity(2, 2, Math.trunc(0.3 * SCALE.m), 0);
         if (withSkill) defender.skills = buildSkillMap({ meleeDefence: { energyTransferMul: q(2.0) } });
         const world = mkWorld(seed, [attacker, defender]);
-        const cmds = new Map([
+        const cmds: CommandMap = new Map([
           [1, [{ kind: "attack", targetId: 2, weaponId: sword.id, intensity: q(1.0) }]],
           [2, [{ kind: "defend", mode: "parry", intensity: q(1.0) }]],
         ]);
         stepWorld(world, cmds, CTX);
         const tgt = world.entities.find(e => e.id === 2)!;
         total += Object.values(tgt.injury.byRegion)
-          .reduce((s: number, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+          .reduce((s: number, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
       }
       return total;
     }
@@ -207,7 +208,7 @@ describe("grappling skill", () => {
         if (withSkill) attacker.skills = buildSkillMap({ grappling: { energyTransferMul: q(1.8) } });
         const target = mkHumanoidEntity(2, 2, Math.trunc(0.5 * SCALE.m), 0);
         const world = mkWorld(seed, [attacker, target]);
-        const cmd = new Map([[1, [{ kind: "grapple", targetId: 2, intensity: q(1.0) }]]]);
+        const cmd: CommandMap = new Map([[1, [{ kind: "grapple", targetId: 2, intensity: q(1.0) }]]]);
         stepWorld(world, cmd, CTX);
         if (world.entities[0]!.grapple.holdingTargetId === 2) wins++;
       }
@@ -233,7 +234,7 @@ describe("rangedCombat skill", () => {
         const events: TraceEvent[] = [];
         stepWorld(world, new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]),
           { ...CTX, trace: { onEvent: e => events.push(e) } });
-        const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+        const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
         if (ev?.hit) hits++;
       }
       return hits;
@@ -256,7 +257,7 @@ describe("throwingWeapons skill", () => {
       const events: TraceEvent[] = [];
       stepWorld(world, new Map([[1, [{ kind: "shoot", targetId: 2, intensity: q(1.0) }]]]),
         { ...CTX, trace: { onEvent: e => events.push(e) } });
-      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit) as any;
+      const ev = events.find(e => e.kind === TraceKinds.ProjectileHit);
       return ev?.energyAtImpact_J ?? 0;
     }
 
@@ -278,14 +279,14 @@ describe("shieldCraft skill", () => {
         defender.loadout.items = [shield];
         if (withSkill) defender.skills = buildSkillMap({ shieldCraft: { energyTransferMul: q(2.0) } });
         const world = mkWorld(seed, [attacker, defender]);
-        const cmds = new Map([
+        const cmds: CommandMap = new Map([
           [1, [{ kind: "attack", targetId: 2, weaponId: sword.id, intensity: q(1.0) }]],
           [2, [{ kind: "defend", mode: "block", intensity: q(1.0) }]],
         ]);
         stepWorld(world, cmds, CTX);
         const tgt = world.entities.find(e => e.id === 2)!;
         total += Object.values(tgt.injury.byRegion)
-          .reduce((s: number, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+          .reduce((s: number, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
       }
       return total;
     }
@@ -299,7 +300,7 @@ describe("medical skill", () => {
     function fluidLossAfter20(withSkill: boolean): number {
       const e = mkHumanoidEntity(1, 1, 0, 0);
       // Inject heavy bleeding directly
-      e.injury.byRegion["torso"]!.bleedingRate = q(0.50) as any;
+      e.injury.byRegion["torso"]!.bleedingRate = q(0.50);
       if (withSkill) e.skills = buildSkillMap({ medical: { treatmentRateMul: q(4.0) } });
       const world = mkWorld(1, [e]);
       for (let i = 0; i < 20; i++) {
@@ -327,7 +328,7 @@ describe("athleticism skill", () => {
       const world = mkWorld(1, [e]);
       const sprint = [{ kind: "move", dir: { x: SCALE.Q, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" }];
       for (let i = 0; i < 60; i++) {
-        stepWorld(world, new Map([[1, sprint]]), CTX);
+        stepWorld(world, new Map([[1, sprint]]) as CommandMap, CTX);
       }
       return world.entities[0]!.energy.fatigue;
     }

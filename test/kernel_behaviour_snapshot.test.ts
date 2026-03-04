@@ -66,7 +66,7 @@ function assertSnapshot(key: string, current: string): void {
 // ── World serialisation helpers ───────────────────────────────────────────────
 
 function stableEntityView(e: ReturnType<typeof mkHumanoidEntity>): unknown {
-  const anyE = e as any;
+  const anyE = e;
   const torso = e.injury.byRegion?.["torso"];
   return {
     id: e.id,
@@ -115,7 +115,7 @@ function stableEntityView(e: ReturnType<typeof mkHumanoidEntity>): unknown {
 
     // Substances
     substances: (e.substances ?? [])
-      .map((s) => ({ id: (s as any).substance?.id ?? (s as any).type ?? "?", conc: (s as any).concentration ?? 0 }))
+      .map((s) => ({ id: (s).substance?.id ?? 0 }))
       .sort((a, b) => (a.id < b.id ? -1 : 1)),
   };
 }
@@ -158,15 +158,15 @@ function captureSnapshot(
           .map(([key, h]) => ({ key, intensity: h.intensity, duration_ticks: h.duration_ticks }))
       : [];
 
-  const fields = ((world as any).activeFieldEffects ?? [])
+  const fields = ((world).activeFieldEffects ?? [])
     .slice()
     .sort((a: any, b: any) => (a.id ?? 0) - (b.id ?? 0))
     .map((fe: any) => ({ id: fe.id, radius_m: fe.radius_m, duration_ticks: fe.duration_ticks }));
 
   return JSON.stringify(
     {
-      seed: (world as any).seed,
-      tick: (world as any).tick,
+      seed: (world).seed,
+      tick: (world).tick,
       entityCount: entities.length,
       entities,
       hazards,
@@ -211,14 +211,14 @@ describe("kernel behaviour snapshot", () => {
     // Both use correct command format: { kind: "move", dir, intensity, mode }
     const commands: CommandMap = new Map([
       [a.id, [
-        { kind: "move",   dir: { x: 1, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" } as any,
-        { kind: "attack", targetId: b.id, weaponId: undefined, intensity: q(1.0) } as any,
+        { kind: "move",   dir: { x: 1, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" },
+        { kind: "attack", targetId: b.id, intensity: q(1.0) },
       ]],
       [b.id, [
-        { kind: "move",   dir: { x: -1, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" } as any,
-        { kind: "attack", targetId: a.id, weaponId: undefined, intensity: q(1.0) } as any,
+        { kind: "move",   dir: { x: -1, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" },
+        { kind: "attack", targetId: a.id, intensity: q(1.0) },
       ]],
-    ]);
+    ]) as CommandMap;
 
     const ctx: KernelContext = {
       tractionCoeff: q(0.80) as Q,
@@ -244,12 +244,12 @@ describe("kernel behaviour snapshot", () => {
 
     const commands: CommandMap = new Map([
       [a.id, [
-        { kind: "move",   dir: { x: 1, y: 0, z: 0 }, intensity: q(0.5), mode: "walk" } as any,
-        { kind: "attack", targetId: b.id, weaponId: club.id, intensity: q(1.0), mode: "strike" } as any,
+        { kind: "move",   dir: { x: 1, y: 0, z: 0 }, intensity: q(0.5), mode: "walk" },
+        { kind: "attack", targetId: b.id, weaponId: club.id, intensity: q(1.0), mode: "strike" },
       ]],
       [b.id, [
-        { kind: "move",   dir: { x: -1, y: 0, z: 0 }, intensity: q(0.5), mode: "walk" } as any,
-        { kind: "attack", targetId: a.id, weaponId: club.id, intensity: q(1.0), mode: "strike" } as any,
+        { kind: "move",   dir: { x: -1, y: 0, z: 0 }, intensity: q(0.5), mode: "walk" },
+        { kind: "attack", targetId: a.id, weaponId: club.id, intensity: q(1.0), mode: "strike" },
       ]],
     ]);
 
@@ -275,7 +275,7 @@ describe("kernel behaviour snapshot", () => {
     // Shooter repeatedly fires; target stands still
     const commands: CommandMap = new Map([
       [shooter.id, [
-        { kind: "shoot", targetId: target.id, weaponId: bow.id, intensity: q(1.0) } as any,
+        { kind: "shoot", targetId: target.id, weaponId: bow.id, intensity: q(1.0) },
       ]],
     ]);
 
@@ -315,7 +315,7 @@ describe("kernel behaviour snapshot", () => {
 
   it("scenario: berserk entity + leader aura (5 ticks)", () => {
     const berserk = mkHumanoidEntity(1, 1, 0, 0);
-    (berserk.attributes.resilience as any).fearResponse = "berserk";
+    (berserk.attributes.resilience).fearResponse = "berserk";
     berserk.condition.fearQ = q(0.50) as Q;
 
     const ordinary = mkHumanoidEntity(2, 1, to.m(3), 0);
@@ -323,7 +323,7 @@ describe("kernel behaviour snapshot", () => {
     ordinary.condition.suppressedTicks = 8;
 
     const leader = mkHumanoidEntity(3, 1, to.m(5), 0);
-    (leader as any).traits = ["leader"]; // provides morale aura
+    (leader).traits = ["leader"]; // provides morale aura
 
     const enemy = mkHumanoidEntity(4, 2, to.m(15), 0);
 

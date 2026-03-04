@@ -8,20 +8,23 @@ import { defaultAction } from "../src/sim/action";
 import { TraceKinds } from "../src/sim/kinds";
 import type { TraceEvent } from "../src/sim/trace";
 import { TUNING } from "../src/sim/tuning";
+import { CommandMap, Entity } from "../src";
 
 const club = STARTER_WEAPONS.find(w => w.id === "wpn_club")!;
 const CLOSE_DIST = Math.trunc(0.5 * SCALE.m);
 
-function runTick(world: ReturnType<typeof mkWorld>, cmds: Map<number, any[]>): TraceEvent[] {
+function runTick(world: ReturnType<typeof mkWorld>, cmds: CommandMap): TraceEvent[] {
   const events: TraceEvent[] = [];
   const trace = { onEvent: (ev: TraceEvent) => events.push(ev) };
   stepWorld(world, cmds, { tractionCoeff: q(0.9), tuning: TUNING.tactical, trace });
   return events;
 }
 
-function totalDamage(entity: any): number {
+function totalDamage(entity: Entity): number {
   let total = 0;
-  for (const reg of Object.values(entity.injury.byRegion) as any[]) {
+  const regions = entity.injury.byRegion;
+  for (const key in regions) {
+    const reg = regions[key]!;
     total += (reg.surfaceDamage ?? 0) + (reg.internalDamage ?? 0) + (reg.structuralDamage ?? 0);
   }
   return total;
@@ -37,7 +40,7 @@ describe("Swing momentum carry", () => {
     attacker.loadout.items = [club];
     const target = mkHumanoidEntity(2, 2, Math.trunc(50 * SCALE.m), 0); // far — no attack
     const world = mkWorld(1, [attacker, target]);
-    (attacker.action as any).swingMomentumQ = q(0.80);
+    (attacker.action).swingMomentumQ = q(0.80);
 
     runTick(world, new Map());
 
@@ -54,10 +57,10 @@ describe("Swing momentum carry", () => {
       const target = mkHumanoidEntity(2, 2, CLOSE_DIST, 0);
       const world = mkWorld(seed, [attacker, target]);
 
-      const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]]]);
+      const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]]]);
       const events = runTick(world, cmds);
 
-      const attempt = events.find(e => e.kind === TraceKinds.AttackAttempt) as any;
+      const attempt = events.find(e => e.kind === TraceKinds.AttackAttempt);
       const e1 = world.entities.find(e => e.id === 1)!;
 
       if (attempt?.hit && !attempt?.blocked && !attempt?.parried) {
@@ -76,14 +79,14 @@ describe("Swing momentum carry", () => {
     for (let seed = 1; seed <= 300; seed++) {
       const attacker = mkHumanoidEntity(1, 1, 0, 0);
       attacker.loadout.items = [club];
-      (attacker.action as any).swingMomentumQ = q(0.80); // pre-set momentum
+      (attacker.action).swingMomentumQ = q(0.80); // pre-set momentum
       const target = mkHumanoidEntity(2, 2, CLOSE_DIST, 0);
       const world = mkWorld(seed, [attacker, target]);
 
-      const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]]]);
+      const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]]]);
       const events = runTick(world, cmds);
 
-      const attempt = events.find(e => e.kind === TraceKinds.AttackAttempt) as any;
+      const attempt = events.find(e => e.kind === TraceKinds.AttackAttempt);
       const e1 = world.entities.find(e => e.id === 1)!;
 
       if (!attempt?.hit) {
@@ -101,19 +104,19 @@ describe("Swing momentum carry", () => {
     for (let seed = 1; seed <= 300; seed++) {
       const attacker = mkHumanoidEntity(1, 1, 0, 0);
       attacker.loadout.items = [club];
-      (attacker.action as any).swingMomentumQ = q(0.80);
+      (attacker.action).swingMomentumQ = q(0.80);
       const target = mkHumanoidEntity(2, 2, CLOSE_DIST, 0);
       target.loadout.items = [club];
       const world = mkWorld(seed, [attacker, target]);
 
       // Target must issue a "defend" command in the same tick — setting intent directly gets reset
-      const cmds = new Map<number, any[]>([
+      const cmds: CommandMap = new Map([
         [1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]],
         [2, [{ kind: "defend", mode: "block", intensity: q(1.0) }]],
       ]);
       const events = runTick(world, cmds);
 
-      const attempt = events.find(e => e.kind === TraceKinds.AttackAttempt) as any;
+      const attempt = events.find(e => e.kind === TraceKinds.AttackAttempt);
       const e1 = world.entities.find(e => e.id === 1)!;
 
       if (attempt?.hit && (attempt?.blocked || attempt?.parried)) {
@@ -133,9 +136,9 @@ describe("Swing momentum carry", () => {
       attacker.loadout.items = [club];
       const target = mkHumanoidEntity(2, 2, CLOSE_DIST, 0);
       const world = mkWorld(seed, [attacker, target]);
-      const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]]]);
+      const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]]]);
       const ev = runTick(world, cmds);
-      const attempt = ev.find(e => e.kind === TraceKinds.AttackAttempt) as any;
+      const attempt = ev.find(e => e.kind === TraceKinds.AttackAttempt);
       if (attempt?.hit && !attempt?.blocked && !attempt?.parried) {
         foundSeed = seed;
         break;
@@ -143,7 +146,7 @@ describe("Swing momentum carry", () => {
     }
     expect(foundSeed).toBeGreaterThan(0);
 
-    const cmds = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]]]);
+    const cmds: CommandMap = new Map([[1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]]]);
 
     // World A: no momentum
     const attA = mkHumanoidEntity(1, 1, 0, 0);
@@ -155,7 +158,7 @@ describe("Swing momentum carry", () => {
     // World B: pre-set momentum = q(0.80)
     const attB = mkHumanoidEntity(1, 1, 0, 0);
     attB.loadout.items = [club];
-    (attB.action as any).swingMomentumQ = q(0.80);
+    (attB.action).swingMomentumQ = q(0.80);
     const wB = mkWorld(foundSeed, [attB, mkHumanoidEntity(2, 2, CLOSE_DIST, 0)]);
     runTick(wB, cmds);
     const dmgB = totalDamage(wB.entities.find(e => e.id === 2)!);
@@ -170,7 +173,7 @@ describe("Swing momentum carry", () => {
     // Max bonus fraction = qMul(7600, q(0.12)) = qMul(7600, 1200) / 10000 = 912 / 10000 ≈ 9.12%
     // At most q(0.12) of energy — verify this holds by checking the momentum field
     const e = mkHumanoidEntity(1, 1, 0, 0);
-    (e.action as any).swingMomentumQ = q(0.80);
+    (e.action).swingMomentumQ = q(0.80);
     const world = mkWorld(1, [e]);
     runTick(world, new Map());
     // After decay, momentum ≤ q(0.80), so bonus ≤ qMul(q(0.80), q(0.12)) = 960/10000 of energy
@@ -181,8 +184,8 @@ describe("Swing momentum carry", () => {
 
   it("dead entity: momentum decay fires each tick without crashing", () => {
     const attacker = mkHumanoidEntity(1, 1, 0, 0);
-    (attacker as any).injury.dead = true;
-    (attacker.action as any).swingMomentumQ = q(0.50);
+    (attacker).injury.dead = true;
+    (attacker.action).swingMomentumQ = q(0.50);
     const world = mkWorld(1, [attacker]);
 
     // Should not throw

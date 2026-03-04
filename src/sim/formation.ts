@@ -4,7 +4,6 @@ import type { SpatialIndex } from "./spatial.js";
 import { queryNearbyIds } from "./spatial.js";
 import { isEnemy } from "./team.js";
 import { dotDirQ, normaliseDirCheapQ } from "./vec3.js"; // wherever you keep these
-import { SCALE } from "../units.js";
 
 export interface EngagementQuery {
   reach_m: number;          // fixed-point metres

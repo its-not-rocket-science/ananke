@@ -8,6 +8,7 @@
 import type { Q, I32 } from "../units.js";
 import { q } from "../units.js";
 import { DamageChannel } from "../channels.js";
+import { BodyRegion } from "./body.js";
 
 // ─── locomotion and CNS models ────────────────────────────────────────────────
 

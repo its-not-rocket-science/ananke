@@ -8,10 +8,11 @@ import {
 } from "../src/sim/terrain";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
+import { CommandMap } from "../src";
 
 const CELL = Math.trunc(4 * SCALE.m); // 4 m cell size
 
-function baseCtx(extra: Record<string, any> = {}) {
+function baseCtx(extra = {}) {
   return { tractionCoeff: q(0.80), cellSize_m: CELL, ...extra };
 }
 
@@ -69,7 +70,7 @@ describe("slope — movement speed", () => {
       ? buildSlopeGrid(Object.fromEntries(Array.from({ length: 30 }, (_, i) => [`${i},0`, slopeInfo])))
       : undefined;
     for (let i = 0; i < ticks; i++) {
-      stepWorld(world, new Map([[1, moveCmd]]), baseCtx(slopeGrid ? { slopeGrid } : {}));
+      stepWorld(world, new Map([[1, moveCmd]]) as CommandMap, baseCtx(slopeGrid ? { slopeGrid } : {}));
     }
     return world.entities[0]!.velocity_mps.x;
   }
