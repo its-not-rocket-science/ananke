@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–25 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–28 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -142,9 +142,19 @@ and trade mechanics: `computeItemValue` derives cost-unit prices from physical p
 (mass, reach, armour resist), `applyWear` tracks cumulative use-wear on melee weapons
 (penalty at q(0.30), fumble at q(0.70), breaks at q(1.0)), `resolveDrops` produces
 deterministic loot from dead or incapacitated entities, and `evaluateTradeOffer` evaluates
-trades from the accepting party's perspective.
+trades from the accepting party's perspective, a **momentum transfer and knockback**
+layer (`src/sim/knockback.ts`) that converts impulse-momentum physics into stagger and
+prone transitions, a **hydrostatic shock and cavitation** layer (`src/sim/hydrostatic.ts`)
+that amplifies internal damage for high-velocity projectiles based on per-tissue compliance
+(temporary cavity ×1.0–×3.0 above 600 m/s; cavitation bleed boost in fluid-saturated organs
+above 900 m/s), and a **cone AoE** system (`src/sim/cone.ts`) that adds directional
+geometry to the capability system for breath weapons, flamethrowers, gas dispersal, and
+sonic blasts: `entityInCone` geometry with configurable half-angle and range, `"facing"` and
+`"fixed"` direction modes, sustained emission with per-tick cost deduction and shock interrupt,
+a `weaponImpact` payload variant for custom per-effect damage profiles, and a full
+dragon-vs-knight scenario demonstration.
 
-**1185 tests.** All coverage thresholds met (statements 96.9 %, branches 85.8 %, functions 95.9 %, lines 96.9 %).
+**1260 tests.** All coverage thresholds met (statements 96.9 %, branches 85.9 %, functions 96.0 %, lines 96.9 %).
 
 See `ROADMAP.md` for the full development plan.
 
@@ -1322,6 +1332,56 @@ automatically in the finalImpacts loop — no changes to call sites required.
 
 ---
 
+## Cone AoE: Breath Weapons, Fire, Gas (Phase 28)
+
+`src/sim/cone.ts` adds directional cone geometry to the capability system, enabling
+breath weapons, flamethrowers, gas dispensers, and sonic disorientation blasts.
+
+```typescript
+import { entityInCone, buildEntityFacingCone } from "./src/sim/cone.js";
+import type { CapabilityEffect, CapabilitySource } from "./src/sim/capability.js";
+import { q, SCALE } from "./src/units.js";
+import { DamageChannel } from "./src/channels.js";
+
+// Dragon fire breath — 20 ticks sustained, 30° half-angle cone, 10m range
+const DRAGON_FIRE: CapabilityEffect = {
+  id:               "fire_breath",
+  cost_J:           800,           // deducted each sustained tick
+  castTime_ticks:   5,
+  sustainedTicks:   20,            // fires 20 consecutive ticks
+  coneHalfAngle_rad: Math.PI / 6,  // 30° half-angle = 60° total cone
+  coneDir:          "facing",      // follows entity's facingDirQ
+  range_m:          10 * SCALE.m,
+  payload: {
+    kind:     "weaponImpact",
+    energy_J:  800,
+    profile: {
+      surfaceFrac:     q(0.60),  // fire burns surface heavily
+      internalFrac:    q(0.30),  // convective heat reaches internal tissue
+      structuralFrac:  q(0.10),
+      bleedFactor:     q(0.05),
+      penetrationBias: q(0.05),
+    },
+  },
+};
+// Total reserve cost for one breath: 800J × 20 ticks = 16 000 J
+```
+
+**Cone direction modes**:
+- `coneDir: "facing"` — cone follows the actor's `facingDirQ` (updated by movement commands)
+- `coneDir: "fixed"` with `coneDirFixed: { dx, dy }` — fixed world-space direction (gas cloud, mounted turret)
+
+**Sustained emission** respects the same concentration-break rules as `castTime_ticks = -1`
+auras: shock ≥ q(0.30) cancels emission immediately. Each tick deducts `cost_J`; if the
+source reserve falls below `cost_J` the emission stops early.
+
+**`weaponImpact` payload** allows any damage profile without being constrained to a
+`DamageChannel`. Unlike `impact` (which maps to a synthetic weapon via `DamageChannel`),
+`weaponImpact` takes a `WeaponDamageProfile` directly — enabling fire's
+surface-heavy/internal-pass-through split or acid's structural bias.
+
+---
+
 ## Project layout
 
 ```
@@ -1370,6 +1430,7 @@ src/
     capability.ts       CapabilitySource, CapabilityEffect, RegenModel, EffectPayload, FieldEffect — Clarke's Third Law abstraction
     knockback.ts        computeKnockback(), applyKnockback() — impulse-momentum transfer; stagger/prone checks
     hydrostatic.ts      computeTemporaryCavityMul(), computeCavitationBleed() — high-velocity wound physics
+    cone.ts             entityInCone(), buildEntityFacingCone(), ConeSpec — directional cone AoE geometry (breath weapons, flamethrowers, gas)
     events.ts           ImpactEvent type, deterministic sort
     seeds.ts            Deterministic per-event seed derivation
     formation.ts        pickNearestEnemyInReach()

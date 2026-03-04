@@ -12,6 +12,7 @@ import { DamageChannel } from "../channels.js";
 import type { MedicalTier } from "./medical.js";
 import type { ActiveSubstance } from "./substance.js";
 import type { TechCapability } from "./tech.js";
+import type { WeaponDamageProfile } from "../equipment.js";
 
 // ─── Regen models ─────────────────────────────────────────────────────────────
 
@@ -103,8 +104,12 @@ export type EffectPayload =
     // Write back structural damage. Only capability effects can do this;
     // normal injury is write-once. Respects permanentDamage floor.
 
-  | { kind: "fieldEffect";     spec: FieldEffectSpec };
+  | { kind: "fieldEffect";     spec: FieldEffectSpec }
     // Place a suppression / modifier zone in world.activeFieldEffects.
+
+  | { kind: "weaponImpact";   profile: WeaponDamageProfile; energy_J: number };
+    // Like "impact" but uses a custom damage profile instead of a channel-based
+    // synthetic weapon. Used for fire breath, chemical burns, precise damage profiling.
 
 // ─── Capability effect ────────────────────────────────────────────────────────
 
@@ -115,7 +120,16 @@ export interface CapabilityEffect {
   cooldown_ticks?: number;      // Phase 12B: ticks before same effect can fire again; 0/undefined = no cooldown
   requiredCapability?: TechCapability; // Phase 12B: if set + techCtx present, gated by tech availability
   range_m?: number;             // fixed-point metres; undefined = self-only
-  aoeRadius_m?: number;         // if set, all entities within radius receive payload
+  aoeRadius_m?: number;         // if set, all entities within sphere radius receive payload
+
+  // Phase 28: directional cone AoE (replaces spherical aoeRadius_m when coneHalfAngle_rad is set)
+  coneHalfAngle_rad?: number;              // radians; undefined = no cone
+  coneDir?: "facing" | "fixed";           // "facing" = actor's facingDirQ; "fixed" = coneDirFixed
+  coneDirFixed?: { dx: number; dy: number }; // used when coneDir = "fixed"; SCALE.m-normalised
+
+  // Phase 28: sustained emission — effect auto-fires this many consecutive ticks
+  sustainedTicks?: number;               // undefined = one-shot; >0 = fires N ticks total
+
   payload: EffectPayload | EffectPayload[];
   tags?: string[];
 }

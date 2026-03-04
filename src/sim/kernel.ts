@@ -6,7 +6,7 @@ import type { KernelContext } from "./context.js";
 
 import { SCALE, q, clampQ, qMul, mulDiv, to, type Q, type I32 } from "../units.js";
 import { DamageChannel } from "../channels.js";
-import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, findSensor, type Weapon, type RangedWeapon } from "../equipment.js";
+import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, findSensor, type Weapon, type RangedWeapon, type WeaponDamageProfile } from "../equipment.js";
 
 import { isCapabilityAvailable } from "./tech.js";
 import { deriveFunctionalState } from "./impairment.js";
@@ -50,6 +50,7 @@ import { stepEnergy } from "./step/energy.js";
 import { stepConcentration } from "./step/concentration.js";
 import { computeKnockback, applyKnockback } from "./knockback.js";
 import { computeTemporaryCavityMul, computeCavitationBleed } from "./hydrostatic.js";
+import { entityInCone, type ConeSpec } from "./cone.js";
 import { stepConditionsToInjury, stepInjuryProgression } from "./step/injury.js";
 import { stepCapabilitySources } from "./step/capability.js";
 import { stepMovement } from "./step/movement.js";
@@ -221,6 +222,15 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
       if (src && eff) {
         applyCapabilityEffect(world, e, e.pendingActivation.targetId, eff, trace, world.tick);
         trace.onEvent({ kind: TraceKinds.CapabilityActivated, tick: world.tick, entityId: e.id, sourceId: src.id, effectId: eff.id });
+        // Phase 28: set up sustained emission for remaining ticks after cast completion
+        if (eff.sustainedTicks && eff.sustainedTicks > 1) {
+          e.action.sustainedEmission = {
+            sourceId: src.id,
+            effectId: eff.id,
+            ...(e.pendingActivation.targetId !== undefined ? { targetId: e.pendingActivation.targetId } : {}),
+            remainingTicks: eff.sustainedTicks - 1,
+          };
+        }
       }
       delete e.pendingActivation;
     }
@@ -230,6 +240,35 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   for (const e of world.entities) {
     if (!e.activeConcentration || e.injury.dead) continue;
     stepConcentration (e, world, trace, world.tick);
+  }
+
+  // Phase 28: step sustained emission (breath weapons, flamethrowers, etc.)
+  for (const e of world.entities) {
+    if (!e.action.sustainedEmission || e.injury.dead) continue;
+    const em = e.action.sustainedEmission;
+    // Concentration break: shock interrupts sustained emission (same threshold as cast)
+    if (e.injury.shock >= CAST_INTERRUPT_SHOCK) {
+      trace.onEvent({ kind: TraceKinds.CastInterrupted, tick: world.tick, entityId: e.id });
+      delete e.action.sustainedEmission;
+      continue;
+    }
+    const src = e.capabilitySources?.find(s => s.id === em.sourceId);
+    const eff = src?.effects.find(ef => ef.id === em.effectId);
+    if (!src || !eff) { delete e.action.sustainedEmission; continue; }
+    // Deduct cost per tick; stop if reserve exhausted
+    const isBoundless = src.regenModel.type === "boundless";
+    if (!isBoundless) {
+      if (src.reserve_J < eff.cost_J) {
+        delete e.action.sustainedEmission;
+        continue;
+      }
+      src.reserve_J -= eff.cost_J;
+    }
+    applyCapabilityEffect(world, e, em.targetId, eff, trace, world.tick);
+    em.remainingTicks -= 1;
+    if (em.remainingTicks <= 0) {
+      delete e.action.sustainedEmission;
+    }
   }
 
   for (const e of world.entities) {
@@ -1911,6 +1950,42 @@ export function applyPayload(
       world.activeFieldEffects.push(fe);
       break;
     }
+
+    case "weaponImpact": {
+      // Phase 28: custom damage profile (fire breath, napalm, chemical burn, etc.)
+      // Bypasses armour like other capability impacts; damage mix is determined by profile.
+      const wpn: Weapon = {
+        id: "cap_weaponimpact",
+        kind: "weapon",
+        name: "WeaponImpact",
+        mass_kg: 0,
+        bulk: q(0),
+        damage: payload.profile,
+      };
+      const capSeed = eventSeed(world.seed, tick, actor.id, target.id, 0xCAB2);
+      const capRng  = makeRng(capSeed, SCALE.Q);
+      let hitRegion: string;
+      if (target.bodyPlan) {
+        hitRegion = resolveHitSegment(target.bodyPlan, capRng.q01());
+      } else {
+        const area    = chooseArea(capRng.q01());
+        const sideBit = (capSeed & 1) as 0 | 1;
+        hitRegion     = regionFromHit(area, sideBit);
+      }
+      if (!target.injury.byRegion[hitRegion]) break;
+      let effectiveEnergy = payload.energy_J;
+      if ((target.condition.shieldReserve_J ?? 0) > 0 &&
+          target.condition.shieldExpiry_tick !== undefined &&
+          tick <= target.condition.shieldExpiry_tick) {
+        const absorbed = Math.min(target.condition.shieldReserve_J!, effectiveEnergy);
+        target.condition.shieldReserve_J! -= absorbed;
+        effectiveEnergy -= absorbed;
+      }
+      if (effectiveEnergy > 0) {
+        applyImpactToInjury(target, wpn, effectiveEnergy, hitRegion, false, trace, tick);
+      }
+      break;
+    }
   }
 }
 
@@ -1933,7 +2008,28 @@ export function applyCapabilityEffect(
 
   // Determine target entities
   let targets: Entity[];
-  if (effect.aoeRadius_m !== undefined) {
+  if (effect.coneHalfAngle_rad !== undefined) {
+    // Phase 28: directional cone AoE — apply to all living entities within the cone
+    const range_m = effect.range_m ?? 0;
+    let dir: { dx: number; dy: number };
+    if (effect.coneDir === "fixed" && effect.coneDirFixed) {
+      dir = effect.coneDirFixed;
+    } else {
+      // "facing" (default) — use actor's current facingDirQ
+      const fx  = actor.action.facingDirQ.x;
+      const fy  = actor.action.facingDirQ.y;
+      const mag = Math.sqrt(fx * fx + fy * fy);
+      const sc  = mag > 0 ? SCALE.m / mag : 1;
+      dir = { dx: Math.round(fx * sc), dy: Math.round(fy * sc) };
+    }
+    const cone: ConeSpec = {
+      origin:        { x: actor.position_m.x, y: actor.position_m.y },
+      dir,
+      halfAngle_rad: effect.coneHalfAngle_rad,
+      range_m,
+    };
+    targets = world.entities.filter(e => !e.injury.dead && entityInCone(e, cone));
+  } else if (effect.aoeRadius_m !== undefined) {
     const origin = targetId !== undefined
       ? (world.entities.find(e => e.id === targetId)?.position_m ?? actor.position_m)
       : actor.position_m;
@@ -2071,5 +2167,14 @@ function resolveActivation(
   if (effect.cooldown_ticks && effect.cooldown_ticks > 0) {
     if (!actor.action.capabilityCooldowns) actor.action.capabilityCooldowns = new Map();
     actor.action.capabilityCooldowns.set(cooldownKey, effect.cooldown_ticks);
+  }
+  // Phase 28: if sustainedTicks, set up emission for the remaining ticks (first tick fired above)
+  if (effect.sustainedTicks && effect.sustainedTicks > 1) {
+    actor.action.sustainedEmission = {
+      sourceId: cmd.sourceId,
+      effectId: cmd.effectId,
+      ...(cmd.targetId !== undefined ? { targetId: cmd.targetId } : {}),
+      remainingTicks: effect.sustainedTicks - 1,
+    };
   }
 }

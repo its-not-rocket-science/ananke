@@ -31,6 +31,14 @@ export interface ActionState {
 
   // Phase 26: stagger timer — ticks remaining in stagger window after knockback
   staggerTicks?: number;
+
+  // Phase 28: sustained cone/beam emission (breath weapon, flamethrower, etc.)
+  sustainedEmission?: {
+    sourceId: string;
+    effectId: string;
+    targetId?: number;
+    remainingTicks: number; // ticks left to fire (decremented each tick; deleted when 0)
+  };
 }
 
 export const defaultAction = (): ActionState => ({

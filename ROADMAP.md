@@ -3360,7 +3360,7 @@ Kernel integration: inside `resolveShoot`, after computing `internalInc`, multip
 
 ---
 
-## Phase 28 — Cone AoE: Breath Weapons, Fire, Gas
+## Phase 28 — Cone AoE: Breath Weapons, Fire, Gas *(COMPLETE)*
 
 ### Overview
 
