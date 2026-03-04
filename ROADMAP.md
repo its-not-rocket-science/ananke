@@ -2894,7 +2894,7 @@ export function narrateDialogue(
 
 ---
 
-## Phase 24 — Faction & Reputation System
+## Phase 24 — Faction & Reputation System *(COMPLETE)*
 
 ### Overview
 
@@ -3114,7 +3114,7 @@ export function totalInventoryValue(inventory: ItemInventory): number;
 
 ---
 
-## Phase 26 — Momentum Transfer & Knockback
+## Phase 26 — Momentum Transfer & Knockback *(COMPLETE)*
 
 ### Overview
 

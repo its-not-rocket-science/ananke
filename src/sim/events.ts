@@ -15,6 +15,8 @@ export interface ImpactEvent {
   wpn: Weapon;
   hitQuality: Q;
   shieldBlocked: boolean;
+  /** Phase 26: effective striking mass (weapon head + body fraction, or projectile mass) in SCALE.kg units. */
+  massEff_kg?: number;
 }
 
 export function sortEventsDeterministic<T extends { attackerId: number; targetId: number }>(ev: T[]): void {

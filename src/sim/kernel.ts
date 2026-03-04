@@ -48,6 +48,7 @@ import { applyHazardDamage } from "./step/hazards.js";
 import { stepSubstances } from "./step/substances.js";
 import { stepEnergy } from "./step/energy.js";
 import { stepConcentration } from "./step/concentration.js";
+import { computeKnockback, applyKnockback } from "./knockback.js";
 import { stepConditionsToInjury, stepInjuryProgression } from "./step/injury.js";
 import { stepCapabilitySources } from "./step/capability.js";
 import { stepMovement } from "./step/movement.js";
@@ -191,6 +192,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     e.condition.unconsciousTicks = Math.max(0, e.condition.unconsciousTicks - 1);
     e.condition.suppressedTicks = Math.max(0, e.condition.suppressedTicks - 1);    // Phase 3
     e.condition.blindTicks      = Math.max(0, e.condition.blindTicks - 1);         // Phase 10C
+    if (e.action.staggerTicks) e.action.staggerTicks = Math.max(0, e.action.staggerTicks - 1); // Phase 26
     e.condition.rallyCooldownTicks = Math.max(0, e.condition.rallyCooldownTicks - 1); // Phase 5 ext
     // Phase 2C: weapon bind decay — emit trace only from the smaller-ID entity to avoid duplicates
     if (e.action.weaponBindTicks > 0) {
@@ -353,6 +355,18 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
     if (effectiveEnergy > 0) {
       applyImpactToInjury(target, ev.wpn, effectiveEnergy, ev.region, ev.protectedByArmour, trace, world.tick);
+    }
+
+    // Phase 26: apply knockback impulse to the target
+    if (effectiveEnergy > 0 && (ev.massEff_kg ?? 0) > 0) {
+      const attacker = index.byId.get(ev.attackerId);
+      if (attacker) {
+        const kbResult = computeKnockback(effectiveEnergy, ev.massEff_kg!, target);
+        applyKnockback(target, kbResult, {
+          dx: target.position_m.x - attacker.position_m.x,
+          dy: target.position_m.y - attacker.position_m.y,
+        });
+      }
     }
 
     trace.onEvent({
@@ -912,6 +926,10 @@ function resolveAttack(world: WorldState,
     }
   }
 
+  // Phase 26: effective mass for knockback — same formula used in impactEnergy_J
+  const kbBodyMass = mulDiv(attacker.attributes.morphology.mass_kg, wpn.strikeEffectiveMassFrac ?? q(0.10), SCALE.Q);
+  const kbMassEff  = wpn.mass_kg + kbBodyMass;
+
   impacts.push({
     kind: "impact",
     attackerId: attacker.id,
@@ -925,6 +943,7 @@ function resolveAttack(world: WorldState,
     parried: res.parried,
     hitQuality: clampQ(res.hitQuality, q(0.05), q(1.0)),
     shieldBlocked,
+    massEff_kg: kbMassEff,  // Phase 26
   });
 
   // Phase 2 extension: update swing momentum based on outcome
@@ -1287,6 +1306,7 @@ function resolveShoot(
       parried: false,
       hitQuality: q(0.75),
       shieldBlocked: shieldHit ?? false,
+      massEff_kg: projMass_kg,  // Phase 26: projectile mass drives knockback
     });
   }
 

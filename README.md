@@ -1205,6 +1205,87 @@ without rolling RNG. Useful for UI previews, AI decision-making, and testing.
 
 ---
 
+## Faction & Reputation (Phase 24)
+
+`src/faction.ts` tracks political standing, witnesses hostile events, and modulates AI
+behaviour based on inter-faction relationships. Fully deterministic — no RNG, standing
+changes are pure arithmetic.
+
+```typescript
+import {
+  createFactionState, adjustStanding, getStanding,
+  extractWitnessEvents, applyReputationDelta,
+  type FactionState,
+} from "./src/faction.js";
+```
+
+- **`adjustStanding(state, factionId, delta)`** — clamp standing to [−SCALE.Q, SCALE.Q]
+- **`getStanding(state, factionId)`** — 0 for unknown factions
+- **`extractWitnessEvents(world, env)`** — returns assault events seen by bystanders
+- **`applyReputationDelta`** — propagate witness events into faction standing
+
+AI target-selection uses `STANDING_HOSTILE_THRESHOLD = q(−0.40)` to activate attack
+mode; the `factionGuard` preset additionally suppresses attack below standing `q(0.60)`.
+
+---
+
+## Loot & Economy (Phase 25)
+
+`src/economy.ts` provides item valuation, equipment wear, loot drop resolution, and
+trade evaluation. No kernel dependency — pure data management.
+
+```typescript
+import {
+  computeItemValue, armourConditionQ, applyWear,
+  resolveDrops, evaluateTradeOffer, totalInventoryValue,
+  type ItemInventory, type TradeOffer, type DropTable,
+} from "./src/economy.js";
+```
+
+- **`computeItemValue(item, wear_Q?)`** — derives `baseValue`, `condition_Q`, `sellFraction`
+  for any weapon, armour, or medical resource
+- **`applyWear(weapon, intensity_Q, seed?)`** — accumulates `WEAR_BASE = q(0.001)` per strike;
+  penalty at `q(0.30)`, fumble at `q(0.70)`, breaks at `q(1.0)`
+- **`resolveDrops(entity, seed, extra?, config?)`** — dead → all equipped items drop;
+  probabilistic extras rolled deterministically from seed
+- **`evaluateTradeOffer(offer, inventory)`** — `netValue` + `feasible` from accepting party's view
+
+---
+
+## Momentum Transfer & Knockback (Phase 26)
+
+`src/sim/knockback.ts` adds the impulse-momentum half of Newtonian mechanics: every
+impact now imparts a velocity delta to the target. Calibrated to real physics — a
+5.56 mm rifle round produces negligible knockback (≈ 0.05 m/s on 75 kg), while a
+large-creature kick can knock humans prone.
+
+```typescript
+import {
+  computeKnockback, applyKnockback,
+  STAGGER_THRESHOLD_mps, PRONE_THRESHOLD_mps, STAGGER_TICKS,
+} from "./src/sim/knockback.js";
+
+const result = computeKnockback(energy_J, massEff_kg, target);
+// → { impulse_Ns, knockback_v, staggered, prone }
+
+applyKnockback(target, result, { dx, dy });
+// → mutates velocity_mps, condition.prone, action.staggerTicks
+```
+
+**Physics**: `impulse = sqrt(2 × E × m_eff)` [N·s]; `Δv = impulse / m_target` [m/s].
+Stability coefficient reduces effective knockback before threshold checks:
+`effective_v = Δv × (1 − stabilityQ)`.
+
+| Threshold | Value | Effect |
+|-----------|-------|--------|
+| `STAGGER_THRESHOLD_mps` | 0.5 m/s | 3-tick stagger window |
+| `PRONE_THRESHOLD_mps` | 2.0 m/s | `condition.prone = true` |
+
+The kernel integrates knockback automatically for every melee and ranged hit — no
+changes to call sites required.
+
+---
+
 ## Project layout
 
 ```
@@ -1230,6 +1311,8 @@ src/
   progression.ts    createProgressionState(), awardXP(), advanceSkill(), applyTrainingSession(), stepAgeing(), applyAgeingDelta(), deriveSequelae()
   campaign.ts       createCampaign(), addLocation(), travel(), mergeEntityState(), stepCampaignTime(), debitInventory/creditInventory/getInventoryCount(), serialiseCampaign/deserialiseCampaign()
   dialogue.ts       resolveDialogue(), applyDialogueOutcome(), narrateDialogue(), dialogueProbability() — social encounter resolution (intimidate/persuade/deceive/surrender/negotiate)
+  faction.ts        createFactionState(), adjustStanding(), extractWitnessEvents(), applyReputationDelta() — faction tracking and reputation system
+  economy.ts        computeItemValue(), applyWear(), resolveDrops(), evaluateTradeOffer() — item valuation, wear, loot drops, trade evaluation
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
@@ -1249,6 +1332,7 @@ src/
     substance.ts        Substance, ActiveSubstance, STARTER_SUBSTANCES — pharmacokinetics model
     tech.ts             TechEra, TechCapability, TechContext, defaultTechContext, isCapabilityAvailable
     capability.ts       CapabilitySource, CapabilityEffect, RegenModel, EffectPayload, FieldEffect — Clarke's Third Law abstraction
+    knockback.ts        computeKnockback(), applyKnockback() — impulse-momentum transfer; stagger/prone checks
     events.ts           ImpactEvent type, deterministic sort
     seeds.ts            Deterministic per-event seed derivation
     formation.ts        pickNearestEnemyInReach()

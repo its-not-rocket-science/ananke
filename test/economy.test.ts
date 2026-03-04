@@ -18,7 +18,8 @@ import {
 import { STARTER_WEAPONS, STARTER_ARMOUR } from "../src/equipment.js";
 import { MEDICAL_RESOURCES } from "../src/downtime.js";
 import { mkHumanoidEntity } from "../src/sim/testing.js";
-import { stepWorld, TICK_HZ } from "../src/sim/kernel.js";
+import { stepWorld } from "../src/sim/kernel.js";
+import { TICK_HZ } from "../src/sim/tick.js";
 import { mkWorld } from "../src/sim/testing.js";
 import type { Weapon } from "../src/equipment.js";
 

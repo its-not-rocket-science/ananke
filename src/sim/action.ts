@@ -28,6 +28,9 @@ export interface ActionState {
 
   // Phase 12B: previous terrain cell key — used for terrain-entry trigger detection.
   lastCellKey?: string;
+
+  // Phase 26: stagger timer — ticks remaining in stagger window after knockback
+  staggerTicks?: number;
 }
 
 export const defaultAction = (): ActionState => ({

@@ -6,9 +6,7 @@ import {
   runArena,
   summariseArena,
   formatArenaReport,
-  narrateRepresentativeTrial,
   expectWinRate,
-  expectSurvivalRate,
   expectMeanDuration,
   expectRecovery,
   expectResourceCost,
@@ -23,7 +21,6 @@ import {
 import { HUMAN_BASE } from "../src/archetypes.js";
 import { STARTER_WEAPONS } from "../src/equipment.js";
 import { v3 } from "../src/sim/vec3.js";
-import { buildSkillMap } from "../src/sim/skills.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -148,7 +145,7 @@ describe("expectation builders", () => {
       survivalRateByEntity: new Map([[1, 1], [2, 0]]),
       meanTTI_s:            new Map(),
       injuryDistribution:   [],
-      recoveryStats,
+      recoveryStats: recoveryStats ?? [],
       expectationResults:   [],
     };
   }
@@ -314,8 +311,8 @@ describe("recovery stats", () => {
     const rMinor  = runArena(mkRecScenario(0.20), 3);
     const rSevere = runArena(mkRecScenario(0.60), 3);
 
-    const minorDays  = rMinor.recoveryStats![0].meanFullRecoveryDays;
-    const severeDays = rSevere.recoveryStats![0].meanFullRecoveryDays;
+    const minorDays  = rMinor.recoveryStats![0]!.meanFullRecoveryDays;
+    const severeDays = rSevere.recoveryStats![0]!.meanFullRecoveryDays;
 
     expect(minorDays).not.toBeNull();
     expect(severeDays).not.toBeNull();
@@ -335,7 +332,7 @@ describe("recovery stats", () => {
       recovery: { careLevel: "none", recoveryHours: 0.1 },
     };
     const result = runArena(scenario, 3);
-    expect(result.recoveryStats![0].meanResourceCostUnits).toBe(0);
+    expect(result.recoveryStats![0]!.meanResourceCostUnits).toBe(0);
   });
 
   it("inventory exhaustion caps treatment (0 bandages → higher fluid loss)", () => {
@@ -354,16 +351,16 @@ describe("recovery stats", () => {
       recovery: {
         careLevel: "first_aid",
         recoveryHours: 0.1,  // 360 s
-        inventory: bandages !== undefined ? new Map([["bandage", bandages]]) : undefined,
+        ...(bandages !== undefined && { inventory: new Map([["bandage", bandages]]) }),
       },
     });
 
-    const rFull  = runArena(mkBandageScenario(undefined), 3); // unlimited
-    const rEmpty = runArena(mkBandageScenario(0),         3); // no bandages
+    const rFull  = runArena(mkBandageScenario(undefined), 3) // unlimited
+    const rEmpty = runArena(mkBandageScenario(0),         3)!; // no bandages
 
     // Without bandages, entity continues bleeding; with unlimited, bleeding stops immediately
-    const fullSurvival  = rFull.recoveryStats![0].survivalRatePostRecovery;
-    const emptySurvival = rEmpty.recoveryStats![0].survivalRatePostRecovery;
+    const fullSurvival  = rFull.recoveryStats![0]!.survivalRatePostRecovery;
+    const emptySurvival = rEmpty.recoveryStats![0]!.survivalRatePostRecovery;
     // Full supply should have equal or better survival
     expect(fullSurvival).toBeGreaterThanOrEqual(emptySurvival - 0.01);
   });
@@ -413,7 +410,7 @@ describe("recovery stats", () => {
       name: "cost-dist",
     };
     const result = runArena(scenario, 20);
-    const stats  = result.recoveryStats![0];
+    const stats  = result.recoveryStats![0]!;
     expect(stats.p90ResourceCostUnits).toBeGreaterThanOrEqual(stats.meanResourceCostUnits - 1e-9);
   });
 });
@@ -460,7 +457,7 @@ describe("edge cases", () => {
     const result = runArena(scenario, 3);
     expect(result.recoveryStats).toBeDefined();
     // With 0 seconds of downtime, entity should survive (no time to die)
-    expect(result.recoveryStats![0].survivalRatePostRecovery).toBe(1.0);
+    expect(result.recoveryStats![0]!.survivalRatePostRecovery).toBe(1.0);
   });
 
   it("scenario without narrativeCfg omits combat log", () => {
