@@ -3246,7 +3246,7 @@ then calls `applyKnockback` to update entity velocity.
 
 ---
 
-## Phase 27 — Hydrostatic Shock & Cavitation
+## Phase 27 — Hydrostatic Shock & Cavitation *(COMPLETE)*
 
 ### Overview
 

@@ -1286,6 +1286,42 @@ changes to call sites required.
 
 ---
 
+## Hydrostatic Shock & Cavitation (Phase 27)
+
+`src/sim/hydrostatic.ts` models the wound-amplification physics of high-velocity
+projectiles. Above 600 m/s a temporary stretch wave radiates outward through
+inelastic tissue; above 900 m/s momentary vacuum cavitation further boosts
+haemorrhage in fluid-saturated organs.
+
+```typescript
+import {
+  computeTemporaryCavityMul, computeCavitationBleed,
+  HYDROSTATIC_THRESHOLD_mps, CAVITATION_THRESHOLD_mps,
+} from "./src/sim/hydrostatic.js";
+
+// Multiplier applied to internalDamage (q(1.0) = no effect, q(3.0) = max)
+const cavMul = computeTemporaryCavityMul(v_impact_mps, "liver");  // → q(3.0) at 960 m/s
+
+// Cavitation bleed boost for fluid-saturated tissue (torso, liver, lung, spleen, legs)
+const newBleed = computeCavitationBleed(v_impact_mps, currentBleed, "torso");
+```
+
+**Tissue compliance** governs how much the stretch wave amplifies damage:
+
+| Region | Compliance | Behaviour |
+|--------|-----------|-----------|
+| bone / skull | q(0.05) | Brittle; maximum cavity damage |
+| brain / liver / spleen | q(0.10) | Very inelastic; high amplification |
+| lung | q(0.30) | Partially air-filled; intermediate |
+| torso | q(0.40) | Mixed; moderate amplification |
+| muscle / limbs | q(0.60) | Elastic; minimum amplification |
+
+The kernel computes `v_impact_mps` from pre-armour projectile energy and mass in
+`resolveShoot`, passes it through `ImpactEvent`, and applies both functions
+automatically in the finalImpacts loop — no changes to call sites required.
+
+---
+
 ## Project layout
 
 ```
@@ -1333,6 +1369,7 @@ src/
     tech.ts             TechEra, TechCapability, TechContext, defaultTechContext, isCapabilityAvailable
     capability.ts       CapabilitySource, CapabilityEffect, RegenModel, EffectPayload, FieldEffect — Clarke's Third Law abstraction
     knockback.ts        computeKnockback(), applyKnockback() — impulse-momentum transfer; stagger/prone checks
+    hydrostatic.ts      computeTemporaryCavityMul(), computeCavitationBleed() — high-velocity wound physics
     events.ts           ImpactEvent type, deterministic sort
     seeds.ts            Deterministic per-event seed derivation
     formation.ts        pickNearestEnemyInReach()

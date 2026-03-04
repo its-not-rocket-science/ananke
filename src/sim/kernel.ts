@@ -49,6 +49,7 @@ import { stepSubstances } from "./step/substances.js";
 import { stepEnergy } from "./step/energy.js";
 import { stepConcentration } from "./step/concentration.js";
 import { computeKnockback, applyKnockback } from "./knockback.js";
+import { computeTemporaryCavityMul, computeCavitationBleed } from "./hydrostatic.js";
 import { stepConditionsToInjury, stepInjuryProgression } from "./step/injury.js";
 import { stepCapabilitySources } from "./step/capability.js";
 import { stepMovement } from "./step/movement.js";
@@ -354,7 +355,18 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     }
 
     if (effectiveEnergy > 0) {
-      applyImpactToInjury(target, ev.wpn, effectiveEnergy, ev.region, ev.protectedByArmour, trace, world.tick);
+      // Phase 27: compute temporary-cavity multiplier from impact velocity
+      const tempCavMul = ev.v_impact_mps
+        ? computeTemporaryCavityMul(ev.v_impact_mps, ev.region)
+        : undefined;
+      applyImpactToInjury(target, ev.wpn, effectiveEnergy, ev.region, ev.protectedByArmour, trace, world.tick, tempCavMul);
+      // Phase 27: cavitation bleed boost for fluid-saturated tissue
+      if (ev.v_impact_mps) {
+        const rs = target.injury.byRegion[ev.region];
+        if (rs) {
+          rs.bleedingRate = computeCavitationBleed(ev.v_impact_mps, rs.bleedingRate, ev.region) as Q;
+        }
+      }
     }
 
     // Phase 26: apply knockback impulse to the target
@@ -1152,6 +1164,11 @@ function resolveShoot(
   // Energy at impact after drag (Phase 3 extension: use ammo drag coefficient)
   const energy_J = energyAtRange_J(launchEnergy, dragCoeff_perM, dist_m);
 
+  // Phase 27: impact velocity from pre-armour energy (v = sqrt(2E/m))
+  const v_impact_mps = projMass_kg > 0
+    ? Math.trunc(Math.sqrt(2 * energy_J * SCALE.kg / projMass_kg) * SCALE.mps)
+    : 0;
+
   // Shooter's aim quality
   const ctrl = shooter.attributes.control;
   const adjDisp = adjustedDispersionQ(
@@ -1307,6 +1324,7 @@ function resolveShoot(
       hitQuality: q(0.75),
       shieldBlocked: shieldHit ?? false,
       massEff_kg: projMass_kg,  // Phase 26: projectile mass drives knockback
+      v_impact_mps,             // Phase 27: hydrostatic shock velocity
     });
   }
 
@@ -1378,7 +1396,7 @@ function impactEnergy_J(attacker: Entity, wpn: Weapon, relVel_mps: Vec3): number
   return Math.max(0, Number(num / denom));
 }
 
-function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, region: string, armoured: boolean, trace: TraceSink, tick: number): void {
+function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, region: string, armoured: boolean, trace: TraceSink, tick: number, tempCavityMul_Q?: number): void {
   if (energy_J <= 0) return;
 
   // Determine region role: head → CNS-critical; limb → structural-priority; torso → default
@@ -1414,7 +1432,11 @@ function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, regi
   const intFrac = clampQ(wpn.damage.internalFrac + qMul(bias, q(0.12)), q(0.05), q(0.95));
 
   const surfInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(qMul(surfFrac, areaSurf), armourShift), SURF_J * SCALE.Q));
-  const intInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(intFrac, areaInt), INT_J * SCALE.Q));
+  let intInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(intFrac, areaInt), INT_J * SCALE.Q));
+  // Phase 27: temporary cavity amplifies internal damage for high-velocity projectiles
+  if (tempCavityMul_Q && tempCavityMul_Q > SCALE.Q) {
+    intInc = Math.min(SCALE.Q, mulDiv(intInc, tempCavityMul_Q, SCALE.Q));
+  }
   let strInc = Math.min(SCALE.Q, mulDiv(Math.trunc(energyQ), qMul(wpn.damage.structuralFrac, areaStr), STR_J * SCALE.Q));
 
   // Phase 8B: joint vulnerability — joints take extra structural damage from kinetic impacts
