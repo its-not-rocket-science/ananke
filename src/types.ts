@@ -1,5 +1,18 @@
 import type { I32, Q } from "./units.js";
 
+// Phase 32A: locomotion mode types
+export type LocomotionMode = "ground" | "flight" | "swim" | "climb";
+
+export interface LocomotionCapacity {
+  mode:          LocomotionMode;
+  /** Maximum speed in this mode [SCALE.mps]. */
+  maxSpeed_mps:  number;
+  /** Energy cost multiplier on peakPower_W per unit distance. */
+  costMul:       Q;
+  /** Target altitude maintained during flight [SCALE.m]; ignored for other modes. */
+  cruiseAlt_m?:  number;
+}
+
 // Phase 4: sensory and cognitive attributes
 export interface Perception {
   visionRange_m: I32;       // maximum reliable visual range (SCALE.m units)
@@ -63,6 +76,8 @@ export interface IndividualAttributes {
   control: Control;
   resilience: Resilience;
   perception?: Perception;
+  /** Phase 32A: declared locomotion modes (absent = ground-only). */
+  locomotionModes?: LocomotionCapacity[];
 }
 
 export interface EnergyState {

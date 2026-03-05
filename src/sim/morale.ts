@@ -50,6 +50,9 @@ const BASE_DECAY: Q = q(0.008);
 /** Additional fear decay per nearby living ally (cohesion effect). */
 const ALLY_COHESION: Q = q(0.002);
 
+/** Additional fear decay per ally in a tight formation (Phase 32E). */
+const FORMATION_COHESION: Q = q(0.003);
+
 // ── Pure functions ────────────────────────────────────────────────────────────
 
 /**
@@ -59,10 +62,17 @@ const ALLY_COHESION: Q = q(0.002);
  *
  * Returns a Q value to subtract from fearQ each tick.
  */
-export function fearDecayPerTick(distressTolerance: Q, nearbyAllyCount: number): Q {
+export function fearDecayPerTick(
+  distressTolerance: Q,
+  nearbyAllyCount: number,
+  formationAllyCount?: number,
+): Q {
   const base = qMul(BASE_DECAY, distressTolerance);
-  const cohesion = Math.min(nearbyAllyCount * ALLY_COHESION, q(0.020)) as Q; // cap cohesion at q(0.020)
-  return clampQ(base + cohesion, 0, q(0.030));
+  const cohesion = Math.min(nearbyAllyCount * ALLY_COHESION, q(0.020)) as Q; // cap at q(0.020)
+  const formation = formationAllyCount
+    ? Math.min(formationAllyCount * FORMATION_COHESION, q(0.015)) as Q  // cap at q(0.015)
+    : 0;
+  return clampQ(base + cohesion + formation, 0, q(0.040));
 }
 
 /**

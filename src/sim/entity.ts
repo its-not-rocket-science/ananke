@@ -12,6 +12,8 @@ import type { SkillMap } from "./skills.js";
 import type { BodyPlan } from "./bodyplan.js";
 import type { ActiveSubstance } from "./substance.js";
 import type { CapabilitySource, PendingActivation } from "./capability.js";
+import type { ActiveVenom } from "./toxicology.js";
+import type { LimbState } from "./limb.js";
 
 /** Phase 12B: state for an active concentration aura (castTime_ticks = -1 effect). */
 export interface ConcentrationState {
@@ -103,4 +105,10 @@ export interface Entity {
 
   /** Phase 31: species-level physiological overrides (thermoregulation, nutrition). */
   physiology?: SpeciesPhysiology;
+
+  /** Phase 32C: active venom/toxin injections — ticked at 1 Hz by stepToxicology. */
+  activeVenoms?: ActiveVenom[];
+
+  /** Phase 32B: per-limb state for multi-limb entities (octopoids, arachnids, etc.). */
+  limbStates?: LimbState[];
 }

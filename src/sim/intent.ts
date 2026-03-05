@@ -2,6 +2,7 @@ import type { Q } from "../units.js";
 import { q } from "../units.js";
 import { DefenceMode, DefenceModes, MoveMode, MoveModes } from "./kinds.js";
 import type { Vec3 } from "./vec3.js";
+import type { LocomotionMode } from "../types.js";
 
 export interface MoveIntent {
   dir: Vec3;
@@ -18,6 +19,8 @@ export interface IntentState {
   move: MoveIntent;
   defence: DefenceIntent;
   prone: boolean;
+  /** Phase 32A: requested locomotion mode. Validated against entity.attributes.locomotionModes. */
+  locomotionMode?: LocomotionMode;
 }
 
 export interface AIState {

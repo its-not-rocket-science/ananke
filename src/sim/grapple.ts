@@ -18,6 +18,7 @@ import type { FunctionalState } from "./impairment.js";
 import { deriveFunctionalState } from "./impairment.js";
 import type { TraceSink } from "./trace.js";
 import { TraceKinds } from "./kinds.js";
+import { effectiveLimbForceMul } from "./limb.js";
 import type { SimulationTuning } from "./tuning.js";
 import type { ImpactEvent } from "./events.js";
 import type { Weapon } from "../equipment.js";
@@ -305,8 +306,12 @@ export function resolveGrappleAttempt(
   if (!funcA.canAct) return;
 
   const clampedIntensity: Q = clampQ(intensity, q(0.1), q(1.0));
+  // Phase 32B: reduce contest score by active limb fraction (severed limbs excluded)
+  const limbMul: Q = attacker.limbStates
+    ? effectiveLimbForceMul(attacker.limbStates, attacker.injury)
+    : q(1.0) as Q;
   const scoreA: Q = clampQ(
-    qMul(grappleContestScore(attacker, funcA), clampedIntensity),
+    qMul(qMul(grappleContestScore(attacker, funcA), clampedIntensity), limbMul),
     q(0.05), q(0.95)
   );
   const scoreB: Q = grappleContestScore(target, funcB);

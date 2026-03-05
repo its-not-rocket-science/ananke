@@ -20,6 +20,7 @@ import {
   CORE_TEMP_NORMAL_Q,
 } from "./sim/thermoregulation.js";
 import { stepNutrition } from "./sim/nutrition.js";
+import { stepToxicology } from "./sim/toxicology.js";
 
 // ── Medical resource catalogue ───────────────────────────────────────────────
 
@@ -517,6 +518,8 @@ export function stepDowntime(
       }
       // Phase 30: nutrition drain once per simulated second (entity resting, activity = 0)
       stepNutrition(entity, 1.0, q(0) as Q);
+      // Phase 32C: toxicology tick (venoms progress during downtime)
+      if (entity.activeVenoms?.length) stepToxicology(entity, 1.0);
     }
 
     const injuryAtEnd = captureInjurySummary(injClone);

@@ -89,7 +89,61 @@ export function stepMovement(e: Entity, world: WorldState, ctx: KernelContext, t
     }
   }
 
-  const baseMul = qMul(qMul(qMul(qMul(qMul(qMul(controlMul, mobilityMul), crowdMul), terrainSpeedMul), slopeMul), exoSpeedMul), flightSpeedMul);
+  // Phase 32A: locomotion mode modifiers
+  // Validate requested mode against entity's declared locomotion capacities.
+  const requestedMode = e.intent.locomotionMode;
+  const locomotionModes = e.attributes.locomotionModes;
+  const activeCapacity = requestedMode && locomotionModes
+    ? locomotionModes.find(c => c.mode === requestedMode)
+    : undefined;
+
+  // aquatic depth check: entity without swim capacity and below ground (z < 0) cannot act
+  const isSubmerged = e.position_m.z < 0;
+  const canSwim = locomotionModes?.some(c => c.mode === "swim") ?? false;
+  if (isSubmerged && !canSwim) {
+    e.velocity_mps = v3(0, 0, 0);
+    return;
+  }
+
+  // Locomotion mode speed multipliers
+  let locomotionSpeedMul: Q = SCALE.Q as Q;
+  let skipTraction = false;
+
+  if (activeCapacity) {
+    switch (activeCapacity.mode) {
+      case "flight":
+        // Flight: bypass ground traction; apply cruiseAlt proportional controller
+        skipTraction = true;
+        if (activeCapacity.cruiseAlt_m !== undefined) {
+          const targetZ = activeCapacity.cruiseAlt_m;
+          const dz = targetZ - e.position_m.z;
+          const dzStep = clampI32(Math.trunc(dz), -Math.trunc(2 * SCALE.m), Math.trunc(2 * SCALE.m));
+          e.position_m = { ...e.position_m, z: e.position_m.z + dzStep };
+        }
+        // Cap at declared maxSpeed
+        if (activeCapacity.maxSpeed_mps < vmax_mps) {
+          locomotionSpeedMul = mulDiv(activeCapacity.maxSpeed_mps, SCALE.Q, vmax_mps) as Q;
+        }
+        break;
+      case "swim":
+        // Hydrodynamic drag: ~40% of surface sprint speed
+        locomotionSpeedMul = q(0.40) as Q;
+        skipTraction = true;
+        break;
+      case "climb":
+        locomotionSpeedMul = q(0.30) as Q;
+        break;
+      default:
+        break;
+    }
+  }
+
+  // If skipping traction, override the traction-derived speed caps
+  const effTrackMul: Q = skipTraction ? SCALE.Q as Q : SCALE.Q as Q; // traction already applied above via caps
+
+  const baseMul = qMul(qMul(qMul(qMul(qMul(qMul(qMul(controlMul, mobilityMul), crowdMul),
+    skipTraction ? (SCALE.Q as Q) : terrainSpeedMul), slopeMul), exoSpeedMul), flightSpeedMul), locomotionSpeedMul);
+  void effTrackMul;
 
   const effVmax = mulDiv(vmax_mps, baseMul, SCALE.Q);
   const effAmax = mulDiv(amax_mps2, baseMul, SCALE.Q);

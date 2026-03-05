@@ -54,6 +54,8 @@ import { entityInCone, type ConeSpec } from "./cone.js";
 import { stepConditionsToInjury, stepInjuryProgression } from "./step/injury.js";
 import { stepCoreTemp, deriveTempModifiers, CORE_TEMP_NORMAL_Q } from "./thermoregulation.js";
 import { stepNutrition } from "./nutrition.js";
+import { stepToxicology } from "./toxicology.js";
+import { buildLimbStates, stepLimbFatigue } from "./limb.js";
 import { stepCapabilitySources } from "./step/capability.js";
 import { stepMovement } from "./step/movement.js";
 import { stepChainEffects, stepFieldEffects, stepHazardEffects } from "./step/effects.js";
@@ -176,6 +178,11 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
       if (ablativeItems.length > 0) {
         e.armourState = new Map(ablativeItems.map(it => [it.id, { resistRemaining_J: (it as any).resist_J as number }]));
       }
+    }
+    // Phase 32B: initialize per-limb state for multi-limb body plans (once only)
+    if (!e.limbStates && e.bodyPlan) {
+      const limbs = buildLimbStates(e.bodyPlan);
+      if (limbs.length > 0) e.limbStates = limbs;
     }
   }
 
@@ -500,6 +507,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   }
 
   // Phase 30: nutrition at 1 Hz (world-level accumulator avoids per-tick BMR calls)
+  // Phase 32C: toxicology ticked at same 1 Hz cadence
   {
     if ((world as any).__nutritionAccum === undefined) (world as any).__nutritionAccum = 0;
     (world as any).__nutritionAccum = ((world as any).__nutritionAccum as number) + (1 / TICK_HZ);
@@ -510,8 +518,16 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
           const nVMag = Math.sqrt(e.velocity_mps.x ** 2 + e.velocity_mps.y ** 2);
           const nAct: Q = nVMag >= Math.trunc(SCALE.mps) ? q(0.50) as Q : q(0) as Q;
           stepNutrition(e, 1.0, nAct);
+          if (e.activeVenoms?.length) stepToxicology(e, 1.0);
         }
       }
+    }
+  }
+
+  // Phase 32B: limb fatigue tick (per-tick, for entities with limbStates)
+  for (const e of world.entities) {
+    if (!e.injury.dead && e.limbStates) {
+      stepLimbFatigue(e.limbStates, e.attributes.performance.peakForce_N, 1 / TICK_HZ);
     }
   }
 
