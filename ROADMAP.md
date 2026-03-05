@@ -3781,7 +3781,7 @@ export function deriveHungerModifiers(hungerState: HungerState): {
 
 ## Physics Realism Summary (Post-Phase 30)
 
-After Phase 30, Ananke will handle the following real-world physics scenarios:
+Phases 1–30 are complete. Ananke now handles the following real-world physics scenarios:
 
 ### Man wrestling an octopus (Phase 2A + Phase 8B + Phase 26)
 - Octopus: LARGE_PACIFIC_OCTOPUS archetype, 8 arms, controlQuality q(0.95), stability q(0.98)
@@ -3820,4 +3820,4 @@ After Phase 30, Ananke will handle the following real-world physics scenarios:
 - Diver in 4°C water: ~30–45 min (matches empirical dive medicine data)
 - Knight in blizzard without insulation: ~20–40 min (matches historical cases)
 
-**Expected test growth**: ~90 new tests (30 + 25 + 35), reaching ~980 total.
+**Test suite**: 1,313 tests passing. Coverage: statements 96.9%, branches 85.8%, functions 95.9%, lines 96.9%.

@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–28 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–30 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -152,11 +152,93 @@ geometry to the capability system for breath weapons, flamethrowers, gas dispers
 sonic blasts: `entityInCone` geometry with configurable half-angle and range, `"facing"` and
 `"fixed"` direction modes, sustained emission with per-tick cost deduction and shock interrupt,
 a `weaponImpact` payload variant for custom per-effect damage profiles, and a full
-dragon-vs-knight scenario demonstration.
+dragon-vs-knight scenario demonstration, a **staged thermoregulation model**
+(`src/sim/thermoregulation.ts`) that tracks core body temperature using a heat-balance
+equation (metabolic heat vs. conductive loss through armour and skin), deriving performance
+modifiers across seven stages from mild hyperthermia to cardiac-arrest hypothermia — each
+with calibrated powerMul, fineControlPen, and latencyMul penalties, and a **nutrition and
+starvation model** (`src/sim/nutrition.ts`) that adds the longest survivability axis:
+caloric balance tracked via Kleiber's-law BMR, four hunger states (sated → hungry →
+starving → critical) with staged fat catabolism (300 g/day), muscle catabolism (0.5 N/hour
+reduction in peakForce_N), and a six-item food catalogue from ration bars to water flasks.
 
-**1260 tests.** All coverage thresholds met (statements 96.9 %, branches 85.9 %, functions 96.0 %, lines 96.9 %).
+**1313 tests.** All coverage thresholds met (statements 96.97 %, branches 85.85 %, functions 96.06 %, lines 96.97 %).
 
 See `ROADMAP.md` for the full development plan.
+
+---
+
+## Physics realism summary (post-Phase 30)
+
+Ananke now models the complete survivability stack. Five independent threat vectors can kill
+an entity, each operating on a different time scale and requiring different intervention:
+
+| Threat | Time scale | Mechanism | Primary phases |
+|--------|-----------|-----------|----------------|
+| Injury / blood loss | Seconds | Fluid loss → shock → death | 1, 9 |
+| Infection | Hours–days | Internal damage accumulation | 9 |
+| Thermal stress | Minutes–hours | Core temperature extremes | 29 |
+| Dehydration | Hours–days | Hydration balance collapse | 30 |
+| Starvation | Days–weeks | Caloric deficit → catabolism | 30 |
+
+### Physical phenomena modelled
+
+**Newtonian mechanics**
+- Kinetic energy → injury via impact physics, penetration, and leverage (Phases 1–3)
+- Impulse-momentum → knockback velocity and stagger/prone transitions (Phase 26)
+- Angular momentum → miss recovery time and weapon bind probability (Phase 2)
+
+**Wound physiology**
+- Per-region surface / internal / structural damage; penetration bias by tissue type
+- Bleeding rate proportional to internal damage; natural clotting proportional to tissue integrity
+- Fluid loss → haemodynamic shock → consciousness erosion → death (`fluidLoss ≥ 0.80` fatal)
+- Fracture (structural ≥ 0.70), permanent damage (≥ 0.90), infection onset after 100 ticks of bleeding
+
+**High-velocity ballistics** (Phase 27)
+- Temporary cavity multiplier ×1.0–×3.0 above 600 m/s; scales by tissue compliance
+- Cavitation bleed boost in fluid-saturated organs (torso, liver, spleen, lung, legs) above 900 m/s
+
+**Thermodynamics** (Phase 29)
+- Core temperature balance: metabolic heat (1.06–5.50 W/kg by activity) vs. conductive loss through skin + armour insulation
+- Thermal resistance: `R = 0.09 + Σ(armour.insulation_m2KW)` °C/W; thermal mass = `3500 × mass_real` J/°C
+- Seven-stage temperature model: critical hyperthermia → heat stroke → heat exhaustion → normal → mild → moderate → severe hypothermia → cardiac arrest
+
+**Metabolism** (Phase 30)
+- Basal metabolic rate: `80 × (mass_kg / 75)^0.75` W (Kleiber's law)
+- Active metabolic rate: `BMR + peakPower_W × activityFrac × 0.15`
+- Four hunger states: sated (< 12 h deficit), hungry (12–24 h), starving (24–72 h), critical (≥ 72 h)
+- Fat catabolism: 300 g/day during starvation; muscle catabolism: 0.5 N/hour reduction in `peakForce_N` during critical state
+
+**Pharmacokinetics** (Phase 10)
+- One-compartment absorption/elimination model per active substance
+- Cross-substance interactions: stimulant, haemostatic, anaesthetic, poison
+
+**Neuromuscular and cognitive**
+- Reaction time → attack/defence timing; decision latency → AI replanning interval
+- Fine motor control impairment from arm damage; manipulation penalty from fractures
+- Fatigue accumulation (joules) → exhaustion threshold → prone collapse
+
+**Environmental**
+- Fire, corrosive, electrical, radiation, suffocation — tick-based accumulation with channel-specific armour
+- Blast wave (quadratic falloff) and fragmentation (stochastic count, random region)
+- Ambient temperature stress (Phase 10); terrain friction, elevation, cover, hazard cells (Phase 6)
+
+**Psychology**
+- Fear accumulation from near-miss fire, ally deaths, calibre size (Phase 5)
+- Routing, panic varieties (surrender / freeze / flee), leader auras, rally mechanics
+- Suppression from near-miss ranged fire → AI cover-seeking
+
+### Time scales covered
+
+| Scale | System |
+|-------|--------|
+| 50 ms / tick (20 Hz) | Combat resolution, movement, stamina |
+| Seconds | Bleeding, pharmacokinetics, thermal tick |
+| Minutes | Clotting, hypothermia onset |
+| Hours | Infection onset, hunger onset, thermal equilibrium |
+| Days | Hunger state transitions, mass loss from starvation |
+| Weeks | Wound healing, infection mortality |
+| Months / years | Training drift, ageing decline, injury sequelae (Phase 21) |
 
 ---
 
@@ -1382,6 +1464,108 @@ surface-heavy/internal-pass-through split or acid's structural bias.
 
 ---
 
+## Environmental Stress: Thermoregulation (Phase 29)
+
+`src/sim/thermoregulation.ts` models core body temperature as a continuous heat-balance
+system. Unlike abstract "cold resistance" stats, temperature is tracked in real °C (encoded
+as Q) and driven by genuine thermophysics.
+
+```typescript
+import { stepCoreTemp, deriveTempModifiers, cToQ, CORE_TEMP_NORMAL_Q } from "./src/sim/thermoregulation.js";
+import type { KernelContext } from "./src/sim/context.js";
+
+// Ambient temperature −10°C arctic environment
+const ctx: KernelContext = {
+  thermalAmbient_Q: cToQ(-10),  // cToQ converts Celsius to engine Q encoding
+  tractionCoeff: q(0.9),
+};
+
+// stepWorld automatically calls stepCoreTemp for every living entity each tick.
+// After simulation, query an entity's thermal state:
+const mods = deriveTempModifiers((entity.condition as any).coreTemp_Q ?? CORE_TEMP_NORMAL_Q);
+// → { powerMul: q(0.80), fineControlPen: q(0.15), latencyMul: q(1.2), dead: false }
+// → moderate hypothermia: −20% power, +20% reaction time
+```
+
+**Temperature stage thresholds** (Q encoding; `q(0.5)` = 37 °C; full range 10–64 °C):
+
+| Stage | Core temp | `powerMul` | `fineControlPen` | `latencyMul` |
+|-------|-----------|-----------|-----------------|-------------|
+| Critical hyperthermia | > 40.1 °C | q(0.60) | q(0.30) | q(3.0) — dead |
+| Heat stroke | 39.4–40.1 °C | q(0.60) | q(0.20) | q(2.0) |
+| Heat exhaustion | 38.6–39.4 °C | q(0.85) | q(0.10) | q(1.0) |
+| Mild hyperthermia | 37.8–38.6 °C | q(0.95) | q(0) | q(1.0) |
+| Normal | 37.0–37.8 °C | q(1.0) | q(0) | q(1.0) |
+| Mild hypothermia | 36.2–37.0 °C | q(0.95) | q(0.05) | q(1.0) |
+| Moderate hypothermia | 34.6–36.2 °C | q(0.80) | q(0.15) | q(1.2) |
+| Severe hypothermia | 33.0–34.6 °C | q(0.50) | q(0.20) | q(3.0) |
+| Critical hypothermia | < 33.0 °C | q(0.50) | q(0.30) | q(4.0) — dead |
+
+**Armour insulation** is modelled via `insulation_m2KW?: number` on `Armour` items.
+Higher insulation slows both heating and cooling. Typical values: plate armour 0.02, wool 0.15, fur 0.25.
+
+**Downtime integration**: `DowntimeConfig.thermalAmbient_Q` enables temperature tracking
+through multi-hour recovery simulations. `EntityRecoveryReport.finalCoreTemp_Q` reports the
+final state.
+
+---
+
+## Nutrition & Starvation (Phase 30)
+
+`src/sim/nutrition.ts` adds the longest survivability axis: caloric balance from hours to
+weeks. Hunger states impose escalating combat penalties and eventually cause mass loss —
+fat catabolism first, then muscle tissue.
+
+```typescript
+import {
+  computeBMR, stepNutrition, consumeFood, deriveHungerModifiers,
+  FOOD_ITEMS, type HungerState,
+} from "./src/sim/nutrition.js";
+
+// BMR for a 75 kg entity: 80 W (Kleiber's law)
+const bmr = computeBMR(entity.attributes.morphology.mass_kg);  // → 80
+
+// stepWorld calls stepNutrition automatically at 1 Hz for every living entity.
+// Feed an entity from their food inventory:
+(entity as any).foodInventory = new Map([["ration_bar", 3], ["water_flask", 2]]);
+const ate = consumeFood(entity, "ration_bar", world.tick);  // → true; caloricBalance += 2 000 000 J
+
+// Query current state:
+const hunger: HungerState = (entity.condition as any).hungerState ?? "sated";
+const mods = deriveHungerModifiers(hunger);
+// → { staminaMul: q(1.0), forceMul: q(1.0), latencyMul: q(1.0), moraleDecay: q(0) }  // sated
+// → { staminaMul: q(0.50), forceMul: q(0.80), latencyMul: q(1.50), moraleDecay: q(0.030) }  // critical
+```
+
+**Hunger state thresholds** (deficit relative to BMR):
+
+| State | Onset | `staminaMul` | `forceMul` | `latencyMul` | `moraleDecay` |
+|-------|-------|-------------|-----------|-------------|--------------|
+| `sated` | deficit < 12 h × BMR | q(1.0) | q(1.0) | q(1.0) | q(0) |
+| `hungry` | 12–24 h × BMR | q(0.90) | q(1.0) | q(1.0) | q(0) |
+| `starving` | 24–72 h × BMR | q(0.75) | q(0.90) | q(1.0) | q(0.030)/tick |
+| `critical` | ≥ 72 h × BMR | q(0.50) | q(0.80) | q(1.50) | q(0.030)/tick |
+
+**Food catalogue** (`FOOD_ITEMS`):
+
+| Item | Energy | Mass | Hydration |
+|------|--------|------|-----------|
+| `ration_bar` | 2 000 000 J | 500 g | — |
+| `dried_meat` | 1 500 000 J | 300 g | — |
+| `hardtack` | 800 000 J | 200 g | — |
+| `fresh_bread` | 700 000 J | 250 g | — |
+| `berry_handful` | 150 000 J | 50 g | — |
+| `water_flask` | 0 J | 500 g | 500 000 hydJ |
+
+**Mass loss** (accumulated as float; applies only during starvation/critical):
+- Fat catabolism: 300 g/day (`mass_kg -= 300/86400 × delta_s`)
+- Muscle catabolism: 0.5 N/hour (`peakForce_N -= 0.5 × SCALE.N / 3600 × delta_s`, critical only)
+
+**Entity food inventory**: attach `(entity as any).foodInventory = new Map<string, number>()`
+before calling `consumeFood`. Absent inventory = unlimited supply.
+
+---
+
 ## Project layout
 
 ```
@@ -1431,6 +1615,8 @@ src/
     knockback.ts        computeKnockback(), applyKnockback() — impulse-momentum transfer; stagger/prone checks
     hydrostatic.ts      computeTemporaryCavityMul(), computeCavitationBleed() — high-velocity wound physics
     cone.ts             entityInCone(), buildEntityFacingCone(), ConeSpec — directional cone AoE geometry (breath weapons, flamethrowers, gas)
+    thermoregulation.ts stepCoreTemp(), deriveTempModifiers(), cToQ() — 9-stage core-temp model (mild hyperthermia → cardiac-arrest hypothermia)
+    nutrition.ts        computeBMR(), stepNutrition(), consumeFood(), deriveHungerModifiers(), FOOD_ITEMS — caloric balance, hunger states, fat/muscle catabolism
     events.ts           ImpactEvent type, deterministic sort
     seeds.ts            Deterministic per-event seed derivation
     formation.ts        pickNearestEnemyInReach()
