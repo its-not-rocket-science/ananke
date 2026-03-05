@@ -3820,4 +3820,867 @@ Phases 1–30 are complete. Ananke now handles the following real-world physics 
 - Diver in 4°C water: ~30–45 min (matches empirical dive medicine data)
 - Knight in blizzard without insulation: ~20–40 min (matches historical cases)
 
+**Test suite**: 1,343 tests passing. Coverage: statements 97.15%, branches 85.99%, functions 96.07%, lines 97.15%.
+
+---
+
+## Phase 31 — Species & Race System *(COMPLETE)*
+
+### Overview
+
+Data-driven species registry. `SpeciesDefinition` bundles every species-specific property
+(archetype, body plan, innate traits, capabilities, natural weapons, physiological overrides,
+skill aptitudes) into one declarative record. `generateSpeciesIndividual` produces a
+ready-to-use entity spec from it. Three existing simulation modules gained optional overrides
+(`coldBlooded`, `bmrMultiplier`, `naturalInsulation_m2KW`) that affect thermoregulation and
+nutrition for non-human physiology.
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/species.ts` | Types + 14 species + `generateSpeciesIndividual` |
+| `src/sim/entity.ts` | `physiology?: SpeciesPhysiology` field on Entity |
+| `src/sim/thermoregulation.ts` | `naturalInsulation_m2KW` added to insulation sum |
+| `src/sim/nutrition.ts` | `bmrMultiplier` applied to computed BMR |
+| `src/sim/kernel.ts` | Skip thermoregulation for `coldBlooded` entities |
+| `test/species.test.ts` | 30 tests |
+
+### 14 species
+
+| Group | Species |
+|-------|---------|
+| Fantasy humanoids (7) | elf, dwarf, halfling, orc, ogre, goblin, troll |
+| Sci-fi humanoids (3) | vulcan, klingon, romulan |
+| Mythological (3) | dragon (AVIAN_PLAN, fire breath), centaur (CENTAUR_PLAN), satyr |
+| Fictional (1) | heechee |
+
+---
+
+## Phase 32 — Deferred Systems: Gap Resolution
+
+### Overview
+
+Collects deferred items from earlier phases that were explicitly noted as out-of-scope at the
+time. Implementing them together closes the most significant simulation realism gaps without
+retroactively bloating earlier phases.
+
+---
+
+### 32A — Locomotion Modes (flight, swimming, climbing)
+
+**Gap addressed:** dragon flight (Phase 28), aquatic combat (Phase 2A).
+
+Every entity currently moves on a 2D ground plane with optional elevation. Phase 32A adds
+first-class locomotion *modes* with distinct physics.
+
+```typescript
+type LocomotionMode = "ground" | "flight" | "swim" | "climb";
+
+interface LocomotionCapacity {
+  mode:         LocomotionMode;
+  maxSpeed_mps: number;   // [SCALE.mps]
+  costMul:      Q;        // peakPower cost multiplier per unit distance
+  cruiseAlt_m?: number;   // flight altitude maintained [SCALE.m]
+}
+```
+
+`IndividualAttributes` gains `locomotionModes?: LocomotionCapacity[]`; absent = ground-only
+(backward-compatible). `stepMovement` checks `entity.intent.locomotionMode` against declared
+capacities. Aerially mobile entities are exempt from traction lookup; an altitude-dependent
+wind-drag penalty applies. Flying entities cannot be melee-targeted unless the attacker also
+flies or has reach ≥ altitude differential. Aquatic entities use hydrodynamic drag instead of
+traction; entities without `"swim"` capacity lose `canAct` when depth exceeds stature.
+
+**Tests (~20):** flight max speed respected; non-flier cannot select flight mode; dragon at
+10 m altitude out of human melee reach; aquatic entity stamina drain matches hydrodynamic load.
+
+---
+
+### 32B — Multi-Limb Granularity
+
+**Gap addressed:** octopus 8 arms treated as one force pool (Phase 2A + Phase 8B).
+
+```typescript
+interface LimbState {
+  segmentId:   string;  // references BodySegment
+  gripQ:       Q;
+  engagedWith: number;  // entity id (0 = free)
+  fatigueJ:    number;
+}
+```
+
+`Entity.limbStates?: LimbState[]` populated for body plans with `limbGroup: true` segments.
+Grapple resolution distributes force across active limbs; severed or highly damaged limbs are
+excluded. Limb fatigue accumulates independently at `peakForce_N / limbCount` per active limb.
+
+**Tests (~16):** octopus with 2 severed arms → reduced grapple score; fatigue isolated per limb;
+entity without limbStates unchanged (backward-compatible).
+
+---
+
+### 32C — Venom & Chemical Injection
+
+**Gap addressed:** insect venom, chemical defence (Phase 8B).
+
+```typescript
+interface VenomProfile {
+  id:           string;
+  onsetDelay_s: number;  // seconds before first damage tick
+  damageRate_Q: Q;       // per-second internal damage as Q of max internal health
+  fearRate_Q:   Q;       // per-second fear increment while symptomatic
+  duration_s:   number;  // total duration without antidote
+  antidoteId?:  string;  // consumable item id
+}
+```
+
+`Entity.activeVenoms?: { profile: VenomProfile; elapsedSeconds: number }[]`
+
+`stepToxicology` ticks active venoms each second (1 Hz, same cadence as nutrition), applies
+internal damage and fear, removes entries past `duration_s`. Antidote consumption clears the
+matching entry.
+
+**Tests (~14):** onset delay respected; damage accumulates correctly; antidote clears entry;
+entity with no active venoms unaffected; fear increment during symptomatic period.
+
+---
+
+### 32D — Phase 5 Deferred Enhancements
+
+All items from the **Phase 5 enhancements (deferred)** section, implemented together:
+
+1. **Caliber-based suppression fear** — `suppressionFearMul: Q` on `RangedWeapon`; stored on
+   `condition` and multiplied in `stepMoraleForEntity`.
+2. **Fear memory / diminishing returns** — `condition.recentAllyDeaths` + `lastAllyDeathTick`;
+   subsequent deaths in the same 5-second window scale by `max(0.4, 1.0 − 0.15 × priorDeaths)`.
+3. **Leader / standard-bearer auras** — `TRAIT_LEADER` and `TRAIT_STANDARD_BEARER` apply
+   per-tick fear decay (~q(0.015) / q(0.010)) for allies within 20 m.
+4. **Panic action variety** — routing entities may freeze or surrender based on seeded roll
+   weighted by `distressTolerance`; `captive` flag added to `ConditionState`.
+5. **Rally mechanic** — `condition.rallyCooldownTicks` suppresses aggression briefly after
+   fear drops below routing threshold.
+6. **Archetype fear response** — `fearResponse: "flight" | "freeze" | "berserk"` on
+   `IndividualAttributes`; undead/automata → "berserk"; animals → "flight".
+
+**Tests (~22):** one test per enhancement + boundary cases + determinism.
+
+---
+
+### 32E — Phase 6 Remaining Items
+
+- **Choke points** — frontage cap: maximum entity count through a corridor derived from
+  `ObstacleGrid` geometry; excess entities queue.
+- **Formation cohesion bonus** — `formationAllyCount` argument to `fearDecayPerTick`.
+- **Replay recording** — deterministic event log sufficient to reconstruct any tick;
+  `ReplayRecorder` and `replayFromLog`.
+- **Performance benchmarking harness** — entities-per-tick at 20 Hz wall-clock budget.
+
+---
+
+## Phase 33 — Multiple Intelligences: Attribute Architecture
+
+### Overview
+
+Howard Gardner's theory of Multiple Intelligences (1983, revised 2011) identifies nine
+relatively independent cognitive domains. Ananke adopts these as first-class attributes,
+extended with a tenth — **inter-species intelligence** — relevant to the system's xenobiology
+and cross-species modelling goals.
+
+Each intelligence is Q-coded (0–1 scale). Like all Ananke attributes they derive from
+physiology and experience — not game-design abstractions. A gorilla has extreme bodily-
+kinesthetic and naturalist intelligence but near-zero linguistic. A Vulcan has extreme
+logical-mathematical and intrapersonal. A dragon has extreme spatial and intrapersonal. A
+heechee has extreme logical-mathematical and inter-species.
+
+Intelligences **multiply and modulate** existing physical outcomes. They do not replace them.
+A strong, dexterous entity with low bodily-kinesthetic intelligence is clumsy with precision
+tasks despite raw physical capability.
+
+---
+
+### New type: `CognitiveProfile`
+
+```typescript
+/** Phase 33: Gardner's multiple intelligences + inter-species, all Q-coded. */
+export interface CognitiveProfile {
+  /** Language, argument complexity, written/spoken command clarity. */
+  linguistic:          Q;
+  /** Deductive reasoning, planning horizon, pattern abstraction. */
+  logicalMathematical: Q;
+  /** 3D world modelling, navigation, cover identification, targeting lead. */
+  spatial:             Q;
+  /** Proprioception, fine motor precision, tool mastery. */
+  bodilyKinesthetic:   Q;
+  /** Rhythm, acoustic pattern recognition, sound cue detection. */
+  musical:             Q;
+  /** Social reading, empathy, leadership radius, teaching quality. */
+  interpersonal:       Q;
+  /** Self-regulation, focus maintenance, willpower, fear resistance. */
+  intrapersonal:       Q;
+  /** Pattern recognition in living systems, tracking, herbalism, taming. */
+  naturalist:          Q;
+  /** Empathy across species boundaries; reading non-human intent. */
+  interSpecies:        Q;
+}
+```
+
+`IndividualAttributes` gains `cognition: CognitiveProfile`. The existing `attentionDepth_Q`
+and `learningRate` become aliases for `logicalMathematical` and
+`(logicalMathematical + intrapersonal) / 2` respectively (backward-compatible).
+
+---
+
+### Default cognitive profiles by species
+
+| Species / archetype | Ling | Log | Spat | BK  | Mus | IPerso | Intra | Nat | IS  |
+|---------------------|------|-----|------|-----|-----|--------|-------|-----|-----|
+| HUMAN_BASE          | 0.65 | 0.60| 0.60 |0.60 |0.50 | 0.60   | 0.55  |0.50 |0.35 |
+| ELF                 | 0.80 | 0.72| 0.80 |0.75 |0.85 | 0.70   | 0.75  |0.78 |0.60 |
+| DWARF               | 0.55 | 0.75| 0.65 |0.90 |0.55 | 0.50   | 0.65  |0.45 |0.25 |
+| HALFLING            | 0.70 | 0.55| 0.65 |0.80 |0.70 | 0.82   | 0.60  |0.65 |0.55 |
+| ORC                 | 0.45 | 0.45| 0.55 |0.75 |0.55 | 0.50   | 0.40  |0.50 |0.30 |
+| GOBLIN              | 0.50 | 0.60| 0.70 |0.75 |0.40 | 0.55   | 0.35  |0.60 |0.40 |
+| TROLL               | 0.20 | 0.20| 0.35 |0.60 |0.15 | 0.25   | 0.20  |0.55 |0.20 |
+| VULCAN              | 0.80 | 0.95| 0.85 |0.70 |0.65 | 0.50   | 0.95  |0.70 |0.65 |
+| KLINGON             | 0.60 | 0.55| 0.65 |0.80 |0.70 | 0.65   | 0.50  |0.60 |0.30 |
+| ROMULAN             | 0.75 | 0.80| 0.75 |0.65 |0.55 | 0.75   | 0.80  |0.55 |0.45 |
+| DRAGON              | 0.50 | 0.75| 0.95 |0.80 |0.40 | 0.40   | 0.90  |0.80 |0.55 |
+| CENTAUR             | 0.55 | 0.60| 0.80 |0.85 |0.65 | 0.65   | 0.60  |0.85 |0.55 |
+| SATYR               | 0.60 | 0.50| 0.60 |0.80 |0.95 | 0.75   | 0.55  |0.72 |0.60 |
+| HEECHEE             | 0.40 | 0.95| 0.90 |0.55 |0.30 | 0.45   | 0.85  |0.65 |0.90 |
+| LARGE_PACIFIC_OCT.  | 0.05 | 0.70| 0.90 |0.95 |0.25 | 0.40   | 0.65  |0.80 |0.50 |
+| SERVICE_ROBOT       | 0.60 | 0.90| 0.80 |0.85 |0.10 | 0.10   | 0.30  |0.10 |0.15 |
+
+---
+
+### Engine wiring (Phase 33)
+
+| Intelligence | Existing attribute / system | Effect |
+|---|---|---|
+| `spatial` | Phase 4 threat horizon (`attentionDepth_Q`) | Horizon scales with spatial |
+| `bodilyKinesthetic` | `fineControl` | `fineControl = max(rawFineControl, BK × q(0.80))` |
+| `interpersonal` | Phase 5 leader aura radius | Aura radius scales with interpersonal |
+| `intrapersonal` | `distressTolerance` | Adds `intrapersonal × q(0.30)` to fear resistance |
+| `linguistic` | Phase 23 persuade base | Base `q(0.40)` → `q(0.20 + 0.30 × linguistic)` |
+| `logicalMathematical` | Phase 4 decision latency | `latency × (1.20 − 0.40 × logicalMath)` |
+| `musical` | Phase 5 suppression (Phase 39) | Acoustic clarity reduces panic from unfamiliar sounds |
+| `naturalist` | Tracking / foraging (Phase 35) | Direct multiplier on quality |
+| `interSpecies` | Phase 23 dialogue vs non-humans (Phase 36) | New modifier |
+
+---
+
+### Files
+
+| File | Change |
+|------|--------|
+| `src/types.ts` | Add `CognitiveProfile`; add `cognition?: CognitiveProfile` to `IndividualAttributes` |
+| `src/archetypes.ts` | Add default `cognition` block to each archetype |
+| `src/species.ts` | Override `cognition` in species definitions |
+| `src/sim/kernel.ts` | Wire spatial → attention, logicalMath → latency, interpersonal → aura |
+| `test/cognition.test.ts` | ~24 tests |
+
+### Tests (~24)
+
+- **Type integrity (4):** all 9+1 fields present; values in [0, SCALE.Q]; archetype blocks
+  non-null; species override merges with archetype default correctly.
+- **Spatial wiring (4):** spatial q(0.90) → larger threat horizon than q(0.40); spatial q(0)
+  → minimum horizon; deterministic; backward-compatible when `cognition` absent.
+- **Logical-Mathematical wiring (4):** high value reduces decision latency; low increases it;
+  clamped to sensible bounds; deterministic.
+- **Interpersonal wiring (4):** high value extends leader aura radius; entity without
+  TRAIT_LEADER unaffected; deterministic.
+- **Intrapersonal wiring (4):** high value adds to fear resistance; clamped to [0, SCALE.Q];
+  deterministic.
+- **Linguistic wiring (4):** persuade success rate shifts with linguistic; troll has much
+  lower persuade chance than vulcan; deterministic; backward-compatible.
+
+---
+
+## Phase 34 — Bodily-Kinesthetic & Spatial Intelligence (Non-Combat Applications)
+
+### Overview
+
+Bodily-kinesthetic intelligence governs *physical precision in directed tasks*: crafting,
+surgery, instrument building, acrobatics. In combat `fineControl` already captures most of
+this; Phase 34 extends it into non-combat outputs. Spatial intelligence governs *mental
+modelling of 3D space* and extends into navigation, pathfinding quality, and architectural
+planning.
+
+---
+
+### Crafting quality model
+
+```typescript
+export interface CraftingSpec {
+  outputId:       string;
+  toolCategory?:  "bladed" | "blunt" | "needlework" | "forge" | "precision";
+  baseTime_s:     number;  // base seconds for BK q(0.50) entity
+  materialQ:      Q;       // raw material quality 0–1
+  minBKQ:         Q;       // minimum BK to attempt
+}
+
+export interface CraftingOutcome {
+  quality_Q:      Q;
+  timeTaken_s:    number;
+  success:        boolean;
+  descriptor:     "masterwork" | "fine" | "adequate" | "poor" | "ruined";
+}
+
+export function resolveCrafting(entity: Entity, spec: CraftingSpec, seed: number): CraftingOutcome;
+```
+
+`quality_Q = materialQ × bodilyKinesthetic × skillBonus × toolBonus`
+`timeTaken_s = baseTime_s / bodilyKinesthetic`
+
+---
+
+### Surgical precision extension
+
+`medical` skill already applies `treatmentRateMul`. Phase 34 adds a second multiplier:
+`surgicalPrecisionMul = lerp(q(0.70), q(1.30), bodilyKinesthetic)` applied to complication
+probability in downtime surgical procedures.
+
+---
+
+### Navigation and pathfinding
+
+```typescript
+export interface NavigationOutcome {
+  routeEfficiency: Q;     // 1.0 = optimal; lower = detours taken
+  timeLost_s:      number;
+}
+
+export function resolveNavigation(entity: Entity, spec: NavigationSpec, seed: number): NavigationOutcome;
+```
+
+`routeEfficiency = clamp(spatial × mapBonus, q(0.50), q(1.0))`
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/competence/crafting.ts` | `CraftingSpec`, `CraftingOutcome`, `resolveCrafting` |
+| `src/competence/navigation.ts` | `NavigationSpec`, `NavigationOutcome`, `resolveNavigation` |
+| `src/competence/index.ts` | Re-exports all competence modules |
+| `test/crafting.test.ts` | ~18 tests |
+| `test/navigation.test.ts` | ~12 tests |
+
+---
+
+## Phase 35 — Naturalist Intelligence & Animal Handling
+
+### Overview
+
+Naturalist intelligence ("the ability to recognize patterns in living organisms and the
+natural world") grounds tracking, foraging, herbalism, and animal taming into the same
+Q-based resolution model used for crafting and navigation.
+
+---
+
+### Tracking
+
+```typescript
+export interface TrackingSpec {
+  trackAge_s:    number;   // seconds since quarry passed
+  terrain:       "ideal" | "rain" | "urban" | "deep_water";
+  quarrySpecies: string;
+}
+
+export interface TrackingOutcome {
+  confidence_Q:  Q;        // above q(0.60) = reliable direction
+  trackRange_m:  number;   // max range at which entity can follow this track
+}
+```
+
+`confidence_Q = naturalist × ageMul × terrainMul × speciesMul`
+
+Entities with `speciesAffinity` containing the quarry species gain +q(0.15) confidence.
+
+---
+
+### Foraging and herbalism
+
+```typescript
+export interface ForagingOutcome {
+  yield:           number;  // items per hour of searching
+  herbQuality_Q:   Q;       // quality of medicinal plants found
+  misidentified:   boolean; // poisonous plant mistaken for edible
+}
+```
+
+`P_misidentified = max(0, 0.30 − naturalist × 0.40)` — troll misidentifies ~30%; Elf with
+naturalist 0.78 → ~1%.
+
+---
+
+### Animal handling and taming
+
+```typescript
+export interface TamingOutcome {
+  trust_Q:   Q;       // 0 = hostile → 1 = fully tamed
+  attacked:  boolean; // animal attacked handler this session
+}
+```
+
+`trust_Q = clamp(naturalist × interSpecies × effortFactor − animalFearQ × 0.50, 0, 1)`
+
+Full taming (trust_Q ≥ q(0.90)) makes the animal available as an ally entity in the kernel.
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/competence/naturalist.ts` | Tracking, foraging, taming resolvers |
+| `test/naturalist.test.ts` | ~20 tests |
+
+---
+
+## Phase 36 — Inter-Species Intelligence & Xenodiplomacy
+
+### Overview
+
+Inter-species intelligence is Ananke's addition to Gardner's original eight. It models the
+ability of an entity to understand, read, and communicate with minds operating on
+fundamentally different cognitive and sensory substrates.
+
+Relevant contexts: fantasy druids and rangers; sci-fi first contact; war elephant mahouts;
+horse archers reading mount intent mid-gallop; xenobiology research.
+
+---
+
+### Species affinity
+
+```typescript
+export interface InterSpeciesProfile {
+  empathy_Q:       Q;
+  speciesAffinity: string[];       // species ids with deep familiarity
+  signalVocab:     Map<string, Q>; // species id → comprehension quality
+}
+```
+
+---
+
+### Cross-species dialogue extension
+
+Phase 23's `DialogueAction` gains:
+
+```typescript
+| { kind: "signal"; targetSpecies: string; intent: "calm" | "submit" | "ally" | "territory" }
+```
+
+`P_success = empathy_Q × signalVocab.get(targetSpecies) × (1 − animalFearQ × 0.60)`
+
+---
+
+### Unfamiliar-species latency penalty
+
+When deciding against an opponent whose species is not in `speciesAffinity`:
+
+```
+latencyPenalty_s = (1.0 − interSpecies) × 0.080  // up to +80 ms
+```
+
+A human fighter facing a dragon for the first time reacts measurably slower than one who
+has studied dragon physiology.
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/competence/interspecies.ts` | `InterSpeciesProfile`, signal resolution, latency modifier |
+| `src/dialogue.ts` | Add `signal` action variant |
+| `src/sim/kernel.ts` | Apply unfamiliar-species latency penalty |
+| `test/interspecies.test.ts` | ~18 tests |
+
+---
+
+## Phase 37 — Linguistic & Interpersonal Intelligence
+
+### Overview
+
+Linguistic intelligence governs command clarity, multilingual competence, persuasive argument
+structure, and written record quality. Interpersonal intelligence governs social reading:
+detecting deception, understanding emotional state, teaching effectively, and wielding
+authority at range.
+
+---
+
+### Language capacity
+
+```typescript
+export interface LanguageCapacity {
+  languageId: string;  // e.g. "common", "elvish", "klingonese", "dolphin_click"
+  fluency_Q:  Q;       // q(1.0) = native; q(0.50) = conversational; q(0.20) = survival
+}
+```
+
+`Entity.languages?: LanguageCapacity[]`
+
+When entities with different native languages interact in Phase 23 dialogue, success rates
+are multiplied by `min(initiator.fluency(targetLang), target.fluency(initiatorLang))`. A
+troll (linguistic 0.20) arguing a complex treaty in Elvish at conversational fluency q(0.30)
+suffers a compounded penalty.
+
+---
+
+### Battle command clarity
+
+```typescript
+export interface CommandTransmission {
+  receptionRate_Q:         Q;   // fraction of formation receiving correctly
+  transmissionDelay_ticks: number;
+}
+
+export function resolveCommandTransmission(
+  commander:     Entity,
+  formationSize: number,
+): CommandTransmission;
+```
+
+`receptionRate_Q = linguistic × formationBonus(formationSize)`
+`transmissionDelay_ticks = ceil(formationSize / (linguistic × 20))`
+
+Troll warlord (0.20) + 40 troops → ~30% reception. Vulcan captain (0.80) → ~90%, faster.
+
+---
+
+### Teaching and skill transfer (extends Phase 21)
+
+```typescript
+export function resolveTeaching(
+  teacher: Entity,
+  learner: Entity,
+  domain:  SkillId,
+  hours:   number,
+): { xpGained: number; teacherFatigueJ: number };
+```
+
+`xpGained = hours × BASE_XP_RATE × interpersonal(teacher) × learningRate(learner)`
+
+---
+
+### Deception detection (extends Phase 23)
+
+```
+P_detect = clamp(
+  target.attentionDepth_Q × 0.50 + target.interpersonal_Q × 0.50 − source.plausibility_Q,
+  0, 1)
+```
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/competence/language.ts` | `LanguageCapacity`, `resolveCommandTransmission` |
+| `src/competence/teaching.ts` | `resolveTeaching` |
+| `src/dialogue.ts` | Update `deceive` resolution with `interpersonal_Q` |
+| `test/language.test.ts` | ~16 tests |
+| `test/teaching.test.ts` | ~12 tests |
+
+---
+
+## Phase 38 — Logical-Mathematical & Intrapersonal Intelligence
+
+### Overview
+
+Logical-mathematical intelligence governs systematic reasoning applied to complex external
+problems: tactical analysis, engineering, research, resource planning. Intrapersonal
+intelligence governs internal management: willpower, sustained focus, emotional self-
+regulation, and the mental stamina required for cognitively demanding tasks.
+
+---
+
+### Willpower reserve
+
+Analogous to Phase 2B's `reserveEnergy_J` for physical stamina.
+
+```typescript
+export interface WillpowerState {
+  current_J: number;  // same unit as energy_J
+  max_J:     number;  // intrapersonal × SCALE_WILLPOWER_J (= 50_000)
+}
+```
+
+`Entity.willpower?: WillpowerState`
+
+Phase 12B concentration auras deduct from `willpower.current_J`; when depleted the aura
+collapses. Replenishment: q(0.10) of max per hour of rest.
+
+---
+
+### Engineering quality
+
+```typescript
+export interface EngineeringSpec {
+  category:     "fortification" | "mechanism" | "weapon" | "vessel";
+  complexity_Q: Q;
+  timeBudget_h: number;
+}
+
+export interface EngineeringOutcome {
+  qualityMul: Q;       // multiplier on structural integrity / resist_J
+  latentFlaw: boolean; // probability inversely scales with logicalMath
+}
+```
+
+`qualityMul = logicalMath × (1 − complexity_Q × 0.30) × timeFactor`
+`P_latentFlaw = max(0, complexity_Q − logicalMath) × 0.40`
+
+Troll building complex siege engine → 48% chance of latent flaw. Heechee → 0%.
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/competence/willpower.ts` | `WillpowerState`, `stepWillpower`, drain/replenishment |
+| `src/competence/engineering.ts` | `EngineeringSpec/Outcome`, `resolveEngineering` |
+| `src/sim/kernel.ts` | Deduct willpower on concentration aura ticks |
+| `src/downtime.ts` | Replenish willpower during rest |
+| `test/willpower.test.ts` | ~16 tests |
+| `test/engineering.test.ts` | ~14 tests |
+
+---
+
+## Phase 39 — Musical Intelligence & Acoustic Systems
+
+### Overview
+
+Musical intelligence in Ananke is primarily about *cognition in the time-acoustic domain*:
+recognition of rhythmic patterns, sound cue detection, formation signal interpretation, and
+the use of sound as a vector for morale and coordination. Every historical army marched to
+drums; every naval tradition used signal horns; every ambush relied on listening.
+
+---
+
+### Acoustic signature and detection
+
+```typescript
+export function deriveAcousticSignature(entity: Entity): AcousticSignature;
+
+export function detectAcousticSignature(
+  listener: Entity,
+  source:   Entity,
+  dist_m:   number,
+): Q;  // detection confidence 0–1
+```
+
+`detection_Q = clamp(sourceNoise / dist_m × listener.musical × SCALE_ACOUSTIC, 0, 1)`
+
+Extends the existing `stealth` skill: stealth reduces `sourceNoise`; musical intelligence
+increases receiver sensitivity. Both matter.
+
+---
+
+### Formation signals: drums and horns
+
+```typescript
+export type FormationSignal =
+  | "advance" | "retreat" | "hold" | "flank_left" | "flank_right" | "rally";
+
+export function resolveFormationSignal(
+  signaller: Entity,
+  signal:    FormationSignal,
+  listener:  Entity,
+  dist_m:    number,
+): { clarity_Q: Q; received: boolean };
+```
+
+`clarity_Q = musical(signaller) × musical(listener) × rangeFactor(dist_m)`
+
+Satyr signaller (0.95) → Elf listeners (0.85) → near-perfect reception at long range.
+Troll → Troll → commands degrade rapidly beyond a few metres.
+
+---
+
+### Musical performance as morale vector
+
+Performance generates a sustained morale aura scaled by `musical`, draining willpower
+(Phase 38):
+
+```typescript
+export function resolvePerformance(
+  performer: Entity,
+  duration_s: number,
+  allies:    Entity[],
+): { fearDecayBonus: Q; willpowerDrained: number };
+```
+
+`fearDecayBonus = musical × q(0.020)` per tick per ally in range. Satyr bard
+(`fearDecayBonus ≈ q(0.019)`) nearly matches a standard leader aura and stacks with it.
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/competence/acoustic.ts` | Acoustic signature, detection, formation signal |
+| `src/competence/performance.ts` | `resolvePerformance`, morale vector |
+| `test/acoustic.test.ts` | ~16 tests |
+| `test/performance.test.ts` | ~12 tests |
+
+---
+
+## Phase 40 — Non-Combat Competence Framework
+
+### Overview
+
+Phases 34–39 each introduce domain-specific competence resolvers. Phase 40 provides the
+**unified framework** that:
+
+1. Defines canonical `CompetenceAction` / `CompetenceOutcome` types
+2. Routes to the correct resolver based on `CompetenceDomain`
+3. Integrates with Phase 21 progression (XP gain per competence use)
+4. Provides a competence catalogue parallel to the weapons and food catalogues
+5. Enables host applications to declare competence challenges the same way Phase 20 Arena
+   declares combat scenarios
+
+---
+
+### Core types
+
+```typescript
+export type CompetenceDomain =
+  | "linguistic" | "logicalMathematical" | "spatial" | "bodilyKinesthetic"
+  | "musical"    | "interpersonal"       | "intrapersonal"
+  | "naturalist" | "interSpecies";
+
+export interface CompetenceAction {
+  domain:          CompetenceDomain;
+  taskId:          string;           // references CompetenceCatalogue
+  targetEntityId?: number;           // for interpersonal / inter-species tasks
+  toolId?:         string;           // equipment item used
+  timeAvailable_s: number;
+  seed:            number;
+}
+
+export interface CompetenceOutcome {
+  domain:          CompetenceDomain;
+  quality_Q:       Q;
+  timeTaken_s:     number;
+  success:         boolean;
+  descriptor:      "exceptional" | "good" | "adequate" | "poor" | "failure";
+  xpGained:        number;           // fed into Phase 21 awardXP
+  narrativeLine?:  string;
+}
+
+export function resolveCompetence(
+  actor:  Entity,
+  action: CompetenceAction,
+  world:  WorldState,
+): CompetenceOutcome;
+```
+
+---
+
+### Competence catalogue (sample)
+
+| taskId | domain | difficulty_Q | timeBase_s | notes |
+|--------|--------|--------------|------------|-------|
+| `craft_sword_basic` | bodilyKinesthetic | q(0.40) | 14 400 | 4 h, forge required |
+| `craft_sword_master` | bodilyKinesthetic | q(0.85) | 28 800 | 8 h |
+| `navigate_wilderness` | spatial | q(0.50) | — | per-hour efficiency |
+| `track_quarry_fresh` | naturalist | q(0.30) | — | confidence output |
+| `tame_horse` | naturalist + interSpecies | q(0.40) | 7 200 | trust accumulation |
+| `treat_wound_field` | bodilyKinesthetic | q(0.50) | 300 | extends Phase 19 |
+| `teach_swordsmanship` | interpersonal | q(0.45) | 3 600 | XP multiplier for learner |
+| `negotiate_treaty` | linguistic + interpersonal | q(0.70) | 1 800 | Phase 23 extension |
+| `design_fortification` | logicalMathematical | q(0.60) | 86 400 | 1-day planning |
+| `compose_march` | musical | q(0.35) | 1 800 | morale aura enabler |
+| `identify_herb` | naturalist | q(0.25) | 60 | herbalism yield |
+| `signal_alien_species` | interSpecies | q(0.60) | — | first-contact attempt |
+
+---
+
+### Integration with Phase 21
+
+`resolveCompetence` returns `xpGained`; the host calls
+`awardXP(state, domain, xpGained, tick)`. Domain names map directly (e.g. `"naturalist"` XP
+improves naturalist progression, which on milestone increases `cognition.naturalist`).
+
+---
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/competence/index.ts` | Unified `resolveCompetence` router |
+| `src/competence/catalogue.ts` | `COMPETENCE_CATALOGUE: readonly CompetenceTask[]` |
+| `test/competence.test.ts` | ~24 tests |
+
+### Tests (~24)
+
+- **Routing (9):** each domain routes to correct resolver; unknown taskId → failure; missing
+  required tool degrades quality.
+- **XP integration (5):** xpGained > 0 on success; = 0 on failure; exceptional > adequate
+  XP; deterministic; feeds Phase 21 milestone correctly.
+- **Catalogue integrity (5):** all entries have valid domain and difficulty in range; taskId
+  unique; no undefined fields.
+- **Narrative (5):** exceptional → "exceptional" descriptor; failure → "failure"; narrativeLine
+  present when requested; terse vs. verbose mode differs in length.
+
+---
+
+## Outstanding Gaps & Research Items
+
+Acknowledged gaps not yet assigned to a phase, collected from simulation calibration notes
+and Physics Realism Summary entries.
+
+### Sensory systems beyond vision and hearing
+
+- Current: `visionRange_m`, `hearingRange_m` as scalar attributes.
+- Missing: field-of-view arc limits (beyond `visionArcDeg` stub), twilight/darkness penalties,
+  olfaction (scent-based tracking without the Naturalist system), echolocation (bats, cetaceans,
+  shrews), electroreception (sharks, eels, platypus).
+- Stealth is currently only acoustic; visual stealth is binary (in-range / out-of-range).
+
+### Systemic toxicology (beyond Phase 32C wound-injection venom)
+
+- Ingested systemic toxins: alcohol, sedatives, plant alkaloids — differing onset and
+  duration from injected venom.
+- Cumulative exposure: heavy metals, radiation beyond Phase 10 single-event hazard.
+- Withdrawal states modifying performance attributes over days.
+
+### Entity-level social network
+
+- Phase 24 models faction-to-faction standing; missing: individual-to-individual relationship
+  graph (friendship, rivalry, debt, family bonds).
+- These would modify morale, teaching rate, betrayal probability, and Phase 23 dialogue.
+  Relevant for long-form campaign simulation.
+
+### Weather and atmospheric environment
+
+- Wind: vector field affecting projectile dispersion (Phase 3), acoustic signal propagation
+  (Phase 39), and flame cone shape (Phase 28).
+- Precipitation: traction reduction compounding on terrain, visibility reduction, acoustic
+  noise masking stealth.
+- Fog: hard visual range cap.
+- All interact with existing Phase 10, 27, 28, 29, 37, and 39 systems.
+
+### Wound aging and long-term sequelae (extends Phase 21)
+
+- Current: `fracture_malunion`, `nerve_damage`, `scar_tissue` derived at injury time.
+- Missing: sequelae emerging over weeks/months — chronic fatigue, altered fear response
+  (PTSD-equivalent), phantom pain, recurring infection risk.
+- Relevant for multi-year campaign simulation.
+
+### Collective non-combat activities
+
+- Siege engineering: formation-scale crafting where many entities contribute to a shared
+  progress pool, each contributing `competenceQuality × hoursWorked`.
+- Ritual and ceremony: collective musical and intrapersonal intelligence pool produces
+  emergent morale effects above what individual performance achieves.
+- Trade caravan logistics: economy (Phase 25) interacting with Phase 40 competence and
+  Phase 38 engineering for route and supply planning.
+
 **Test suite**: 1,313 tests passing. Coverage: statements 96.9%, branches 85.8%, functions 95.9%, lines 96.9%.
