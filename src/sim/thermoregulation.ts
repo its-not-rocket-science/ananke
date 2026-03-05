@@ -134,7 +134,8 @@ export function stepCoreTemp(
   const coreQ: number = cond.coreTemp_Q ?? CORE_TEMP_NORMAL_Q;
 
   const mReal = entity.attributes.morphology.mass_kg / SCALE.kg;
-  const insul = sumArmourInsulation(entity.loadout.items as any[]);
+  const insul = sumArmourInsulation(entity.loadout.items as any[])
+             + (entity.physiology?.naturalInsulation_m2KW ?? 0);
 
   const vx   = entity.velocity_mps.x;
   const vy   = entity.velocity_mps.y;

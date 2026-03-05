@@ -465,8 +465,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     stepInjuryProgression(e, world.tick);
     stepSubstances(e, ctx.ambientTemperature_Q);
     stepEnergy(e, ctx);
-    // Phase 29: advance core temperature once per tick
-    if (ctx.thermalAmbient_Q !== undefined) {
+    // Phase 29: advance core temperature once per tick (Phase 31: skip ectotherms)
+    if (ctx.thermalAmbient_Q !== undefined && !e.physiology?.coldBlooded) {
       stepCoreTemp(e, ctx.thermalAmbient_Q, 1 / TICK_HZ);
     }
     stepCapabilitySources(e, world, ctx); // Phase 12

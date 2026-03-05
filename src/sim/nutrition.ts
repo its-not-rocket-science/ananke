@@ -104,7 +104,10 @@ function deriveHungerState(caloricBalance: number, bmr: number): HungerState {
 export function stepNutrition(entity: Entity, delta_s: number, activity: Q): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cond = entity.condition as any;
-  const bmr    = computeBMR(entity.attributes.morphology.mass_kg);
+  const baseBMR  = computeBMR(entity.attributes.morphology.mass_kg);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bmrMul   = (entity as any).physiology?.bmrMultiplier ?? SCALE.Q;
+  const bmr      = Math.round(baseBMR * bmrMul / SCALE.Q);
 
   // Active metabolic rate: BMR + peakPower × activityFrac × 0.15
   const actFrac = activity / SCALE.Q;

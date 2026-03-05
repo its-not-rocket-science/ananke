@@ -1,6 +1,7 @@
 import type { IndividualAttributes, EnergyState } from "../types.js";
 import type { Loadout } from "../equipment.js";
 import type { TraitId } from "../traits.js";
+import type { SpeciesPhysiology } from "../species.js";
 
 import type { Vec3 } from "./vec3.js";
 import type { ConditionState } from "./condition.js";
@@ -99,4 +100,7 @@ export interface Entity {
    * Map<factionId, Q> — takes priority over faction-default standings when set.
    */
   reputations?: Map<string, number>;
+
+  /** Phase 31: species-level physiological overrides (thermoregulation, nutrition). */
+  physiology?: SpeciesPhysiology;
 }
