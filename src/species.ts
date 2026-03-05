@@ -87,15 +87,16 @@ export function generateSpeciesIndividual(
   const attrs = species.innateTraits?.length
     ? applyTraitsToAttributes(base, species.innateTraits)
     : base;
-  return {
+  const spec: SpeciesEntitySpec = {
     attributes:         attrs,
-    physiology:         species.physiology,
-    bodyPlan:           species.bodyPlan,
-    innateTraits:       species.innateTraits  ?? [],
+    innateTraits:       species.innateTraits       ?? [],
     innateCapabilities: species.innateCapabilities ?? [],
-    naturalWeapons:     species.naturalWeapons ?? [],
-    skillAptitudes:     species.skillAptitudes,
+    naturalWeapons:     species.naturalWeapons     ?? [],
   };
+  if (species.physiology    !== undefined) spec.physiology    = species.physiology;
+  if (species.bodyPlan      !== undefined) spec.bodyPlan      = species.bodyPlan;
+  if (species.skillAptitudes !== undefined) spec.skillAptitudes = species.skillAptitudes;
+  return spec;
 }
 
 // ── Natural weapons ────────────────────────────────────────────────────────────
