@@ -4,7 +4,6 @@ import { describe, it, expect } from "vitest";
 import { q, to, SCALE } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
-import { CollectingTrace } from "../src/metrics";
 import {
   extractMotionVectors,
   extractHitTraces,
@@ -145,7 +144,7 @@ describe("extractHitTraces", () => {
     const result = extractHitTraces([
       { kind: "death" as const, tick: 1, entityId: 1 },
       { kind: "moraleRoute" as const, tick: 1, entityId: 2, fearQ: q(0.8) },
-    ] as any);
+    ]);
     expect(result.meleeHits).toHaveLength(0);
     expect(result.projectileHits).toHaveLength(0);
   });

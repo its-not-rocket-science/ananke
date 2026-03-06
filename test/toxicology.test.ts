@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE, type Q } from "../src/units";
+import { q } from "../src/units";
 import {
   stepToxicology,
   injectVenom,
@@ -23,22 +23,12 @@ import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { segmentIds, OCTOPOID_PLAN } from "../src/sim/bodyplan";
 import { defaultInjury } from "../src/sim/injury";
 import { stepWorld } from "../src/sim/kernel";
-import { TUNING } from "../src/sim/tuning";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function freshEntity(id = 1) {
   const e = mkHumanoidEntity(id, 1, 0, 0);
   return e;
-}
-
-/** Fast-forward past onset and apply damage for a given number of seconds. */
-function advanceVenom(e: ReturnType<typeof freshEntity>, secondsPastOnset: number, venomId: string) {
-  const profile = getVenomProfile(venomId)!;
-  // Advance past onset first (single step)
-  stepToxicology(e, profile.onsetDelay_s + 0.001);
-  // Then advance for damage window
-  stepToxicology(e, secondsPastOnset);
 }
 
 // ── Catalogue ─────────────────────────────────────────────────────────────────
@@ -100,7 +90,7 @@ describe("onset delay", () => {
     const e = freshEntity();
     injectVenom(e, "venom_insect");
     stepToxicology(e, 29);
-    expect((e.condition as any).fearQ ?? 0).toBe(0);
+    expect((e.condition).fearQ ?? 0).toBe(0);
   });
 
   it("damage begins after onset", () => {
@@ -108,7 +98,7 @@ describe("onset delay", () => {
     injectVenom(e, "venom_insect");
     stepToxicology(e, 31); // past 30s onset
     // humanoid defaultInjury includes "torso" region — damage lands there
-    expect((e.injury.byRegion as any)["torso"].internalDamage).toBeGreaterThan(0);
+    expect((e.injury.byRegion)["torso"]!.internalDamage).toBeGreaterThan(0);
   });
 });
 
@@ -119,14 +109,14 @@ describe("damage and fear accumulation", () => {
     const e = freshEntity();
     injectVenom(e, "venom_insect");
     stepToxicology(e, 35); // 5s past onset
-    expect((e.injury.byRegion as any)["torso"].internalDamage).toBeGreaterThan(0);
+    expect((e.injury.byRegion)["torso"]!.internalDamage).toBeGreaterThan(0);
   });
 
   it("fear increases with time after onset", () => {
     const e = freshEntity();
     injectVenom(e, "venom_insect");
     stepToxicology(e, 35);
-    expect((e.condition as any).fearQ ?? 0).toBeGreaterThan(0);
+    expect((e.condition).fearQ ?? 0).toBeGreaterThan(0);
   });
 
   it("venom applies to torso.internalDamage when torso region exists", () => {
@@ -134,11 +124,11 @@ describe("damage and fear accumulation", () => {
     // Give entity an octopoid plan but ensure a torso-named region by injecting manually
     e.injury = defaultInjury(segmentIds(OCTOPOID_PLAN));
     // Add a synthetic torso region so damage lands there
-    (e.injury.byRegion as any)["torso"] = { internalDamage: q(0), structuralDamage: q(0), bleedingRate: q(0) };
+    (e.injury.byRegion)["torso"] = { internalDamage: q(0), structuralDamage: q(0), bleedingRate: q(0), surfaceDamage: q(0), fractured: false, infectedTick: 0, bleedDuration_ticks: 0, permanentDamage: 0 };
     const shockBefore = e.injury.shock;
     injectVenom(e, "venom_snake");
     stepToxicology(e, 65); // 5s past onset (60s)
-    expect((e.injury.byRegion as any)["torso"].internalDamage).toBeGreaterThan(0);
+    expect((e.injury.byRegion)["torso"].internalDamage).toBeGreaterThan(0);
     expect(e.injury.shock).toBe(shockBefore); // shock unchanged when torso region exists
   });
 
@@ -150,7 +140,7 @@ describe("damage and fear accumulation", () => {
     // Both past onset; 20s window
     stepToxicology(eP, 35);
     stepToxicology(eS, 65);
-    expect((eP.condition as any).fearQ).toBeGreaterThan((eS.condition as any).fearQ ?? 0);
+    expect((eP.condition).fearQ).toBeGreaterThan((eS.condition).fearQ ?? 0);
   });
 });
 

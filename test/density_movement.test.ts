@@ -8,6 +8,7 @@ import { q, SCALE } from "../src/units";
 import { TUNING } from "../src/sim/tuning";
 
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
+import { Entity } from "../src";
 
 
 function displacementX(world: WorldState, id: number): number {
@@ -31,7 +32,7 @@ test("density slows movement in a crowd", () => {
 
   const ctx = { tractionCoeff: q(0.9), tuning: TUNING.tactical };
 
-    const entitiesHealthy: any[] = [];
+  const entitiesHealthy: Entity[] = [];
   entitiesHealthy.push(mkHumanoidEntity(moverId, 1, 0, 0));
   {
     const far = Math.trunc(5 * SCALE.m);
@@ -39,7 +40,7 @@ test("density slows movement in a crowd", () => {
     entitiesHealthy.push(mkHumanoidEntity(3, 1, far, far));
   }
 
-  const entitiesCrowded: any[] = [];
+  const entitiesCrowded: Entity[] = [];
   entitiesCrowded.push(mkHumanoidEntity(moverId, 1, 0, 0));
   {
     const r = Math.trunc(0.30 * SCALE.m);
@@ -54,11 +55,11 @@ test("density slows movement in a crowd", () => {
   }
 
   const healthy = mkWorld(12345, entitiesHealthy);
-  stepWorld(healthy, cmds, ctx as any);
+  stepWorld(healthy, cmds, ctx);
   const dxHealthy = displacementX(healthy, moverId);
 
   const crowded = mkWorld(12345, entitiesCrowded);
-  stepWorld(crowded, cmds, ctx as any);
+  stepWorld(crowded, cmds, ctx);
   const dxCrowded = displacementX(crowded, moverId);
 
   expect(dxCrowded).toBeLessThan(dxHealthy);

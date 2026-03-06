@@ -162,6 +162,7 @@ describe("twoHandedAttackBonusQ", () => {
   it("weapon with no handedness field → defaults to one-handed (1.0)", () => {
     const { handedness, ...knifeWithoutHandedness } = knife;
     const noHanded: Weapon = knifeWithoutHandedness;
+    expect(handedness).toBe('oneHand');
     expect(twoHandedAttackBonusQ(noHanded, false, false, false)).toBe(q(1.0));
   });
 });
@@ -729,11 +730,12 @@ describe("kernel: breakBind command", () => {
 
     stepWorld(world, new Map(), traceCtx);
 
-    const timeoutEvents = events.filter(ev => ev.kind === TraceKinds.WeaponBindBreak && (ev as any).reason === "timeout");
+    const bindBreak = events.filter(ev => ev.kind === TraceKinds.WeaponBindBreak);
+    const timeoutEvents = bindBreak!.filter(ev => (ev).reason === "timeout");
     // Only one event emitted (from smaller ID = 1)
     expect(timeoutEvents).toHaveLength(1);
-    expect((timeoutEvents[0] as any).entityId).toBe(1);
-    expect((timeoutEvents[0] as any).partnerId).toBe(2);
+    expect((timeoutEvents[0]!).entityId).toBe(1);
+    expect((timeoutEvents[0]!).partnerId).toBe(2);
   });
 });
 
@@ -785,8 +787,8 @@ describe("kernel: bind chance scales with fatigue", () => {
     // Verify that full fatigue produces a strictly higher bind chance than zero fatigue.
     const bChanceBase = bindChanceQ(club, club);
 
-    const freshMod   = (SCALE.Q + qMul(q(0.0), q(0.20) as any)) as any;   // 10000
-    const fullMod    = (SCALE.Q + qMul(q(1.0), q(0.20) as any)) as any;   // 12000
+    const freshMod   = (SCALE.Q + qMul(q(0.0), q(0.20)));   // 10000
+    const fullMod    = (SCALE.Q + qMul(q(1.0), q(0.20)));   // 12000
 
     const freshChance    = clampQ(qMul(bChanceBase, freshMod), q(0.0), q(0.45));
     const exhaustedChance = clampQ(qMul(bChanceBase, fullMod),  q(0.0), q(0.45));

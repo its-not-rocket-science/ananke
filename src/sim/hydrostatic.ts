@@ -8,6 +8,8 @@
 
 import type { Q } from "../units.js";
 import { SCALE, q, clampQ, mulDiv } from "../units.js";
+import { BodyRegion, BoneRegion, MajorOrgan } from "./body.js";
+import { BodySegment } from "./bodyplan.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -29,7 +31,7 @@ export const CAVITATION_THRESHOLD_mps  = Math.trunc(900 * SCALE.mps);
  *   lung — q(0.30): intermediate; partially elastic air-filled tissue
  *   muscle/torso — q(0.60): moderately elastic
  */
-export const TISSUE_COMPLIANCE: Record<string, Q> = {
+export const TISSUE_COMPLIANCE: Record<BodyRegion | BodySegment["id"] | MajorOrgan | BoneRegion, Q> = {
   // Organ segments (advanced body plans)
   brain:    q(0.10),
   liver:    q(0.10),
@@ -48,6 +50,8 @@ export const TISSUE_COMPLIANCE: Record<string, Q> = {
   femur:    q(0.05),
   tibia:    q(0.05),
 };
+
+export type TISSUE_COMPLIANCE_KEY = keyof typeof TISSUE_COMPLIANCE;
 
 /** Compliance used when a region is not in the table (muscle-level). */
 export const DEFAULT_COMPLIANCE: Q = q(0.60);
@@ -82,7 +86,8 @@ const CAVITATION_TISSUE = new Set([
  * @param v_impact   Projectile velocity at impact point (SCALE.mps units).
  * @param region     Hit region id.
  */
-export function computeTemporaryCavityMul(v_impact: number, region: string): Q {
+export function computeTemporaryCavityMul(v_impact: number, region: TISSUE_COMPLIANCE_KEY
+): Q {
   if (v_impact <= HYDROSTATIC_THRESHOLD_mps) return q(1.0);
 
   const compliance_Q = TISSUE_COMPLIANCE[region] ?? DEFAULT_COMPLIANCE;

@@ -502,8 +502,8 @@ export function stepDowntime(
 
     // Phase 29: initialise core temperature tracking (entity is resting during recovery)
     const massReal_kg = entity.attributes.morphology.mass_kg / SCALE.kg;
-    const armourInsul = sumArmourInsulation(entity.loadout.items as any[]);
-    let coreTempQ: Q  = ((entity.condition as any).coreTemp_Q as Q | undefined) ?? CORE_TEMP_NORMAL_Q;
+    const armourInsul = sumArmourInsulation(entity.loadout.items);
+    let coreTempQ: Q  = ((entity.condition).coreTemp_Q as Q | undefined) ?? CORE_TEMP_NORMAL_Q;
 
     // Simulation loop
     for (let sec = 0; sec < elapsedSeconds; sec++) {

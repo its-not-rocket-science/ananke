@@ -21,7 +21,6 @@ import {
   CORE_TEMP_HEAT_MILD,
   CORE_TEMP_HEAT_EXHAUS,
   CORE_TEMP_HEAT_STROKE,
-  CORE_TEMP_HYPOTHERMIA_MILD,
   CORE_TEMP_HYPOTHERMIA_MOD,
   CORE_TEMP_HYPOTHERMIA_SEVERE,
 } from "../src/sim/thermoregulation";
@@ -29,11 +28,12 @@ import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepDowntime } from "../src/downtime";
 import { stepWorld } from "../src/sim/kernel";
 import { TUNING } from "../src/sim/tuning";
+import { Armour, STARTER_WEAPONS } from "../src";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 /** Build a plate armour stub with the given insulation value. */
-function makeArmour(insulation_m2KW: number) {
+function makeArmour(insulation_m2KW: number): Armour {
   return {
     kind: "armour" as const,
     id: "test_armour",
@@ -60,18 +60,18 @@ function runCoreTemp(
   entityId   = 1,
 ): number {
   const e = mkHumanoidEntity(entityId, 1, 0, 0);
-  if (insulation > 0) e.loadout.items = [makeArmour(insulation) as any];
+  if (insulation > 0) e.loadout.items = [makeArmour(insulation)];
   if (active) {
     // Give entity a velocity > 1 m/s to trigger ACT_SPECIFIC_W (active path)
     e.velocity_mps.x = Math.trunc(2.0 * SCALE.mps);
   }
-  (e.condition as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+  (e.condition).coreTemp_Q = CORE_TEMP_NORMAL_Q;
 
   const ambQ = cToQ(ambientC) as Q;
   for (let s = 0; s < seconds; s++) {
     stepCoreTemp(e, ambQ, 1.0);
   }
-  return (e.condition as any).coreTemp_Q as number;
+  return (e.condition).coreTemp_Q as number;
 }
 
 // ── Heat balance ──────────────────────────────────────────────────────────────
@@ -160,13 +160,14 @@ describe("armour insulation", () => {
   });
 
   it("sumArmourInsulation returns 0 for weapon-only loadout", () => {
-    expect(sumArmourInsulation([{ kind: "weapon" }])).toBe(0);
+    expect(sumArmourInsulation([STARTER_WEAPONS[0]!])).toBe(0);
   });
 
   it("sumArmourInsulation sums insulation across multiple armour pieces", () => {
-    const items = [
-      { kind: "armour", insulation_m2KW: 0.02 },
-      { kind: "armour", insulation_m2KW: 0.15 },
+
+    const items: Armour[] = [
+      makeArmour(0.02),
+      makeArmour(0.15),
     ];
     expect(sumArmourInsulation(items)).toBeCloseTo(0.17, 5);
   });
@@ -214,26 +215,26 @@ describe("calibration scenarios", () => {
 
   function timeToFallBelow(threshold: number, ambientC: number, maxSeconds: number, insulation = 0, active = false): number | null {
     const e = mkHumanoidEntity(1, 1, 0, 0);
-    if (insulation > 0) e.loadout.items = [makeArmour(insulation) as any];
+    if (insulation > 0) e.loadout.items = [makeArmour(insulation)];
     if (active) e.velocity_mps.x = Math.trunc(2.0 * SCALE.mps);
-    (e.condition as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+    (e.condition).coreTemp_Q = CORE_TEMP_NORMAL_Q;
     const ambQ = cToQ(ambientC) as Q;
     for (let s = 0; s < maxSeconds; s++) {
       stepCoreTemp(e, ambQ, 1.0);
-      if (((e.condition as any).coreTemp_Q as number) < threshold) return s;
+      if (((e.condition).coreTemp_Q as number) < threshold) return s;
     }
     return null;
   }
 
   function timeToRiseAbove(threshold: number, ambientC: number, maxSeconds: number, insulation = 0, active = false): number | null {
     const e = mkHumanoidEntity(1, 1, 0, 0);
-    if (insulation > 0) e.loadout.items = [makeArmour(insulation) as any];
+    if (insulation > 0) e.loadout.items = [makeArmour(insulation)];
     if (active) e.velocity_mps.x = Math.trunc(2.0 * SCALE.mps);
-    (e.condition as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+    (e.condition).coreTemp_Q = CORE_TEMP_NORMAL_Q;
     const ambQ = cToQ(ambientC) as Q;
     for (let s = 0; s < maxSeconds; s++) {
       stepCoreTemp(e, ambQ, 1.0);
-      if (((e.condition as any).coreTemp_Q as number) > threshold) return s;
+      if (((e.condition).coreTemp_Q as number) > threshold) return s;
     }
     return null;
   }
@@ -296,7 +297,7 @@ describe("integration", () => {
   it("downtime with cold thermal ambient → core temp decreases", () => {
     const world = mkWorld(1, [mkHumanoidEntity(1, 1, 0, 0)]);
     const entity = world.entities[0]!;
-    (entity.condition as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+    (entity.condition).coreTemp_Q = CORE_TEMP_NORMAL_Q;
 
     const reports = stepDowntime(world, 3600, {
       treatments: new Map([[entity.id, { careLevel: "none" }]]),
@@ -312,8 +313,8 @@ describe("integration", () => {
   it("kernel: hypothermic entity has reduced effective power (powerMul < 1)", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     // Set severe hypothermia
-    (e.condition as any).coreTemp_Q = (CORE_TEMP_HYPOTHERMIA_MOD - 100) as Q;
-    const mods = deriveTempModifiers((e.condition as any).coreTemp_Q as Q);
+    (e.condition).coreTemp_Q = (CORE_TEMP_HYPOTHERMIA_MOD - 100) as Q;
+    const mods = deriveTempModifiers((e.condition).coreTemp_Q as Q);
     expect(mods.powerMul).toBeLessThan(q(1.0));
     expect(mods.dead).toBe(false);
   });

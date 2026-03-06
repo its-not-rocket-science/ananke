@@ -4,12 +4,13 @@ import { defaultIntent } from "./intent.js";
 import { defaultAction } from "./action.js";
 import { defaultCondition } from "./condition.js";
 import { defaultInjury } from "./injury.js";
-import { type Loadout } from "../equipment.js";
+import { Weapon, type Loadout } from "../equipment.js";
 import { v3 } from "./vec3.js";
 import { q, SCALE } from "../units.js";
 
 import type { Entity } from "./entity.js";
 import type { WorldState } from "./world.js";
+import { ImpactEvent } from "./events.js";
 /**
  * Minimal humanoid entity for tests (deterministic attributes via generateIndividual()).
  * Positions are fixed-point metres (SCALE.m).
@@ -34,12 +35,12 @@ export function mkHumanoidEntity(id: number, teamId: number, x_m: number, y_m: n
   };
 }
 
-export function mkWorld(seed: number, entities: any[]): WorldState;
+export function mkWorld(seed: number, entities: Entity[]): WorldState;
 /** @deprecated Pass an explicit entity array instead: mkWorld(seed, [a, b]) */
 export function mkWorld(seed: number, loadoutA: Loadout): WorldState;
 
 // implementation
-export function mkWorld(seed: number, arg: any): WorldState {
+export function mkWorld(seed: number, arg: Entity | Entity[] | Loadout): WorldState {
   // General form: mkWorld(seed, entities[])
   if (Array.isArray(arg)) {
     const entities = [...arg].sort((a, b) => a.id - b.id);
@@ -51,11 +52,11 @@ export function mkWorld(seed: number, arg: any): WorldState {
       throw new Error(`mkWorld: duplicate entity IDs detected: ${[...new Set(dupes)].join(", ")}`);
     }
 
-    return { tick: 0, seed, entities } as any;
+    return { tick: 0, seed, entities };
   }
 
   // Back-compat duel form: mkWorld(seed, loadoutA)
-  const loadoutA: Loadout = arg;
+  const loadoutA: Loadout = (('items' in arg) ? arg : { items: [] });
 
   const aAttrs = generateIndividual(1, HUMAN_BASE);
   const bAttrs = generateIndividual(2, HUMAN_BASE);
@@ -95,5 +96,33 @@ export function mkWorld(seed: number, arg: any): WorldState {
         grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0), position: "standing" as const },
       },
     ],
-  } as any;
+  };
+}
+
+export function mkImpactEvent(attackerId: number,
+  targetId: number,
+  region = "",
+  energy_J = 0,
+  protectedByArmour = false,
+  blocked = false,
+  parried = false,
+  weaponId = "",
+  wpn = {} as Weapon,
+  hitQuality = q(0),
+  shieldBlocked = false
+): ImpactEvent {
+  return {
+    kind: "impact",
+    attackerId,
+    targetId,
+    region,
+    energy_J,
+    protectedByArmour,
+    blocked,
+    parried,
+    weaponId,
+    wpn,
+    hitQuality,
+    shieldBlocked,
+  };
 }

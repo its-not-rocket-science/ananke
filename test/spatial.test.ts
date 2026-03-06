@@ -2,16 +2,13 @@ import { expect, test } from "vitest";
 import { buildSpatialIndex, queryNearbyIds } from "../src/sim/spatial";
 import { v3 } from "../src/sim/vec3";
 import { SCALE } from "../src/units";
-
-function mkWorld(entities: any[]) {
-  return { tick: 0, seed: 1, entities } as any;
-}
+import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 
 test("spatial query is deterministic and returns sorted ids", () => {
-  const world = mkWorld([
-    { id: 10, position_m: v3(Math.trunc(0.5 * SCALE.m), 0, 0), injury: { dead: false } },
-    { id: 2,  position_m: v3(Math.trunc(0.7 * SCALE.m), 0, 0), injury: { dead: false } },
-    { id: 7,  position_m: v3(Math.trunc(5.5 * SCALE.m), 0, 0), injury: { dead: false } },
+  const world = mkWorld(1, [
+    mkHumanoidEntity(10, 1, Math.trunc(0.5 * SCALE.m), 0, 0),
+    mkHumanoidEntity(2, 1, Math.trunc(0.7 * SCALE.m), 0, 0),
+    mkHumanoidEntity(7, 1, Math.trunc(5.5 * SCALE.m), 0, 0),
   ]);
 
   const cell = Math.trunc(4 * SCALE.m);

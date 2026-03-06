@@ -16,12 +16,12 @@ import { mkWorld, mkHumanoidEntity } from "../src/sim/testing.js";
 import { buildWorldIndex } from "../src/sim/indexing.js";
 import { buildSpatialIndex } from "../src/sim/spatial.js";
 import { TraceKinds, CommandKinds } from "../src/sim/kinds.js";
-import type { MedicalAction } from "../src/sim/medical.js";
+import type { MedicalAction, MedicalTier } from "../src/sim/medical.js";
 import type { TraceEvent, TraceSink } from "../src/sim/trace.js";
 import type { CommandMap } from "../src/sim/commands.js";
 import { decideCommandsForEntity } from "../src/sim/ai/decide.js";
 import { AI_PRESETS } from "../src/sim/ai/presets.js";
-import { isRouting, moraleThreshold } from "../src/sim/morale.js";
+import { isRouting } from "../src/sim/morale.js";
 import {
   STARTER_WEAPONS,
   STARTER_ARMOUR,
@@ -45,6 +45,7 @@ import {
   describeCombatOutcome,
   type NarrativeConfig,
 } from "../src/narrative.js";
+import { Entity } from "../src/sim/entity.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ function pct(q: Q): string {
   return (q / SCALE.Q * 100).toFixed(0) + "%";
 }
 
-function entityLine(e: any): string {
+function entityLine(e: Entity): string {
   const inj = e.injury;
   const fear = (e.condition.fearQ ?? 0) as Q;
   const routing = isRouting(fear, e.attributes.resilience.distressTolerance);
@@ -75,57 +76,57 @@ class DemoTrace implements TraceSink {
   onEvent(ev: TraceEvent): void {
     switch (ev.kind) {
       case TraceKinds.TickStart:
-        if (!this.quiet) console.log(`\n── tick ${(ev as any).tick} ──`);
+        if (!this.quiet) console.log(`\n── tick ${(ev).tick} ──`);
         break;
 
       case TraceKinds.Attack:
         console.log(
-          `  atk e${(ev as any).attackerId}→e${(ev as any).targetId}` +
-          ` ${(ev as any).region} E=${(ev as any).energy_J}J` +
-          ` arm=${(ev as any).armoured} blk=${(ev as any).blocked}` +
-          ` shd=${(ev as any).shieldBlocked} pry=${(ev as any).parried}`
+          `  atk e${(ev).attackerId}→e${(ev).targetId}` +
+          ` ${(ev).region} E=${(ev).energy_J}J` +
+          ` arm=${(ev).armoured} blk=${(ev).blocked}` +
+          ` shd=${(ev).shieldBlocked} pry=${(ev).parried}`
         );
         break;
 
       case TraceKinds.ProjectileHit:
         console.log(
-          `  prj e${(ev as any).shooterId}→e${(ev as any).targetId}` +
-          ` hit=${(ev as any).hit}` +
-          (!(ev as any).hit ? ` suppressed=${(ev as any).suppressed}` : ` region=${(ev as any).region}`) +
-          ` dist=${((ev as any).distance_m / M).toFixed(1)}m` +
-          ` E=${(ev as any).energyAtImpact_J}J`
+          `  prj e${(ev).shooterId}→e${(ev).targetId}` +
+          ` hit=${(ev).hit}` +
+          (!(ev).hit ? ` suppressed=${(ev).suppressed}` : ` region=${(ev).region}`) +
+          ` dist=${((ev).distance_m / M).toFixed(1)}m` +
+          ` E=${(ev).energyAtImpact_J}J`
         );
         break;
 
       case TraceKinds.WeaponBind:
-        console.log(`  bind e${(ev as any).entityAId}↔e${(ev as any).entityBId} (${(ev as any).durationTicks} ticks)`);
+        console.log(`  bind e${(ev).attackerId}↔e${(ev).targetId} (${(ev).durationTicks} ticks)`);
         break;
 
       case TraceKinds.WeaponBindBreak:
-        console.log(`  bind-break e${(ev as any).entityAId}↔e${(ev as any).entityBId}`);
+        console.log(`  bind-break e${(ev).entityId}↔e${(ev).partnerId} (${(ev).reason})`);
         break;
 
       case TraceKinds.MoraleRoute:
-        console.log(`  !! ROUTE e${(ev as any).entityId} fearQ=${pct((ev as any).fearQ)}`);
+        console.log(`  !! ROUTE e${(ev).entityId} fearQ=${pct((ev).fearQ)}`);
         break;
 
       case TraceKinds.Injury:
         // Only print significant injury changes; suppress in quiet mode (medical scenario uses medLine)
-        if (!this.quiet && ((ev as any).dead || (ev as any).shockQ > q(0.15))) {
+        if (!this.quiet && ((ev).dead || (ev).shockQ > q(0.15))) {
           console.log(
-            `  inj e${(ev as any).entityId} shock=${pct((ev as any).shockQ)}` +
-            ` conc=${pct((ev as any).consciousnessQ)}` +
-            ((ev as any).dead ? " **DEAD**" : "")
+            `  inj e${(ev).entityId} shock=${pct((ev).shockQ)}` +
+            ` conc=${pct((ev).consciousnessQ)}` +
+            ((ev).dead ? " **DEAD**" : "")
           );
         }
         break;
 
       case TraceKinds.Fracture:
-        console.log(`  fracture e${(ev as any).entityId} region=${(ev as any).region}`);
+        console.log(`  fracture e${(ev).entityId} region=${(ev).region}`);
         break;
 
       case TraceKinds.TreatmentApplied: {
-        const t = ev as any;
+        const t = ev;
         // Surgery fires every tick — skip it to avoid noise; log one-shot actions only
         if (t.action === "tourniquet" || t.action === "fluidReplacement") {
           console.log(`  treat e${t.treaterId}→e${t.targetId} ${t.action}${t.regionId ? ` [${t.regionId}]` : ""}`);
@@ -152,7 +153,7 @@ function runScenario(
   console.log(`  ${label}`);
   console.log(`${"═".repeat(60)}`);
 
-  const trace = ctx.trace as DemoTrace;
+  // const trace = ctx.trace as DemoTrace;
 
   for (let tick = 0; tick < maxTicks; tick++) {
     const index   = buildWorldIndex(world);
@@ -409,8 +410,9 @@ function scenarioMedical(): void {
   //   bleedingRate q(0.06) → q(0.003)/tick fluid loss → fatal at ~tick 267
   //   internalDamage q(0.20) > infection threshold q(0.10) — infection can develop
   //   structuralDamage q(0.55) — significant but below fracture threshold q(0.70)
-  const applyWound = (e: any) => {
+  const applyWound = (e: Entity) => {
     const r = e.injury.byRegion[WOUND_REGION];
+    if (!r) return;
     r.bleedingRate     = q(0.06) as Q;
     r.structuralDamage = q(0.55) as Q;
     r.internalDamage   = q(0.20) as Q;
@@ -436,8 +438,9 @@ function scenarioMedical(): void {
   console.log("  Fatal fluid loss: q(0.80) ≈ tick 267 (13.4 s)");
   console.log(`${"═".repeat(60)}`);
 
-  const medLine = (label: string, e: any) => {
+  const medLine = (label: string, e: Entity) => {
     const r = e.injury.byRegion[WOUND_REGION];
+    if (!r) return;
     const infected = r.infectedTick >= 0;
     const flags = [
       e.injury.dead     ? "DEAD"     : "",
@@ -455,7 +458,7 @@ function scenarioMedical(): void {
   };
 
   for (let tick = 0; tick < 300; tick++) {
-    const index = buildWorldIndex(world);
+    const _index = buildWorldIndex(world);
     const cmds: CommandMap = new Map();
 
     // Medic treats soldier A: tourniquet on tick 0 (stops bleeding), surgery thereafter
@@ -525,7 +528,7 @@ function scenarioTech(): void {
     ["rng_plasma_rifle", { items: [STARTER_RANGED_WEAPONS.find(w => w.id === "rng_plasma_rifle")!] }],
   ];
 
-  const eras: Array<[string, number]> = [
+  const eras: Array<[string, TechEra]> = [
     ["Prehistoric", TechEra.Prehistoric],
     ["Medieval",    TechEra.Medieval],
     ["EarlyModern", TechEra.EarlyModern],
@@ -543,7 +546,7 @@ function scenarioTech(): void {
   for (const [itemName, loadout] of checkItems) {
     const row = "  " + itemName.padEnd(itemPad) +
       eras.map(([, era]) => {
-        const ctx = defaultTechContext(era as any);
+        const ctx = defaultTechContext(era);
         const errors = validateLoadout(loadout, ctx);
         return (errors.length === 0 ? "✓" : "✗").padEnd(12);
       }).join("");
@@ -616,20 +619,20 @@ function scenarioTech(): void {
   console.log("  surgicalKit tier (no req):        works in any era");
   console.log("  nanomedicine tier (NanomedicalRepair):  Modern=blocked  DeepSpace=heals\n");
 
-  const runGateTest = (tierLabel: string, tier: string, era: number | null): number => {
+  const runGateTest = (tierLabel: string, tier: MedicalTier, era: TechEra | null): number => {
     const medic   = mkHumanoidEntity(1, 1, 0, 0);
     const patient = mkHumanoidEntity(2, 1, Math.trunc(0.5 * M), 0);
-    patient.injury.byRegion["torso"]!.structuralDamage = q(0.50) as any;
+    patient.injury.byRegion["torso"]!.structuralDamage = q(0.50);
 
     const world = mkWorld(1, [medic, patient]);
-    const cmds = new Map([[1, [{
+    const cmds: CommandMap = new Map([[1, [{
       kind: "treat" as const, targetId: 2,
       action: "surgery" as const,
-      tier: tier as any,
+      tier,
       regionId: "torso",
     }]]]);
 
-    const techCtx = era !== null ? defaultTechContext(era as any) : undefined;
+    const techCtx = era !== null ? defaultTechContext(era) : undefined;
     const ctx: KernelContext = { tractionCoeff: q(0.80) as Q, tuning: TUNING.tactical, ...(techCtx ? { techCtx } : {}) };
     for (let i = 0; i < 20; i++) stepWorld(world, cmds, ctx);
     const finalDmg = world.entities.find(e => e.id === 2)!.injury.byRegion["torso"]!.structuralDamage;
@@ -677,8 +680,8 @@ function scenarioNarrative(): void {
   const allWeapons = [...STARTER_WEAPONS, ...STARTER_RANGED_WEAPONS];
   const weaponProfiles = new Map(
     allWeapons
-      .filter(w => (w as any).damage)
-      .map(w => [w.id, (w as any).damage]),
+      .filter(w => (w).damage)
+      .map(w => [w.id, (w).damage]),
   );
 
   // Name map — entity 1 is "you" for second-person demonstration

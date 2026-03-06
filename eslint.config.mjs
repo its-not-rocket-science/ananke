@@ -34,6 +34,7 @@ export default [
       "**/dist/**",
       "**/coverage/**",
       "**/node_modules/**",
+      "**/tools/**",
     ],
   },
 ];

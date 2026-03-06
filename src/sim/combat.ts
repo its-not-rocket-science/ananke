@@ -2,8 +2,9 @@ import { SCALE, q, qMul, clampQ, mulDiv, type Q } from "../units.js";
 import { makeRng } from "../rng.js";
 
 import type { Entity } from "./entity.js";
-import { type Weapon, type Shield, type Loadout } from "../equipment.js";
+import { type Weapon, type Shield } from "../equipment.js";
 import { type HitArea } from "./kinds.js";
+import { BodySegment } from "./bodyplan.js";
 
 export type { HitArea };
 
@@ -33,7 +34,7 @@ export function parryLeverageQ(wpn: Weapon, attacker: Entity): Q {
   // (q(0.70) + qMul(q(0.5), q(0.30)) = 0.85), so it is intentionally tighter
   // than the old q(0.80) which was unreachable.
   const ratio = clampQ(
-    mulDiv(arm * SCALE.Q, 1, ref) as any,
+    mulDiv(arm * SCALE.Q, 1, ref),
     q(0.5),
     q(1.8)
   );
@@ -63,11 +64,11 @@ export function resolveHit(
 ): HitResolution {
   const rng = makeRng(seedU32, SCALE.Q);
 
-  const geom = clampQ(q(1.05) - mulDiv(geometryDotQ, q(0.10), SCALE.Q) as any, q(0.85), q(1.20));
+  const geom = clampQ(q(1.05) - mulDiv(geometryDotQ, q(0.10), SCALE.Q), q(0.85), q(1.20));
   const atk = qMul(attackSkill, geom);
 
   const diff = (atk - defenceSkill) as Q;
-  const p = clampQ(q(0.55) + mulDiv(diff, q(0.35), SCALE.Q) as any, q(0.10), q(0.95));
+  const p = clampQ(q(0.55) + mulDiv(diff, q(0.35), SCALE.Q), q(0.10), q(0.95));
 
   const roll = rng.q01();
   const hit = roll < p;
@@ -77,7 +78,7 @@ export function resolveHit(
   // Quality measures how cleanly the attack landed. It is only meaningful
   // when hit === true; set to 0 on a miss so callers can't accidentally use it.
   const quality = hit
-    ? clampQ(qMul(atk, q(0.60) + mulDiv((p - roll), q(0.40), SCALE.Q) as any), q(0.05), q(0.99))
+    ? clampQ(qMul(atk, q(0.60) + mulDiv((p - roll), q(0.40), SCALE.Q)), q(0.05), q(0.99))
     : q(0);
 
   let blocked = false;
@@ -101,17 +102,18 @@ export function resolveHit(
   return { hit, area, hitQuality: quality, blocked, parried, shieldBlocked: false };
 }
 
-function isShield(item: unknown): item is Shield {
-  // cheap “A” that makes “B” easy later
-  return (item as any)?.kind === "shield";
-}
+// function isShield(item: Item): item is Shield {
+//   // cheap “A” that makes “B” easy later
+//   return (item)?.kind === "shield";
+// }
 
 
 /** Returns true if `shield` covers `area`. Accepts the shield item so that
  *  future item variants (buckler, kite, tower) can override coverage by
  *  checking item tags rather than hard-coding areas here. */
-export function shieldCovers(shield: Shield, area: HitArea): boolean {
+export function shieldCovers(shield: Shield, area: HitArea | BodySegment | undefined): boolean {
+  if (area === undefined) return false;  // no hit area = no shield coverage
   // Explicit coverage list; extend when adding shield variants.
-  const covered: HitArea[] = (shield as any).covers ?? ["torso", "head"];
-  return covered.includes(area);
+  const covered: HitArea[] = shield.covers ?? ["torso", "head"];
+  return covered.includes(area as string);
 }

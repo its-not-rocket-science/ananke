@@ -24,7 +24,7 @@ export function pickTarget(
   if (focused && !focused.injury.dead && ai.retargetCooldownTicks > 0) return focused;
 
   // Phase 4: use entity's own threat horizon as perception radius
-  const perc = (self.attributes as any).perception ?? DEFAULT_PERCEPTION;
+  const perc = (self.attributes).perception ?? DEFAULT_PERCEPTION;
   const perceptionRadius = perc.threatHorizon_m;
 
   const p = perceiveLocal(self, index, spatial, perceptionRadius, perc.attentionDepth, env);
@@ -33,7 +33,7 @@ export function pickTarget(
   // Stickiness: prefer keeping previous target if present and alive
   if (focused && !focused.injury.dead) {
     const seed = eventSeed(worldSeed, tick, self.id, ai.focusTargetId, 0xF0C05);
-    const rollQ = (seed % SCALE.Q) as any;
+    const rollQ = (seed % SCALE.Q);
     if (rollQ < policy.focusStickinessQ) return focused;
   }
 

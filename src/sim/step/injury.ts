@@ -3,7 +3,7 @@ import type { WorldState } from "../world.js";
 import { q, clampQ, qMul, mulDiv, SCALE, type Q } from "../../units.js";
 import { buildTraitProfile } from "../../traits.js";
 import { deriveArmourProfile } from "../../equipment.js";
-import { ALL_REGIONS, DEFAULT_REGION_WEIGHTS } from "../body.js";
+import { ALL_REGIONS, BodyRegion, DEFAULT_REGION_WEIGHTS } from "../body.js";
 import { getExposureWeight } from "../bodyplan.js";
 import { DamageChannel } from "../../channels.js";
 import { armourCoversHit } from "../kernel.js";
@@ -75,25 +75,25 @@ export function stepConditionsToInjury(e: Entity, world: WorldState, ambientTemp
         };
       default:
         // Fallback: assume proportional to area.
-        return DEFAULT_REGION_WEIGHTS as any;
+        return DEFAULT_REGION_WEIGHTS;
     }
   };
 
-  const applyDoseToRegion = (channel: DamageChannel, region: string, dose: Q): Q => {
+  const applyDoseToRegion = (channel: DamageChannel, region: BodyRegion, dose: Q): Q => {
     if (dose <= 0) return q(0);
     if ((traitProfile.immuneMask & (1 << channel)) !== 0) return q(0);
 
     let out = dose;
-    if ((traitProfile.resistantMask & (1 << channel)) !== 0) out = Math.trunc(out / 2) as any;
+    if ((traitProfile.resistantMask & (1 << channel)) !== 0) out = Math.trunc(out / 2);
 
-    const cov = (armour.coverageByRegion as any)[region] ?? q(0);
+    const cov = (armour.coverageByRegion)[region] ?? q(0);
     const armCovers = armourCoversHit(world, cov, e.id, (e.id ^ 0xBEEF) + (channel << 8) + regionSalt(region));
     if (armCovers && ((armour.protects & (1 << channel)) !== 0)) {
       const mul = armour.channelResistMul[channel] ?? q(1.0);
 
       // A simple "resist factor" curve; for non-kinetic we treat resist_J as a generalised protective capacity.
       const resistFactor = clampQ(
-        q(1.0) - (mulDiv(Math.min(armour.resist_J, 800) * SCALE.Q, 1, 800) as any),
+        q(1.0) - (mulDiv(Math.min(armour.resist_J, 800) * SCALE.Q, 1, 800)),
         q(0.20),
         q(1.0),
       );
@@ -121,10 +121,10 @@ export function stepConditionsToInjury(e: Entity, world: WorldState, ambientTemp
   const suff = (() => {
     if ((traitProfile.immuneMask & (1 << DamageChannel.Suffocation)) !== 0) return q(0);
     let out = e.condition.suffocation;
-    if ((traitProfile.resistantMask & (1 << DamageChannel.Suffocation)) !== 0) out = Math.trunc(out / 2) as any;
+    if ((traitProfile.resistantMask & (1 << DamageChannel.Suffocation)) !== 0) out = Math.trunc(out / 2);
 
     // Simple: masks/helmets reduce suffocation slightly if they protect Suffocation.
-    const armCovers = armourCoversHit(world, (armour.coverageByRegion as any)["head"] ?? q(0), e.id, e.id ^ 0x5AFF);
+    const armCovers = armourCoversHit(world, (armour.coverageByRegion)["head"] ?? q(0), e.id, e.id ^ 0x5AFF);
     if (armCovers && ((armour.protects & (1 << DamageChannel.Suffocation)) !== 0)) {
       out = qMul(out, armour.protectedDamageMul);
     }
@@ -144,7 +144,7 @@ export function stepConditionsToInjury(e: Entity, world: WorldState, ambientTemp
   const RAD_INTERNAL_PER_TICK = q(0.0008);
   const RAD_SHOCK_PER_TICK = q(0.0003);
 
-  const allRegionIds = planSegments ? planSegments.map(s => s.id) : ALL_REGIONS as readonly string[];
+  const allRegionIds = planSegments ? planSegments.map(s => s.id as BodyRegion) : ALL_REGIONS;
   for (const r of allRegionIds) {
     const fire = applyDoseToRegion(DamageChannel.Thermal,    r, fireBy[r] ?? q(0));
     const corr = applyDoseToRegion(DamageChannel.Chemical,   r, corrBy[r] ?? q(0));
@@ -340,7 +340,7 @@ export function stepInjuryProgression(e: Entity, tick: number): void {
   }
 
   const bleedRate = totalBleedingRate(e.injury);
-  const rawBleedThisTick = Math.trunc((bleedRate * DT_S) / SCALE.s) as any;
+  const rawBleedThisTick = Math.trunc((bleedRate * DT_S) / SCALE.s);
   // Phase 7: medical.treatmentRateMul reduces fluid loss (passive wound management)
   const medSkill = getSkill(e.skills, "medical");
   const bleedThisTick = medSkill.treatmentRateMul > SCALE.Q

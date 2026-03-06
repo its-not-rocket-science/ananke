@@ -14,7 +14,6 @@ import {
   buildLimbStates,
   effectiveLimbForceMul,
   stepLimbFatigue,
-  type LimbState,
 } from "../src/sim/limb";
 import { OCTOPOID_PLAN, HUMANOID_PLAN, AVIAN_PLAN } from "../src/sim/bodyplan";
 import { defaultInjury } from "../src/sim/injury";
@@ -76,7 +75,7 @@ describe("effectiveLimbForceMul", () => {
     const injury = defaultInjury(segmentIds(OCTOPOID_PLAN));
     // Sever first 4 arms
     for (const seg of ["arm1", "arm2", "arm3", "arm4"]) {
-      (injury.byRegion as any)[seg].structuralDamage = SCALE.Q;
+      (injury.byRegion)[seg]!.structuralDamage = SCALE.Q;
     }
     const mul = effectiveLimbForceMul(limbs, injury);
     expect(mul).toBe(q(0.5)); // 4/8
@@ -86,7 +85,7 @@ describe("effectiveLimbForceMul", () => {
     const limbs = buildLimbStates(OCTOPOID_PLAN);
     const injury = defaultInjury(segmentIds(OCTOPOID_PLAN));
     for (const seg of ["arm1","arm2","arm3","arm4","arm5","arm6","arm7","arm8"]) {
-      (injury.byRegion as any)[seg].structuralDamage = SCALE.Q;
+      (injury.byRegion)[seg]!.structuralDamage = SCALE.Q;
     }
     const mul = effectiveLimbForceMul(limbs, injury);
     expect(mul).toBe(q(0));
@@ -110,7 +109,7 @@ describe("effectiveLimbForceMul", () => {
   it("2 arms (HUMANOID): 1 severed → 0.5 × activeFrac", () => {
     const limbs = buildLimbStates(HUMANOID_PLAN);
     const injury = defaultInjury(segmentIds(HUMANOID_PLAN));
-    (injury.byRegion as any)["leftArm"].structuralDamage = SCALE.Q;
+    (injury.byRegion)["leftArm"]!.structuralDamage = SCALE.Q;
     const mul = effectiveLimbForceMul(limbs, injury);
     expect(mul).toBe(q(0.5)); // 1/2
   });
@@ -127,28 +126,28 @@ describe("stepLimbFatigue", () => {
 
   it("engaged limb accumulates fatigue", () => {
     const limbs = buildLimbStates(OCTOPOID_PLAN);
-    limbs[0].engagedWith = 99;
+    limbs[0]!.engagedWith = 99;
     stepLimbFatigue(limbs, 80_000, 1.0); // 80N
-    expect(limbs[0].fatigueJ).toBeGreaterThan(0);
+    expect(limbs[0]!.fatigueJ).toBeGreaterThan(0);
   });
 
   it("fatigue is proportional to delta_s", () => {
     const limbsA = buildLimbStates(OCTOPOID_PLAN);
     const limbsB = buildLimbStates(OCTOPOID_PLAN);
-    limbsA[0].engagedWith = 1;
-    limbsB[0].engagedWith = 1;
+    limbsA[0]!.engagedWith = 1;
+    limbsB[0]!.engagedWith = 1;
     stepLimbFatigue(limbsA, 80_000, 1.0);
     stepLimbFatigue(limbsB, 80_000, 2.0);
-    expect(limbsB[0].fatigueJ).toBeCloseTo(limbsA[0].fatigueJ * 2, 5);
+    expect(limbsB[0]!.fatigueJ).toBeCloseTo(limbsA[0]!.fatigueJ * 2, 5);
   });
 
   it("only engaged limbs accumulate fatigue", () => {
     const limbs = buildLimbStates(OCTOPOID_PLAN);
-    limbs[2].engagedWith = 7; // arm3 only
+    limbs[2]!.engagedWith = 7; // arm3 only
     stepLimbFatigue(limbs, 80_000, 1.0);
     for (let i = 0; i < limbs.length; i++) {
-      if (i === 2) expect(limbs[i].fatigueJ).toBeGreaterThan(0);
-      else expect(limbs[i].fatigueJ).toBe(0);
+      if (i === 2) expect(limbs[i]!.fatigueJ).toBeGreaterThan(0);
+      else expect(limbs[i]!.fatigueJ).toBe(0);
     }
   });
 });
@@ -181,10 +180,10 @@ describe("kernel integration", () => {
     // Initialize limbStates first
     stepWorld(world, new Map(), { tractionCoeff: q(0.9) });
     // Engage a limb
-    e.limbStates![0].engagedWith = 99;
-    const fatigueBefore = e.limbStates![0].fatigueJ;
+    e.limbStates![0]!.engagedWith = 99;
+    const fatigueBefore = e.limbStates![0]!.fatigueJ;
     // Run another tick
     stepWorld(world, new Map(), { tractionCoeff: q(0.9) });
-    expect(e.limbStates![0].fatigueJ).toBeGreaterThan(fatigueBefore);
+    expect(e.limbStates![0]!.fatigueJ).toBeGreaterThan(fatigueBefore);
   });
 });

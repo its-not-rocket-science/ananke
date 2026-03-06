@@ -1,6 +1,7 @@
 import type { Entity } from "./entity.js";
 import type { FieldEffect } from "./capability.js";
 import { SensoryEnvironment } from "./sensory.js";
+import { FactionRegistry } from "../faction.js";
 
 export interface WorldState {
   tick: number;
@@ -12,4 +13,6 @@ export interface WorldState {
   activeFieldEffects?: FieldEffect[];
 
   __sensoryEnv?: SensoryEnvironment
+  __factionRegistry?: FactionRegistry;
+  __nutritionAccum?:number;
 }

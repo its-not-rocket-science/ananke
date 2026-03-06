@@ -12,7 +12,8 @@
  *   thermalMass = (mass_kg_real) × 3500                       [J/°C]
  */
 
-import { q, SCALE, type Q, qMul } from "../units.js";
+import { Item } from "../equipment.js";
+import { q, SCALE, type Q } from "../units.js";
 import type { Entity } from "./entity.js";
 
 // ── Temperature encoding helpers ──────────────────────────────────────────────
@@ -58,7 +59,7 @@ const CORE_TEMP_CRITICAL_HIGH: Q = q(0.558) as Q;  // ~40.1 °C — death trajec
 // Critical hypothermia is below HYPOTHERMIA_SEVERE (q(0.426) ≈ 33 °C)
 
 /** Helper: derive total armour insulation from loadout items. */
-export function sumArmourInsulation(items: readonly { kind?: string; insulation_m2KW?: number }[]): number {
+export function sumArmourInsulation(items: Item[]): number {
   let total = 0;
   for (const item of items) {
     if (item.kind === "armour" && item.insulation_m2KW != null) total += item.insulation_m2KW;
@@ -134,7 +135,7 @@ export function stepCoreTemp(
   const coreQ: number = cond.coreTemp_Q ?? CORE_TEMP_NORMAL_Q;
 
   const mReal = entity.attributes.morphology.mass_kg / SCALE.kg;
-  const insul = sumArmourInsulation(entity.loadout.items as any[])
+  const insul = sumArmourInsulation(entity.loadout.items)
              + (entity.physiology?.naturalInsulation_m2KW ?? 0);
 
   const vx   = entity.velocity_mps.x;

@@ -4,6 +4,8 @@ import type { Q, I32 } from "../units.js";
 
 import { TraceKinds, type HitArea } from "./kinds.js";
 import type { MedicalAction } from "./medical.js";
+import { BodyRegion } from "./body.js";
+import { BodySegmentId } from "./bodyplan.js";
 
 export type TraceEvent =
   | { kind: typeof TraceKinds.TickStart, tick: number }
@@ -26,7 +28,7 @@ export type TraceEvent =
       attackerId: number;
       targetId: number;
       weaponId?: string;             // Phase 18: weapon used; optional for back-compat
-      region: string;
+      region: BodyRegion | BodySegmentId;
       energy_J: number;
       blocked: boolean;
       parried: boolean;
@@ -84,7 +86,7 @@ export type TraceEvent =
       targetId: number;
       weaponId?: string;             // Phase 18: weapon used; optional for back-compat
       hit: boolean;
-      region?: string;               // only when hit=true
+      region?: BodyRegion | BodySegmentId;               // only when hit=true
       distance_m: I32;
       energyAtImpact_J: number;
       suppressed: boolean;
@@ -105,7 +107,7 @@ export type TraceEvent =
       kind: typeof TraceKinds.Fracture;       // Phase 9
       tick: number;
       entityId: number;
-      region: string;
+      region:  BodyRegion | BodySegmentId;
     }
   | {
       kind: typeof TraceKinds.TreatmentApplied; // Phase 9

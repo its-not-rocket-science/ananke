@@ -55,7 +55,7 @@ function runDuel(
   cmds.set(2, [{ kind: "defend", mode: defendMode, intensity: q(1.0) }]);
 
   for (let i = 0; i < ticks; i++) {
-    stepWorld(world, cmds, { tractionCoeff: q(0.9) } as any);
+    stepWorld(world, cmds, { tractionCoeff: q(0.9) });
   }
 
   return totalDamage(world);
@@ -73,10 +73,10 @@ test("attack cooldown prevents striking every tick", () => {
   const cmds: CommandMap = new Map();
   cmds.set(1, [{ kind: "attack", targetId: 2, weaponId: CLUB_ID, intensity: q(1.0) }]);
 
-  stepWorld(world, cmds, { tractionCoeff: q(0.9) } as any);
+  stepWorld(world, cmds, { tractionCoeff: q(0.9) });
   const after1 = totalDamage(world);
 
-  stepWorld(world, cmds, { tractionCoeff: q(0.9) } as any);
+  stepWorld(world, cmds, { tractionCoeff: q(0.9) });
   const after2 = totalDamage(world);
 
   expect(after2).toBe(after1);

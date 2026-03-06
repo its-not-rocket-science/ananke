@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 import { q, SCALE } from "../src/units";
-import { STARTER_WEAPONS, STARTER_SHIELDS, findShield, type Loadout } from "../src/equipment";
+import { STARTER_ARMOUR, STARTER_WEAPONS, STARTER_SHIELDS, findShield, type Loadout, Item } from "../src/equipment";
 import { mkHumanoidEntity } from "../src/sim/testing";
 
 import {
@@ -16,11 +16,12 @@ import {
   chooseArea,
   resolveHit,
   shieldCovers,
+  HitArea,
 } from "../src/sim/combat";
 
 // isShield is an internal helper in combat.ts; test it indirectly via findShield + kind check
-function isShield(item: unknown): boolean {
-  return (item as any)?.kind === "shield";
+function isShield(item?: Item): boolean {
+  return item?.kind === "shield";
 }
 
 // ─── parryLeverageQ ───────────────────────────────────────────────────────────
@@ -202,10 +203,9 @@ describe("isShield", () => {
   });
 
   test("returns false for null / undefined / plain objects", () => {
-    expect(isShield(null)).toBe(false);
     expect(isShield(undefined)).toBe(false);
-    expect(isShield({})).toBe(false);
-    expect(isShield({ kind: "armour" })).toBe(false);
+    expect(isShield({} as Item)).toBe(false);
+    expect(isShield(STARTER_ARMOUR[0])).toBe(false);
   });
 });
 
@@ -249,7 +249,7 @@ describe("shieldCovers", () => {
   });
 
   test("respects explicit covers override on shield item", () => {
-    const customShield = { ...shield, covers: ["leg", "arm"] };
+    const customShield = { ...shield, covers: ["leg", "arm"] as HitArea[] };
     expect(shieldCovers(customShield, "leg")).toBe(true);
     expect(shieldCovers(customShield, "arm")).toBe(true);
     expect(shieldCovers(customShield, "torso")).toBe(false);

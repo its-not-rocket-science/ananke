@@ -226,7 +226,7 @@ describe("surrender", () => {
   it("offer with fearQ exactly above threshold always resolves as accepted", () => {
     // fearQ = SURRENDER_THRESHOLD + 1 → P > 0 → deterministic success
     const ctx = makeContext();
-    ctx.target.condition.fearQ = (SURRENDER_THRESHOLD + 1) as any;
+    ctx.target.condition.fearQ = (SURRENDER_THRESHOLD + 1);
     const o = resolveDialogue({ kind: "surrender" }, ctx);
     expect(o.result).toBe("success");
   });
@@ -275,8 +275,8 @@ describe("escalation", () => {
       );
       if (o.result === "escalate") {
         // Escalate has no delta fields
-        expect((o as any).fearDelta).toBeUndefined();
-        expect((o as any).moraleDelta).toBeUndefined();
+        expect('fearDelta' in o).toBe(false);
+        expect('moraleDelta' in o).toBe(false);
         break;
       }
     }

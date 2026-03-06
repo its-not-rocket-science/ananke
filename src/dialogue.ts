@@ -140,7 +140,7 @@ export function dialogueProbability(
       const leaderRed  = target.traits.includes("leader") ? LEADER_INTIMIDATE_REDUCTION : 0;
       return clampQ(
         forceFrac
-          + target.condition.fearQ
+          + target.condition.fearQ!
           - target.attributes.resilience.distressTolerance
           - leaderRed,
         0, SCALE.Q,
@@ -166,7 +166,7 @@ export function dialogueProbability(
 
     case "surrender":
       // Returns non-zero only when target's fear exceeds the acceptance threshold.
-      return clampQ(target.condition.fearQ - SURRENDER_THRESHOLD, 0, SCALE.Q);
+      return clampQ(target.condition.fearQ! - SURRENDER_THRESHOLD, 0, SCALE.Q);
 
     case "negotiate": {
       const given    = action.offer.giving.reduce((s, i)    => s + i.value, 0);
@@ -223,7 +223,7 @@ export function resolveDialogue(
   // Failure branches
   if (action.kind === "intimidate") {
     // Fearless targets interpret intimidation as an insult.
-    if (ctx.target.condition.fearQ < ESCALATE_THRESHOLD) {
+    if (ctx.target.condition.fearQ! < ESCALATE_THRESHOLD) {
       return { result: "escalate" };
     }
     return { result: "failure", cooldown_s: 30 };
@@ -252,13 +252,13 @@ export function applyDialogueOutcome(
 
   if (outcome.fearDelta !== undefined) {
     target.condition.fearQ = clampQ(
-      target.condition.fearQ + outcome.fearDelta, 0, SCALE.Q,
+      target.condition.fearQ! + outcome.fearDelta, 0, SCALE.Q,
     ) as Q;
   }
 
   if (outcome.moraleDelta !== undefined) {
     target.condition.fearQ = clampQ(
-      target.condition.fearQ - outcome.moraleDelta, 0, SCALE.Q,
+      target.condition.fearQ! - outcome.moraleDelta, 0, SCALE.Q,
     ) as Q;
   }
 

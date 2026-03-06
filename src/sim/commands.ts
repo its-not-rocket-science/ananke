@@ -2,7 +2,7 @@ import type { Q } from "../units.js";
 import { q } from "../units.js";
 import type { Vec3 } from "./vec3.js";
 
-import { CommandKinds, DefenceMode, EngageModes, EngageMode, MoveMode, MoveModes } from "./kinds.js";
+import { CommandKinds, DefenceMode, EngageModes, MoveMode, MoveModes } from "./kinds.js";
 import type { MedicalAction, MedicalTier } from "./medical.js";
 
 export type Command =

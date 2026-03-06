@@ -31,7 +31,7 @@ export function decideCommandsForEntity(
   if (self.injury.dead) return [];
 
   // Feature 4: surrendered entities are permanently passive
-  if ((self.condition as any).surrendered) {
+  if ((self.condition).surrendered) {
     return [
       { kind: "defend", mode: "none" as DefenceMode, intensity: q(0) },
       { kind: "setProne", prone: true },
@@ -40,7 +40,7 @@ export function decideCommandsForEntity(
 
   // tick down AI cooldowns
   if (!self.ai) self.ai = { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
-  if ((self.ai as any).decisionCooldownTicks === undefined) (self.ai as any).decisionCooldownTicks = 0;
+  if ((self.ai).decisionCooldownTicks === undefined) (self.ai).decisionCooldownTicks = 0;
   self.ai.retargetCooldownTicks = Math.max(0, self.ai.retargetCooldownTicks - 1);
   self.ai.decisionCooldownTicks = Math.max(0, self.ai.decisionCooldownTicks - 1);
 
@@ -51,7 +51,7 @@ export function decideCommandsForEntity(
   }
 
   // Charge latency for next decision cycle
-  const perc = (self.attributes as any).perception ?? DEFAULT_PERCEPTION;
+  const perc = (self.attributes).perception ?? DEFAULT_PERCEPTION;
   // Phase 7: tactics.hitTimingOffset_s reduces decision latency (max 50% reduction)
   const tacticsSkill = getSkill(self.skills, "tactics");
   const adjustedLatency_s = Math.max(
@@ -62,9 +62,9 @@ export function decideCommandsForEntity(
   self.ai.decisionCooldownTicks = latencyTicks;
 
   // Phase 5: morale states — routing flees; hesitant suppresses attacks
-  const fearQ = (self.condition as any).fearQ ?? q(0);
+  const fearQ = (self.condition).fearQ ?? q(0);
   const distressTol = self.attributes.resilience.distressTolerance;
-  const fearResp = (self.attributes.resilience as any).fearResponse ?? "flight";
+  const fearResp = (self.attributes.resilience).fearResponse ?? "flight";
 
   // Feature 6: berserk entities never route or hesitate
   const isHesitant = fearResp !== "berserk" &&
@@ -83,7 +83,7 @@ export function decideCommandsForEntity(
     const freezeChance    = Math.trunc(qMul(q(0.15), (SCALE.Q - distressTol) as Q));
     const r = panicSeed % SCALE.Q;
     if (r < surrenderChance) {
-      (self.condition as any).surrendered = true;
+      (self.condition).surrendered = true;
       return [
         { kind: "defend", mode: "none" as DefenceMode, intensity: q(0) },
         { kind: "setProne", prone: true },
@@ -111,7 +111,7 @@ export function decideCommandsForEntity(
   }
 
   // Phase 3 extension: suppression response — go prone when sustained under fire (low distressTol only)
-  const suppressedTicks = (self.condition as any).suppressedTicks ?? 0;
+  const suppressedTicks = (self.condition).suppressedTicks ?? 0;
   if (suppressedTicks >= 3 && distressTol < q(0.50)) {
     const suppCmds: Command[] = [{ kind: "defend", mode: "none" as DefenceMode, intensity: q(0) }];
     if (!self.condition.prone) {
@@ -126,7 +126,7 @@ export function decideCommandsForEntity(
   // Self-defence override: if self has taken damage (shock > 0 or fluid loss > 0),
   // faction check is bypassed (attacker is fought back regardless of standing).
   if (target && self.faction) {
-    const factionRegistry = (world as any).__factionRegistry as FactionRegistry | undefined;
+    const factionRegistry = (world).__factionRegistry as FactionRegistry | undefined;
     if (factionRegistry) {
       const standing = effectiveStanding(factionRegistry, self, target);
       const selfDefence = self.injury.shock > 0 || self.injury.fluidLoss > 0;
@@ -219,7 +219,7 @@ export function decideCommandsForEntity(
 
   // attack when within engage range — hesitant or rallying entities hold back
   const weapon = findWeapon(self.loadout, undefined);
-  const isRallying = ((self.condition as any).rallyCooldownTicks ?? 0) > 0;
+  const isRallying = ((self.condition).rallyCooldownTicks ?? 0) > 0;
   if (weapon && !isHesitant && !isRallying) {
     const reach = weapon.reach_m ?? Math.trunc(self.attributes.morphology.stature_m * 0.45);
     if (distApprox <= reach + Math.trunc(0.25 * SCALE.m)) {

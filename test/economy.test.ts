@@ -40,8 +40,8 @@ describe("item value", () => {
   });
 
   it("worn weapon has lower condition_Q than fresh", () => {
-    const fresh = computeItemValue(wpn_club, q(0) as any);
-    const worn  = computeItemValue(wpn_club, q(0.50) as any);
+    const fresh = computeItemValue(wpn_club, q(0));
+    const worn  = computeItemValue(wpn_club, q(0.50));
     expect(worn.condition_Q).toBeLessThan(fresh.condition_Q);
   });
 
@@ -84,7 +84,7 @@ describe("item value", () => {
 
 describe("wear mechanics", () => {
   // Fresh weapon with no wear_Q set
-  const freshWeapon: Weapon = { ...wpn_club, wear_Q: q(0) as any };
+  const freshWeapon: Weapon = { ...wpn_club, wear_Q: q(0) };
 
   it("single strike at full intensity adds q(0.001)", () => {
     const result = applyWear(freshWeapon, q(1.0));
@@ -98,7 +98,7 @@ describe("wear mechanics", () => {
   });
 
   it("wear ≥ q(0.30) sets penaltyActive", () => {
-    const nearPenalty: Weapon = { ...wpn_club, wear_Q: (WEAR_PENALTY_THRESHOLD - 1) as any };
+    const nearPenalty: Weapon = { ...wpn_club, wear_Q: (WEAR_PENALTY_THRESHOLD - 1) };
     const result = applyWear(nearPenalty, q(1.0));
     expect(result.wear_Q).toBeGreaterThanOrEqual(WEAR_PENALTY_THRESHOLD);
     expect(result.penaltyActive).toBe(true);
@@ -110,7 +110,7 @@ describe("wear mechanics", () => {
   });
 
   it("wear ≥ q(0.70) can trigger fumble with seed", () => {
-    const nearFumble: Weapon = { ...wpn_club, wear_Q: WEAR_FUMBLE_THRESHOLD as any };
+    const nearFumble: Weapon = { ...wpn_club, wear_Q: WEAR_FUMBLE_THRESHOLD };
     // With a fixed seed, fumble result is deterministic
     const r1 = applyWear(nearFumble, q(1.0), 42);
     const r2 = applyWear(nearFumble, q(1.0), 42);
@@ -118,13 +118,13 @@ describe("wear mechanics", () => {
   });
 
   it("fumble is false without a seed", () => {
-    const nearFumble: Weapon = { ...wpn_club, wear_Q: WEAR_FUMBLE_THRESHOLD as any };
+    const nearFumble: Weapon = { ...wpn_club, wear_Q: WEAR_FUMBLE_THRESHOLD };
     const result = applyWear(nearFumble, q(1.0));  // no seed
     expect(result.fumble).toBe(false);
   });
 
   it("wear ≥ q(1.0) → broke=true", () => {
-    const maxWear: Weapon = { ...wpn_club, wear_Q: (SCALE.Q - 1) as any };
+    const maxWear: Weapon = { ...wpn_club, wear_Q: (SCALE.Q - 1) };
     const result = applyWear(maxWear, q(1.0));
     expect(result.broke).toBe(true);
     expect(result.wear_Q).toBe(SCALE.Q);
@@ -301,14 +301,14 @@ describe("integration", () => {
   });
 
   it("wear accumulates over multiple strikes", () => {
-    const weapon: Weapon = { ...wpn_club, wear_Q: q(0) as any };
+    const weapon: Weapon = { ...wpn_club, wear_Q: q(0) };
     let current: Weapon = weapon;
     for (let i = 0; i < 10; i++) {
       const result = applyWear(current, q(1.0));
       current = { ...current, wear_Q: result.wear_Q };
     }
     // After 10 strikes at q(1.0), wear = 10 × q(0.001) = q(0.01)
-    const finalWear = (current as any).wear_Q as number;
+    const finalWear = (current).wear_Q as number;
     expect(finalWear).toBeGreaterThanOrEqual(q(0.009));
     expect(finalWear).toBeLessThanOrEqual(q(0.015));
   });

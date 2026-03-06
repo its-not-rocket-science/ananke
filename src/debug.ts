@@ -149,7 +149,7 @@ export function extractConditionSamples(world: WorldState): ConditionSample[] {
     entityId:     e.id,
     teamId:       e.teamId,
     position_m:   e.position_m,
-    fearQ:        e.condition.fearQ,
+    fearQ:        e.condition.fearQ ?? 0,
     shock:        e.injury.shock,
     consciousness: e.injury.consciousness,
     fluidLoss:    e.injury.fluidLoss,

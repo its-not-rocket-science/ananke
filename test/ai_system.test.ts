@@ -6,6 +6,7 @@ import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";
 import { buildAICommands } from "../src/sim/ai/system";
 import { AI_PRESETS } from "../src/sim/ai/presets";
+import { CommandMap } from "../src";
 
 test("AI command generation is deterministic for the same world state", () => {
   const a1 = mkHumanoidEntity(1, 1, 0, 0);
@@ -31,10 +32,10 @@ test("AI command generation is deterministic for the same world state", () => {
   const c2 = buildAICommands(w2, idx2, sp2, cmdsFor);
 
   // Compare as JSON-friendly structure
-  const norm = (m: Map<number, readonly any[]>) =>
+  const norm = (m: CommandMap) =>
     [...m.entries()].sort((a, b) => a[0] - b[0]).map(([k, v]) => [k, v]);
 
-  expect(norm(c1 as any)).toEqual(norm(c2 as any));
+  expect(norm(c1)).toEqual(norm(c2));
 });
 
 test("AI targets enemies, not allies", () => {
@@ -51,7 +52,7 @@ test("AI targets enemies, not allies", () => {
   const list = cmds.get(1) ?? [];
 
   // Expect at least a move/defend; if an attack exists it must not target ally
-  for (const c of list as any[]) {
+  for (const c of list) {
     if (c.kind === "attack") expect(c.targetId).toBe(3);
   }
 });

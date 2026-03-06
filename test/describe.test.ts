@@ -194,6 +194,7 @@ describe("body description", () => {
   it("OCTOPUS mass string contains '15' and 'slight'", () => {
     expect(octopusDesc.mass).toContain("15");
     expect(octopusDesc.mass).toContain("slight");
+    expect(octopusNom.concussionResistance.label).toBe("ironclad"); // 15 kg maps to excellent concussion resistance tier
   });
 
   it("SERVICE_ROBOT stature string does not contain 'average height' (1.60 m is 'short')", () => {

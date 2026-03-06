@@ -52,6 +52,8 @@ export interface Entity {
   /** Phase 10: active pharmacological substances (ingested/injected by the host application). */
   substances?: ActiveSubstance[];
 
+  foodInventory?: Map<string, number> | undefined; // optional Phase 12: tracks consumable food items and counts
+
   /**
    * Phase 8B: molting state for arthropod-type entities.
    * Active molt: segments in `softeningSegments` take reduced kinetic structural damage.
@@ -104,7 +106,7 @@ export interface Entity {
   reputations?: Map<string, number>;
 
   /** Phase 31: species-level physiological overrides (thermoregulation, nutrition). */
-  physiology?: SpeciesPhysiology;
+  physiology?: SpeciesPhysiology | undefined;
 
   /** Phase 32C: active venom/toxin injections — ticked at 1 Hz by stepToxicology. */
   activeVenoms?: ActiveVenom[];

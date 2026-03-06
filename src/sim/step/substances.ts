@@ -54,7 +54,7 @@ export function stepSubstances(e: Entity, ambientTemperature_Q?: Q): void {
     switch (sub.effectType) {
       case "stimulant":
         // Reduces fear and slows fatigue accumulation
-        e.condition.fearQ  = clampQ(e.condition.fearQ  - qMul(effectDose, q(0.005)), q(0), q(1.0));
+        e.condition.fearQ  = clampQ((e.condition.fearQ ?? 0)  - qMul(effectDose, q(0.005)), q(0), q(1.0));
         e.energy.fatigue   = clampQ(e.energy.fatigue   - qMul(effectDose, q(0.003)), q(0), q(1.0));
         break;
       case "anaesthetic":

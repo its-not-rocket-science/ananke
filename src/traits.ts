@@ -16,28 +16,15 @@ export type TraitId =
   | "leader"
   | "standardBearer";
 
+export type TraitMult = Partial<Record<TraitMultKey, Q>>;
+
 export interface TraitEffect {
   id: TraitId;
   name: string;
   description: string;
   immuneTo?: ChannelMask;
   resistantTo?: ChannelMask;
-  mult?: Partial<{
-    actuatorScale: Q;
-    structureScale: Q;
-    conversionEfficiency: Q;
-    controlQuality: Q;
-    stability: Q;
-    surfaceIntegrity: Q;
-    bulkIntegrity: Q;
-    structureIntegrity: Q;
-    concussionTolerance: Q;
-    shockTolerance: Q;
-    heatTolerance: Q;
-    coldTolerance: Q;
-    fatigueRate: Q;
-    recoveryRate: Q;
-  }>;
+  mult?: TraitMult;
 }
 
 export const TRAITS: Record<TraitId, TraitEffect> = {
@@ -116,13 +103,118 @@ export const TRAITS: Record<TraitId, TraitEffect> = {
   },
 };
 
+
+export type TraitMultKey =
+  | "shockTolerance"
+  | "concussionTolerance"
+  | "distressTolerance"
+  | "surfaceIntegrity"
+  | "bulkIntegrity"
+  | "structureIntegrity"
+  | "structureScale"
+  | "heatTolerance"
+  | "coldTolerance"
+  | "controlQuality";
+
+type Accessor = {
+  get: (a: IndividualAttributes) => number;
+  set: (a: IndividualAttributes, v: number) => void;
+  // Optional per-field clamp range if you want more realism later:
+  max?: number;
+};
+
+const MULT_ACCESSORS: Record<TraitMultKey, Accessor> = {
+  // Resilience
+  shockTolerance: {
+    get: (a) => a.resilience.shockTolerance,
+    set: (a, v) => { a.resilience.shockTolerance = v; },
+    max: 10 * SCALE.Q,
+  },
+  concussionTolerance: {
+    get: (a) => a.resilience.concussionTolerance,
+    set: (a, v) => { a.resilience.concussionTolerance = v; },
+    max: 10 * SCALE.Q,
+  },
+  distressTolerance: {
+    get: (a) => a.resilience.distressTolerance,
+    set: (a, v) => { a.resilience.distressTolerance = v; },
+    max: 10 * SCALE.Q,
+  },
+
+  // Integrity (your traits imply these exist; adjust nesting if needed)
+  surfaceIntegrity: {
+    get: (a) => a.resilience.surfaceIntegrity,
+    set: (a, v) => { a.resilience.surfaceIntegrity = v; },
+    max: 10 * SCALE.Q,
+  },
+  bulkIntegrity: {
+    get: (a) => a.resilience.bulkIntegrity,
+    set: (a, v) => { a.resilience.bulkIntegrity = v; },
+    max: 10 * SCALE.Q,
+  },
+  structureIntegrity: {
+    get: (a) => a.resilience.structureIntegrity,
+    set: (a, v) => { a.resilience.structureIntegrity = v; },
+    max: 10 * SCALE.Q,
+  },
+
+  // Morphology / structure scaling
+  structureScale: {
+    get: (a) => a.morphology.structureScale,
+    set: (a, v) => { a.morphology.structureScale = v; },
+    max: 10 * SCALE.Q,
+  },
+
+  // Thermoregulation / tolerances
+  heatTolerance: {
+    get: (a) => a.resilience.heatTolerance,
+    set: (a, v) => { a.resilience.heatTolerance = v; },
+    max: 10 * SCALE.Q,
+  },
+  coldTolerance: {
+    get: (a) => a.resilience.coldTolerance,
+    set: (a, v) => { a.resilience.coldTolerance = v; },
+    max: 10 * SCALE.Q,
+  },
+
+  // Control / coordination quality
+  controlQuality: {
+    get: (a) => a.control.controlQuality,
+    set: (a, v) => { a.control.controlQuality = v; },
+    max: 10 * SCALE.Q,
+  },
+} as const;
+
+type AttrMutator = (a: IndividualAttributes) => void;
+
+function applyMult(a: IndividualAttributes, key: TraitMultKey, mult: Q): void {
+  const acc = MULT_ACCESSORS[key];
+  const current = acc.get(a);
+  const next = clampQ(qMul(current, mult), 0, acc.max ?? (10 * SCALE.Q));
+  acc.set(a, next);
+}
+
+export const TRAIT_MUTATORS: Record<TraitId, AttrMutator> = (() => {
+  const out = {} as Record<TraitId, AttrMutator>;
+  for (const id of Object.keys(TRAITS) as TraitId[]) {
+    const trait = TRAITS[id];
+    out[id] = (a) => {
+      if (!trait.mult) return;
+      for (const [k, mult] of Object.entries(trait.mult) as Array<[TraitMultKey, Q]>) {
+        applyMult(a, k, mult);
+      }
+    };
+  }
+  return out;
+})();
+
 export interface TraitProfile {
   traits: TraitId[];
   immuneMask: ChannelMask;
   resistantMask: ChannelMask;
 }
 
-export function buildTraitProfile(traits: TraitId[]): TraitProfile {
+export function buildTraitProfile(traits: readonly TraitId[]): TraitProfile {
   let immuneMask = 0;
   let resistantMask = 0;
   for (const id of traits) {
@@ -132,44 +224,20 @@ export function buildTraitProfile(traits: TraitId[]): TraitProfile {
   }
   return { traits: [...traits].sort(), immuneMask, resistantMask };
 }
+export function applyTraitsToAttributes(
+  base: IndividualAttributes,
+  traits: readonly TraitId[],
+): IndividualAttributes {
+  const out: IndividualAttributes = structuredClone(base);
 
-export function applyTraitsToAttributes(a: IndividualAttributes, traits: TraitId[]): IndividualAttributes {
-  const ids = [...traits].sort();
-  const out: IndividualAttributes = JSON.parse(JSON.stringify(a));
+  // Deterministic ordering
+  const sorted = [...traits].sort();
 
-    const mulField = (path: string[], mult: Q) => {
-    let obj: any = out;
-
-    for (let i = 0; i < path.length - 1; i++) {
-      const k = path[i]!;      // assert not undefined
-      if (!k || !obj[k]) throw new Error(`Invalid trait path: ${path.join('.')}`);
-      obj = obj[k];
-    }
-
-    const key = path[path.length - 1]!;
-    obj[key] = clampQ(qMul(obj[key], mult), 0, 10 * SCALE.Q);
-  };
-
-  for (const id of ids) {
-    const t = TRAITS[id];
-    const m = t.mult;
-    if (!m) continue;
-
-    if (m.actuatorScale) mulField(["morphology","actuatorScale"], m.actuatorScale);
-    if (m.structureScale) mulField(["morphology","structureScale"], m.structureScale);
-    if (m.conversionEfficiency) mulField(["performance","conversionEfficiency"], m.conversionEfficiency);
-    if (m.controlQuality) mulField(["control","controlQuality"], m.controlQuality);
-    if (m.stability) mulField(["control","stability"], m.stability);
-
-    if (m.surfaceIntegrity) mulField(["resilience","surfaceIntegrity"], m.surfaceIntegrity);
-    if (m.bulkIntegrity) mulField(["resilience","bulkIntegrity"], m.bulkIntegrity);
-    if (m.structureIntegrity) mulField(["resilience","structureIntegrity"], m.structureIntegrity);
-    if (m.concussionTolerance) mulField(["resilience","concussionTolerance"], m.concussionTolerance);
-    if (m.shockTolerance) mulField(["resilience","shockTolerance"], m.shockTolerance);
-    if (m.heatTolerance) mulField(["resilience","heatTolerance"], m.heatTolerance);
-    if (m.coldTolerance) mulField(["resilience","coldTolerance"], m.coldTolerance);
-    if (m.fatigueRate) mulField(["resilience","fatigueRate"], m.fatigueRate);
-    if (m.recoveryRate) mulField(["resilience","recoveryRate"], m.recoveryRate);
+  for (const t of sorted) {
+    const mut = TRAIT_MUTATORS[t];
+    if (!mut) throw new Error(`Unknown trait: ${t}`);
+    mut(out);
   }
+
   return out;
 }

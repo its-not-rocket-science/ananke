@@ -18,7 +18,7 @@ import type { TraitId }              from "./traits.js";
 import type { CapabilitySource }     from "./sim/capability.js";
 import type { Weapon }               from "./equipment.js";
 import type { SkillMap }             from "./sim/skills.js";
-import { type Q, q, SCALE, to }      from "./units.js";
+import { type Q, q, to }      from "./units.js";
 import { generateIndividual }        from "./generate.js";
 import { applyTraitsToAttributes }   from "./traits.js";
 import { HUMANOID_PLAN, AVIAN_PLAN, CENTAUR_PLAN } from "./sim/bodyplan.js";

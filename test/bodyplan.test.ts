@@ -29,6 +29,7 @@ import { generateIndividual } from "../src/generate.js";
 import { HUMAN_BASE } from "../src/archetypes.js";
 import { v3 } from "../src/sim/vec3.js";
 import { STARTER_WEAPONS } from "../src/equipment.js";
+import { CommandMap, Entity } from "../src/index.js";
 
 // ─── catalogue checks ─────────────────────────────────────────────────────────
 
@@ -197,7 +198,7 @@ describe("defaultInjury", () => {
 // ─── deriveFunctionalState with body plan ─────────────────────────────────────
 
 describe("deriveFunctionalState (data-driven)", () => {
-  function makeEntityWithPlan(plan: BodyPlan) {
+  function makeEntityWithPlan(plan: BodyPlan): Entity {
     const attrs = generateIndividual(1, HUMAN_BASE);
     return {
       id: 1, teamId: 1,
@@ -266,7 +267,7 @@ describe("deriveFunctionalState (data-driven)", () => {
     withPlan.injury.byRegion["rightLeg"]!.structuralDamage = q(0.50);
 
     const withoutPlan = makeEntityWithPlan(HUMANOID_PLAN);
-    delete (withoutPlan as any).bodyPlan;
+    delete (withoutPlan).bodyPlan;
     withoutPlan.injury.byRegion["rightLeg"]!.structuralDamage = q(0.50);
 
     const fsWithPlan    = deriveFunctionalState(withPlan, TUNING.tactical);
@@ -282,7 +283,7 @@ describe("deriveFunctionalState (data-driven)", () => {
 describe("kernel integration — non-humanoid body plan", () => {
   it("quadruped entity completes 20 ticks without crash", () => {
     const attrs = generateIndividual(1, HUMAN_BASE);
-    const quadruped: any = {
+    const quadruped = {
       id: 1, teamId: 1,
       attributes: attrs,
       energy: { reserveEnergy_J: attrs.performance.reserveEnergy_J, fatigue: q(0) },
@@ -315,7 +316,7 @@ describe("kernel integration — non-humanoid body plan", () => {
   it("quadruped accumulates damage in body plan segments when attacked", () => {
     const CLOSE = Math.trunc(0.5 * SCALE.m);
     const attrs = generateIndividual(1, HUMAN_BASE);
-    const quadruped: any = {
+    const quadruped = {
       id: 1, teamId: 1,
       attributes: attrs,
       energy: { reserveEnergy_J: attrs.performance.reserveEnergy_J, fatigue: q(0) },
@@ -338,7 +339,7 @@ describe("kernel integration — non-humanoid body plan", () => {
 
     // Issue explicit attack commands from human toward quadruped each tick
     for (let tick = 0; tick < 100; tick++) {
-      const cmds: Map<number, any[]> = new Map();
+      const cmds: CommandMap = new Map();
       if (!quadruped.injury.dead && !human.injury.dead) {
         cmds.set(human.id, [{ kind: "attack", targetId: quadruped.id, weaponId: sword.id, intensity: q(1.0) }]);
       }
@@ -350,8 +351,9 @@ describe("kernel integration — non-humanoid body plan", () => {
     }
 
     // Quadruped should have accumulated some injury (hits spread over body plan segments)
+    //TODO: fix
     const totalDamage = Object.values(quadruped.injury.byRegion)
-      .reduce((s: number, r: any) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
+      .reduce((s: number, r) => s + r.surfaceDamage + r.internalDamage + r.structuralDamage, 0);
     expect(totalDamage).toBeGreaterThan(0);
 
     // Verify only body plan segment keys exist (no humanoid-specific keys like leftArm/rightArm)

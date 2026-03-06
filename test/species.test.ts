@@ -16,12 +16,12 @@ import {
   generateSpeciesIndividual,
   ALL_SPECIES, FANTASY_HUMANOID_SPECIES, SCIFI_HUMANOID_SPECIES,
   MYTHOLOGICAL_SPECIES, FICTIONAL_SPECIES,
-  ELF_SPECIES, DWARF_SPECIES, HALFLING_SPECIES, ORC_SPECIES, GOBLIN_SPECIES,
+  ELF_SPECIES, HALFLING_SPECIES, ORC_SPECIES, GOBLIN_SPECIES,
   OGRE_SPECIES, TROLL_SPECIES, VULCAN_SPECIES, KLINGON_SPECIES,
   HEECHEE_SPECIES, DRAGON_SPECIES, SATYR_SPECIES,
 } from "../src/species";
 import { HUMAN_BASE } from "../src/archetypes";
-import { AVIAN_PLAN, CENTAUR_PLAN, HUMANOID_PLAN } from "../src/sim/bodyplan";
+import { AVIAN_PLAN } from "../src/sim/bodyplan";
 import { computeBMR, stepNutrition } from "../src/sim/nutrition";
 import { stepCoreTemp, cToQ, CORE_TEMP_NORMAL_Q } from "../src/sim/thermoregulation";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
@@ -53,7 +53,7 @@ describe("data integrity", () => {
     ] as const;
     for (const s of ALL_SPECIES) {
       for (const field of varFields) {
-        const v = (s.archetype as any)[field] as number;
+        const v = (s.archetype)[field] as number;
         expect(v).toBeGreaterThanOrEqual(0);
         expect(v).toBeLessThanOrEqual(SCALE.Q);
       }
@@ -126,82 +126,82 @@ describe("thermoregulation — species physiology", () => {
   const ARCTIC = cToQ(-20) as Q;  // −20°C ambient
 
   it("cold-blooded entity: coreTemp_Q unchanged after stepWorld with thermalAmbient_Q", () => {
-    const e = mkHumanoidEntity(1, 1, 0);
-    (e as any).physiology = { coldBlooded: true };
-    const initialCoreQ = (e.condition as any).coreTemp_Q;  // undefined before first step
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    (e).physiology = { coldBlooded: true };
+    const initialCoreQ = (e.condition).coreTemp_Q;  // undefined before first step
     const world = mkWorld(1, [e]);
     for (let i = 0; i < 20; i++) {
       stepWorld(world, new Map(), { thermalAmbient_Q: ARCTIC, tractionCoeff: q(0.9) });
     }
     // coldBlooded skips stepCoreTemp — coreTemp_Q stays at initial (undefined)
-    expect((e.condition as any).coreTemp_Q).toBe(initialCoreQ);
+    expect((e.condition).coreTemp_Q).toBe(initialCoreQ);
   });
 
   it("non-cold-blooded entity: coreTemp_Q moves toward arctic ambient", () => {
-    const e = mkHumanoidEntity(2, 1, 0);
+    const e = mkHumanoidEntity(2, 1, 0, 0);
     const world = mkWorld(1, [e]);
     for (let i = 0; i < 40; i++) {
       stepWorld(world, new Map(), { thermalAmbient_Q: ARCTIC, tractionCoeff: q(0.9) });
     }
-    const coreQ = (e.condition as any).coreTemp_Q as number;
+    const coreQ = (e.condition).coreTemp_Q as number;
     // coreTemp should have been set and moved below normal q(0.500) toward cold ambient
     expect(coreQ).toBeLessThan(q(0.500));
   });
 
   it("TROLL natural insulation (0.08) slows cooling vs. entity without insulation", () => {
     // Two identical entities (same seed) except one has naturalInsulation_m2KW: 0.08
-    const eNoInsul = mkHumanoidEntity(1, 1, 0);
-    const eInsul   = mkHumanoidEntity(1, 2, 100);  // same seed → same mass
-    (eInsul as any).physiology = { naturalInsulation_m2KW: 0.08 };
+    const eNoInsul = mkHumanoidEntity(1, 1, 0, 0);
+    const eInsul   = mkHumanoidEntity(1, 2, 100, 0);  // same seed → same mass
+    (eInsul).physiology = { naturalInsulation_m2KW: 0.08 };
 
     // Set same starting temp
-    (eNoInsul.condition as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
-    (eInsul.condition   as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+    (eNoInsul.condition).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+    (eInsul.condition  ).coreTemp_Q = CORE_TEMP_NORMAL_Q;
 
     for (let i = 0; i < 200; i++) {
       stepCoreTemp(eNoInsul, ARCTIC, 1 / 20);
       stepCoreTemp(eInsul,   ARCTIC, 1 / 20);
     }
 
-    const qNoInsul = (eNoInsul.condition as any).coreTemp_Q as number;
-    const qInsul   = (eInsul.condition   as any).coreTemp_Q as number;
+    const qNoInsul = (eNoInsul.condition).coreTemp_Q as number;
+    const qInsul   = (eInsul.condition  ).coreTemp_Q as number;
     // Insulated entity should be warmer (higher Q)
     expect(qInsul).toBeGreaterThan(qNoInsul);
   });
 
   it("dragon natural insulation (0.05) slows cooling vs. no insulation", () => {
-    const eDragon = mkHumanoidEntity(1, 1, 0);
-    const ePlain  = mkHumanoidEntity(1, 2, 100);  // same seed → same mass
-    (eDragon as any).physiology = { naturalInsulation_m2KW: 0.05 };
+    const eDragon = mkHumanoidEntity(1, 1, 0, 0);
+    const ePlain  = mkHumanoidEntity(1, 2, 100, 0);  // same seed → same mass
+    (eDragon).physiology = { naturalInsulation_m2KW: 0.05 };
 
-    (eDragon.condition as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
-    (ePlain.condition  as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+    (eDragon.condition).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+    (ePlain.condition ).coreTemp_Q = CORE_TEMP_NORMAL_Q;
 
     for (let i = 0; i < 200; i++) {
       stepCoreTemp(eDragon, ARCTIC, 1 / 20);
       stepCoreTemp(ePlain,  ARCTIC, 1 / 20);
     }
 
-    const qDragon = (eDragon.condition as any).coreTemp_Q as number;
-    const qPlain  = (ePlain.condition  as any).coreTemp_Q as number;
+    const qDragon = (eDragon.condition).coreTemp_Q as number;
+    const qPlain  = (ePlain.condition ).coreTemp_Q as number;
     expect(qDragon).toBeGreaterThan(qPlain);
   });
 
   it("entity without physiology behaves identically to entity with physiology: undefined", () => {
     // Run same entity twice to eliminate mass/velocity differences
-    const e = mkHumanoidEntity(1, 1, 0);
-    (e.condition as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    (e.condition).coreTemp_Q = CORE_TEMP_NORMAL_Q;
 
     // First run: no physiology set
-    delete (e as any).physiology;
+    delete (e).physiology;
     for (let i = 0; i < 20; i++) stepCoreTemp(e, ARCTIC, 1 / 20);
-    const withoutPhysiology = (e.condition as any).coreTemp_Q as number;
+    const withoutPhysiology = (e.condition).coreTemp_Q as number;
 
     // Reset core temp, set physiology = undefined explicitly
-    (e.condition as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
-    (e as any).physiology = undefined;
+    (e.condition).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+    (e).physiology = undefined;
     for (let i = 0; i < 20; i++) stepCoreTemp(e, ARCTIC, 1 / 20);
-    expect((e.condition as any).coreTemp_Q).toBe(withoutPhysiology);
+    expect((e.condition).coreTemp_Q).toBe(withoutPhysiology);
   });
 });
 
@@ -228,50 +228,50 @@ describe("nutrition — bmrMultiplier", () => {
 
   it("VULCAN bmrMul q(0.72): stays sated longer when starting from positive balance", () => {
     // At t = 70 000 s with +2 MJ start: human crosses hungry (68 200s), Vulcan hasn't (77 683s)
-    const eHuman  = mkHumanoidEntity(1, 1, 0);
-    const eVulcan = mkHumanoidEntity(2, 2, 0);
+    const eHuman  = mkHumanoidEntity(1, 1, 0, 0);
+    const eVulcan = mkHumanoidEntity(2, 2, 0, 0);
     eHuman.attributes.morphology.mass_kg  = 75_000;
     eVulcan.attributes.morphology.mass_kg = 75_000;
-    (eHuman.condition  as any).caloricBalance_J = 2_000_000;
-    (eVulcan.condition as any).caloricBalance_J = 2_000_000;
-    (eVulcan as any).physiology = { bmrMultiplier: VULCAN_SPECIES.physiology!.bmrMultiplier };
+    (eHuman.condition ).caloricBalance_J = 2_000_000;
+    (eVulcan.condition).caloricBalance_J = 2_000_000;
+    (eVulcan).physiology = { bmrMultiplier: VULCAN_SPECIES.physiology!.bmrMultiplier! };
 
     stepNutrition(eHuman,  70_000, q(0) as Q);
     stepNutrition(eVulcan, 70_000, q(0) as Q);
 
-    expect((eHuman.condition  as any).hungerState).not.toBe("sated");
-    expect((eVulcan.condition as any).hungerState).toBe("sated");
+    expect((eHuman.condition ).hungerState).not.toBe("sated");
+    expect((eVulcan.condition).hungerState).toBe("sated");
   });
 
   it("ORC bmrMul q(1.15): reaches hungry before HUMAN_BASE at same starting balance", () => {
     // At t = 66 000 s with +2 MJ start: Orc crosses hungry (64 939s), human hasn't (68 200s)
-    const eHuman = mkHumanoidEntity(1, 1, 0);
-    const eOrc   = mkHumanoidEntity(2, 2, 0);
+    const eHuman = mkHumanoidEntity(1, 1, 0, 0);
+    const eOrc   = mkHumanoidEntity(2, 2, 0, 0);
     eHuman.attributes.morphology.mass_kg = 75_000;
     eOrc.attributes.morphology.mass_kg   = 75_000;
-    (eHuman.condition as any).caloricBalance_J = 2_000_000;
-    (eOrc.condition   as any).caloricBalance_J = 2_000_000;
-    (eOrc as any).physiology = { bmrMultiplier: ORC_SPECIES.physiology!.bmrMultiplier };
+    (eHuman.condition).caloricBalance_J = 2_000_000;
+    (eOrc.condition  ).caloricBalance_J = 2_000_000;
+    (eOrc).physiology = { bmrMultiplier: ORC_SPECIES.physiology!.bmrMultiplier! };
 
     stepNutrition(eHuman, 66_000, q(0) as Q);
     stepNutrition(eOrc,   66_000, q(0) as Q);
 
-    expect((eHuman.condition as any).hungerState).toBe("sated");
-    expect((eOrc.condition   as any).hungerState).not.toBe("sated");
+    expect((eHuman.condition).hungerState).toBe("sated");
+    expect((eOrc.condition  ).hungerState).not.toBe("sated");
   });
 
   it("bmrMultiplier q(1.0) produces same caloricBalance drain as no physiology", () => {
-    const eBase = mkHumanoidEntity(1, 1, 0);
-    const eMul1 = mkHumanoidEntity(1, 2, 0);  // same seed → same attrs
+    const eBase = mkHumanoidEntity(1, 1, 0, 0);
+    const eMul1 = mkHumanoidEntity(1, 2, 0, 0);  // same seed → same attrs
     eBase.attributes.morphology.mass_kg = 75_000;
     eMul1.attributes.morphology.mass_kg = 75_000;
-    (eMul1 as any).physiology = { bmrMultiplier: SCALE.Q as Q };  // q(1.0) = 10000
+    (eMul1).physiology = { bmrMultiplier: SCALE.Q as Q };  // q(1.0) = 10000
 
     stepNutrition(eBase, 8 * 3600, q(0) as Q);
     stepNutrition(eMul1, 8 * 3600, q(0) as Q);
 
-    expect((eBase.condition as any).caloricBalance_J).toBeCloseTo(
-      (eMul1.condition as any).caloricBalance_J, 0,
+    expect((eBase.condition).caloricBalance_J).toBeCloseTo(
+      (eMul1.condition).caloricBalance_J!, 0,
     );
   });
 });

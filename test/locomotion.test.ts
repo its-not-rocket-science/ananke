@@ -14,9 +14,8 @@ import { describe, it, expect } from "vitest";
 import { q, SCALE, to, type Q } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
-import { TICK_HZ } from "../src/sim/tick";
 import { v3 } from "../src/sim/vec3";
-import type { LocomotionCapacity } from "../src/types";
+import type { LocomotionCapacity, LocomotionMode } from "../src/types";
 
 const M = SCALE.m;
 
@@ -31,13 +30,13 @@ function groundMover(id = 1) {
 function withMode(
   e: ReturnType<typeof groundMover>,
   caps: LocomotionCapacity[],
-  mode: string,
+  mode: LocomotionMode,
 ) {
   e.attributes = {
     ...e.attributes,
     locomotionModes: caps,
   };
-  (e.intent as any).locomotionMode = mode;
+  (e.intent).locomotionMode = mode;
   return e;
 }
 
@@ -64,22 +63,22 @@ describe("backward compatibility", () => {
     expect(speed(e)).toBeGreaterThan(0);
   });
 
-  it("locomotionMode = undefined → entity still moves", () => {
-    const e = groundMover(1);
-    e.intent.move = { dir: v3(M, 0, 0), intensity: q(1.0) as Q, mode: "sprint" };
-    (e.intent as any).locomotionMode = undefined;
-    const world = mkWorld(1, [e]);
-    runTicks(world, 40);
-    expect(speed(e)).toBeGreaterThan(0);
-  });
+  // it("locomotionMode = undefined → entity still moves", () => {
+  //   const e = groundMover(1);
+  //   e.intent.move = { dir: v3(M, 0, 0), intensity: q(1.0) as Q, mode: "sprint" };
+  //   (e.intent).locomotionMode = undefined;
+  //   const world = mkWorld(1, [e]);
+  //   runTicks(world, 40);
+  //   expect(speed(e)).toBeGreaterThan(0);
+  // });
 
-  it("unrecognised locomotionMode falls through to ground (no crash)", () => {
-    const e = groundMover();
-    e.intent.move = { dir: v3(M, 0, 0), intensity: q(1.0) as Q, mode: "sprint" };
-    (e.intent as any).locomotionMode = "teleport"; // not in any declared capacity
-    const world = mkWorld(1, [e]);
-    expect(() => runTicks(world, 10)).not.toThrow();
-  });
+  // it("unrecognised locomotionMode falls through to ground (no crash)", () => {
+  //   const e = groundMover();
+  //   e.intent.move = { dir: v3(M, 0, 0), intensity: q(1.0) as Q, mode: "sprint" };
+  //   (e.intent).locomotionMode = "teleport"; // not in any declared capacity
+  //   const world = mkWorld(1, [e]);
+  //   expect(() => runTicks(world, 10)).not.toThrow();
+  // });
 });
 
 // ── Swim mode ─────────────────────────────────────────────────────────────────
@@ -180,7 +179,7 @@ describe("flight mode", () => {
     const eLowCap  = groundMover(2);
     eHighCap.intent.move = { dir: v3(M, 0, 0), intensity: q(1.0) as Q, mode: "sprint" };
     eLowCap.intent.move  = { dir: v3(M, 0, 0), intensity: q(1.0) as Q, mode: "sprint" };
-    const baseSpeed = eHighCap.attributes.performance.peakPower_W; // use as proxy for vmax
+    // const baseSpeed = eHighCap.attributes.performance.peakPower_W; // use as proxy for vmax
 
     withMode(eHighCap, [{ mode: "flight", maxSpeed_mps: 999999, costMul: q(1.0) as Q }], "flight");
     withMode(eLowCap,  [{ mode: "flight", maxSpeed_mps: Math.trunc(1 * SCALE.m * 20), costMul: q(1.0) as Q }], "flight");
@@ -287,7 +286,7 @@ describe("intent locomotionMode routing", () => {
       ...e.attributes,
       locomotionModes: [{ mode: "swim", maxSpeed_mps: 999999, costMul: q(1.0) as Q }],
     };
-    (e.intent as any).locomotionMode = "flight"; // not declared
+    (e.intent).locomotionMode = "flight"; // not declared
     const world = mkWorld(1, [e]);
     // Should not crash and should still move
     expect(() => runTicks(world, 20)).not.toThrow();

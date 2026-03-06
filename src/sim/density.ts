@@ -2,7 +2,7 @@ import type { WorldState } from "./world.js";
 import type { SpatialIndex } from "./spatial.js";
 import type { WorldIndex } from "./indexing.js";
 import { queryNearbyIds } from "./spatial.js";
-import { SCALE, clampQ, q } from "../units.js";
+import { SCALE, clampQ } from "../units.js";
 import type { Q } from "../units.js";
 
 /** Per-entity crowding metrics (0..1 Q). */
@@ -46,7 +46,7 @@ export function computeDensityField(
     }
 
     // map neighbour count to 0..1 Q
-    const qv = clampQ(Math.trunc((n * SCALE.Q) / Math.max(1, t.crowdingAt)) as any, 0, SCALE.Q);
+    const qv = clampQ(Math.trunc((n * SCALE.Q) / Math.max(1, t.crowdingAt)), 0, SCALE.Q);
     crowdingQ.set(e.id, qv);
   }
 

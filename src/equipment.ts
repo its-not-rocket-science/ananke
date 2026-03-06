@@ -6,6 +6,7 @@ import type { IndividualAttributes } from "./types.js";
 import type { BodyRegion } from "./sim/body.js";
 import { ALL_REGIONS, DEFAULT_REGION_WEIGHTS, weightedMean01 } from "./sim/body.js";
 import type { TechCapability, TechContext } from "./sim/tech.js";
+import { HitArea } from "./sim/kinds.js";
 
 export type ItemId = string;
 
@@ -31,7 +32,7 @@ export type Handedness = "oneHand" | "twoHand" | "mounted" | "natural";
 
 export interface Weapon extends ItemBase {
   kind: "weapon";
-  reach_m?: I32;
+  reach_m?: I32 | undefined;  // optional for legacy items; if undefined, use default based on category and morphology
   handlingMul?: Q;
   readyTime_s?: I32;
 
@@ -57,6 +58,7 @@ export interface Weapon extends ItemBase {
 
   /** Phase 25: cumulative use-wear (0 = new, q(1.0) = broken). Updated by applyWear(). */
   wear_Q?: Q;
+
 }
 
 export interface Shield extends ItemBase {
@@ -75,6 +77,8 @@ export interface Shield extends ItemBase {
   manipulationMul: Q;
   mobilityMul: Q;
   fatigueMul: Q;
+
+  covers?: HitArea[];
 }
 
 export type CoverageByRegion = Partial<Record<BodyRegion, Q>>;
@@ -153,6 +157,8 @@ export interface RangedWeapon extends ItemBase {  // Phase 3
   ammo?: AmmoType[];
   /** Phase 5 extension: scales per-tick suppression fear (default q(1.0)). */
   suppressionFearMul?: Q;
+
+  shieldBypassQ?: Q;  // chainshot or flechette rounds that bypass shields to some extent (0..1)
 }
 
 /** Phase 11C: electronic sensor suite — boosts vision and hearing range while worn. */
@@ -391,7 +397,7 @@ export function findRangedWeapon(loadout: Loadout, weaponId?: string): RangedWea
 }
 
 
-export function findShield(loadout: Loadout): Item | undefined {
+export function findShield(loadout: Loadout): Shield | undefined {
   return loadout.items.find(item => item?.kind === "shield");
 }
 

@@ -214,9 +214,10 @@ describe("applyExplosion", () => {
 
     applyExplosion(world, v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => events.push(ev) });
 
-    const nearEv = events.find(ev => ev.kind === TraceKinds.BlastHit && ev.entityId === 1) as any;
-    const farEv  = events.find(ev => ev.kind === TraceKinds.BlastHit && ev.entityId === 2) as any;
-    expect(nearEv!.blastEnergy_J).toBeGreaterThan(farEv!.blastEnergy_J);
+    const evts = events.filter(e => e.kind === TraceKinds.BlastHit);
+    const nearEv = evts.find(ev => ev.entityId === 1)!;
+    const farEv  = evts.find(ev => ev.entityId === 2)!;
+    expect(nearEv.blastEnergy_J).toBeGreaterThan(farEv.blastEnergy_J);
   });
 
   it("dead entities are skipped", () => {
@@ -253,8 +254,8 @@ describe("applyExplosion", () => {
 
     const wToward = mkWorld(1, [eToward]);
     const wAway   = mkWorld(1, [eAway]);
-    const evToward: any[] = [];
-    const evAway:   any[] = [];
+    const evToward: TraceEvent[] = [];
+    const evAway:   TraceEvent[] = [];
 
     applyExplosion(wToward, v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => evToward.push(ev) });
     applyExplosion(wAway,   v3(0, 0, 0), GRENADE_SPEC, 0, { onEvent: ev => evAway.push(ev) });

@@ -1,13 +1,12 @@
 // test/downtime.test.ts — Phase 19: Downtime & Recovery tests
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q } from "../src/units.js";
 import {
   stepDowntime,
   MEDICAL_RESOURCES,
   type DowntimeConfig,
   type TreatmentSchedule,
-  type EntityRecoveryReport,
 } from "../src/downtime.js";
 import { mkWorld, mkHumanoidEntity } from "../src/sim/testing.js";
 import type { WorldState } from "../src/sim/world.js";
@@ -26,16 +25,16 @@ function woundedWorld(opts: {
 }): WorldState {
   const e = mkHumanoidEntity(1, 1, 0, 0);
   const torso = e.injury.byRegion["torso"]!;
-  if (opts.bleedingRate    !== undefined) torso.bleedingRate    = opts.bleedingRate    as any;
-  if (opts.structuralDamage !== undefined) torso.structuralDamage = opts.structuralDamage as any;
+  if (opts.bleedingRate    !== undefined) torso.bleedingRate    = opts.bleedingRate   ;
+  if (opts.structuralDamage !== undefined) torso.structuralDamage = opts.structuralDamage;
   if (opts.fractured        !== undefined) torso.fractured        = opts.fractured;
   if (opts.infectedTick     !== undefined) {
     torso.infectedTick  = opts.infectedTick;
-    torso.internalDamage = q(0.20) as any;  // above infection internal threshold
+    torso.internalDamage = q(0.20);  // above infection internal threshold
   }
-  if (opts.internalDamage !== undefined) torso.internalDamage = opts.internalDamage as any;
-  if (opts.fluidLoss      !== undefined) e.injury.fluidLoss   = opts.fluidLoss      as any;
-  if (opts.shock          !== undefined) e.injury.shock       = opts.shock          as any;
+  if (opts.internalDamage !== undefined) torso.internalDamage = opts.internalDamage;
+  if (opts.fluidLoss      !== undefined) e.injury.fluidLoss   = opts.fluidLoss     ;
+  if (opts.shock          !== undefined) e.injury.shock       = opts.shock         ;
   return mkWorld(1, [e]);
 }
 
@@ -149,8 +148,8 @@ describe("resource tracking", () => {
   it("first_aid consumes 1 bandage per bleeding region", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     // Make two regions bleed
-    e.injury.byRegion["torso"]!.bleedingRate  = q(0.05) as any;
-    e.injury.byRegion["leftArm"]!.bleedingRate = q(0.03) as any;
+    e.injury.byRegion["torso"]!.bleedingRate  = q(0.05);
+    e.injury.byRegion["leftArm"]!.bleedingRate = q(0.03);
     const world = mkWorld(1, [e]);
     const r = stepDowntime(world, 50, cfg("first_aid"))[0]!;
     const bandageUsage = r.resourcesUsed.find(u => u.resourceId === "bandage");

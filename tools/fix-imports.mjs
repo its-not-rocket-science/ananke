@@ -1,4 +1,6 @@
-#!/usr/bin/env node
+/* eslint-env node */
+import { console } from "node:console";
+
 
 import fs from 'fs';
 import path from 'path';
@@ -12,7 +14,7 @@ function fixImports(filePath) {
     let changed = false;
     
     // Fix relative imports: from "./something" to from "./something.js"
-    content = content.replace(/from\s+["'](\.\.[\/\\][^"']*?)["']/g, (match, importPath) => {
+    content = content.replace(/from\s+["'](\.\.[/\\][^"']*?)["']/g, (match, importPath) => {
         if (!importPath.endsWith('.js')) {
             changed = true;
             return match.replace(importPath, importPath + '.js');
@@ -20,7 +22,7 @@ function fixImports(filePath) {
         return match;
     });
     
-    content = content.replace(/from\s+["'](\.[\/\\][^"']*?)["']/g, (match, importPath) => {
+    content = content.replace(/from\s+["'](\.[/\\][^"']*?)["']/g, (match, importPath) => {
         if (!importPath.endsWith('.js')) {
             changed = true;
             return match.replace(importPath, importPath + '.js');

@@ -3,7 +3,7 @@ import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import { queryNearbyIds } from "../spatial.js";
 import { isEnemy } from "../team.js";
-import { SCALE, q } from "../../units.js";
+import { q } from "../../units.js";
 import { canDetect, DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
 import { findSensor } from "../../equipment.js";
 
@@ -23,7 +23,7 @@ export function perceiveLocal(
   maxCount = 24,
   env: SensoryEnvironment = DEFAULT_SENSORY_ENV,
 ): LocalPerception {
-  const perc = (self.attributes as any).perception ?? DEFAULT_PERCEPTION;
+  const perc = (self.attributes).perception ?? DEFAULT_PERCEPTION;
   // Use the threat horizon as the spatial query radius if it is smaller than the requested radius.
   const effectiveRadius = Math.min(radius_m, perc.threatHorizon_m);
 

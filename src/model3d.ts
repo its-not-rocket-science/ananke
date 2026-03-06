@@ -243,7 +243,7 @@ export function deriveAnimationHints(entity: Entity): AnimationHints {
     guardingQ,
     attackingQ,
     shockQ: entity.injury.shock,
-    fearQ:  entity.condition.fearQ,
+    fearQ:  entity.condition.fearQ ?? 0,
     prone,
     unconscious,
     dead,

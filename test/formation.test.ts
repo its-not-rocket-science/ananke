@@ -2,35 +2,22 @@ import { expect, test } from "vitest";
 import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";
 import { pickNearestEnemyInReach } from "../src/sim/formation";
-import { v3 } from "../src/sim/vec3";
 import { SCALE, q } from "../src/units";
+import { mkHumanoidEntity, mkWorld } from "../src";
 
-function mkEntity(id: number, teamId: number, x_m: number) {
-  return {
-    id,
-    teamId,
-    position_m: v3(x_m, 0, 0),
-    injury: { dead: false },
-    action: { facingDirQ: { x: SCALE.Q, y: 0, z: 0 } }, // facing +x
-  } as any;
-}
 
 test("pickNearestEnemyInReach ignores friendlies and breaks ties by id", () => {
-  const world: any = {
-    tick: 0,
-    seed: 1,
-    entities: [
-      mkEntity(1, 1, 0),
-      mkEntity(2, 1, Math.trunc(0.4 * SCALE.m)), // friendly closer
-      mkEntity(3, 2, Math.trunc(0.5 * SCALE.m)), // enemy
-      mkEntity(4, 2, Math.trunc(0.5 * SCALE.m)), // enemy same distance, higher id
-    ],
-  };
+  const world = mkWorld(1, [
+    mkHumanoidEntity(1, 1, 0, 0), // attacker
+    mkHumanoidEntity(2, 1, Math.trunc(0.4 * SCALE.m), 0), // friendly closer
+    mkHumanoidEntity(3, 2, Math.trunc(0.5 * SCALE.m), 0), // enemy
+    mkHumanoidEntity(4, 2, Math.trunc(0.5 * SCALE.m), 0), // enemy same distance, higher id
+  ]);
 
   const index = buildWorldIndex(world);
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
-  const attacker = world.entities[0];
+  const attacker = world.entities[0]!;
   const target = pickNearestEnemyInReach(attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),
@@ -43,19 +30,15 @@ test("pickNearestEnemyInReach ignores friendlies and breaks ties by id", () => {
 
 test("pickNearestEnemyInReach requireFrontArc filters rear enemies", () => {
   // Attacker at 0 facing +x; enemy at -0.5m (behind) should be excluded
-  const world: any = {
-    tick: 0,
-    seed: 1,
-    entities: [
-      mkEntity(1, 1, 0),
-      mkEntity(2, 2, Math.trunc(-0.5 * SCALE.m)), // enemy behind (-x)
-    ],
-  };
-
+  const world = mkWorld(1, [
+    mkHumanoidEntity(1, 1, 0, 0), // attacker
+    mkHumanoidEntity(2, 2, Math.trunc(-0.5 * SCALE.m), 0), // enemy behind (-x)
+  ]);
+  
   const index = buildWorldIndex(world);
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
-  const attacker = world.entities[0];
+  const attacker = world.entities[0]!;
   const target = pickNearestEnemyInReach(attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),
@@ -69,19 +52,15 @@ test("pickNearestEnemyInReach requireFrontArc filters rear enemies", () => {
 });
 
 test("pickNearestEnemyInReach requireFrontArc picks front enemy", () => {
-  const world: any = {
-    tick: 0,
-    seed: 1,
-    entities: [
-      mkEntity(1, 1, 0),
-      mkEntity(2, 2, Math.trunc(0.5 * SCALE.m)), // enemy in front (+x)
-    ],
-  };
+  const world = mkWorld(1, [
+    mkHumanoidEntity(1, 1, 0, 0), // attacker
+    mkHumanoidEntity(2, 2, Math.trunc(0.5 * SCALE.m), 0), // enemy in front (+x)
+  ]);
 
   const index = buildWorldIndex(world);
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
-  const attacker = world.entities[0];
+  const attacker = world.entities[0]!;
   const target = pickNearestEnemyInReach(attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),
@@ -96,22 +75,18 @@ test("pickNearestEnemyInReach requireFrontArc picks front enemy", () => {
 test("pickNearestEnemyInReach respects maxTargets cap and picks closest", () => {
   // 4 enemies at different distances; maxTargets=2 caps candidate collection
   // Nearest enemy should still be returned
-  const world: any = {
-    tick: 0,
-    seed: 1,
-    entities: [
-      mkEntity(1, 1, 0), // attacker
-      mkEntity(2, 2, Math.trunc(0.9 * SCALE.m)), // enemy, 0.9m
-      mkEntity(3, 2, Math.trunc(0.5 * SCALE.m)), // enemy, 0.5m (nearest but sorted by id)
-      mkEntity(4, 2, Math.trunc(0.7 * SCALE.m)), // enemy, 0.7m
-      mkEntity(5, 2, Math.trunc(0.8 * SCALE.m)), // enemy, 0.8m
-    ],
-  };
-
+  const world = mkWorld(1, [
+    mkHumanoidEntity(1, 1, 0, 0), // attacker
+    mkHumanoidEntity(2, 2, Math.trunc(0.9 * SCALE.m), 0), // enemy, 0.9m
+    mkHumanoidEntity(3, 2, Math.trunc(0.5 * SCALE.m), 0), // enemy, 0.5m (nearest but sorted by id)
+    mkHumanoidEntity(4, 2, Math.trunc(0.7 * SCALE.m), 0), // enemy, 0.7m
+    mkHumanoidEntity(5, 2, Math.trunc(0.8 * SCALE.m), 0), // enemy, 0.8m
+  ]);
+  
   const index = buildWorldIndex(world);
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
-  const attacker = world.entities[0];
+  const attacker = world.entities[0]!;
   const target = pickNearestEnemyInReach(attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),
@@ -125,19 +100,15 @@ test("pickNearestEnemyInReach respects maxTargets cap and picks closest", () => 
 });
 
 test("pickNearestEnemyInReach returns undefined when no enemies in reach", () => {
-  const world: any = {
-    tick: 0,
-    seed: 1,
-    entities: [
-      mkEntity(1, 1, 0),
-      mkEntity(2, 2, Math.trunc(5.0 * SCALE.m)), // far beyond reach
-    ],
-  };
+  const world = mkWorld(1, [
+    mkHumanoidEntity(1, 1, 0, 0), // attacker
+    mkHumanoidEntity(2, 2, Math.trunc(5.0 * SCALE.m), 0), // enemy beyond reach
+  ]);
 
   const index = buildWorldIndex(world);
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
-  const attacker = world.entities[0];
+  const attacker = world.entities[0]!;
   const target = pickNearestEnemyInReach(attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),

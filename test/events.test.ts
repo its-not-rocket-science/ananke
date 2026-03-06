@@ -1,12 +1,13 @@
 import { expect, test } from "vitest";
-import { sortEventsDeterministic } from "../src/sim/events";
+import { ImpactEvent, sortEventsDeterministic } from "../src/sim/events";
+import { mkImpactEvent } from "../src";
 
 test("impact events sort deterministically by attackerId then targetId", () => {
-  const ev: any[] = [
-    { attackerId: 5, targetId: 9 },
-    { attackerId: 2, targetId: 9 },
-    { attackerId: 2, targetId: 1 },
-    { attackerId: 5, targetId: 3 },
+  const ev: ImpactEvent[] = [
+    mkImpactEvent(5, 9),
+    mkImpactEvent(2, 9),
+    mkImpactEvent(2, 1),
+    mkImpactEvent(5, 3),
   ];
 
   sortEventsDeterministic(ev);

@@ -8,7 +8,6 @@
 import type { Q, I32 } from "../units.js";
 import { q } from "../units.js";
 import { DamageChannel } from "../channels.js";
-import { BodyRegion } from "./body.js";
 
 // ─── locomotion and CNS models ────────────────────────────────────────────────
 
@@ -115,6 +114,8 @@ export interface BodySegment {
   intrinsicArmor_J?: number;
 }
 
+export type BodySegmentId = BodySegment["id"];
+
 // ─── body plan ───────────────────────────────────────────────────────────────
 
 export interface BodyPlan {
@@ -138,7 +139,7 @@ export function getExposureWeight(seg: BodySegment, channel: DamageChannel): Q {
  * Resolve which segment is struck, given a uniform [0, SCALE.Q) random value.
  * Uses kinetic exposure weights for physical-impact hits.
  */
-export function resolveHitSegment(plan: BodyPlan, r01: Q): string {
+export function resolveHitSegment(plan: BodyPlan, r01: Q): BodySegmentId {
   let cum = 0;
   for (const seg of plan.segments) {
     cum += seg.exposureWeight[DamageChannel.Kinetic] ?? 0;

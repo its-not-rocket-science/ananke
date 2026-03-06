@@ -16,7 +16,7 @@
 // Injury sequelae (permanent damage from wounds) are also derived here,
 // as they feed back into IndividualAttributes like ageing does.
 
-import { q, clampQ, SCALE, type Q, type I32 } from "./units.js";
+import { q, SCALE, type Q, type I32 } from "./units.js";
 import type { SkillId, SkillLevel, SkillMap } from "./sim/skills.js";
 import { defaultSkillLevel } from "./sim/skills.js";
 import type { RegionInjury } from "./sim/injury.js";

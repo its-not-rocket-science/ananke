@@ -1,4 +1,4 @@
-import { q, type Q, SCALE } from "../units.js";
+import { q, SCALE, type Q } from "../units.js";
 
 /** Phase 30: staged hunger/starvation state derived from caloricBalance_J. */
 export type HungerState = "sated" | "hungry" | "starving" | "critical";
@@ -27,7 +27,7 @@ export interface ConditionState {
   blindTicks: number;          // vision zeroed while > 0; decremented each tick
 
   // Phase 5: psychological state
-  fearQ: Q;                    // accumulated fear 0..1; routing when ≥ moraleThreshold
+  fearQ?: Q;                    // accumulated fear 0..1; routing when ≥ moraleThreshold
 
   // Phase 5 extensions: morale features
   suppressionFearMul: Q;       // caliber-based suppression fear multiplier (default SCALE.Q)

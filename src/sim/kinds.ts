@@ -1,5 +1,8 @@
 // src/sim/kinds.ts
 
+import { BodyRegion } from "./body";
+import { BodySegmentId } from "./bodyplan";
+
 /** Commands are player/AI intentions */
 export const CommandKinds = {
   Move: "move",
@@ -72,4 +75,4 @@ export const EngageModes = {
 
 export type EngageMode = typeof EngageModes[keyof typeof EngageModes];
 
-export type HitArea = "head" | "torso" | "arm" | "leg";
+export type HitArea = BodyRegion | BodySegmentId; 

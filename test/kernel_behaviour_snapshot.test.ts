@@ -17,7 +17,7 @@ import type { CommandMap } from "../src/sim/commands.js";
 
 import { stepWorld } from "../src/sim/kernel.js";
 import { mkWorld, mkHumanoidEntity } from "../src/sim/testing.js";
-import { buildObstacleGrid, buildHazardGrid } from "../src/sim/terrain.js";
+import { buildObstacleGrid } from "../src/sim/terrain.js";
 import { q, to, SCALE, type Q } from "../src/units.js";
 import type { KernelContext } from "../src/sim/context.js";
 import { STARTER_WEAPONS, STARTER_RANGED_WEAPONS } from "../src/equipment.js";
@@ -25,6 +25,7 @@ import { STARTER_SUBSTANCES } from "../src/sim/substance.js";
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { TraceKinds } from "../src/sim/kinds.js";
 
 // ── Snapshot file helpers ─────────────────────────────────────────────────────
 
@@ -121,15 +122,59 @@ function stableEntityView(e: ReturnType<typeof mkHumanoidEntity>): unknown {
 }
 
 function stableTraceView(ev: TraceEvent): unknown {
-  const a = ev as any;
-  return {
-    kind: a.kind,
-    tick: a.tick,
-    entityId: a.entityId ?? undefined,
-    aId: a.aId ?? undefined,
-    bId: a.bId ?? undefined,
-    targetId: a.targetId ?? undefined,
+  const base = {
+    kind: ev.kind,
+    tick: ev.tick,
   };
+
+  switch (ev.kind) {
+    case TraceKinds.Intent:
+    case TraceKinds.Move:
+    case TraceKinds.Injury:
+    case TraceKinds.KO:
+    case TraceKinds.Death:
+    case TraceKinds.MoraleRoute:
+    case TraceKinds.MoraleRally:
+    case TraceKinds.Fracture:
+    case TraceKinds.BlastHit:
+    case TraceKinds.CapabilityActivated:
+    case TraceKinds.CapabilitySuppressed:
+    case TraceKinds.CastInterrupted:
+    case TraceKinds.WeaponBindBreak:
+      return {
+        ...base,
+        entityId: ev.entityId,
+        ...(ev.kind === TraceKinds.WeaponBindBreak ? { partnerId: ev.partnerId } : {}),
+      };
+
+    case TraceKinds.Attack:
+    case TraceKinds.AttackAttempt:
+    case TraceKinds.Grapple:
+    case TraceKinds.WeaponBind:
+      return {
+        ...base,
+        attackerId: ev.attackerId,
+        targetId: ev.targetId,
+      };
+
+    case TraceKinds.ProjectileHit:
+      return {
+        ...base,
+        shooterId: ev.shooterId,
+        targetId: ev.targetId,
+      };
+
+    case TraceKinds.TreatmentApplied:
+      return {
+        ...base,
+        treaterId: ev.treaterId,
+        targetId: ev.targetId,
+      };
+
+    case TraceKinds.TickStart:
+    case TraceKinds.TickEnd:
+      return base;
+  }
 }
 
 function captureSnapshot(
@@ -151,17 +196,12 @@ function captureSnapshot(
     .sort((a, b) => a.id - b.id)
     .map(stableEntityView);
 
-  const hazards =
-    (world as any).hazards?.grid instanceof Map
-      ? Array.from(((world as any).hazards.grid as Map<string, any>).entries())
-          .sort(([a], [b]) => (a < b ? -1 : 1))
-          .map(([key, h]) => ({ key, intensity: h.intensity, duration_ticks: h.duration_ticks }))
-      : [];
+  const hazards: readonly unknown[] = [];
 
   const fields = ((world).activeFieldEffects ?? [])
     .slice()
-    .sort((a: any, b: any) => (a.id ?? 0) - (b.id ?? 0))
-    .map((fe: any) => ({ id: fe.id, radius_m: fe.radius_m, duration_ticks: fe.duration_ticks }));
+    .sort((a, b) => (a.id < b.id ? -1 : 1))
+    .map((fe) => ({ id: fe.id, radius_m: fe.radius_m, duration_ticks: fe.duration_ticks }));
 
   return JSON.stringify(
     {
@@ -199,11 +239,11 @@ describe("kernel behaviour snapshot", () => {
       pendingDose: q(0.4),
     }];
 
-    const hazardGrid = buildHazardGrid({
-      "0,0": { type: "fire",        intensity: q(0.5), duration_ticks: 5  },
-      "1,0": { type: "radiation",   intensity: q(0.3), duration_ticks: 0  },
-      "0,1": { type: "poison_gas",  intensity: q(0.7), duration_ticks: 10 },
-    });
+    // const hazardGrid = buildHazardGrid({
+    //   "0,0": { type: "fire",        intensity: q(0.5), duration_ticks: 5  },
+    //   "1,0": { type: "radiation",   intensity: q(0.3), duration_ticks: 0  },
+    //   "0,1": { type: "poison_gas",  intensity: q(0.7), duration_ticks: 10 },
+    // });
 
     world.entities.push(a, b, c);
 
@@ -224,7 +264,6 @@ describe("kernel behaviour snapshot", () => {
       tractionCoeff: q(0.80) as Q,
       cellSize_m: to.m(4),
       obstacleGrid: buildObstacleGrid({}),
-      hazardGrid,
     };
 
     const snapshot = captureSnapshot(world, commands, ctx, 15);

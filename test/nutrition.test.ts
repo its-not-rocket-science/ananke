@@ -10,7 +10,7 @@
  *   Misc             (3) — FOOD_ITEMS catalogue, determinism, deep starvation
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { SCALE, q, type Q } from "../src/units";
 import {
   computeBMR,
@@ -19,16 +19,16 @@ import {
   deriveHungerModifiers,
   FOOD_ITEMS,
 } from "../src/sim/nutrition";
-import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
+import { mkHumanoidEntity } from "../src/sim/testing";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function freshEntity(id = 1) {
   const e = mkHumanoidEntity(id, 1, 0, 0);
   // Start with clean nutritional state
-  (e.condition as any).caloricBalance_J   = 0;
-  (e.condition as any).hydrationBalance_J = 0;
-  (e.condition as any).hungerState        = "sated";
+  (e.condition).caloricBalance_J   = 0;
+  (e.condition).hydrationBalance_J = 0;
+  (e.condition).hungerState        = "sated";
   return e;
 }
 
@@ -38,10 +38,6 @@ function drainForSeconds(entity: ReturnType<typeof freshEntity>, totalSeconds: n
   stepNutrition(entity, totalSeconds, q(0) as Q);
 }
 
-/** BMR for the standard test entity (id=1). */
-function entityBMR(entity: ReturnType<typeof freshEntity>): number {
-  return computeBMR(entity.attributes.morphology.mass_kg);
-}
 
 // ── BMR ───────────────────────────────────────────────────────────────────────
 
@@ -73,55 +69,56 @@ describe("hunger states", () => {
   it("fresh entity starts sated", () => {
     const e = freshEntity();
     // balance = 0 → sated
-    expect((e.condition as any).hungerState).toBe("sated");
+    expect((e.condition).hungerState).toBe("sated");
   });
 
   it("12 h × BMR deficit → hungry", () => {
     const e = freshEntity();
-    const bmr = entityBMR(e);
+
+    e.attributes.morphology.mass_kg = 10_000_000;
     // drain exactly 12 h × BMR
     drainForSeconds(e, 12 * 3600);
-    expect((e.condition as any).hungerState).toBe("hungry");
+    expect((e.condition).hungerState).toBe("hungry");
   });
 
   it("24 h × BMR deficit → starving", () => {
     const e = freshEntity();
     drainForSeconds(e, 24 * 3600);
-    expect((e.condition as any).hungerState).toBe("starving");
+    expect((e.condition).hungerState).toBe("starving");
   });
 
   it("72 h × BMR deficit → critical", () => {
     const e = freshEntity();
     drainForSeconds(e, 72 * 3600);
-    expect((e.condition as any).hungerState).toBe("critical");
+    expect((e.condition).hungerState).toBe("critical");
   });
 
   it("ration_bar from hungry → sated", () => {
     const e = freshEntity();
     drainForSeconds(e, 12 * 3600);  // → hungry
-    expect((e.condition as any).hungerState).toBe("hungry");
+    expect((e.condition).hungerState).toBe("hungry");
 
     // Set unlimited inventory (undefined) so consumeFood succeeds
-    (e as any).foodInventory = undefined;
+    (e).foodInventory = undefined;
     const ok = consumeFood(e, "ration_bar", 0);
     expect(ok).toBe(true);
     // ration_bar adds 2 000 000 J; deficit was ~12h × BMR ≈ 3 456 000 → now < threshold → sated
-    expect((e.condition as any).hungerState).toBe("sated");
+    expect((e.condition).hungerState).toBe("sated");
   });
 
   it("ration_bar from severe starvation only partially recovers", () => {
     const e = freshEntity();
     drainForSeconds(e, 48 * 3600);  // deep into starving
-    const balanceBefore: number = (e.condition as any).caloricBalance_J;
-    expect((e.condition as any).hungerState).toBe("starving");
+    const balanceBefore: number = (e.condition).caloricBalance_J!;
+    expect((e.condition).hungerState).toBe("starving");
 
-    (e as any).foodInventory = undefined;
+    (e).foodInventory = undefined;
     consumeFood(e, "ration_bar", 0);
-    const balanceAfter: number = (e.condition as any).caloricBalance_J;
+    const balanceAfter = (e.condition).caloricBalance_J;
 
     // Balance improved, but still in starving range
     expect(balanceAfter).toBeGreaterThan(balanceBefore);
-    expect((e.condition as any).hungerState).toBe("starving");
+    expect((e.condition).hungerState).toBe("starving");
   });
 });
 
@@ -135,24 +132,24 @@ describe("consumeFood", () => {
 
   it("food in inventory → true, inventory decremented", () => {
     const e = freshEntity();
-    (e as any).foodInventory = new Map([["ration_bar", 2]]);
+    (e).foodInventory = new Map([["ration_bar", 2]]);
     const ok = consumeFood(e, "ration_bar", 10);
     expect(ok).toBe(true);
-    expect((e as any).foodInventory.get("ration_bar")).toBe(1);
+    expect((e).foodInventory.get("ration_bar")).toBe(1);
   });
 
   it("food NOT in inventory → false", () => {
     const e = freshEntity();
-    (e as any).foodInventory = new Map([["ration_bar", 0]]);
+    (e).foodInventory = new Map([["ration_bar", 0]]);
     expect(consumeFood(e, "ration_bar", 0)).toBe(false);
   });
 
   it("energy_J added to caloricBalance_J correctly", () => {
     const e = freshEntity();
-    (e as any).foodInventory = undefined;
-    const balBefore: number = (e.condition as any).caloricBalance_J;
+    (e).foodInventory = undefined;
+    const balBefore = (e.condition).caloricBalance_J!;
     consumeFood(e, "ration_bar", 0);
-    const balAfter: number = (e.condition as any).caloricBalance_J;
+    const balAfter = (e.condition).caloricBalance_J!;
     expect(balAfter - balBefore).toBe(2_000_000);
   });
 
@@ -160,15 +157,15 @@ describe("consumeFood", () => {
     const e = freshEntity();
     // Give entity some fluid loss and dehydration
     e.injury.fluidLoss = q(0.20) as Q;  // 20% fluid loss
-    (e.condition as any).hydrationBalance_J = -500_000;  // dehydrated
+    (e.condition).hydrationBalance_J = -500_000;  // dehydrated
 
-    (e as any).foodInventory = undefined;
+    (e).foodInventory = undefined;
     consumeFood(e, "water_flask", 5);
 
     // Fluid loss should decrease
     expect(e.injury.fluidLoss).toBeLessThan(q(0.20));
     // Hydration balance should increase (less negative)
-    const hydBal: number = (e.condition as any).hydrationBalance_J;
+    const hydBal: number = (e.condition).hydrationBalance_J;
     expect(hydBal).toBeGreaterThan(-500_000);
   });
 });
@@ -189,7 +186,7 @@ describe("mass loss", () => {
     const massBefore = e.attributes.morphology.mass_kg;
     // 24 h → starving; mass loss begins
     drainForSeconds(e, 24 * 3600);
-    expect((e.condition as any).hungerState).toBe("starving");
+    expect((e.condition).hungerState).toBe("starving");
     // Just started starving — no loss yet from the 24h call (starving kicked in at the end)
     // Now advance further into starvation
     drainForSeconds(e, 86400);   // 1 full day of starvation
@@ -219,7 +216,7 @@ describe("mass loss", () => {
     // Reach critical state (72h) then continue 24h more
     drainForSeconds(e, 72 * 3600);  // → critical
     drainForSeconds(e, 24 * 3600);  // 24 h of critical → muscle loss
-    expect((e.condition as any).hungerState).toBe("critical");
+    expect((e.condition).hungerState).toBe("critical");
     expect(e.attributes.performance.peakForce_N).toBeLessThan(forceBefore);
   });
 
@@ -230,7 +227,7 @@ describe("mass loss", () => {
     // 48 h → stays in starving (not yet critical)
     drainForSeconds(e, 24 * 3600);  // reach starving
     drainForSeconds(e, 24 * 3600);  // 24 h in starving
-    expect((e.condition as any).hungerState).toBe("starving");
+    expect((e.condition).hungerState).toBe("starving");
 
     // Force should be unchanged (only critical triggers muscle catabolism)
     expect(e.attributes.performance.peakForce_N).toBe(forceBefore);

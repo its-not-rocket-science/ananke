@@ -13,9 +13,7 @@ import {
   isRouting,
   painLevel,
   painBlocksAction,
-  FEAR_FOR_ALLY_DEATH,
   FEAR_SURPRISE,
-  FEAR_ROUTING_CASCADE,
 } from "../src/sim/morale";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepWorld } from "../src/sim/kernel";
@@ -27,8 +25,6 @@ import type { TraceEvent } from "../src/sim/trace";
 import { TraceKinds } from "../src/sim/kinds";
 import { decideCommandsForEntity } from "../src/sim/ai/decide";
 import type { AIPolicy } from "../src/sim/ai/types";
-import { v3 } from "../src/sim/vec3";
-import { DEFAULT_SENSORY_ENV } from "../src/sim/sensory";
 import { deriveFunctionalState } from "../src/sim/impairment";
 import { TUNING } from "../src/sim/tuning";
 
@@ -189,7 +185,7 @@ describe("fearQ initialised to 0 by default", () => {
 
   it("kernel init guard sets fearQ=0 on old entities without the field", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
-    delete (e.condition as any).fearQ;
+    delete (e.condition).fearQ;
     const world = mkWorld(42, [e]);
     runTick(world, noCmd());
     expect(world.entities[0]!.condition.fearQ).toBeDefined();
@@ -204,7 +200,7 @@ describe("fear accumulation from suppression", () => {
     e.condition.fearQ = q(0.10);
     const world = mkWorld(42, [e]);
 
-    const before = world.entities[0]!.condition.fearQ;
+    const before = world.entities[0]!.condition.fearQ!;
     runTick(world, noCmd());
     const after = world.entities[0]!.condition.fearQ;
 
@@ -249,7 +245,7 @@ describe("MoraleRoute trace event", () => {
 
     const moraleEvents = allEvents.filter(ev => ev.kind === TraceKinds.MoraleRoute);
     expect(moraleEvents.length).toBeGreaterThan(0);
-    expect((moraleEvents[0] as any).entityId).toBe(1);
+    expect((moraleEvents[0]!).entityId).toBe(1);
   });
 });
 
@@ -268,7 +264,7 @@ describe("ally death adds fear to nearby survivors", () => {
     survivor.condition.fearQ = q(0.10);
 
     const world = mkWorld(42, [dyingAlly, survivor]);
-    const before = world.entities.find(e => e.id === 3)!.condition.fearQ;
+    const before = world.entities.find(e => e.id === 3)!.condition.fearQ!;
     runTick(world, noCmd());
 
     const allyEnt = world.entities.find(e => e.id === 2)!;
@@ -326,7 +322,7 @@ describe("routing causes AI to flee", () => {
     if (moveCmd && moveCmd.kind === "move") {
       // Fleeing from +x enemy → dir should point in -x direction
       expect(moveCmd.dir.x).toBeLessThan(0);
-      expect((moveCmd as any).mode).toBe("sprint");
+      expect((moveCmd).mode).toBe("sprint");
     }
 
     // Routing entity should not issue an attack command
@@ -392,7 +388,7 @@ describe("pain blocking in resolveAttack", () => {
         ]);
         const events: TraceEvent[] = [];
         stepWorld(world, cmds, { tractionCoeff: q(0.80), trace: { onEvent: (ev) => events.push(ev) } });
-        if (events.some(ev => ev.kind === TraceKinds.Attack && (ev as any).attackerId === 1)) hitsNoShock++;
+        if (events.some(ev => ev.kind === TraceKinds.Attack && (ev).attackerId === 1)) hitsNoShock++;
       }
 
       // High shock run
@@ -409,7 +405,7 @@ describe("pain blocking in resolveAttack", () => {
         ]);
         const events: TraceEvent[] = [];
         stepWorld(world, cmds, { tractionCoeff: q(0.80), trace: { onEvent: (ev) => events.push(ev) } });
-        if (events.some(ev => ev.kind === TraceKinds.Attack && (ev as any).attackerId === 1)) hitsHighShock++;
+        if (events.some(ev => ev.kind === TraceKinds.Attack && (ev).attackerId === 1)) hitsHighShock++;
       }
     }
 
@@ -494,7 +490,7 @@ describe("surprise adds fear to defender", () => {
 
     // In a 2v2 all within 30m: 2 enemies vs 1 ally + self = 2 → NOT outnumbered (2 > 2 is false)
     for (const e of world2.entities) {
-      expect((e.condition as any).fearQ ?? 0).toBe(0);
+      expect((e.condition).fearQ ?? 0).toBe(0);
     }
   });
 });
@@ -616,7 +612,7 @@ describe("decide.ts branch coverage", () => {
     const enemy = mkHumanoidEntity(2, 2, Math.trunc(0.5 * M), 0);
 
     // Create weapon without reach_m (optional field)
-    const wpnNoReach: any = { ...STARTER_WEAPONS[0], reach_m: undefined };
+    const wpnNoReach = { ...STARTER_WEAPONS[0]!, reach_m: undefined };
     self.loadout.items = [wpnNoReach];
     self.condition.fearQ = q(0);
 

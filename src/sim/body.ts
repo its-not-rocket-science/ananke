@@ -19,6 +19,10 @@ export const ALL_REGIONS: readonly BodyRegion[] = [
   "rightLeg",
 ] as const;
 
+export type MajorOrgan = "brain" | "lung" | "liver" | "spleen";
+
+export type BoneRegion = "bone" | "skull" | "femur" | "tibia";
+
 export const DEFAULT_REGION_WEIGHTS: Record<BodyRegion, Q> = {
   head: q(0.12),
   torso: q(0.50),

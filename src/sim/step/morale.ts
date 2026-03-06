@@ -71,8 +71,8 @@ export function stepMoraleForEntity(
     return;
   }
 
-  const wasRouting = isRouting(e.condition.fearQ, distressTol);
-  let fearQ = e.condition.fearQ;
+  let fearQ = e.condition.fearQ!;
+  const wasRouting = isRouting(fearQ, distressTol);
 
   // 1. Suppression ticks add fear per tick — scaled by caliber multiplier (Feature 1)
   if (e.condition.suppressedTicks > 0) {
@@ -114,7 +114,7 @@ export function stepMoraleForEntity(
     if (aId === e.id) continue;
     const ally = index.byId.get(aId);
     if (!ally || ally.injury.dead || ally.teamId !== e.teamId) continue;
-    const traits: string[] = (ally as any).traits ?? [];
+    const traits: string[] = ally.traits ?? [];
     if (traits.includes("leader")) leaderCount++;
     if (traits.includes("standardBearer")) bannerCount++;
   }

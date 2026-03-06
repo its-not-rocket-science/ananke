@@ -4,7 +4,7 @@
 // joint vulnerability, and flight locomotion.
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE, to, type Q, type I32 } from "../src/units";
+import { q, SCALE, type Q, type I32 } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import type { KernelContext } from "../src/sim/context";
 import { stepWorld } from "../src/sim/kernel";
@@ -14,7 +14,7 @@ import {
   type BodySegment,
   segmentIds,
 } from "../src/sim/bodyplan";
-import { defaultInjury, defaultRegionInjury } from "../src/sim/injury";
+import { defaultInjury } from "../src/sim/injury";
 import { DamageChannel } from "../src/channels";
 import { STARTER_WEAPONS } from "../src/equipment";
 import { TUNING } from "../src/sim/tuning";
@@ -25,6 +25,7 @@ import { defaultCondition } from "../src/sim/condition";
 import { defaultAction } from "../src/sim/action";
 import { defaultIntent } from "../src/sim/intent";
 import type { AttackCommand } from "../src/sim/commands";
+import { Entity } from "../src";
 
 const BASE_CTX: KernelContext = { tractionCoeff: q(0.80) as Q, tuning: TUNING.tactical };
 
@@ -33,7 +34,7 @@ const CLUB = STARTER_WEAPONS[0]!;
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function makeGrasshopperEntity(id: number, x_m = 0, y_m = 0) {
+function makeGrasshopperEntity(id: number, x_m = 0, y_m = 0) : Entity {
   const attrs = generateIndividual(id, HUMAN_BASE);
   return {
     id,
@@ -369,24 +370,24 @@ describe("hemolymph accumulation", () => {
 describe("molting", () => {
   it("ticksRemaining decrements each tick", () => {
     const e = makeGrasshopperEntity(1);
-    (e as any).molting = { active: true, ticksRemaining: 5, softeningSegments: [] };
+    (e).molting = { active: true, ticksRemaining: 5, softeningSegments: [] };
 
-    const world = mkWorld(1, [e as any]);
+    const world = mkWorld(1, [e]);
     runTicks(3, world);
 
-    const molting = (world.entities[0]! as any).molting;
+    const molting = (world.entities[0]!).molting!;
     expect(molting.ticksRemaining).toBe(2);
     expect(molting.active).toBe(true);
   });
 
   it("molting completes when ticksRemaining reaches 0: active becomes false", () => {
     const e = makeGrasshopperEntity(1);
-    (e as any).molting = { active: true, ticksRemaining: 1, softeningSegments: [] };
+    (e).molting = { active: true, ticksRemaining: 1, softeningSegments: [] };
 
-    const world = mkWorld(1, [e as any]);
+    const world = mkWorld(1, [e]);
     runTicks(1, world);
 
-    const molting = (world.entities[0]! as any).molting;
+    const molting = (world.entities[0]!).molting!;
     expect(molting.active).toBe(false);
     expect(molting.ticksRemaining).toBe(0);
   });
@@ -395,9 +396,9 @@ describe("molting", () => {
     const e = makeGrasshopperEntity(1);
     // Damage hindleg_l (has regeneratesViaMolting: true in GRASSHOPPER_PLAN)
     e.injury.byRegion["hindleg_l"]!.structuralDamage = q(0.30);
-    (e as any).molting = { active: true, ticksRemaining: 1, softeningSegments: [] };
+    (e).molting = { active: true, ticksRemaining: 1, softeningSegments: [] };
 
-    const world = mkWorld(1, [e as any]);
+    const world = mkWorld(1, [e]);
     runTicks(1, world);
 
     const segDamage = world.entities[0]!.injury.byRegion["hindleg_l"]!.structuralDamage;
@@ -408,9 +409,9 @@ describe("molting", () => {
   it("molt completion does not repair below zero", () => {
     const e = makeGrasshopperEntity(1);
     e.injury.byRegion["hindleg_l"]!.structuralDamage = q(0.05); // less than q(0.10)
-    (e as any).molting = { active: true, ticksRemaining: 1, softeningSegments: [] };
+    (e).molting = { active: true, ticksRemaining: 1, softeningSegments: [] };
 
-    const world = mkWorld(1, [e as any]);
+    const world = mkWorld(1, [e]);
     runTicks(1, world);
 
     const segDamage = world.entities[0]!.injury.byRegion["hindleg_l"]!.structuralDamage;
@@ -428,7 +429,7 @@ describe("molting", () => {
       e.bodyPlan = plan;
       e.injury = defaultInjury(["shell"]);
       if (softening) {
-        (e as any).molting = { active: true, ticksRemaining: 999, softeningSegments: ["shell"] };
+        (e).molting = { active: true, ticksRemaining: 999, softeningSegments: ["shell"] };
       }
       return e;
     }
@@ -699,13 +700,13 @@ describe("auto-molt trigger", () => {
       e.injury.byRegion[lid]!.structuralDamage = q(0.50);
     }
     // Ensure no molt is active at start
-    expect((e as any).molting).toBeUndefined();
+    expect((e).molting).toBeUndefined();
 
-    const world = mkWorld(1, [e as any]);
+    const world = mkWorld(1, [e]);
     // One tick is enough — trigger checks on each stepInjuryProgression call
     runTicks(1, world);
 
-    const molting = (world.entities[0]! as any).molting;
+    const molting = (world.entities[0]!).molting!;
     expect(molting).toBeDefined();
     expect(molting.active).toBe(true);
     expect(molting.ticksRemaining).toBeGreaterThan(0);
@@ -718,10 +719,10 @@ describe("auto-molt trigger", () => {
       e.injury.byRegion[lid]!.structuralDamage = q(0.20);
     }
 
-    const world = mkWorld(1, [e as any]);
+    const world = mkWorld(1, [e]);
     runTicks(5, world);
 
-    const molting = (world.entities[0]! as any).molting;
+    const molting = (world.entities[0]!).molting;
     expect(molting?.active ?? false).toBe(false);
   });
 
@@ -731,13 +732,13 @@ describe("auto-molt trigger", () => {
       e.injury.byRegion[lid]!.structuralDamage = q(0.50);
     }
     // Start a molt manually with a long duration
-    (e as any).molting = { active: true, ticksRemaining: 500, softeningSegments: [] };
+    (e).molting = { active: true, ticksRemaining: 500, softeningSegments: [] };
 
-    const world = mkWorld(1, [e as any]);
+    const world = mkWorld(1, [e]);
     runTicks(3, world);
 
     // ticksRemaining should decrement, not reset to TICK_HZ * 60 = 1200
-    const molting = (world.entities[0]! as any).molting;
+    const molting = (world.entities[0]!).molting!;
     expect(molting.ticksRemaining).toBe(497); // 500 - 3
     expect(molting.active).toBe(true);
   });
@@ -748,10 +749,10 @@ describe("auto-molt trigger", () => {
       e.injury.byRegion[lid]!.structuralDamage = q(0.50);
     }
 
-    const world = mkWorld(1, [e as any]);
+    const world = mkWorld(1, [e]);
     runTicks(1, world);
 
-    const molting = (world.entities[0]! as any).molting;
+    const molting = (world.entities[0]!).molting!;
     const regenIds = GRASSHOPPER_PLAN.segments
       .filter(s => s.regeneratesViaMolting)
       .map(s => s.id)
@@ -786,13 +787,13 @@ describe("wing passive regeneration", () => {
     const e = makeGrasshopperEntity(1);
     e.injury.byRegion["forewing_l"]!.structuralDamage = q(0.20);
     // Force active molting — leg damage below threshold so trigger won't reset it
-    (e as any).molting = { active: true, ticksRemaining: 999, softeningSegments: [] };
+    (e).molting = { active: true, ticksRemaining: 999, softeningSegments: [] };
     // Keep leg damage low so auto-trigger doesn't interfere
     for (const lid of ["foreleg_l", "foreleg_r", "midleg_l", "midleg_r", "hindleg_l", "hindleg_r"]) {
       e.injury.byRegion[lid]!.structuralDamage = q(0.10);
     }
 
-    const world = mkWorld(1, [e as any]);
+    const world = mkWorld(1, [e]);
     const before = world.entities[0]!.injury.byRegion["forewing_l"]!.structuralDamage;
 
     runTicks(20, world);

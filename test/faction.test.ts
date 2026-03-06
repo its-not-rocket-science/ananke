@@ -13,9 +13,7 @@ import {
   STANDING_RIVAL,
   STANDING_ALLY,
   STANDING_EXALTED,
-  STANDING_FRIENDLY_THRESHOLD,
   type Faction,
-  type FactionRegistry,
   type WitnessEvent,
 } from "../src/faction.js";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
@@ -103,7 +101,7 @@ describe("standing", () => {
     const a = makeEntity(1); a.faction = "guards";
     const b = makeEntity(2); b.faction = "bandits";
     // Inject a clamped value directly
-    registry.entityReputations.set(1, new Map([["bandits", SCALE.Q as any]]));
+    registry.entityReputations.set(1, new Map([["bandits", SCALE.Q]]));
     const s = effectiveStanding(registry, a, b);
     expect(s).toBeLessThanOrEqual(SCALE.Q);
   });
@@ -144,7 +142,7 @@ describe("witness events", () => {
 
   it("standing is clamped at SCALE.Q after large positive delta", () => {
     const registry = createFactionRegistry([makeGuards()]);
-    registry.entityReputations.set(1, new Map([["guards", SCALE.Q as any]]));
+    registry.entityReputations.set(1, new Map([["guards", SCALE.Q]]));
     applyWitnessEvent(registry, { actorId: 1, targetId: 2, eventType: "aid", factionId: "guards", delta: q(1.0), tick: 0 });
     expect(registry.entityReputations.get(1)!.get("guards")).toBe(SCALE.Q);
   });
@@ -184,7 +182,7 @@ describe("witness events", () => {
     const defender  = mkHumanoidEntity(2, 2,  1,  0);
     const bystander = mkHumanoidEntity(3, 1,  0,  1);  // nearby neutral bystander
     // Give bystander 360° vision so arc check is skipped → canDetect returns q(1.0)
-    (bystander.attributes as any).perception = { ...DEFAULT_PERCEPTION, visionArcDeg: 360 };
+    (bystander.attributes).perception = { ...DEFAULT_PERCEPTION, visionArcDeg: 360 };
     const world     = mkWorld(1, [attacker, defender, bystander]);
     const fMap      = new Map([[1, "guards"], [2, "bandits"], [3, "guards"]]);
     const fakeAttack: TraceEvent = {
@@ -203,7 +201,7 @@ describe("witness events", () => {
     const attacker  = mkHumanoidEntity(1, 1, 0, 0);
     const defender  = mkHumanoidEntity(2, 2, 1, 0);
     const bystander = mkHumanoidEntity(3, 1, 0, 1);
-    (bystander.attributes as any).perception = { ...DEFAULT_PERCEPTION, visionArcDeg: 360 };
+    (bystander.attributes).perception = { ...DEFAULT_PERCEPTION, visionArcDeg: 360 };
     const world     = mkWorld(1, [attacker, defender, bystander]);
     const fMap      = new Map([[1, "guards"], [2, "bandits"], [3, "guards"]]);
     // Two identical events same tick
@@ -240,7 +238,7 @@ describe("AI modulation", () => {
     registry.globalStanding.get("guards")!.set("merchants", q(0.80));
 
     const world = mkWorld(1, [self, target]);
-    (world as any).__factionRegistry = registry;
+    (world).__factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -258,7 +256,7 @@ describe("AI modulation", () => {
 
     const registry = createFactionRegistry([makeGuards(), makeBandits()]);
     const world    = mkWorld(1, [self, target]);
-    (world as any).__factionRegistry = registry;
+    (world).__factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -275,7 +273,7 @@ describe("AI modulation", () => {
     // No faction set on either entity
     const registry = createFactionRegistry([makeGuards()]);
     const world    = mkWorld(1, [self, target]);
-    (world as any).__factionRegistry = registry;
+    (world).__factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -292,7 +290,7 @@ describe("AI modulation", () => {
 
     const registry = createFactionRegistry([]);   // empty registry
     const world    = mkWorld(1, [self, target]);
-    (world as any).__factionRegistry = registry;
+    (world).__factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -315,7 +313,7 @@ describe("AI modulation", () => {
     self.injury.shock = q(0.10);
 
     const world = mkWorld(1, [self, target]);
-    (world as any).__factionRegistry = registry;
+    (world).__factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -419,7 +417,7 @@ describe("integration", () => {
     registry.globalStanding.get("guards")!.set("merchants", q(0.80));
 
     const world = mkWorld(1, [self, target]);
-    (world as any).__factionRegistry = registry;
+    (world).__factionRegistry = registry;
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
 
