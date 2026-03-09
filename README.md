@@ -215,7 +215,16 @@ from intrapersonal intelligence (max 50kJ); `deductWillpower()`, `replenishWillp
 complexityMul × timeFactor`) with latent flaw probability (`P_flaw = max(0, complexity − logicalMath) × 0.40`);
 descriptor bands: exceptional/good/adequate/poor/failure.
 
-**1654 tests.** All coverage thresholds met (statements 96.42 %, branches 86.17 %, functions 93.9 %, lines 96.42 %).
+**Phase 39** adds musical intelligence and acoustic systems: `deriveAcousticSignature(entity)`
+computes noise level from movement velocity, equipment (metal armour +15, heavy weapons +10),
+and stealth skill; `detectAcousticSignature(listener, source, dist_m)` returns detection confidence
+(`sourceNoise / dist_m × listener.musical × SCALE_ACOUSTIC`); `resolveFormationSignal(signaller,
+signal, listener, dist_m)` computes command clarity (`musical(signaller) × musical(listener) ×
+rangeFactor`) for military coordination (drums, horns); `resolvePerformance(performer, spec)`
+generates morale auras (`fearDecayBonus = musical × q(0.020)`) draining willpower per second;
+performance types: march/rally/dirge/celebration/lament.
+
+**1712 tests.** All coverage thresholds met (statements 96.32 %, branches 85.92 %, functions 93.87 %, lines 96.32 %). All coverage thresholds met (statements 96.42 %, branches 86.17 %, functions 93.9 %, lines 96.42 %).
 
 See `ROADMAP.md` for the full development plan.
 

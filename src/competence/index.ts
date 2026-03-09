@@ -1,4 +1,4 @@
-// src/competence/index.ts — Phase 34-38: Competence module re-exports
+// src/competence/index.ts — Phase 34-39: Competence module re-exports
 
 export * from "./crafting.js";
 export * from "./navigation.js";
@@ -8,3 +8,5 @@ export * from "./language.js";
 export * from "./teaching.js";
 export * from "./willpower.js";
 export * from "./engineering.js";
+export * from "./acoustic.js";
+export * from "./performance.js";
