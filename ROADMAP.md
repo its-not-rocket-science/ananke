@@ -4685,3 +4685,371 @@ and Physics Realism Summary entries.
   Phase 38 engineering for route and supply planning.
 
 **Test suite**: 1,313 tests passing. Coverage: statements 96.9%, branches 85.8%, functions 95.9%, lines 96.9%.
+
+---
+
+## Phase 41 — Quest & Mission System
+
+### Overview
+
+Building on Phase 22 (Campaign) and Phase 40 (Competence), Phase 41 introduces a structured quest system that tracks objectives, progression states, and branching outcomes. This transforms the simulation from pure sandbox into an RPG-like experience with meaningful goals.
+
+### Core concepts
+
+**Quest as state machine**: Each quest is a directed graph of objectives with entry conditions, completion criteria, and exit transitions.
+
+```typescript
+export interface Quest {
+  questId: string;
+  title: string;
+  description: string;
+  giverId?: number;              // NPC who gave the quest
+  objectives: QuestObjective[];
+  state: "inactive" | "active" | "completed" | "failed";
+  priority: number;              // For sorting/selection when multiple available
+}
+
+export interface QuestObjective {
+  objectiveId: string;
+  description: string;
+  type: QuestObjectiveType;
+  target?: {                     // What to interact with
+    entityId?: number;
+    location?: { x: number; y: number; radius_m: number };
+    itemId?: string;
+  };
+  count?: number;                // For "collect X" or "defeat Y"
+  progress: number;              // Current count
+  state: "locked" | "available" | "in_progress" | "completed" | "failed";
+  hidden: boolean;               // Reveal only when previous objectives complete
+}
+
+export type QuestObjectiveType =
+  | "reach_location"
+  | "defeat_entity"
+  | "collect_item"
+  | "use_competence"             // Phase 40 integration
+  | "deliver_item"
+  | "escort_entity"
+  | "dialogue_choice"
+  | "wait_duration";             // Time-gated objectives
+```
+
+**Quest hooks from simulation events**: The quest system listens to kernel events and updates quest progress automatically.
+
+```typescript
+export interface QuestUpdateEvent {
+  questId: string;
+  objectiveId: string;
+  oldState: ObjectiveState;
+  newState: ObjectiveState;
+  trigger: SimulationEvent;      // What caused the update
+}
+```
+
+### Integration points
+
+**Phase 40 Competence**: Objectives can require specific competence checks ("craft a masterwork sword", "negotiate peaceful resolution").
+
+**Phase 24 Factions**: Quest availability depends on faction standing. Completing quests modifies reputation.
+
+**Phase 23 Dialogue**: Quest-related dialogue options appear based on active quests. Choices can advance/fail objectives.
+
+**Phase 22 Campaign**: Quests are the primary mechanism for campaign progression. World state stores active/completed quests per entity.
+
+### Files
+
+- `src/quest.ts` — Core quest definitions, state machine, and update logic
+- `src/quest-generators.ts` — Procedural quest generation from world state
+- `test/quest.test.ts` — Quest state transitions, integration with simulation events
+
+---
+
+## Phase 42 — Personal Relationship Graph
+
+### Overview
+
+Phase 24 provides faction-level reputation. Phase 42 adds individual-to-individual relationships — the social fabric that makes RPGs feel alive. Relationships affect morale, teaching effectiveness, betrayal probability, and dialogue options.
+
+### Core types
+
+```typescript
+export interface Relationship {
+  entityA: number;
+  entityB: number;
+  affinity_Q: Q;                 // -1.0 (hatred) to +1.0 (love)
+  trust_Q: Q;                    // 0.0 to 1.0, separate from affinity
+  history: RelationshipEvent[];  // Chronicle of interactions
+}
+
+export interface RelationshipEvent {
+  tick: number;
+  type: "met" | "fought_alongside" | "betrayed" | "saved" | "deceived" |
+        "gift_given" | "insult" | "bonded" | "separated";
+  magnitude_Q: Q;                // How much this affected the relationship
+}
+
+export type SocialBond =
+  | "none"
+  | "acquaintance"
+  | "friend"
+  | "close_friend"
+  | "rival"
+  | "enemy"
+  | "mentor"
+  | "student"
+  | "family"
+  | "romantic_partner";
+```
+
+### Relationship mechanics
+
+**Affinity evolution**: Based on interaction history and personality compatibility (Phase 33 intrapersonal attributes).
+
+**Trust vs affinity**: High affinity + low trust = friendly but won't watch your back in combat. High trust + low affinity = professional respect, works together but doesn't socialize.
+
+**Betrayal detection**: When entity A harms entity B, check relationship. If affinity_Q > q(0.50), this is "betrayal" — larger relationship penalty and potential morale collapse for witnesses.
+
+**Teaching effectiveness** (Phase 37): `resolveTeaching()` multiplier based on relationship affinity between teacher and learner.
+
+**Morale effects** (Phase 5/33): Seeing a friend injured causes distress penalty proportional to affinity. Seeing an enemy fall provides morale bonus.
+
+### Files
+
+- `src/relationships.ts` — Relationship graph storage, affinity calculations, event logging
+- `src/relationships-effects.ts` — Integration with morale, teaching, combat decisions
+- `test/relationships.test.ts` — Relationship evolution, betrayal mechanics, morale integration
+
+---
+
+## Phase 43 — Deep Inventory & Encumbrance
+
+### Overview
+
+Equipment exists (Phase 8), but inventory management is currently shallow. Phase 43 provides a complete item system with containers, durability, weight-based encumbrance, and item interactions.
+
+### Core types
+
+```typescript
+export interface Inventory {
+  ownerId: number;
+  containers: Container[];       // Multiple bags, pouches, etc.
+  equipped: EquippedItems;
+  encumbrance_Kg: number;
+  maxEncumbrance_Kg: number;
+}
+
+export interface Container {
+  containerId: string;
+  name: string;
+  capacity_Kg: number;
+  volume_L: number;              // Optional: volume-based limits
+  items: ItemInstance[];
+}
+
+export interface ItemInstance {
+  instanceId: string;
+  templateId: string;            // References equipment catalogue
+  quantity: number;
+  durability_Q?: Q;              // 1.0 = pristine, 0.0 = broken
+  modifications?: ItemMod[];
+  containerPath: string[];       // Which container(s) it's in
+}
+
+export interface ItemMod {
+  type: "sharpened" | "reinforced" | "enchanted" | "damaged";
+  effects: Partial<Weapon> | Partial<Armour>;
+}
+```
+
+### Encumbrance system
+
+**Weight categories**:
+- Unencumbered: < 30% max — no penalties
+- Light: 30-50% — fineControl penalty q(0.05)
+- Medium: 50-75% — dodge/parry latency +20%, movement speed -10%
+- Heavy: 75-100% — combat penalties, cannot sprint
+- Overloaded: > 100% — cannot move without dropping items
+
+**Max encumbrance**: Derived from `peakForce_N` — stronger characters carry more.
+
+### Item durability
+
+Weapons and armour accumulate wear:
+- Parried heavy strikes: small durability loss
+- Blocked with weapon: durability loss based on impact energy
+- Armour penetration: durability loss proportional to absorbed damage
+
+Broken items: Weapons deal reduced damage (qMul(quality, durability_Q)). Broken armour provides no protection.
+
+### Integration
+
+**Phase 40 Competence**: Repairing items requires crafting competence. Quality of repair restores durability proportionally.
+
+**Phase 25 Economy**: Item durability affects value. Damaged goods sell for less. Repair services available at settlements.
+
+### Files
+
+- `src/inventory.ts` — Container management, encumbrance calculations
+- `src/item-durability.ts` — Wear tracking, repair mechanics
+- `test/inventory.test.ts` — Encumbrance penalties, container nesting, durability
+
+---
+
+## Phase 44 — Settlement & Base Building
+
+### Overview
+
+Persistent locations that can be constructed, upgraded, and populated. Settlements provide services (repair, medical, training), storage, and serve as quest hubs.
+
+### Core types
+
+```typescript
+export interface Settlement {
+  settlementId: string;
+  name: string;
+  position: { x: number; y: number };
+  tier: 0 | 1 | 2 | 3 | 4;      // Camp → Hamlet → Village → Town → City
+
+  // Facilities determine available services
+  facilities: {
+    forge: FacilityLevel;        // Item repair, crafting quality bonus
+    medical: FacilityLevel;      // Max care level (Phase 19)
+    market: FacilityLevel;       // Economy integration (Phase 25)
+    barracks: FacilityLevel;     // Population cap, training speed
+    temple: FacilityLevel;       // Morale restoration, ritual (Phase 40 collective)
+  };
+
+  population: number;
+  populationCap: number;
+  factionId?: number;            // Who controls this settlement
+
+  // Storage
+  sharedStorage?: Inventory;     // Guild/faction shared storage
+
+  // Construction progress
+  activeProjects: ConstructionProject[];
+}
+
+export interface ConstructionProject {
+  projectId: string;
+  targetFacility: string;
+  targetLevel: number;
+  requiredResources: Record<string, number>;  // material → quantity
+  progress_Q: Q;                 // 0.0 to 1.0
+  contributors: number[];        // Entity IDs contributing
+}
+```
+
+### Settlement mechanics
+
+**Population growth**: Based on food surplus (Phase 30), medical facility tier, and safety (no recent raids).
+
+**Collective crafting** (from Outstanding Gaps): Multiple entities contribute to construction projects. Progress = Σ(competenceQuality × hoursWorked) / totalRequired.
+
+**Services scaling**: Higher tier facilities unlock better equipment, higher-tier medical care, more quest variety.
+
+**Siege vulnerability**: Settlements can be attacked. Defensive structures (walls, towers) modify combat terrain.
+
+### Integration
+
+**Phase 41 Quests**: Settlements generate procedural quests based on their needs ("bandits attacking our farms", "need ore for forge upgrade").
+
+**Phase 42 Relationships**: Settlements serve as meeting points where relationships form.
+
+**Phase 40 Competence**: Entities can "work" at settlement facilities, converting time + competence into facility progress.
+
+### Files
+
+- `src/settlement.ts` — Settlement state, population dynamics, construction
+- `src/settlement-services.ts` — Service availability, pricing, quest generation
+- `test/settlement.test.ts` — Population growth, construction progress, siege mechanics
+
+---
+
+## Phase 45 — Emergent Story Generation
+
+### Overview
+
+The simulation generates events. Phase 45 transforms those events into coherent narratives — chronicles, histories, and emergent stories that give meaning to the chaos of simulation.
+
+### Core concepts
+
+**Event significance scoring**: Not every punch matters. The system identifies significant events:
+- Entity death (always significant)
+- Relationship state changes (friend → enemy)
+- Quest completion/failure
+- Settlement tier upgrades
+- First contact with new species
+- Exceptional competence outcomes (masterwork crafting)
+
+**Narrative templates**: Significant events are rendered through templates into prose.
+
+```typescript
+export interface ChronicleEntry {
+  entryId: string;
+  tick: number;
+  significance: number;          // For filtering/summarizing
+  eventType: string;
+  actors: number[];              // Entity IDs involved
+  template: string;              // Template key
+  variables: Record<string, string | number>;
+  rendered: string;              // Generated prose
+}
+
+export interface Chronicle {
+  chronicleId: string;
+  scope: "world" | "faction" | "settlement" | "entity";
+  ownerId?: number;              // For entity/faction-specific chronicles
+  entries: ChronicleEntry[];
+}
+```
+
+**Emergent story arcs**: The system detects patterns across multiple events:
+- "Rise of a hero": Entity survives multiple impossible odds, gains reputation
+- "Tragic fall": Entity with high reputation commits betrayal
+- "Rivalry": Two entities repeatedly fight, neither dying
+- "Great migration": Population movement across regions
+
+### Procedural narrative techniques
+
+**Context-aware descriptions**: Use entity relationship data (Phase 42) to generate richer text:
+- "Entity 5 killed Entity 3" → "Gorath slew his former friend Durnik in a fit of rage"
+
+**Branching histories**: Major events create "story branches" where the narrative could have gone differently. For replay/debugging, show "what if" alternatives.
+
+**Summarization**: Long chronicles can be summarized at different granularities:
+- Full: Every significant event
+- Chapter: Major arcs only
+- Synopsis: One paragraph per major phase
+
+### Integration
+
+**Phase 41 Quests**: Quest completion generates chronicle entries. Quest givers reference past player deeds from chronicle.
+
+**Phase 42 Relationships**: Relationship changes generate entries with emotional context.
+
+**Phase 22 Campaign**: Campaign exports include world chronicle for persistence across sessions.
+
+### Files
+
+- `src/chronicle.ts` — Chronicle storage, significance scoring, templates
+- `src/story-arcs.ts` — Pattern detection for emergent narratives
+- `src/narrative-render.ts` — Template rendering, prose generation
+- `test/chronicle.test.ts` — Significance scoring, arc detection, rendering
+
+---
+
+## Phase 46+ — Future Directions
+
+Potential future phases building on the RPG foundation:
+
+**Phase 46: Procedural World Generation** — Generate settlements, factions, and starting relationships procedurally from seed.
+
+**Phase 47: Advanced AI Personalities** — Individual AI beyond presets: personality traits (aggressive/cautious, loyal/opportunistic) affecting decision-making.
+
+**Phase 48: Multi-Party Dynamics** — Managing multiple adventuring parties, companion loyalty, inter-party conflict.
+
+**Phase 49: Legacy & Inheritance** — Character death not ending campaign; heir inherits equipment, relationships partially transfer.
+
+**Phase 50: Mythology & Legend** — Stories from chronicles become "legends" that NPCs reference, affecting their expectations and behavior.
