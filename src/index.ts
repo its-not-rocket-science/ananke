@@ -30,3 +30,6 @@ export * from "./sim/tuning.js";
 export * from "./sim/trace.js";
 
 export * from "./sim/testing.js";
+
+export * from "./quest.js";
+export * from "./quest-generators.js";
