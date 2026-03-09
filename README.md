@@ -178,7 +178,15 @@ boosts effective distress tolerance in morale computations, `linguistic` sets th
 persuasion base probability in dialogue (elf q(0.80) → q(0.44); ogre q(0.25) → q(0.275)),
 and `bodilyKinesthetic` sets a floor on fine-motor precision (`fineControl ≥ bk × q(0.80)`).
 
-**1495 tests.** All coverage thresholds met (statements 96.38 %, branches 86.26 %, functions 93.61 %, lines 96.38 %).
+**Phase 34** extends `bodilyKinesthetic` and `spatial` into non-combat competence resolvers
+(`src/competence/`): `resolveCrafting(entity, spec, seed)` computes craft quality
+(materialQ × BK × fineControl-bonus × toolBonus ± RNG) and time (baseTime_s × q(0.50) / BK);
+`computeSurgicalPrecision(entity)` returns lerp(q(0.70), q(1.30), BK) for use as
+`TreatmentSchedule.surgicalPrecisionMul` in downtime surgery; `resolveNavigation(entity, spec, seed)`
+gives routeEfficiency = clamp(spatial × mapBonus × terrainQ × visibilityQ, q(0.50), q(1.0)) and
+the resulting timeLost_s.
+
+**1527 tests.** All coverage thresholds met (statements 96.44 %, branches 86.37 %, functions 93.47 %, lines 96.44 %).
 
 See `ROADMAP.md` for the full development plan.
 

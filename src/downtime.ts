@@ -63,6 +63,12 @@ export interface TreatmentSchedule {
   onsetDelay_s?: number;
   /** Item inventory; if undefined, assume unlimited supply. */
   inventory?: Map<string, number>;
+  /**
+   * Phase 34: surgeon's bodily-kinesthetic precision multiplier on surgery rate.
+   * Use computeSurgicalPrecision(surgeon) from src/competence/crafting.ts.
+   * Default q(1.0) (no effect).
+   */
+  surgicalPrecisionMul?: Q;
 }
 
 export interface DowntimeConfig {
@@ -297,8 +303,9 @@ function applyTreatment(state: EState, second: number, restMul: Q): void {
 
   const tier      = careTier(care);
   const effectMul = TIER_MUL[tier];
+  const precMul: Q = (state.schedule.surgicalPrecisionMul ?? SCALE.Q) as Q;
   const bleedRed  = mulDiv(qMul(BANDAGE_RATE, restMul), effectMul, SCALE.Q) as Q;
-  const surgRed   = mulDiv(qMul(SURGERY_RATE, restMul), effectMul, SCALE.Q) as Q;
+  const surgRed   = mulDiv(mulDiv(qMul(SURGERY_RATE, restMul), effectMul, SCALE.Q), precMul, SCALE.Q) as Q;
 
   for (const [region, reg] of Object.entries(inj.byRegion)) {
 
