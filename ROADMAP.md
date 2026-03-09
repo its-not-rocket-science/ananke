@@ -4532,7 +4532,7 @@ export function resolvePerformance(
 
 ---
 
-## Phase 40 — Non-Combat Competence Framework
+## Phase 40 — Non-Combat Competence Framework (COMPLETE)
 
 ### Overview
 
