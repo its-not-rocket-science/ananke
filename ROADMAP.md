@@ -4300,7 +4300,7 @@ has studied dragon physiology.
 
 ---
 
-## Phase 37 — Linguistic & Interpersonal Intelligence
+## Phase 37 — Linguistic & Interpersonal Intelligence *(COMPLETE)*
 
 ### Overview
 
@@ -4379,11 +4379,12 @@ P_detect = clamp(
 
 | File | Description |
 |------|-------------|
-| `src/competence/language.ts` | `LanguageCapacity`, `resolveCommandTransmission` |
-| `src/competence/teaching.ts` | `resolveTeaching` |
-| `src/dialogue.ts` | Update `deceive` resolution with `interpersonal_Q` |
-| `test/language.test.ts` | ~16 tests |
-| `test/teaching.test.ts` | ~12 tests |
+| `src/competence/language.ts` | `LanguageCapacity`, `resolveCommandTransmission`, `computeCommandRange_m` |
+| `src/competence/teaching.ts` | `resolveTeaching`, `computeDeceptionDetectionProbability` |
+| `src/types.ts` | Add `LanguageCapacity` interface, `languages` to `IndividualAttributes` |
+| `src/dialogue.ts` | Update `deceive` with interpersonal defense factor |
+| `test/language.test.ts` | 16 tests |
+| `test/teaching.test.ts` | 14 tests |
 
 ---
 

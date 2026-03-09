@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–36 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B, 31–36). Melee combat,
+**Phases 1–37 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B, 31–37). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -200,7 +200,14 @@ with success probability `empathy_Q × vocab × (1 − fear × 0.60)` and potent
 empathy meets fearful targets; `computeUnfamiliarSpeciesLatencyPenalty(entity, species)` returns
 up to +80 ms decision latency when facing unfamiliar species (those not in `speciesAffinity`).
 
-**1575 tests.** All coverage thresholds met (statements 96.47 %, branches 86.39 %, functions 93.51 %, lines 96.47 %).
+**Phase 37** extends linguistic and interpersonal intelligence into practical applications:
+`LanguageCapacity` (languageId + fluency_Q) added to `Entity.languages`; `resolveCommandTransmission`
+computes formation reception rate (`linguistic × formationBonus`) and transmission delay;
+`resolveTeaching` computes XP transfer (`hours × BASE_XP_RATE × interpersonalTeacher × interpersonalLearner`)
+with teacher fatigue; `computeDeceptionDetectionProbability` factors interpersonal intuition into
+detecting lies (`attentionDepth × 0.50 + interpersonal × 0.50 − plausibility`).
+
+**1603 tests.** All coverage thresholds met (statements 96.45 %, branches 86.24 %, functions 93.76 %, lines 96.45 %).
 
 See `ROADMAP.md` for the full development plan.
 

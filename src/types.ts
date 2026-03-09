@@ -1,5 +1,13 @@
 import type { I32, Q } from "./units.js";
 
+// Phase 37: Language capacity for multilingual communication
+export interface LanguageCapacity {
+  /** Language identifier (e.g., "common", "elvish", "klingonese"). */
+  languageId: string;
+  /** Fluency level: q(1.0) = native, q(0.50) = conversational, q(0.20) = survival. */
+  fluency_Q: Q;
+}
+
 // Phase 33: Gardner's Multiple Intelligences + inter-species (all Q-coded 0..1)
 export interface CognitiveProfile {
   /** Language, argument complexity, written/spoken command clarity. */
@@ -106,6 +114,8 @@ export interface IndividualAttributes {
   locomotionModes?: LocomotionCapacity[];
   /** Phase 33: Gardner's multiple intelligences + inter-species. */
   cognition?: CognitiveProfile;
+  /** Phase 37: Language capacities for multilingual communication. */
+  languages?: LanguageCapacity[];
 }
 
 export interface EnergyState {

@@ -180,8 +180,10 @@ describe("deceive", () => {
   it("high plausibility against low attentionDepth yields high probability", () => {
     const ctx = makeContext();
     ctx.target.attributes.perception!.attentionDepth = 2;  // inattentive
+    // Phase 37: interpersonal also affects deception detection
+    ctx.target.attributes.cognition = { ...(ctx.target.attributes.cognition ?? {}), interpersonal: q(0.20) } as any;
     const P = dialogueProbability({ kind: "deceive", plausibility_Q: q(0.90) }, ctx);
-    expect(P).toBeGreaterThan(q(0.65));
+    expect(P).toBeGreaterThan(q(0.60));
   });
 
   it("same seed → same outcome (deterministic)", () => {

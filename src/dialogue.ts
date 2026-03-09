@@ -167,11 +167,19 @@ export function dialogueProbability(
       );
     }
 
-    case "deceive":
-      return qMul(
-        action.plausibility_Q,
-        (SCALE.Q - attentionDepthQ(target.attributes.perception?.attentionDepth ?? 0)) as Q,
+    case "deceive": {
+      // Phase 37: deception detection uses both attentionDepth AND interpersonal
+      // P_success = plausibility × (1 - attentionDepth) × (1 - interpersonal × 0.50)
+      const attentionFactor = (SCALE.Q - attentionDepthQ(target.attributes.perception?.attentionDepth ?? 0)) as Q;
+      // Interpersonal gives defensive bonus against deception
+      const interpersonal: Q = (target.attributes.cognition?.interpersonal ?? q(0.50)) as Q;
+      const interpersonalFactor = clampQ(
+        (SCALE.Q - mulDiv(interpersonal, q(0.50), SCALE.Q)) as Q,
+        q(0.50),
+        SCALE.Q as Q,
       );
+      return qMul(qMul(action.plausibility_Q, attentionFactor), interpersonalFactor);
+    }
 
     case "surrender":
       // Returns non-zero only when target's fear exceeds the acceptance threshold.
