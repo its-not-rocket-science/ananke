@@ -213,6 +213,7 @@ export const ELF_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.70), coldVar: q(0.22),
     fatigueRate: q(0.80), fatigueVar: q(0.20),
     recoveryRate: q(1.10), recoveryVar: q(0.22),
+    cognition: { linguistic: q(0.80), logicalMathematical: q(0.72), spatial: q(0.80), bodilyKinesthetic: q(0.75), musical: q(0.85), interpersonal: q(0.70), intrapersonal: q(0.75), naturalist: q(0.78), interSpecies: q(0.60) },
   },
   lore: "Long-lived woodland folk; keen senses and fine motor precision exceed human norms.",
 };
@@ -250,6 +251,7 @@ export const DWARF_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.72), coldVar: q(0.22),
     fatigueRate: q(0.92), fatigueVar: q(0.22),
     recoveryRate: q(1.15), recoveryVar: q(0.20),
+    cognition: { linguistic: q(0.55), logicalMathematical: q(0.75), spatial: q(0.65), bodilyKinesthetic: q(0.90), musical: q(0.55), interpersonal: q(0.50), intrapersonal: q(0.65), naturalist: q(0.45), interSpecies: q(0.25) },
   },
   lore: "Dense-boned mountain folk; superior structural integrity and acute hearing in tunnels.",
 };
@@ -287,6 +289,7 @@ export const HALFLING_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.55), coldVar: q(0.28),
     fatigueRate: q(0.88), fatigueVar: q(0.22),
     recoveryRate: q(1.05), recoveryVar: q(0.22),
+    cognition: { linguistic: q(0.70), logicalMathematical: q(0.55), spatial: q(0.65), bodilyKinesthetic: q(0.80), musical: q(0.70), interpersonal: q(0.82), intrapersonal: q(0.60), naturalist: q(0.65), interSpecies: q(0.55) },
   },
   lore: "Unassuming but surprisingly tenacious; nimble feet give exceptional balance.",
 };
@@ -324,6 +327,7 @@ export const ORC_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.52), coldVar: q(0.28),
     fatigueRate: q(1.10), fatigueVar: q(0.22),
     recoveryRate: q(1.00), recoveryVar: q(0.22),
+    cognition: { linguistic: q(0.45), logicalMathematical: q(0.45), spatial: q(0.55), bodilyKinesthetic: q(0.75), musical: q(0.55), interpersonal: q(0.50), intrapersonal: q(0.40), naturalist: q(0.50), interSpecies: q(0.30) },
   },
   lore: "High aggression correlates with high metabolic drain; remarkable pain tolerance.",
 };
@@ -360,6 +364,7 @@ export const OGRE_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.62), coldVar: q(0.28),
     fatigueRate: q(1.05), fatigueVar: q(0.24),
     recoveryRate: q(0.95), recoveryVar: q(0.24),
+    cognition: { linguistic: q(0.25), logicalMathematical: q(0.25), spatial: q(0.40), bodilyKinesthetic: q(0.65), musical: q(0.20), interpersonal: q(0.30), intrapersonal: q(0.30), naturalist: q(0.50), interSpecies: q(0.20) },
   },
   lore: "Raw power constrained by poor fine motor skill and sluggish cognition.",
 };
@@ -396,6 +401,7 @@ export const GOBLIN_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.45), coldVar: q(0.30),
     fatigueRate: q(1.05), fatigueVar: q(0.24),
     recoveryRate: q(0.95), recoveryVar: q(0.24),
+    cognition: { linguistic: q(0.50), logicalMathematical: q(0.60), spatial: q(0.70), bodilyKinesthetic: q(0.75), musical: q(0.40), interpersonal: q(0.55), intrapersonal: q(0.35), naturalist: q(0.60), interSpecies: q(0.40) },
   },
   lore: "Survival instinct manifests as extreme flight reflex; low pain threshold accelerates retreat.",
 };
@@ -436,6 +442,7 @@ export const TROLL_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.80), coldVar: q(0.18),
     fatigueRate: q(1.00), fatigueVar: q(0.22),
     recoveryRate: q(2.00), recoveryVar: q(0.20),  // rapid regeneration
+    cognition: { linguistic: q(0.20), logicalMathematical: q(0.20), spatial: q(0.35), bodilyKinesthetic: q(0.60), musical: q(0.15), interpersonal: q(0.25), intrapersonal: q(0.20), naturalist: q(0.55), interSpecies: q(0.20) },
   },
   lore: "Legendary regeneration is suppressed by fire damage — the classical trollslayer strategy.",
 };
@@ -475,6 +482,7 @@ export const VULCAN_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.75), coldVar: q(0.12),
     fatigueRate: q(0.85), fatigueVar: q(0.08),
     recoveryRate: q(1.10), recoveryVar: q(0.08),
+    cognition: { linguistic: q(0.80), logicalMathematical: q(0.95), spatial: q(0.85), bodilyKinesthetic: q(0.70), musical: q(0.65), interpersonal: q(0.50), intrapersonal: q(0.95), naturalist: q(0.70), interSpecies: q(0.65) },
   },
   lore: "Meditative disciplines reduce basal metabolic demand and suppress pain response.",
 };
@@ -512,6 +520,7 @@ export const KLINGON_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.60), coldVar: q(0.24),
     fatigueRate: q(1.05), fatigueVar: q(0.20),
     recoveryRate: q(1.20), recoveryVar: q(0.18),
+    cognition: { linguistic: q(0.60), logicalMathematical: q(0.55), spatial: q(0.65), bodilyKinesthetic: q(0.80), musical: q(0.70), interpersonal: q(0.65), intrapersonal: q(0.50), naturalist: q(0.60), interSpecies: q(0.30) },
   },
   lore: "Redundant cardiovascular and digestive systems (brak'lul) provide extreme shock resilience.",
 };
@@ -549,6 +558,7 @@ export const ROMULAN_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.68), coldVar: q(0.22),
     fatigueRate: q(0.88), fatigueVar: q(0.16),
     recoveryRate: q(1.08), recoveryVar: q(0.16),
+    cognition: { linguistic: q(0.75), logicalMathematical: q(0.80), spatial: q(0.75), bodilyKinesthetic: q(0.65), musical: q(0.55), interpersonal: q(0.75), intrapersonal: q(0.80), naturalist: q(0.55), interSpecies: q(0.45) },
   },
   lore: "Shared ancestry with Vulcans produces similar physical capability; emotional volatility creates wider variance.",
 };
@@ -592,6 +602,7 @@ export const DRAGON_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.60), coldVar: q(0.22),
     fatigueRate: q(0.90), fatigueVar: q(0.20),
     recoveryRate: q(1.30), recoveryVar: q(0.20),
+    cognition: { linguistic: q(0.50), logicalMathematical: q(0.75), spatial: q(0.95), bodilyKinesthetic: q(0.80), musical: q(0.40), interpersonal: q(0.40), intrapersonal: q(0.90), naturalist: q(0.80), interSpecies: q(0.55) },
   },
   lore: "An apex predator. Fire breath is a biological weapon; scales provide armour equivalent to plate.",
 };
@@ -628,6 +639,7 @@ export const CENTAUR_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.65), coldVar: q(0.24),
     fatigueRate: q(0.88), fatigueVar: q(0.22),
     recoveryRate: q(1.05), recoveryVar: q(0.22),
+    cognition: { linguistic: q(0.55), logicalMathematical: q(0.60), spatial: q(0.80), bodilyKinesthetic: q(0.85), musical: q(0.65), interpersonal: q(0.65), intrapersonal: q(0.60), naturalist: q(0.85), interSpecies: q(0.55) },
   },
   lore: "Equine lower body grants exceptional speed and endurance; combat reach advantage from height.",
 };
@@ -665,6 +677,7 @@ export const SATYR_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.58), coldVar: q(0.28),
     fatigueRate: q(0.72), fatigueVar: q(0.22),  // vigorous constitution
     recoveryRate: q(1.10), recoveryVar: q(0.22),
+    cognition: { linguistic: q(0.60), logicalMathematical: q(0.50), spatial: q(0.60), bodilyKinesthetic: q(0.80), musical: q(0.95), interpersonal: q(0.75), intrapersonal: q(0.55), naturalist: q(0.72), interSpecies: q(0.60) },
   },
   lore: "Goat hooves provide unmatched balance on rough terrain; horn delivers surprising impact force.",
 };
@@ -708,6 +721,7 @@ export const HEECHEE_SPECIES: SpeciesDefinition = {
     coldTolerance: q(0.52), coldVar: q(0.28),
     fatigueRate: q(0.95), fatigueVar: q(0.22),
     recoveryRate: q(0.90), recoveryVar: q(0.22),
+    cognition: { linguistic: q(0.40), logicalMathematical: q(0.95), spatial: q(0.90), bodilyKinesthetic: q(0.55), musical: q(0.30), interpersonal: q(0.45), intrapersonal: q(0.85), naturalist: q(0.65), interSpecies: q(0.90) },
   },
   lore: "Evolved for technological manipulation, not combat; their engineering precision is unmatched.",
 };

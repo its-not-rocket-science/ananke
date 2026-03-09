@@ -79,6 +79,7 @@ export interface Shield extends ItemBase {
   fatigueMul: Q;
 
   covers?: HitArea[];
+  coverageProfileId?: string;
 }
 
 export type CoverageByRegion = Partial<Record<BodyRegion, Q>>;
@@ -632,6 +633,8 @@ export const STARTER_SHIELDS: Shield[] = [
     deflectQ: q(0.30),
     arcDeg: 90,
     regions: ["torso", "leftArm", "rightArm"],
+    covers: ["torso", "arm", "head"],
+    coverageProfileId: "shield_small_default",
     manipulationMul: q(0.95),
     mobilityMul: q(0.98),
     fatigueMul: q(1.05),

@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–30 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B). Melee combat,
+**Phases 1–33 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B, 31–33). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -160,9 +160,25 @@ with calibrated powerMul, fineControlPen, and latencyMul penalties, and a **nutr
 starvation model** (`src/sim/nutrition.ts`) that adds the longest survivability axis:
 caloric balance tracked via Kleiber's-law BMR, four hunger states (sated → hungry →
 starving → critical) with staged fat catabolism (300 g/day), muscle catabolism (0.5 N/hour
-reduction in peakForce_N), and a six-item food catalogue from ration bars to water flasks.
+reduction in peakForce_N), and a six-item food catalogue from ration bars to water flasks,
+a **species and race system** (`src/species.ts`) providing a data-driven species registry
+where `SpeciesDefinition` bundles archetype, body plan, innate traits, capabilities, natural
+weapons, and physiological overrides into one record: 14 species across fantasy humanoids
+(elf, dwarf, halfling, orc, ogre, goblin, troll), sci-fi humanoids (Vulcan, Klingon, Romulan),
+mythological (dragon, centaur, satyr), and fictional (Heechee); `SpeciesPhysiology` adds
+`coldBlooded` (skips thermoregulation), `bmrMultiplier` (Vulcan q(0.72) starves slower;
+orc q(1.15) starves faster), and `naturalInsulation_m2KW` (scales heat loss), and a
+**multiple intelligences layer** (`src/types.ts`, wired through targeting, morale, decide,
+and dialogue) implementing Howard Gardner's nine cognitive domains plus inter-species empathy
+as Q-coded attributes on every archetype and species: `spatial` scales the threat-horizon
+perception radius (human baseline q(0.60) → ×1.0; octopus q(0.90) → ×1.30),
+`logicalMathematical` reduces decision latency (Vulcan q(0.95) → ×0.82; ogre q(0.25) →
+×1.10), `interpersonal` scales the effective leader-aura reception radius, `intrapersonal`
+boosts effective distress tolerance in morale computations, `linguistic` sets the per-entity
+persuasion base probability in dialogue (elf q(0.80) → q(0.44); ogre q(0.25) → q(0.275)),
+and `bodilyKinesthetic` sets a floor on fine-motor precision (`fineControl ≥ bk × q(0.80)`).
 
-**1313 tests.** All coverage thresholds met (statements 96.97 %, branches 85.85 %, functions 96.06 %, lines 96.97 %).
+**1495 tests.** All coverage thresholds met (statements 96.38 %, branches 86.26 %, functions 93.61 %, lines 96.38 %).
 
 See `ROADMAP.md` for the full development plan.
 

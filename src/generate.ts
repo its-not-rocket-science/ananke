@@ -132,7 +132,10 @@ const actuatorScale = clampQ(
   const reactionTime_s = applyMultI32(arch.reactionTime_s, qMul(reactMult, reactCouple));
 
   const stability = clampQ(qMul(arch.stability, mulFromVariation(triSym(rng), arch.stabilityVar)), q(0.05), q(0.99));
-  const fineControl = clampQ(qMul(arch.fineControl, mulFromVariation(triSym(rng), arch.fineControlVar)), q(0.05), q(0.99));
+  const rawFineControl = clampQ(qMul(arch.fineControl, mulFromVariation(triSym(rng), arch.fineControlVar)), q(0.05), q(0.99));
+  // Phase 33: bodilyKinesthetic sets a floor on fine motor precision
+  const bkFloor: Q = arch.cognition ? qMul(arch.cognition.bodilyKinesthetic, q(0.80)) : q(0) as Q;
+  const fineControl = clampQ(Math.max(rawFineControl, bkFloor) as Q, q(0.05), q(0.99));
 
   const surfaceIntegrity = clampQ(qMul(arch.surfaceIntegrity, mulFromVariation(triSym(rng), arch.surfaceVar)), q(0.4), q(3.0));
   const bulkIntegrity = clampQ(qMul(arch.bulkIntegrity, mulFromVariation(triSym(rng), arch.bulkVar)), q(0.4), q(3.0));
@@ -191,5 +194,7 @@ const actuatorScale = clampQ(
       attentionDepth: arch.attentionDepth,
       threatHorizon_m: arch.threatHorizon_m,
     },
+    // Phase 33: pass through species-typical cognition (no per-individual variance)
+    ...(arch.cognition ? { cognition: arch.cognition } : {}),
   };
 }

@@ -8,6 +8,7 @@
 import type { Q, I32 } from "../units.js";
 import { q } from "../units.js";
 import { DamageChannel } from "../channels.js";
+import { SegmentCoverageProfile } from "../anatomy/anatomy-contracts.js";
 
 // ─── locomotion and CNS models ────────────────────────────────────────────────
 
@@ -61,6 +62,8 @@ export interface BodySegment {
   manipulationRole?: "primary" | "secondary" | "none";
   /** Central nervous system contribution. */
   cnsRole?: "central" | "ganglionic" | "none";
+
+  tags?: string[];
 
   // ── Phase 8B: exoskeleton biology ─────────────────────────────────────────
 
@@ -123,6 +126,7 @@ export interface BodyPlan {
   segments: BodySegment[];
   locomotion: LocomotionModel;
   cnsLayout: CNSLayout;
+  coverageProfiles?: readonly SegmentCoverageProfile[];
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -181,6 +185,7 @@ export const HUMANOID_PLAN: BodyPlan = {
         [DamageChannel.Chemical]:   q(0.16),
       },
       cnsRole: "central",
+      tags: ["head", "shield-small-cover"],
     },
     {
       id: "torso",
@@ -194,6 +199,7 @@ export const HUMANOID_PLAN: BodyPlan = {
         [DamageChannel.Chemical]:   q(0.36),
       },
       cnsRole: "ganglionic",
+      tags: ["torso", "shield-small-cover"],
     },
     {
       id: "leftArm",
@@ -207,6 +213,7 @@ export const HUMANOID_PLAN: BodyPlan = {
         [DamageChannel.Chemical]:   q(0.12),
       },
       manipulationRole: "primary",
+      tags: ["arm", "shield-small-cover"],
     },
     {
       id: "rightArm",
@@ -220,6 +227,7 @@ export const HUMANOID_PLAN: BodyPlan = {
         [DamageChannel.Chemical]:   q(0.12),
       },
       manipulationRole: "primary",
+      tags: ["arm", "shield-small-cover"],
     },
     {
       id: "leftLeg",
@@ -233,6 +241,7 @@ export const HUMANOID_PLAN: BodyPlan = {
         [DamageChannel.Chemical]:   q(0.12),
       },
       locomotionRole: "primary",
+      tags: ["leg"],
     },
     {
       id: "rightLeg",
@@ -246,6 +255,7 @@ export const HUMANOID_PLAN: BodyPlan = {
         [DamageChannel.Chemical]:   q(0.12),
       },
       locomotionRole: "primary",
+      tags: ["leg"],
     },
   ],
 };

@@ -430,6 +430,8 @@ describe("rally mechanic", () => {
   it("rallyCooldownTicks set to RALLY_COOLDOWN_TICKS when fear drops below routing threshold", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     e.attributes.resilience.distressTolerance = q(0.50);
+    // Disable cognition so intrapersonal boost does not shift the routing threshold (Phase 33).
+    e.attributes = { ...e.attributes, cognition: undefined };
     // moraleThreshold(q(0.50)) = q(0.50) + qMul(q(0.50), q(0.30)) = 5000 + 1500 = 6500
     // fearQ just above: should drop below in 1 tick
     e.condition.fearQ = (6500 + 10) as Q; // just above threshold

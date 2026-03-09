@@ -1,4 +1,5 @@
 import { q, to, type Q, type I32 } from "./units.js";
+import type { CognitiveProfile } from "./types.js";
 
 export interface Archetype {
   stature_m: I32;
@@ -60,6 +61,8 @@ export interface Archetype {
 
   fatigueRate: Q; fatigueVar: Q;
   recoveryRate: Q; recoveryVar: Q;
+  /** Phase 33: species-typical cognitive profile (no per-individual variance). */
+  cognition?: CognitiveProfile;
 }
 
 export const HUMAN_BASE: Archetype = {
@@ -121,6 +124,11 @@ export const HUMAN_BASE: Archetype = {
 
   fatigueRate: q(1.0), fatigueVar: q(0.25),
   recoveryRate: q(1.0), recoveryVar: q(0.25),
+  cognition: {
+    linguistic: q(0.65), logicalMathematical: q(0.60), spatial: q(0.60),
+    bodilyKinesthetic: q(0.60), musical: q(0.50),
+    interpersonal: q(0.60), intrapersonal: q(0.55), naturalist: q(0.50), interSpecies: q(0.35),
+  },
 };
 
 // ─── Phase 15: validated real-world archetypes ────────────────────────────────
@@ -155,6 +163,11 @@ export const AMATEUR_BOXER: Archetype = {
   coldTolerance: q(0.50), coldVar: q(0.25),
   fatigueRate: q(0.85), fatigueVar: q(0.20),
   recoveryRate: q(1.10), recoveryVar: q(0.20),
+  cognition: {
+    linguistic: q(0.55), logicalMathematical: q(0.50), spatial: q(0.60),
+    bodilyKinesthetic: q(0.75), musical: q(0.45),
+    interpersonal: q(0.50), intrapersonal: q(0.60), naturalist: q(0.40), interSpecies: q(0.25),
+  },
 };
 
 /**
@@ -187,6 +200,11 @@ export const PRO_BOXER: Archetype = {
   coldTolerance: q(0.50), coldVar: q(0.22),
   fatigueRate: q(0.80), fatigueVar: q(0.18),
   recoveryRate: q(1.20), recoveryVar: q(0.18),
+  cognition: {
+    linguistic: q(0.55), logicalMathematical: q(0.58), spatial: q(0.65),
+    bodilyKinesthetic: q(0.82), musical: q(0.50),
+    interpersonal: q(0.55), intrapersonal: q(0.72), naturalist: q(0.40), interSpecies: q(0.25),
+  },
 };
 
 /**
@@ -219,6 +237,11 @@ export const GRECO_WRESTLER: Archetype = {
   coldTolerance: q(0.50), coldVar: q(0.25),
   fatigueRate: q(0.82), fatigueVar: q(0.20),
   recoveryRate: q(1.15), recoveryVar: q(0.20),
+  cognition: {
+    linguistic: q(0.52), logicalMathematical: q(0.55), spatial: q(0.65),
+    bodilyKinesthetic: q(0.80), musical: q(0.40),
+    interpersonal: q(0.55), intrapersonal: q(0.65), naturalist: q(0.42), interSpecies: q(0.25),
+  },
 };
 
 /**
@@ -250,6 +273,11 @@ export const KNIGHT_INFANTRY: Archetype = {
   coldTolerance: q(0.55), coldVar: q(0.28),
   fatigueRate: q(0.90), fatigueVar: q(0.22),
   recoveryRate: q(1.05), recoveryVar: q(0.22),
+  cognition: {
+    linguistic: q(0.58), logicalMathematical: q(0.55), spatial: q(0.62),
+    bodilyKinesthetic: q(0.72), musical: q(0.48),
+    interpersonal: q(0.60), intrapersonal: q(0.68), naturalist: q(0.45), interSpecies: q(0.25),
+  },
 };
 
 /**
@@ -286,6 +314,11 @@ export const LARGE_PACIFIC_OCTOPUS: Archetype = {
   coldTolerance: q(0.75), coldVar: q(0.15),
   fatigueRate: q(1.20), fatigueVar: q(0.20),
   recoveryRate: q(0.80), recoveryVar: q(0.20),
+  cognition: {
+    linguistic: q(0.05), logicalMathematical: q(0.70), spatial: q(0.90),
+    bodilyKinesthetic: q(0.95), musical: q(0.25),
+    interpersonal: q(0.40), intrapersonal: q(0.65), naturalist: q(0.80), interSpecies: q(0.50),
+  },
 };
 
 export const SERVICE_ROBOT: Archetype = {
@@ -347,4 +380,9 @@ export const SERVICE_ROBOT: Archetype = {
 
   fatigueRate: q(0.70), fatigueVar: q(0.10),
   recoveryRate: q(1.20), recoveryVar: q(0.10),
+  cognition: {
+    linguistic: q(0.60), logicalMathematical: q(0.90), spatial: q(0.80),
+    bodilyKinesthetic: q(0.85), musical: q(0.10),
+    interpersonal: q(0.10), intrapersonal: q(0.30), naturalist: q(0.10), interSpecies: q(0.15),
+  },
 };

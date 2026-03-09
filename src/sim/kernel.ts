@@ -1,5 +1,5 @@
 import type { WorldState } from "./world.js";
-import type { Entity } from "./entity.js";
+import { ensureAnatomyRuntime, type Entity } from "./entity.js";
 import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand, ShootCommand, TreatCommand, ActivateCommand } from "./commands.js";
 import type { CapabilityEffect, EffectPayload, FieldEffect } from "./capability.js";
 import type { KernelContext } from "./context.js";
@@ -9,7 +9,7 @@ import { DamageChannel } from "../channels.js";
 import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, findSensor, type Weapon, type Shield } from "../equipment.js";
 
 import { isCapabilityAvailable } from "./tech.js";
-import { deriveFunctionalState } from "./impairment.js";
+import { deriveFunctionalState, hasAllDisabledFunctions } from "./impairment.js";
 import { TUNING, type SimulationTuning } from "./tuning.js";
 import { type Vec3, vSub, vAdd } from "./vec3.js";
 import { defaultIntent } from "./intent.js";
@@ -17,8 +17,8 @@ import { defaultAction } from "./action.js";
 import { resolveHit, shieldCovers, chooseArea, type HitArea } from "./combat.js";
 import { normaliseDirCheapQ, dotDirQ } from "./vec3.js";
 import { eventSeed } from "./seeds.js";
-import { BodyRegion, regionFromHit } from "./body.js";
-import { BodySegment, BodySegmentId, resolveHitSegment } from "./bodyplan.js";
+import { regionFromHit } from "./body.js";
+import { resolveHitSegment } from "./bodyplan.js";
 import { FRACTURE_THRESHOLD } from "./injury.js";
 import { TIER_RANK, TIER_MUL, ACTION_MIN_TIER, TIER_TECH_REQ } from "./medical.js";
 import { type BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy } from "./explosion.js";
@@ -99,8 +99,72 @@ const AIM_MAX_TICKS        = 20;            // 1 second at 20 ticks/s
 const AIM_MIN_MUL          = q(0.50) as Q;  // half dispersion at full aim
 const AIM_STILL_THRESHOLD  = 5_000;         // 0.5 m/s in SCALE.mps units
 
+type HitSegmentId = string;
 
+function resolveTargetHitSegment(
+  target: Entity,
+  roll01: Q,
+  sideBit: 0 | 1,
+  fallbackArea?: HitArea,
+): HitSegmentId {
+  if (target.bodyPlan) {
+    return resolveHitSegment(target.bodyPlan, roll01);
+  }
 
+  const area = fallbackArea ?? chooseArea(roll01);
+  return regionFromHit(area, sideBit);
+}
+
+function regionCoverageQ(
+  coverageByRegion: Record<string, Q>,
+  segmentId: HitSegmentId,
+): Q {
+  return coverageByRegion[segmentId] ?? q(0);
+}
+
+function inferHitAreaForSegment(target: Entity, segmentId: HitSegmentId): HitArea | undefined {
+  const seg = target.bodyPlan?.segments.find((s) => s.id === segmentId);
+  if (!seg) {
+    // Legacy humanoid region ids
+    if (segmentId === "head") return "head";
+    if (segmentId === "torso") return "torso";
+    if (segmentId === "leftArm" || segmentId === "rightArm") return "arm";
+    if (segmentId === "leftLeg" || segmentId === "rightLeg") return "leg";
+    return undefined;
+  }
+
+  if (seg.cnsRole === "central") return "head";
+
+  if (seg.manipulationRole === "primary" || seg.manipulationRole === "secondary") {
+    return "arm";
+  }
+
+  if (seg.locomotionRole === "primary" || seg.locomotionRole === "secondary") {
+    return "leg";
+  }
+
+  return "torso";
+}
+
+function shieldBlocksSegment(
+  shield: Shield | undefined,
+  target: Entity,
+  segmentId: HitSegmentId,
+  area: HitArea | undefined,
+): boolean {
+  if (!shield) return false;
+
+  const { helpers } = ensureAnatomyRuntime(target);
+
+  if (shield.coverageProfileId && helpers?.coverage) {
+    return helpers.coverage.coversSegmentId(shield.coverageProfileId, segmentId);
+  }
+
+  const effectiveArea = area ?? inferHitAreaForSegment(target, segmentId);
+  if (effectiveArea === undefined) return false;
+
+  return shieldCovers(shield, effectiveArea);
+}
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
   const tuning = ctx.tuning ?? TUNING.tactical;
@@ -284,8 +348,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     if (e.injury.dead) continue;
 
     applyCommands(e, cmds.get(e.id) ?? []);
-    applyFunctionalGating(world, e, tuning);
-    applyStandAndKO(world, e, tuning);
+    applyFunctionalGating(e, tuning);
+    applyStandAndKO(e, tuning);
 
     trace.onEvent({ kind: TraceKinds.Intent, tick: world.tick, entityId: e.id, intent: e.intent });
   }
@@ -404,11 +468,20 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
     if (effectiveEnergy > 0) {
       // Phase 27: compute temporary-cavity multiplier from impact velocity
-      const region = ev.region as BodyRegion;
+      const region = ev.region;
       const tempCavMul = ev.v_impact_mps
         ? computeTemporaryCavityMul(ev.v_impact_mps, region)
         : undefined;
-      applyImpactToInjury(target, ev.wpn, effectiveEnergy, region, ev.protectedByArmour, trace, world.tick, tempCavMul);
+      applyImpactToInjury(
+        target,
+        ev.wpn,
+        effectiveEnergy,
+        region,
+        ev.protectedByArmour,
+        trace,
+        world.tick,
+        tempCavMul,
+      );
       // Phase 27: cavitation bleed boost for fluid-saturated tissue
       if (ev.v_impact_mps) {
         const rs = target.injury.byRegion[region];
@@ -542,7 +615,20 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   world.tick += 1;
 }
 
-function applyFunctionalGating(world: WorldState, e: Entity, tuning: SimulationTuning): void {
+function resolveCapabilityHitSegment(
+  world: WorldState,
+  tick: number,
+  actor: Entity,
+  target: Entity,
+  salt: number,
+): HitSegmentId {
+  const seed = eventSeed(world.seed, tick, actor.id, target.id, salt);
+  const rng = makeRng(seed, SCALE.Q);
+  const sideBit = (seed & 1) as 0 | 1;
+  return resolveTargetHitSegment(target, rng.q01(), sideBit);
+}
+
+function applyFunctionalGating(e: Entity, tuning: SimulationTuning): void {
   const func = deriveFunctionalState(e, tuning);
 
   // incapacity gates voluntary actions
@@ -572,14 +658,23 @@ function applyFunctionalGating(world: WorldState, e: Entity, tuning: SimulationT
 
   // hard limb disable hooks (tactical/sim)
   if (tuning.realism !== "arcade") {
-    const armsOut = func.leftArmDisabled && func.rightArmDisabled;
+    const armsOut = hasAllDisabledFunctions(
+      func,
+      "leftManipulation",
+      "rightManipulation",
+    );
+
     if (armsOut && (e.intent.defence.mode === "block" || e.intent.defence.mode === "parry")) {
       e.intent.defence = { mode: "none", intensity: q(0) };
     }
 
-    const legsOut = func.leftLegDisabled && func.rightLegDisabled;
+    const legsOut = hasAllDisabledFunctions(
+      func,
+      "leftLocomotion",
+      "rightLocomotion",
+    );
+
     if (legsOut && e.intent.move.mode === "sprint") {
-      // no sprinting with both legs disabled
       e.intent.move = { ...e.intent.move, mode: "walk" };
     }
   }
@@ -595,7 +690,7 @@ function applyCommands(e: Entity, commands: readonly Command[]): void {
   }
 }
 
-function applyStandAndKO(world: WorldState, e: Entity, tuning: SimulationTuning): void {
+function applyStandAndKO(e: Entity, tuning: SimulationTuning): void {
   // KO: if below threshold, go unconscious (but do NOT mark dead)
   const wasUnconscious = e.condition.unconsciousTicks > 0;
 
@@ -812,14 +907,6 @@ function resolveAttack(world: WorldState,
 
   const seed = eventSeed(world.seed, world.tick, attacker.id, target.id, 0xA11AC);
   const res = resolveHit(seed, attackSkill, defenceSkill, geomDot, defenceModeEffective, defenceIntensityForHit);
-  const defenderBlocking = (target.intent.defence.mode === "block"); // or cmd-derived if you do that elsewhere
-  const shield = findShield(target.loadout);
-  const shieldBlocked =
-    res.hit &&
-    res.blocked &&
-    defenderBlocking &&
-    !!shield &&
-    shieldCovers(shield as Shield, res.area);
 
   trace.onEvent({
     kind: TraceKinds.AttackAttempt,
@@ -834,20 +921,29 @@ function resolveAttack(world: WorldState,
   });
 
   if (!res.hit) {
-    // Phase 2C: miss recovery — extend cooldown by weapon angular momentum, scaled by swing intensity.
-    // A full-power swing that misses leaves the attacker more committed than a light probe.
-    attacker.action.attackCooldownTicks += Math.trunc(
-      mulDiv(missRecoveryTicks(wpn), clampedIntensity, SCALE.Q)
-    );
-    attacker.action.swingMomentumQ = q(0) as Q;  // Phase 2 ext: miss breaks rhythm
+    attacker.action.attackCooldownTicks += Math.trunc(mulDiv(missRecoveryTicks(wpn), clampedIntensity, SCALE.Q));
+    attacker.action.swingMomentumQ = q(0);
     return;
   }
 
-  const sideBit = (eventSeed(world.seed, world.tick, attacker.id, target.id, 0x51DE) & 1) as 0 | 1;
-  // Phase 8: use body plan's kinetic exposure weights when available
-  const region: BodyRegion | BodySegmentId = target.bodyPlan
-    ? resolveHitSegment(target.bodyPlan, ((eventSeed(world.seed, world.tick, attacker.id, target.id, 0x51DE) >>> 8) % SCALE.Q) as Q)
-    : regionFromHit(res.area, sideBit);
+  const hitSeed = eventSeed(world.seed, world.tick, attacker.id, target.id, 0x51DE);
+  const sideBit = (hitSeed & 1) as 0 | 1;
+  
+  const region: HitSegmentId = resolveTargetHitSegment(
+    target,
+    ((hitSeed >>> 8) % SCALE.Q) as Q,
+    sideBit,
+    res.area,
+  );
+
+  const defenderBlocking = (target.intent.defence.mode === "block"); // or cmd-derived if you do that elsewhere
+  const shield = findShield(target.loadout);
+  const shieldBlocked =
+    res.hit &&
+    res.blocked &&
+    defenderBlocking &&
+    !!shield &&
+    shieldBlocksSegment(shield, target, region, res.area);
 
 
   const baseIntensity = clampQ(cmd.intensity ?? q(1.0), q(0.1), q(1.0));
@@ -997,7 +1093,12 @@ function resolveAttack(world: WorldState,
   const armour = deriveArmourProfile(target.loadout, target.armourState);
   const isEnergyWeapon = !!(wpn).energyType;
   const CHANNEL_MASK = isEnergyWeapon ? (1 << DamageChannel.Energy) : (1 << DamageChannel.Kinetic);
-  const armourHit = armourCoversHit(world, (armour.coverageByRegion)[region as BodyRegion] ?? q(0), attacker.id, target.id);
+  const armourHit = armourCoversHit(
+    world,
+    regionCoverageQ(armour.coverageByRegion, region),
+    attacker.id,
+    target.id,
+  );
   const protectedByArmour = armourHit && ((armour.protects & CHANNEL_MASK) !== 0);
 
   let finalEnergy = mitigated;
@@ -1327,20 +1428,22 @@ function resolveShoot(
     target.condition.suppressionFearMul = wpn.suppressionFearMul ?? (SCALE.Q as Q);
   }
 
-  let hitRegion: BodyRegion | BodySegmentId | undefined;
+  let hitRegion: HitSegmentId | undefined;
 
   if (hit && energy_J > 0) {
-    // Choose hit region — Phase 8: use body plan when available
     const sideSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15B);
     const areaSeed = eventSeed(world.seed, world.tick, shooter.id, target.id, 0xD15C);
-    let hitArea: HitArea | BodySegment | undefined;
-    if (target.bodyPlan) {
-      hitRegion = resolveHitSegment(target.bodyPlan, ((areaSeed >>> 8) % SCALE.Q) as Q);
-    } else {
-      hitArea = chooseArea((areaSeed % SCALE.Q) as Q);
-      const sideBit = (sideSeed & 1) as 0 | 1;
-      hitRegion = regionFromHit(hitArea, sideBit);
-    }
+    const hitArea: HitArea | undefined = target.bodyPlan
+      ? undefined
+      : chooseArea((areaSeed % SCALE.Q) as Q);
+
+    const sideBit = (sideSeed & 1) as 0 | 1;
+    hitRegion = resolveTargetHitSegment(
+      target,
+      ((areaSeed >>> 8) % SCALE.Q) as Q,
+      sideBit,
+      hitArea,
+    );
 
     // Shield interposition — Phase 17: projectile bypass for flexible weapons
     const shield = findShield(target.loadout);
@@ -1349,13 +1452,21 @@ function resolveShoot(
     const effectiveCoverageQ = projBypassQ > 0
       ? Math.max(0, qMul((shield)?.coverageQ ?? 0, SCALE.Q - projBypassQ))
       : ((shield)?.coverageQ ?? 0);
-    const shieldHit = (shield && hitArea && ((shieldSeed % SCALE.Q) < effectiveCoverageQ)) ? shieldCovers(shield as Shield, hitArea) : false;
+    const shieldHit =
+      shield !== undefined &&
+      ((shieldSeed % SCALE.Q) < effectiveCoverageQ) &&
+      shieldBlocksSegment(shield, target, hitRegion, hitArea);
 
     // Armour
     const armour = deriveArmourProfile(target.loadout, target.armourState);
     const isEnergyProjectile = !!(wpn).energyType;
     const PROJ_CHANNEL_MASK = isEnergyProjectile ? (1 << DamageChannel.Energy) : (1 << DamageChannel.Kinetic);
-    const armourHit = armourCoversHit(world, (armour.coverageByRegion)[hitRegion as BodyRegion] ?? q(0), shooter.id, target.id);
+    const armourHit = armourCoversHit(
+      world,
+      regionCoverageQ(armour.coverageByRegion, hitRegion),
+      shooter.id,
+      target.id,
+    );
     const protectedByArmour = armourHit && ((armour.protects & PROJ_CHANNEL_MASK) !== 0);
 
     let finalEnergy = energy_J;
@@ -1478,7 +1589,16 @@ function impactEnergy_J(attacker: Entity, wpn: Weapon, relVel_mps: Vec3): number
   return Math.max(0, Number(num / denom));
 }
 
-function applyImpactToInjury(target: Entity, wpn: Weapon, energy_J: number, region: BodyRegion, armoured: boolean, trace: TraceSink, tick: number, tempCavityMul_Q?: number): void {
+function applyImpactToInjury(
+  target: Entity,
+  wpn: Weapon,
+  energy_J: number,
+  region: string,
+  armoured: boolean,
+  trace: TraceSink,
+  tick: number,
+  tempCavityMul_Q?: number,
+): void {
   if (energy_J <= 0) return;
 
   // Determine region role: head → CNS-critical; limb → structural-priority; torso → default
@@ -1632,8 +1752,8 @@ export function applyFallDamage(
   const plan = e.bodyPlan;
   if (plan) {
     // Body-plan-aware: locomotion-primary 70%, remainder 30%
-    const primIds  = plan.segments.filter(s => s.locomotionRole === "primary").map(s => s.id) as BodyRegion[];
-    const otherIds = plan.segments.filter(s => s.locomotionRole !== "primary").map(s => s.id) as BodyRegion[];
+    const primIds = plan.segments.filter(s => s.locomotionRole === "primary").map(s => s.id);
+    const otherIds = plan.segments.filter(s => s.locomotionRole !== "primary").map(s => s.id);
     const primShare  = primIds.length  > 0 ? Math.trunc((keEffective * 7) / 10) : 0;
     const otherShare = otherIds.length > 0 ? keEffective - primShare            : 0;
     const perPrim  = primIds.length  > 0 ? Math.trunc(primShare  / primIds.length)  : 0;
@@ -1649,7 +1769,7 @@ export function applyFallDamage(
     ];
     for (const [region, pct] of regions) {
       const energy = Math.trunc((keEffective * pct) / 100);
-      if (energy > 0) applyImpactToInjury(e, FALL_WEAPON, energy, region as BodyRegion, false, trace, tick);
+      if (energy > 0) applyImpactToInjury(e, FALL_WEAPON, energy, region, false, trace, tick);
     }
   }
 }
@@ -1709,7 +1829,7 @@ export function applyExplosion(
             ?? e.bodyPlan.segments[0]?.id ?? "torso")
         : "torso";
       if (blastDelivered > 0 && e.injury.byRegion[blastRegion]) {
-        applyImpactToInjury(e, BLAST_WEAPON, blastDelivered, blastRegion as BodyRegion, false, trace, tick);
+        applyImpactToInjury(e, BLAST_WEAPON, blastDelivered, blastRegion, false, trace, tick);
       }
     }
 
@@ -1726,7 +1846,7 @@ export function applyExplosion(
         if (fragKeJ <= 0) break;
         const fragRegSeed = eventSeed(world.seed, tick, e.id, f, 0xF4A6);
         const fragRng     = makeRng(fragRegSeed, SCALE.Q);
-        let fragRegion: BodyRegion | BodySegmentId | undefined;
+        let fragRegion: string | undefined;
         if (e.bodyPlan) {
           fragRegion = resolveHitSegment(e.bodyPlan, fragRng.q01());
         } else {
@@ -1734,8 +1854,8 @@ export function applyExplosion(
           const sideBit = (fragRegSeed & 1) as 0 | 1;
           fragRegion    = regionFromHit(area, sideBit);
         }
-        if (e.injury.byRegion[fragRegion as string]) {
-          applyImpactToInjury(e, FRAG_WEAPON, fragKeJ, fragRegion as BodyRegion, false, trace, tick);
+        if (fragRegion && e.injury.byRegion[fragRegion]) {
+          applyImpactToInjury(e, FRAG_WEAPON, fragKeJ, fragRegion, false, trace, tick);
           fragHits++;
         }
       }
@@ -1907,21 +2027,10 @@ export function applyPayload(
 ): void {
   switch (payload.kind) {
 
-    case "impact": {
-      const wpn = CAPABILITY_CHANNEL_WEAPONS[payload.spec.channel] ?? CAPABILITY_WEAPON_DEFAULT;
-      const capSeed = eventSeed(world.seed, tick, actor.id, target.id, 0xCAB1);
-      const capRng  = makeRng(capSeed, SCALE.Q);
-      let hitRegion: BodyRegion | BodySegmentId;
-      if (target.bodyPlan) {
-        hitRegion = resolveHitSegment(target.bodyPlan, capRng.q01());
-      } else {
-        const area    = chooseArea(capRng.q01());
-        const sideBit = (capSeed & 1) as 0 | 1;
-        hitRegion     = regionFromHit(area, sideBit);
-      }
-      if (!target.injury.byRegion[hitRegion as string]) break;
+    case "impact": {      
+      const hitRegion = resolveCapabilityHitSegment(world, tick, actor, target, 0xCAB1);
+      if (!target.injury.byRegion[hitRegion]) break;
 
-      // Check temporary shield absorption before applying impact
       let effectiveEnergy = payload.spec.energy_J;
       if ((target.condition.shieldReserve_J ?? 0) > 0 &&
           target.condition.shieldExpiry_tick !== undefined &&
@@ -1931,7 +2040,8 @@ export function applyPayload(
         effectiveEnergy -= absorbed;
       }
       if (effectiveEnergy > 0) {
-        applyImpactToInjury(target, wpn, effectiveEnergy, hitRegion as BodyRegion, false, trace, tick);
+        const wpn = CAPABILITY_CHANNEL_WEAPONS[payload.spec.channel] ?? CAPABILITY_WEAPON_DEFAULT;
+        applyImpactToInjury(target, wpn, effectiveEnergy, hitRegion, false, trace, tick);
       }
       break;
     }
@@ -1994,7 +2104,6 @@ export function applyPayload(
       world.activeFieldEffects.push(fe);
       break;
     }
-
     case "weaponImpact": {
       // Phase 28: custom damage profile (fire breath, napalm, chemical burn, etc.)
       // Bypasses armour like other capability impacts; damage mix is determined by profile.
@@ -2006,27 +2115,24 @@ export function applyPayload(
         bulk: q(0),
         damage: payload.profile,
       };
-      const capSeed = eventSeed(world.seed, tick, actor.id, target.id, 0xCAB2);
-      const capRng  = makeRng(capSeed, SCALE.Q);
-      let hitRegion: BodyRegion | BodySegmentId;
-      if (target.bodyPlan) {
-        hitRegion = resolveHitSegment(target.bodyPlan, capRng.q01());
-      } else {
-        const area    = chooseArea(capRng.q01());
-        const sideBit = (capSeed & 1) as 0 | 1;
-        hitRegion     = regionFromHit(area, sideBit);
-      }
-      if (!target.injury.byRegion[hitRegion as string]) break;
+
+      const hitRegion = resolveCapabilityHitSegment(world, tick, actor, target, 0xCAB2);
+
+      if (!target.injury.byRegion[hitRegion]) break;
+
       let effectiveEnergy = payload.energy_J;
-      if ((target.condition.shieldReserve_J ?? 0) > 0 &&
-          target.condition.shieldExpiry_tick !== undefined &&
-          tick <= target.condition.shieldExpiry_tick) {
+      if (
+        (target.condition.shieldReserve_J ?? 0) > 0 &&
+        target.condition.shieldExpiry_tick !== undefined &&
+        tick <= target.condition.shieldExpiry_tick
+      ) {
         const absorbed = Math.min(target.condition.shieldReserve_J!, effectiveEnergy);
         target.condition.shieldReserve_J! -= absorbed;
         effectiveEnergy -= absorbed;
       }
+
       if (effectiveEnergy > 0) {
-        applyImpactToInjury(target, wpn, effectiveEnergy, hitRegion as BodyRegion, false, trace, tick);
+        applyImpactToInjury(target, wpn, effectiveEnergy, hitRegion, false, trace, tick);
       }
       break;
     }

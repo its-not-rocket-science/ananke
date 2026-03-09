@@ -3,7 +3,7 @@ import type { WorldState } from "../world.js";
 import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import type { Command } from "../commands.js";
-import { q, clampQ, qMul, SCALE, type I32, Q } from "../../units.js";
+import { q, clampQ, qMul, mulDiv, SCALE, type I32, Q } from "../../units.js";
 import { pickTarget, updateFocus } from "./targeting.js";
 import type { AIPolicy } from "./types.js";
 import { findWeapon } from "../../equipment.js";
@@ -58,7 +58,14 @@ export function decideCommandsForEntity(
     Math.trunc(perc.decisionLatency_s / 2),
     perc.decisionLatency_s + tacticsSkill.hitTimingOffset_s,
   );
-  const latencyTicks = Math.max(1, Math.trunc((adjustedLatency_s * TICK_HZ) / SCALE.s));
+  // Phase 33: logicalMathematical reduces decision latency (faster tactical processing)
+  // Formula: mul = q(1.20) − logMath × q(0.40); human (0.60) → ×0.96; Vulcan (0.95) → ×0.82
+  const logMath = self.attributes.cognition?.logicalMathematical ?? 0;
+  const logLatencyMul: Q = logMath
+    ? clampQ((q(1.20) - Math.trunc(mulDiv(q(0.40), logMath, SCALE.Q))) as Q, q(0.50), q(1.20))
+    : SCALE.Q as Q;
+  const scaledLatency_s = logMath ? mulDiv(adjustedLatency_s, logLatencyMul, SCALE.Q) : adjustedLatency_s;
+  const latencyTicks = Math.max(1, Math.trunc((scaledLatency_s * TICK_HZ) / SCALE.s));
   self.ai.decisionCooldownTicks = latencyTicks;
 
   // Phase 5: morale states — routing flees; hesitant suppresses attacks

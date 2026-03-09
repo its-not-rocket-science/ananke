@@ -243,8 +243,8 @@ describe("shieldCovers", () => {
     expect(shieldCovers(shield, "head")).toBe(true);
   });
 
-  test("does not cover arm or leg by default", () => {
-    expect(shieldCovers(shield, "arm")).toBe(false);
+  test("covers arm but not leg by default", () => {
+    expect(shieldCovers(shield, "arm")).toBe(true);
     expect(shieldCovers(shield, "leg")).toBe(false);
   });
 

@@ -15,7 +15,8 @@ export default defineConfig({
         "src/sim/entity.ts",
         "src/sim/world.ts",
         "src/sim/tick.ts",
-        "src/sim/ai/types.ts"
+        "src/sim/ai/types.ts",
+        "src/anatomy/anatomy-contracts.ts"
       ],
       thresholds: {
         statements: 90,

@@ -3,7 +3,7 @@ import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import { perceiveLocal } from "./perception.js";
 import type { AIPolicy } from "./types.js";
-import { SCALE } from "../../units.js";
+import { SCALE, mulDiv } from "../../units.js";
 import { eventSeed } from "../seeds.js";
 import { DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
 
@@ -24,8 +24,13 @@ export function pickTarget(
   if (focused && !focused.injury.dead && ai.retargetCooldownTicks > 0) return focused;
 
   // Phase 4: use entity's own threat horizon as perception radius
+  // Phase 33: spatial intelligence scales the effective horizon
+  // Formula: base × (0.40 + cognSpatial) — human baseline (0.60) → no change (×1.0)
   const perc = (self.attributes).perception ?? DEFAULT_PERCEPTION;
-  const perceptionRadius = perc.threatHorizon_m;
+  const cognSpatial = self.attributes.cognition?.spatial ?? 0;
+  const perceptionRadius = cognSpatial
+    ? Math.trunc(mulDiv(perc.threatHorizon_m, (4000 + cognSpatial) as number, SCALE.Q))
+    : perc.threatHorizon_m;
 
   const p = perceiveLocal(self, index, spatial, perceptionRadius, perc.attentionDepth, env);
   if (p.enemies.length === 0) return undefined;

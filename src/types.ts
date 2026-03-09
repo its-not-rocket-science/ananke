@@ -1,5 +1,27 @@
 import type { I32, Q } from "./units.js";
 
+// Phase 33: Gardner's Multiple Intelligences + inter-species (all Q-coded 0..1)
+export interface CognitiveProfile {
+  /** Language, argument complexity, written/spoken command clarity. */
+  linguistic:          Q;
+  /** Deductive reasoning, planning horizon, pattern abstraction. */
+  logicalMathematical: Q;
+  /** 3-D world modelling, navigation, cover identification, targeting lead. */
+  spatial:             Q;
+  /** Proprioception, fine motor precision, tool mastery. */
+  bodilyKinesthetic:   Q;
+  /** Rhythm, acoustic pattern recognition, sound cue detection. */
+  musical:             Q;
+  /** Social reading, empathy, leadership radius, teaching quality. */
+  interpersonal:       Q;
+  /** Self-regulation, focus, willpower, fear resistance. */
+  intrapersonal:       Q;
+  /** Pattern recognition in living systems, tracking, herbalism, taming. */
+  naturalist:          Q;
+  /** Empathy across species boundaries; reading non-human intent. */
+  interSpecies:        Q;
+}
+
 // Phase 32A: locomotion mode types
 export type LocomotionMode = "ground" | "flight" | "swim" | "climb";
 
@@ -78,6 +100,8 @@ export interface IndividualAttributes {
   perception?: Perception;
   /** Phase 32A: declared locomotion modes (absent = ground-only). */
   locomotionModes?: LocomotionCapacity[];
+  /** Phase 33: Gardner's multiple intelligences + inter-species. */
+  cognition?: CognitiveProfile;
 }
 
 export interface EnergyState {

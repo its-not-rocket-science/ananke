@@ -23,6 +23,9 @@ export interface ConcentrationState {
 }
 
 import { Q } from "../units.js";
+import { CompiledAnatomyModel } from "../anatomy/anatomy-contracts.js";
+import { AnatomyHelperRegistry, createAnatomyHelpers } from "../anatomy/anatomy-helpers.js";
+import { compileAnatomyDefinition } from "../anatomy/anatomy-compiler.js";
 
 export type GrapplePosition = "standing" | "prone" | "pinned";
 
@@ -113,4 +116,30 @@ export interface Entity {
 
   /** Phase 32B: per-limb state for multi-limb entities (octopoids, arachnids, etc.). */
   limbStates?: LimbState[];
+
+  // anatomy related cache
+  compiledAnatomy?: CompiledAnatomyModel;
+  anatomyHelpers?: AnatomyHelperRegistry;
+}
+
+export function ensureAnatomyRuntime(e: Entity): {
+  model?: CompiledAnatomyModel;
+  helpers?: AnatomyHelperRegistry;
+} {
+  if (!e.bodyPlan) return {};
+
+  if (!e.compiledAnatomy) {
+    const compiled = compileAnatomyDefinition(e.bodyPlan);
+    if (!compiled.ok) return {};
+    e.compiledAnatomy = compiled.model!;
+  }
+
+  if (!e.anatomyHelpers) {
+    e.anatomyHelpers = createAnatomyHelpers(e.compiledAnatomy);
+  }
+
+  return {
+    model: e.compiledAnatomy,
+    helpers: e.anatomyHelpers,
+  };
 }

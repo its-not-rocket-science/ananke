@@ -4,7 +4,7 @@ import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import type { TraceSink } from "../trace.js";
 
-import { SCALE, q, clampQ, qMul, type Q } from "../../units.js";
+import { SCALE, q, clampQ, qMul, mulDiv, type Q } from "../../units.js";
 import { queryNearbyIds } from "../spatial.js";
 import { coverFractionAtPosition } from "../terrain.js";
 import { TraceKinds } from "../kinds.js";
@@ -39,7 +39,13 @@ export function stepMoraleForEntity(
 ): void {
   if (e.injury.dead) return;
 
-  const distressTol = e.attributes.resilience.distressTolerance;
+  const distressTolBase = e.attributes.resilience.distressTolerance;
+  // Phase 33: intrapersonal intelligence boosts effective distress tolerance
+  // Formula: base + intrapersonal × q(0.30); human (0.55) → +0.165; clamped to q(0.98)
+  const intrapersonal = e.attributes.cognition?.intrapersonal ?? 0;
+  const distressTol: Q = intrapersonal
+    ? clampQ((distressTolBase + Math.trunc(mulDiv(q(0.30), intrapersonal, SCALE.Q))) as Q, q(0.01), q(0.98))
+    : distressTolBase;
   const MORALE_RADIUS_m = Math.trunc(30 * SCALE.m); // 30 m awareness radius
 
   const nearbyIds = queryNearbyIds(spatial, e.position_m, MORALE_RADIUS_m);
@@ -107,9 +113,15 @@ export function stepMoraleForEntity(
   fearQ = clampQ(fearQ - fearDecayPerTick(distressTol, nearbyAllyCount), 0, SCALE.Q);
 
   // Feature 3: leader and standard-bearer aura decay
+  // Phase 33: interpersonal intelligence scales effective aura reception radius
+  // Formula: base × (0.40 + interpersonal); human (0.60) → ×1.0
+  const interpersonal = e.attributes.cognition?.interpersonal ?? 0;
+  const effectiveAuraRadius_m = interpersonal
+    ? Math.trunc(mulDiv(AURA_RADIUS_m, (4000 + interpersonal) as number, SCALE.Q))
+    : AURA_RADIUS_m;
   let leaderCount = 0;
   let bannerCount = 0;
-  const auraIds = queryNearbyIds(spatial, e.position_m, AURA_RADIUS_m);
+  const auraIds = queryNearbyIds(spatial, e.position_m, effectiveAuraRadius_m);
   for (const aId of auraIds) {
     if (aId === e.id) continue;
     const ally = index.byId.get(aId);

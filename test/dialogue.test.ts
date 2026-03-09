@@ -109,11 +109,13 @@ describe("intimidate", () => {
 // ── Group: persuade ───────────────────────────────────────────────────────────
 
 describe("persuade", () => {
-  it("base probability is q(0.40) with no modifiers", () => {
+  it("base probability for human entity with no modifiers", () => {
     const ctx = makeContext();
-    // Human baseline: attentionDepth=4 → learningBonus=0; no faction; no failed attempts
+    // Human baseline: linguistic=q(0.65) → dynamicBase = q(0.20) + mulDiv(q(0.30), q(0.65), SCALE.Q) = 3950
+    // attentionDepth=4 → learningBonus=0; no faction; no failed attempts
     const P = dialogueProbability({ kind: "persuade" }, ctx);
-    expect(P).toBe(PERSUADE_BASE);
+    const expectedBase = q(0.20) + Math.trunc(3000 * 6500 / 10000); // 2000 + 1950 = 3950
+    expect(P).toBe(expectedBase);
   });
 
   it("high attentionDepth target boosts persuasion probability", () => {

@@ -149,8 +149,14 @@ export function dialogueProbability(
 
     case "persuade": {
       const failed = ctx.priorFailedAttempts ?? 0;
+      // Phase 33: linguistic intelligence sets per-entity persuasion base
+      // Formula: q(0.20) + linguistic × q(0.30); human (0.65) → q(0.395); elf (0.80) → q(0.44)
+      const linguisticQ = initiator.attributes.cognition?.linguistic;
+      const dynamicBase: Q = linguisticQ !== undefined
+        ? clampQ((q(0.20) + mulDiv(q(0.30), linguisticQ, SCALE.Q)) as Q, q(0.20), q(0.50))
+        : PERSUADE_BASE;
       return clampQ(
-        PERSUADE_BASE
+        dynamicBase
           + learningBonus(target.attributes.perception?.attentionDepth ?? 0)
           + (ctx.sharedFaction ? PERSUADE_FACTION_BONUS : 0)
           - (failed * PERSUADE_FAILURE_PENALTY),
