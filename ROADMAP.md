@@ -4169,7 +4169,7 @@ export function resolveNavigation(entity: Entity, spec: NavigationSpec, seed: nu
 
 ---
 
-## Phase 35 — Naturalist Intelligence & Animal Handling
+## Phase 35 — Naturalist Intelligence & Animal Handling *(COMPLETE)*
 
 ### Overview
 
@@ -4204,7 +4204,7 @@ Entities with `speciesAffinity` containing the quarry species gain +q(0.15) conf
 
 ```typescript
 export interface ForagingOutcome {
-  yield:           number;  // items per hour of searching
+  itemsFound:      number;  // items per hour of searching
   herbQuality_Q:   Q;       // quality of medicinal plants found
   misidentified:   boolean; // poisonous plant mistaken for edible
 }
@@ -4235,7 +4235,7 @@ Full taming (trust_Q ≥ q(0.90)) makes the animal available as an ally entity i
 | File | Description |
 |------|-------------|
 | `src/competence/naturalist.ts` | Tracking, foraging, taming resolvers |
-| `test/naturalist.test.ts` | ~20 tests |
+| `test/naturalist.test.ts` | 25 tests |
 
 ---
 

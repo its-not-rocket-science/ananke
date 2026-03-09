@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–33 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B, 31–33). Melee combat,
+**Phases 1–35 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B, 31–35). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -186,7 +186,15 @@ and `bodilyKinesthetic` sets a floor on fine-motor precision (`fineControl ≥ b
 gives routeEfficiency = clamp(spatial × mapBonus × terrainQ × visibilityQ, q(0.50), q(1.0)) and
 the resulting timeLost_s.
 
-**1527 tests.** All coverage thresholds met (statements 96.44 %, branches 86.37 %, functions 93.47 %, lines 96.44 %).
+**Phase 35** adds the `naturalist` intelligence competence resolver (`src/competence/naturalist.ts`):
+`resolveTracking(entity, spec, seed)` computes track confidence from naturalist skill, track age,
+terrain preservation (ideal/rain/urban/deep_water/forest), and species-specific difficulty;
+`resolveForaging(entity, spec, seed)` yields itemsFound per hour by biome (forest/plains/desert/
+swamp/mountain) and season with misidentification risk (P_misidentify = max(0, 0.30 − naturalist × 0.40));
+`resolveTaming(entity, spec, seed)` computes trust_Q = naturalist × interSpecies × effort − fear × 0.50,
+with attack probability when fear exceeds trust.
+
+**1552 tests.** All coverage thresholds met (statements 96.47 %, branches 86.41 %, functions 93.55 %, lines 96.47 %).
 
 See `ROADMAP.md` for the full development plan.
 
