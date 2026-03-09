@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–35 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B, 31–35). Melee combat,
+**Phases 1–36 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B, 31–36). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -194,7 +194,13 @@ swamp/mountain) and season with misidentification risk (P_misidentify = max(0, 0
 `resolveTaming(entity, spec, seed)` computes trust_Q = naturalist × interSpecies × effort − fear × 0.50,
 with attack probability when fear exceeds trust.
 
-**1552 tests.** All coverage thresholds met (statements 96.47 %, branches 86.41 %, functions 93.55 %, lines 96.47 %).
+**Phase 36** adds inter-species intelligence (`src/competence/interspecies.ts`): the `signal` dialogue
+action for cross-species communication (`{ kind: "signal"; targetSpecies; intent: "calm" | "submit" | "ally" | "territory" }`)
+with success probability `empathy_Q × vocab × (1 − fear × 0.60)` and potential aggravation when low
+empathy meets fearful targets; `computeUnfamiliarSpeciesLatencyPenalty(entity, species)` returns
+up to +80 ms decision latency when facing unfamiliar species (those not in `speciesAffinity`).
+
+**1575 tests.** All coverage thresholds met (statements 96.47 %, branches 86.39 %, functions 93.51 %, lines 96.47 %).
 
 See `ROADMAP.md` for the full development plan.
 

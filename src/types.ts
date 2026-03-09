@@ -20,6 +20,10 @@ export interface CognitiveProfile {
   naturalist:          Q;
   /** Empathy across species boundaries; reading non-human intent. */
   interSpecies:        Q;
+  /** Phase 36: species IDs with which the entity has deep familiarity. */
+  speciesAffinity?:    string[];
+  /** Phase 36: map of species ID → comprehension quality for signaling. */
+  signalVocab?:        Map<string, Q>;
 }
 
 // Phase 32A: locomotion mode types

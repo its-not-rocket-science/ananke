@@ -4239,7 +4239,7 @@ Full taming (trust_Q ≥ q(0.90)) makes the animal available as an ally entity i
 
 ---
 
-## Phase 36 — Inter-Species Intelligence & Xenodiplomacy
+## Phase 36 — Inter-Species Intelligence & Xenodiplomacy *(COMPLETE)*
 
 ### Overview
 
@@ -4295,8 +4295,8 @@ has studied dragon physiology.
 |------|-------------|
 | `src/competence/interspecies.ts` | `InterSpeciesProfile`, signal resolution, latency modifier |
 | `src/dialogue.ts` | Add `signal` action variant |
-| `src/sim/kernel.ts` | Apply unfamiliar-species latency penalty |
-| `test/interspecies.test.ts` | ~18 tests |
+| `src/types.ts` | Add `speciesAffinity` and `signalVocab` to `CognitiveProfile` |
+| `test/interspecies.test.ts` | 23 tests |
 
 ---
 

@@ -13,6 +13,7 @@ import type { Entity } from "./sim/entity.js";
 import { eventSeed } from "./sim/seeds.js";
 import { makeRng }   from "./rng.js";
 import type { NarrativeConfig } from "./narrative.js";
+import { resolveSignal, type SignalOutcome } from "./competence/interspecies.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -34,12 +35,13 @@ export type DialogueAction =
   | { kind: "persuade";   argument?: string }      // reason together
   | { kind: "deceive";    plausibility_Q: Q }      // claim something false
   | { kind: "surrender";  terms?: string }         // ask target to lay down arms
-  | { kind: "negotiate";  offer: TradeOffer };     // propose exchange
+  | { kind: "negotiate";  offer: TradeOffer }      // propose exchange
+  | { kind: "signal";     targetSpecies: string; intent: "calm" | "submit" | "ally" | "territory" }; // Phase 36: cross-species signaling
 
 /** The resolution result of a dialogue action. */
 export type DialogueOutcome =
-  | { result: "success";  moraleDelta?: Q; fearDelta?: Q; setSurrendered?: boolean }
-  | { result: "failure";  cooldown_s: number }
+  | { result: "success";  moraleDelta?: Q; fearDelta?: Q; setSurrendered?: boolean; comprehension_Q?: Q }
+  | { result: "failure";  cooldown_s: number; aggravated?: boolean }
   | { result: "escalate" };
 
 /**
@@ -92,6 +94,7 @@ export const ESCALATE_THRESHOLD: Q = q(0.20);
 const SALT_INTIMIDATE = 0xD1A100;
 const SALT_PERSUADE   = 0xD1A101;
 const SALT_DECEIVE    = 0xD1A102;
+const SALT_SIGNAL     = 0xD1A103; // Phase 36: cross-species signaling
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -179,6 +182,11 @@ export function dialogueProbability(
       const received = action.offer.receiving.reduce((s, i) => s + i.value, 0);
       return given > received ? SCALE.Q : 0;
     }
+
+    case "signal":
+      // Phase 36: signal probability is computed in resolveSignal; here we return a placeholder
+      // The actual resolution uses the interspecies resolver
+      return q(0.50);
   }
 }
 
@@ -209,6 +217,21 @@ export function resolveDialogue(
     return P > 0
       ? { result: "success" }
       : { result: "failure", cooldown_s: 0 };
+  }
+
+  // Phase 36: Signal action uses interspecies resolver
+  if (action.kind === "signal") {
+    const seed = eventSeed(ctx.worldSeed, ctx.tick, ctx.initiator.id, ctx.target.id, SALT_SIGNAL);
+    const signalOutcome = resolveSignal(ctx.initiator, {
+      targetSpecies: action.targetSpecies,
+      intent: action.intent,
+      targetFearQ: ctx.target.condition.fearQ ?? q(0),
+    }, seed);
+
+    if (signalOutcome.success) {
+      return { result: "success", comprehension_Q: signalOutcome.comprehension_Q };
+    }
+    return { result: "failure", cooldown_s: 45, aggravated: signalOutcome.aggravated };
   }
 
   // RNG-based branches (intimidate, persuade, deceive)
@@ -283,6 +306,7 @@ function actionLabel(action: DialogueAction): string {
     case "deceive":    return "Deception";
     case "surrender":  return "Surrender demand";
     case "negotiate":  return "Negotiation";
+    case "signal":     return "Cross-species signal";
   }
 }
 
@@ -306,6 +330,10 @@ function verboseDetail(action: DialogueAction, outcome: DialogueOutcome): string
     case "negotiate":
       return res === "success"   ? "both parties agreed to the exchange"
            :                       "the offer was rejected as unfavourable";
+    case "signal":
+      return res === "success"   ? `the ${action.targetSpecies} understood the ${action.intent} signal`
+           : res === "failure" && outcome.aggravated  ? `the ${action.targetSpecies} was aggravated by the signal`
+           :                       `the ${action.targetSpecies} did not comprehend the signal`;
   }
 }
 
