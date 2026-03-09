@@ -207,7 +207,15 @@ computes formation reception rate (`linguistic × formationBonus`) and transmiss
 with teacher fatigue; `computeDeceptionDetectionProbability` factors interpersonal intuition into
 detecting lies (`attentionDepth × 0.50 + interpersonal × 0.50 − plausibility`).
 
-**1603 tests.** All coverage thresholds met (statements 96.45 %, branches 86.24 %, functions 93.76 %, lines 96.45 %).
+**Phase 38** implements logical-mathematical and intrapersonal intelligence: `WillpowerState`
+(`current_J/max_J`) added to `Entity.willpower`; `computeMaxWillpower(entity)` calculates capacity
+from intrapersonal intelligence (max 50kJ); `deductWillpower()`, `replenishWillpower()`, and
+`stepConcentrationWillpower()` manage cognitive stamina for sustained concentration (Phase 12B);
+`resolveEngineering(entity, spec, seed)` computes project quality (`qualityMul = logicalMath ×
+complexityMul × timeFactor`) with latent flaw probability (`P_flaw = max(0, complexity − logicalMath) × 0.40`);
+descriptor bands: exceptional/good/adequate/poor/failure.
+
+**1654 tests.** All coverage thresholds met (statements 96.42 %, branches 86.17 %, functions 93.9 %, lines 96.42 %).
 
 See `ROADMAP.md` for the full development plan.
 

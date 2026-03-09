@@ -1,4 +1,5 @@
 import type { IndividualAttributes, EnergyState } from "../types.js";
+import type { WillpowerState } from "../competence/willpower.js";
 import type { Loadout } from "../equipment.js";
 import type { TraitId } from "../traits.js";
 import type { SpeciesPhysiology } from "../species.js";
@@ -42,6 +43,9 @@ export interface Entity {
 
   attributes: IndividualAttributes;
   energy: EnergyState;
+
+  /** Phase 38: cognitive stamina reserve — depleted by sustained concentration, replenished by rest. */
+  willpower?: WillpowerState;
 
   loadout: Loadout;
   traits: TraitId[];
