@@ -4896,7 +4896,7 @@ Broken items: Weapons deal reduced damage (qMul(quality, durability_Q)). Broken 
 
 ---
 
-## Phase 44 — Settlement & Base Building
+## Phase 44 — Settlement & Base Building (COMPLETE)
 
 ### Overview
 
