@@ -5044,7 +5044,7 @@ export interface Chronicle {
 
 Potential future phases building on the RPG foundation:
 
-**Phase 46: Procedural World Generation** — Generate settlements, factions, and starting relationships procedurally from seed.
+**Phase 46: Procedural World Generation (COMPLETE)** — Generate settlements, factions, and starting relationships procedurally from seed.
 
 **Phase 47: Advanced AI Personalities** — Individual AI beyond presets: personality traits (aggressive/cautious, loyal/opportunistic) affecting decision-making.
 

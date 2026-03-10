@@ -42,3 +42,4 @@ export * from "./settlement-services.js";
 export * from "./chronicle.js";
 export * from "./story-arcs.js";
 export * from "./narrative-render.js";
+export * from "./world-generation.js";
