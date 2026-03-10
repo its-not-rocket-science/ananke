@@ -35,3 +35,5 @@ export * from "./quest.js";
 export * from "./quest-generators.js";
 export * from "./relationships.js";
 export * from "./relationships-effects.js";
+export * from "./inventory.js";
+export * from "./item-durability.js";
