@@ -39,3 +39,6 @@ export * from "./inventory.js";
 export * from "./item-durability.js";
 export * from "./settlement.js";
 export * from "./settlement-services.js";
+export * from "./chronicle.js";
+export * from "./story-arcs.js";
+export * from "./narrative-render.js";
