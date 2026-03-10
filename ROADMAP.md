@@ -5046,7 +5046,7 @@ Potential future phases building on the RPG foundation:
 
 **Phase 46: Procedural World Generation (COMPLETE)** — Generate settlements, factions, and starting relationships procedurally from seed.
 
-**Phase 47: Advanced AI Personalities** — Individual AI beyond presets: personality traits (aggressive/cautious, loyal/opportunistic) affecting decision-making.
+**Phase 47: Advanced AI Personalities *(COMPLETE)*** — `PersonalityTraits` (aggression/caution/loyalty/opportunism) modulate `decide.ts` on top of `AIPolicy` presets; 5 named presets; `derivePersonalityFromCognition()`; 27 tests.
 
 **Phase 48: Multi-Party Dynamics** — Managing multiple adventuring parties, companion loyalty, inter-party conflict.
 

@@ -15,6 +15,12 @@ import { type ObstacleGrid, coverFractionAtPosition, terrainKey } from "../terra
 import { getSkill } from "../skills.js";
 import { TICK_HZ } from "../tick.js";
 import { effectiveStanding, STANDING_FRIENDLY_THRESHOLD, type FactionRegistry } from "../../faction.js";
+import {
+  computeEffectiveRetreatRange,
+  computeDefenceIntensityBoost,
+  applyLoyaltyBias,
+  applyOpportunismBias,
+} from "./personality.js";
 
 type DefenceMode = "none" | "block" | "parry" | "dodge";
 
@@ -73,10 +79,15 @@ export function decideCommandsForEntity(
   const distressTol = self.attributes.resilience.distressTolerance;
   const fearResp = (self.attributes.resilience).fearResponse ?? "flight";
 
+  // Phase 47: personality-driven overrides
+  const personality = self.personality;
+
   // Feature 6: berserk entities never route or hesitate
+  // Phase 47: high-aggression entities (> q(0.70)) also override hesitation
   const isHesitant = fearResp !== "berserk" &&
     !isRouting(fearQ, distressTol) &&
-    fearQ >= qMul(moraleThreshold(distressTol), q(0.70));
+    fearQ >= qMul(moraleThreshold(distressTol), q(0.70)) &&
+    (!personality || personality.aggression < q(0.70));
 
   if (fearResp !== "berserk" && isRouting(fearQ, distressTol)) {
     // Feature 6: freeze archetype routes by freezing instead of fleeing
@@ -129,6 +140,12 @@ export function decideCommandsForEntity(
 
   let target = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
 
+  // Phase 47: personality-driven target bias (loyalty before opportunism)
+  if (personality) {
+    target = applyLoyaltyBias(self, world, target, personality.loyalty);
+    target = applyOpportunismBias(self, world, target, personality.opportunism);
+  }
+
   // Phase 24: faction standing — suppress attack on friendly entities.
   // Self-defence override: if self has taken damage (shock > 0 or fluid loss > 0),
   // faction check is bypassed (attacker is fought back regardless of standing).
@@ -159,7 +176,10 @@ export function decideCommandsForEntity(
 
     if (d2 < threatD2) {
       defendMode = pickDefenceModeDeterministic(policy);
-      defendIntensity = clampQ(policy.defendWhenThreatenedQ, q(0), q(1.0));
+      // Phase 47: caution boosts/reduces defence intensity (±q(0.20) max at extremes)
+      defendIntensity = personality
+        ? computeDefenceIntensityBoost(policy.defendWhenThreatenedQ, personality.caution)
+        : clampQ(policy.defendWhenThreatenedQ, q(0), q(1.0));
     }
   }
 
@@ -181,9 +201,13 @@ export function decideCommandsForEntity(
   const engage = policy.engageRange_m;
 
   // Move toward if too far, back off if too close
+  // Phase 47: aggression shifts the effective retreat range (aggressive → less retreat)
+  const effectiveRetreatRange = personality
+    ? computeEffectiveRetreatRange(policy.retreatRange_m, personality.aggression)
+    : policy.retreatRange_m;
   let dirX = 0, dirY = 0;
   if (distApprox > want) { dirX = dx; dirY = dy; }
-  else if (distApprox < policy.retreatRange_m) { dirX = -dx; dirY = -dy; }
+  else if (distApprox < effectiveRetreatRange) { dirX = -dx; dirY = -dy; }
 
   let moveMode: "sprint" | "run" | "walk" = distApprox > engage ? "sprint" : "run";
 

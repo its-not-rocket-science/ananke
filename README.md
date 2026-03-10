@@ -224,7 +224,16 @@ rangeFactor`) for military coordination (drums, horns); `resolvePerformance(perf
 generates morale auras (`fearDecayBonus = musical × q(0.020)`) draining willpower per second;
 performance types: march/rally/dirge/celebration/lament.
 
-**1712 tests.** All coverage thresholds met (statements 96.32 %, branches 85.92 %, functions 93.87 %, lines 96.32 %). All coverage thresholds met (statements 96.42 %, branches 86.17 %, functions 93.9 %, lines 96.42 %).
+**Phase 47** adds individual AI personalities beyond policy presets (`src/sim/ai/personality.ts`):
+`PersonalityTraits` — four Q-coded axes: `aggression` (shifts retreat range, overrides hesitation
+above q(0.70)), `caution` (±q(0.20) defence intensity boost), `loyalty` (switches focus target to
+protect a distressed ally), `opportunism` (switches to the most-wounded enemy). Five named presets:
+`berserker`, `coward`, `guardian`, `schemer`, `soldier`. `derivePersonalityFromCognition()` maps
+distressTolerance → aggression, intrapersonal → caution, interpersonal → loyalty,
+logicalMathematical → opportunism. `entity.personality?: PersonalityTraits` is optional and
+backward-compatible (absent = neutral = q(0.50) on all axes, no behaviour change).
+
+**2085 tests.** All coverage thresholds met (statements 92.98 %, branches 84.01 %, functions 89.56 %, lines 92.98 %).
 
 See `ROADMAP.md` for the full development plan.
 

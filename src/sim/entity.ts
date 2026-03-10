@@ -1,4 +1,4 @@
-import type { IndividualAttributes, EnergyState } from "../types.js";
+import type { IndividualAttributes, EnergyState, PersonalityTraits } from "../types.js";
 import type { WillpowerState } from "../competence/willpower.js";
 import type { Loadout } from "../equipment.js";
 import type { TraitId } from "../traits.js";
@@ -120,6 +120,9 @@ export interface Entity {
 
   /** Phase 32B: per-limb state for multi-limb entities (octopoids, arachnids, etc.). */
   limbStates?: LimbState[];
+
+  /** Phase 47: individual AI personality traits (aggression, caution, loyalty, opportunism). */
+  personality?: PersonalityTraits;
 
   // anatomy related cache
   compiledAnatomy?: CompiledAnatomyModel;

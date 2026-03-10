@@ -104,6 +104,24 @@ export interface Resilience {
   fearResponse?: "flight" | "freeze" | "berserk";
 }
 
+// Phase 47: individual AI personality traits
+export type PersonalityId = "berserker" | "coward" | "guardian" | "schemer" | "soldier";
+
+/**
+ * Four orthogonal behavioural axes that modulate decisions on top of the base AIPolicy.
+ * All fields are Q-coded [0, SCALE.Q]; q(0.50) is neutral (no change from baseline).
+ */
+export interface PersonalityTraits {
+  /** 0 = passive/retreat-prone; q(1.0) = fights to the end, ignores hesitation. */
+  aggression: Q;
+  /** 0 = reckless; q(1.0) = maximises defensive intensity and cover-seeking. */
+  caution: Q;
+  /** 0 = pure self-preservation; q(1.0) = overrides focus target to shield allies. */
+  loyalty: Q;
+  /** 0 = locks onto first target; q(1.0) = hunts the most wounded enemy. */
+  opportunism: Q;
+}
+
 export interface IndividualAttributes {
   morphology: Morphology;
   performance: Performance;
