@@ -1,14 +1,16 @@
 import type { Entity } from "./entity.js";
 import type { WorldIndex } from "./indexing.js";
 import type { SpatialIndex } from "./spatial.js";
+import type { WorldState } from "./world.js";
 import { queryNearbyIds } from "./spatial.js";
-import { isEnemy } from "./team.js";
+import { isEnemy, areEntitiesHostile } from "./team.js";
 
 export interface OcclusionQuery {
   laneRadius_m: number;   // fixed-point metres (corridor half-width)
 }
 
 export function isMeleeLaneOccludedByFriendly(
+  world: WorldState | undefined,
   attacker: Entity,
   target: Entity,
   index: WorldIndex,
@@ -25,7 +27,8 @@ export function isMeleeLaneOccludedByFriendly(
 
   // If target is on same team, don't treat as occlusion here (that’s friendly fire prevention elsewhere)
   // Occlusion checks FRIENDLIES between attacker and ENEMY target
-  if (!isEnemy(attacker, target)) return false;
+  const hostile = world ? areEntitiesHostile(attacker, target, world) : isEnemy(attacker, target);
+  if (!hostile) return false;
 
   // Search near the midpoint with radius ~= half-distance + laneR
   // This bounds the search to local neighbourhood (fast at scale)

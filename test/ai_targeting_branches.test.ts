@@ -56,13 +56,13 @@ describe("pickTarget", () => {
     const index = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, CELL_SIZE);
 
-    const target = pickTarget(world.seed, world.tick, self, index, spatial, LOOSE_POLICY);
+    const target = pickTarget(world, self, index, spatial, LOOSE_POLICY);
     expect(target).toBeUndefined();
   });
 
   test("returns nearest enemy when no focus exists", () => {
     const { self, enemy, world, index, spatial } = makeSetup();
-    const target = pickTarget(world.seed, world.tick, self, index, spatial, LOOSE_POLICY);
+    const target = pickTarget(world, self, index, spatial, LOOSE_POLICY);
     expect(target?.id).toBe(enemy.id);
   });
 
@@ -72,7 +72,7 @@ describe("pickTarget", () => {
     // Establish focus with an active cooldown
     self.ai = { focusTargetId: enemy.id, retargetCooldownTicks: 5, decisionCooldownTicks: 0 };
 
-    const target = pickTarget(world.seed, world.tick, self, index, spatial, LOOSE_POLICY);
+    const target = pickTarget(world, self, index, spatial, LOOSE_POLICY);
     expect(target?.id).toBe(enemy.id);
   });
 
@@ -89,7 +89,7 @@ describe("pickTarget", () => {
     // Focus on enemy1 but cooldown is zero → should retarget to nearest
     self.ai = { focusTargetId: enemy1.id, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
 
-    const target = pickTarget(world.seed, world.tick, self, index, spatial, LOOSE_POLICY);
+    const target = pickTarget(world, self, index, spatial, LOOSE_POLICY);
     expect(target?.id).toBe(enemy2.id);
   });
 
@@ -103,7 +103,7 @@ describe("pickTarget", () => {
     enemy.injury.dead = true;
     self.ai = { focusTargetId: enemy.id, retargetCooldownTicks: 10, decisionCooldownTicks: 0 };
 
-    const target = pickTarget(world.seed, world.tick, self, index, buildSpatialIndex(world, CELL_SIZE), LOOSE_POLICY);
+    const target = pickTarget(world, self, index, buildSpatialIndex(world, CELL_SIZE), LOOSE_POLICY);
     expect(target?.id).toBe(enemy2.id);
   });
 
@@ -120,7 +120,7 @@ describe("pickTarget", () => {
     let retained = 0;
     for (let tick = 0; tick < 30; tick++) {
       const sp = buildSpatialIndex(world, CELL_SIZE);
-      const t  = pickTarget(world.seed, tick, self, index, sp, STICKY_POLICY);
+      const t  = pickTarget(world, self, index, sp, STICKY_POLICY);
       if (t?.id === enemy.id) retained++;
     }
     // With stickiness of 0.9999 at least 25 of 30 ticks should retain focus
@@ -139,7 +139,7 @@ describe("pickTarget", () => {
     let switched = 0;
     for (let tick = 0; tick < 30; tick++) {
       const sp = buildSpatialIndex(world, CELL_SIZE);
-      const t  = pickTarget(world.seed, tick, self, index, sp, LOOSE_POLICY);
+      const t  = pickTarget(world, self, index, sp, LOOSE_POLICY);
       if (t?.id === enemy2.id) switched++;
     }
     // With stickiness = 0 it should always switch to the nearer enemy

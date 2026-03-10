@@ -14,6 +14,9 @@ import type { Q }                  from "../../units.js";
 import { SCALE, q, clampQ, mulDiv } from "../../units.js";
 import type { Entity }              from "../entity.js";
 import type { WorldState }          from "../world.js";
+import type { RelationshipGraph } from "../../relationships.js";
+import type { PartyRegistry }     from "../../party.js";
+import { computeCompanionLoyalty } from "../../party.js";
 import type { IndividualAttributes, PersonalityTraits, PersonalityId } from "../../types.js";
 import { eventSeed }                from "../seeds.js";
 
@@ -91,6 +94,37 @@ export function derivePersonalityFromCognition(attrs: IndividualAttributes): Per
     loyalty:     (attrs.cognition?.interpersonal       ?? q(0.50)) as Q,
     opportunism: (attrs.cognition?.logicalMathematical ?? q(0.50)) as Q,
   };
+}
+
+// ── Loyalty combination ──────────────────────────────────────────────────────
+
+/**
+ * Compute effective loyalty combining personality loyalty and companion loyalty to party leader.
+ * If entity belongs to a party and has a relationship with the leader, companion loyalty is used.
+ * Otherwise falls back to personality loyalty (or neutral q(0.50) if no personality).
+ */
+export function computeEffectiveLoyalty(self: Entity, world: WorldState): Q {
+  const personality = self.personality;
+  const baseLoyalty = personality?.loyalty ?? q(0.50);
+
+  const partyRegistry = world.__partyRegistry;
+  if (!partyRegistry) return baseLoyalty;
+
+  const partyId = self.party;
+  if (!partyId) return baseLoyalty;
+
+  const party = partyRegistry.parties.get(partyId);
+  if (!party) return baseLoyalty;
+
+  const leaderId = party.leaderId;
+  if (leaderId === self.id) return baseLoyalty; // leader is self
+
+  const relationshipGraph = world.__relationshipGraph;
+  if (!relationshipGraph) return baseLoyalty;
+
+  const companionLoyalty = computeCompanionLoyalty(self, leaderId, relationshipGraph);
+  // Use the higher of base loyalty or companion loyalty (max loyalty)
+  return companionLoyalty > baseLoyalty ? companionLoyalty : baseLoyalty;
 }
 
 // ── Pure formula helpers (exported for unit testing) ──────────────────────────

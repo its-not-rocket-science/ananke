@@ -18,7 +18,7 @@ test("pickNearestEnemyInReach ignores friendlies and breaks ties by id", () => {
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
   const attacker = world.entities[0]!;
-  const target = pickNearestEnemyInReach(attacker, index, spatial, {
+  const target = pickNearestEnemyInReach(world, attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),
     maxTargets: 12,
@@ -39,7 +39,7 @@ test("pickNearestEnemyInReach requireFrontArc filters rear enemies", () => {
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
   const attacker = world.entities[0]!;
-  const target = pickNearestEnemyInReach(attacker, index, spatial, {
+  const target = pickNearestEnemyInReach(world, attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),
     maxTargets: 12,
@@ -61,7 +61,7 @@ test("pickNearestEnemyInReach requireFrontArc picks front enemy", () => {
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
   const attacker = world.entities[0]!;
-  const target = pickNearestEnemyInReach(attacker, index, spatial, {
+  const target = pickNearestEnemyInReach(world, attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),
     maxTargets: 12,
@@ -87,7 +87,7 @@ test("pickNearestEnemyInReach respects maxTargets cap and picks closest", () => 
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
   const attacker = world.entities[0]!;
-  const target = pickNearestEnemyInReach(attacker, index, spatial, {
+  const target = pickNearestEnemyInReach(world, attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),
     maxTargets: 2, // cap at 2 candidates
@@ -109,7 +109,7 @@ test("pickNearestEnemyInReach returns undefined when no enemies in reach", () =>
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
   const attacker = world.entities[0]!;
-  const target = pickNearestEnemyInReach(attacker, index, spatial, {
+  const target = pickNearestEnemyInReach(world, attacker, index, spatial, {
     reach_m: Math.trunc(1.0 * SCALE.m),
     buffer_m: Math.trunc(0.2 * SCALE.m),
     maxTargets: 12,

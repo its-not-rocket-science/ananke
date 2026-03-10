@@ -1,8 +1,9 @@
 import type { Entity } from "../entity.js";
+import type { WorldState } from "../world.js";
 import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import { queryNearbyIds } from "../spatial.js";
-import { isEnemy } from "../team.js";
+import { isEnemy, areEntitiesHostile } from "../team.js";
 import { q } from "../../units.js";
 import { canDetect, DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
 import { findSensor } from "../../equipment.js";
@@ -16,6 +17,7 @@ export interface LocalPerception {
 export type Perception = LocalPerception;
 
 export function perceiveLocal(
+  world: WorldState | undefined,
   self: Entity,
   index: WorldIndex,
   spatial: SpatialIndex,
@@ -47,7 +49,8 @@ export function perceiveLocal(
     const detQ = canDetect(self, e, env, sensorBoost);
     if (detQ <= q(0)) continue;
 
-    if (isEnemy(self, e)) enemies.push(e);
+    const hostile = world ? areEntitiesHostile(self, e, world) : isEnemy(self, e);
+    if (hostile) enemies.push(e);
     else allies.push(e);
 
     if (enemies.length + allies.length >= maxCount) break;

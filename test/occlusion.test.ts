@@ -18,7 +18,7 @@ test("rear-rank melee lane is occluded by a friendly in between", () => {
   const index = buildWorldIndex(world);
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
-  const blocked = isMeleeLaneOccludedByFriendly(A, T, index, spatial, {
+  const blocked = isMeleeLaneOccludedByFriendly(world, A, T, index, spatial, {
     laneRadius_m: Math.trunc(0.35 * SCALE.m),
   });
 
@@ -36,7 +36,7 @@ test("lane is not occluded if friendly is outside corridor", () => {
   const index = buildWorldIndex(world);
   const spatial = buildSpatialIndex(world, Math.trunc(4 * SCALE.m));
 
-  const blocked = isMeleeLaneOccludedByFriendly(A, T, index, spatial, {
+  const blocked = isMeleeLaneOccludedByFriendly(world, A, T, index, spatial, {
     laneRadius_m: Math.trunc(0.35 * SCALE.m),
   });
 

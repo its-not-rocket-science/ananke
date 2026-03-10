@@ -393,6 +393,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
         const reach_m = wpn.reach_m ?? Math.trunc(e.attributes.morphology.stature_m * 0.45);
         const target = pickNearestEnemyInReach(
+          world,
           e,
           index,
           spatial,
@@ -793,6 +794,7 @@ function resolveAttack(world: WorldState,
 
   if (tuning.realism !== "arcade") {
     const blocked = isMeleeLaneOccludedByFriendly(
+      world,
       attacker,
       target,
       index,

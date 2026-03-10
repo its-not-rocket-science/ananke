@@ -5048,7 +5048,7 @@ Potential future phases building on the RPG foundation:
 
 **Phase 47: Advanced AI Personalities *(COMPLETE)*** — `PersonalityTraits` (aggression/caution/loyalty/opportunism) modulate `decide.ts` on top of `AIPolicy` presets; 5 named presets; `derivePersonalityFromCognition()`; 27 tests.
 
-**Phase 48: Multi-Party Dynamics** — Managing multiple adventuring parties, companion loyalty, inter-party conflict.
+**Phase 48: Multi-Party Dynamics (COMPLETE)** — Managing multiple adventuring parties, companion loyalty, inter-party conflict.
 
 **Phase 49: Legacy & Inheritance** — Character death not ending campaign; heir inherits equipment, relationships partially transfer.
 

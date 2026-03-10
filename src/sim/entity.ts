@@ -105,6 +105,8 @@ export interface Entity {
 
   /** Phase 24: faction this entity belongs to (factionId string). */
   faction?: string;
+  /** Phase 48: adventuring party this entity belongs to (partyId string). */
+  party?: string | undefined;
 
   /**
    * Phase 24: entity-level standing overrides toward specific factions.

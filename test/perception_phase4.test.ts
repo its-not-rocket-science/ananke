@@ -174,7 +174,7 @@ describe("perceiveLocal: sensory filtering", () => {
     const idx   = buildWorldIndex(world);
     const spt   = buildSpatialIndex(world, Math.trunc(4 * M));
 
-    const p = perceiveLocal(self, idx, spt, Math.trunc(100 * M), 24, DEFAULT_SENSORY_ENV);
+    const p = perceiveLocal(undefined, self, idx, spt, Math.trunc(100 * M), 24, DEFAULT_SENSORY_ENV);
     expect(p.enemies.length).toBe(0);
   });
 
@@ -185,7 +185,7 @@ describe("perceiveLocal: sensory filtering", () => {
     const idx   = buildWorldIndex(world);
     const spt   = buildSpatialIndex(world, Math.trunc(4 * M));
 
-    const p = perceiveLocal(self, idx, spt, Math.trunc(100 * M), 24, DEFAULT_SENSORY_ENV);
+    const p = perceiveLocal(undefined, self, idx, spt, Math.trunc(100 * M), 24, DEFAULT_SENSORY_ENV);
     expect(p.enemies.length).toBe(1);
     expect(p.enemies[0]!.id).toBe(2);
   });
@@ -198,7 +198,7 @@ describe("perceiveLocal: sensory filtering", () => {
     const idx   = buildWorldIndex(world);
     const spt   = buildSpatialIndex(world, Math.trunc(4 * M));
 
-    const p = perceiveLocal(self, idx, spt, Math.trunc(100 * M), 24, DEFAULT_SENSORY_ENV);
+    const p = perceiveLocal(undefined, self, idx, spt, Math.trunc(100 * M), 24, DEFAULT_SENSORY_ENV);
     expect(p.enemies.length).toBe(1);
   });
 
@@ -211,7 +211,7 @@ describe("perceiveLocal: sensory filtering", () => {
     const idx   = buildWorldIndex(world);
     const spt   = buildSpatialIndex(world, Math.trunc(4 * M));
 
-    const p = perceiveLocal(self, idx, spt, Math.trunc(100 * M), 3, DEFAULT_SENSORY_ENV);
+    const p = perceiveLocal(undefined, self, idx, spt, Math.trunc(100 * M), 3, DEFAULT_SENSORY_ENV);
     expect(p.enemies.length).toBeLessThanOrEqual(3);
   });
 });

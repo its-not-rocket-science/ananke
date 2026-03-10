@@ -20,6 +20,7 @@ import {
   computeDefenceIntensityBoost,
   applyLoyaltyBias,
   applyOpportunismBias,
+  computeEffectiveLoyalty,
 } from "./personality.js";
 
 type DefenceMode = "none" | "block" | "parry" | "dodge";
@@ -111,7 +112,7 @@ export function decideCommandsForEntity(
       return [];
     }
 
-    const nearestThreat = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
+    const nearestThreat = pickTarget(world, self, index, spatial, policy, env);
     if (nearestThreat) {
       const fdx = self.position_m.x - nearestThreat.position_m.x;
       const fdy = self.position_m.y - nearestThreat.position_m.y;
@@ -138,11 +139,12 @@ export function decideCommandsForEntity(
     return suppCmds;
   }
 
-  let target = pickTarget(world.seed, world.tick, self, index, spatial, policy, env);
+  let target = pickTarget(world, self, index, spatial, policy, env);
 
   // Phase 47: personality-driven target bias (loyalty before opportunism)
+  const effectiveLoyalty = computeEffectiveLoyalty(self, world);
+  target = applyLoyaltyBias(self, world, target, effectiveLoyalty);
   if (personality) {
-    target = applyLoyaltyBias(self, world, target, personality.loyalty);
     target = applyOpportunismBias(self, world, target, personality.opportunism);
   }
 

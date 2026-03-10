@@ -1,4 +1,5 @@
 import type { Entity } from "../entity.js";
+import type { WorldState } from "../world.js";
 import type { WorldIndex } from "../indexing.js";
 import type { SpatialIndex } from "../spatial.js";
 import { perceiveLocal } from "./perception.js";
@@ -8,8 +9,7 @@ import { eventSeed } from "../seeds.js";
 import { DEFAULT_PERCEPTION, DEFAULT_SENSORY_ENV, type SensoryEnvironment } from "../sensory.js";
 
 export function pickTarget(
-  worldSeed: number,
-  tick: number,
+  world: WorldState,
   self: Entity,
   index: WorldIndex,
   spatial: SpatialIndex,
@@ -32,12 +32,12 @@ export function pickTarget(
     ? Math.trunc(mulDiv(perc.threatHorizon_m, (4000 + cognSpatial) as number, SCALE.Q))
     : perc.threatHorizon_m;
 
-  const p = perceiveLocal(self, index, spatial, perceptionRadius, perc.attentionDepth, env);
+  const p = perceiveLocal(world, self, index, spatial, perceptionRadius, perc.attentionDepth, env);
   if (p.enemies.length === 0) return undefined;
 
   // Stickiness: prefer keeping previous target if present and alive
   if (focused && !focused.injury.dead) {
-    const seed = eventSeed(worldSeed, tick, self.id, ai.focusTargetId, 0xF0C05);
+    const seed = eventSeed(world.seed, world.tick, self.id, ai.focusTargetId, 0xF0C05);
     const rollQ = (seed % SCALE.Q);
     if (rollQ < policy.focusStickinessQ) return focused;
   }

@@ -22,6 +22,7 @@ import {
   computeDefenceIntensityBoost,
   applyLoyaltyBias,
   applyOpportunismBias,
+  computeEffectiveLoyalty,
   type PersonalityTraits,
 } from "../src/sim/ai/personality";
 import { HUMAN_BASE } from "../src/archetypes";
@@ -32,6 +33,8 @@ import { decideCommandsForEntity } from "../src/sim/ai/decide";
 import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";
 import type { Entity } from "../src/sim/entity";
+import { createPartyRegistry, createParty } from "../src/party.js";
+import { createRelationshipGraph, recordRelationshipEvent } from "../src/relationships.js";
 
 const CELL_SIZE = Math.trunc(4 * SCALE.m);
 
@@ -332,5 +335,97 @@ describe("integration", () => {
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, CELL_SIZE);
     expect(() => decideCommandsForEntity(world, index, spatial, e, policy)).not.toThrow();
+  });
+});
+
+describe("computeEffectiveLoyalty", () => {
+  it("returns base loyalty when no party registry", () => {
+    const world = mkWorld(1, []);
+    const entity = mkHumanoidEntity(1, 1, 0, 0);
+    entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
+    // No __partyRegistry set
+    expect(computeEffectiveLoyalty(entity, world)).toBe(q(0.7));
+  });
+
+  it("returns base loyalty when entity has no party", () => {
+    const world = mkWorld(1, []);
+    world.__partyRegistry = createPartyRegistry();
+    const entity = mkHumanoidEntity(1, 1, 0, 0);
+    entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
+    // entity.party is undefined
+    expect(computeEffectiveLoyalty(entity, world)).toBe(q(0.7));
+  });
+
+  it("returns base loyalty when party not found", () => {
+    const world = mkWorld(1, []);
+    world.__partyRegistry = createPartyRegistry();
+    const entity = mkHumanoidEntity(1, 1, 0, 0);
+    entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
+    entity.party = "nonexistent";
+    expect(computeEffectiveLoyalty(entity, world)).toBe(q(0.7));
+  });
+
+  it("returns base loyalty when entity is party leader", () => {
+    const world = mkWorld(1, []);
+    const registry = createPartyRegistry();
+    world.__partyRegistry = registry;
+    createParty(registry, "party1", "Adventurers", 1);
+    const entity = mkHumanoidEntity(1, 1, 0, 0);
+    entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
+    entity.party = "party1";
+    expect(computeEffectiveLoyalty(entity, world)).toBe(q(0.7));
+  });
+
+  it("returns base loyalty when no relationship graph", () => {
+    const world = mkWorld(1, []);
+    const registry = createPartyRegistry();
+    world.__partyRegistry = registry;
+    createParty(registry, "party1", "Adventurers", 1);
+    const entity = mkHumanoidEntity(2, 1, 0, 0);
+    entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
+    entity.party = "party1";
+    // No __relationshipGraph set
+    expect(computeEffectiveLoyalty(entity, world)).toBe(q(0.7));
+  });
+
+  it("returns companion loyalty when higher than base loyalty", () => {
+    const world = mkWorld(1, []);
+    const registry = createPartyRegistry();
+    world.__partyRegistry = registry;
+    createParty(registry, "party1", "Adventurers", 1);
+    const graph = createRelationshipGraph();
+    world.__relationshipGraph = graph;
+    const entity = mkHumanoidEntity(2, 1, 0, 0);
+    entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.3), opportunism: q(0.5) }; // low base loyalty
+    entity.party = "party1";
+    // Create positive relationship with leader (id 1)
+    recordRelationshipEvent(graph, 2, 1, {
+      tick: 0,
+      type: "fought_alongside",
+      magnitude_Q: 8000,
+    });
+    const result = computeEffectiveLoyalty(entity, world);
+    expect(result).toBeGreaterThan(q(0.3)); // Should be higher due to relationship
+    expect(result).toBeLessThanOrEqual(SCALE.Q);
+  });
+
+  it("returns base loyalty when higher than companion loyalty", () => {
+    const world = mkWorld(1, []);
+    const registry = createPartyRegistry();
+    world.__partyRegistry = registry;
+    createParty(registry, "party1", "Adventurers", 1);
+    const graph = createRelationshipGraph();
+    world.__relationshipGraph = graph;
+    const entity = mkHumanoidEntity(2, 1, 0, 0);
+    entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.9), opportunism: q(0.5) }; // high base loyalty
+    entity.party = "party1";
+    // Create negative relationship with leader (id 1)
+    recordRelationshipEvent(graph, 2, 1, {
+      tick: 0,
+      type: "betrayed",
+      magnitude_Q: 8000,
+    });
+    const result = computeEffectiveLoyalty(entity, world);
+    expect(result).toBe(q(0.9)); // Base loyalty should win
   });
 });

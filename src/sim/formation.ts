@@ -1,8 +1,9 @@
 import type { Entity } from "./entity.js";
 import type { WorldIndex } from "./indexing.js";
 import type { SpatialIndex } from "./spatial.js";
+import type { WorldState } from "./world.js";
 import { queryNearbyIds } from "./spatial.js";
-import { isEnemy } from "./team.js";
+import { isEnemy, areEntitiesHostile } from "./team.js";
 import { dotDirQ, normaliseDirCheapQ } from "./vec3.js"; // wherever you keep these
 
 export interface EngagementQuery {
@@ -14,6 +15,7 @@ export interface EngagementQuery {
 }
 
 export function pickNearestEnemyInReach(
+  world: WorldState | undefined,
   attacker: Entity,
   index: WorldIndex,
   spatial: SpatialIndex,
@@ -29,7 +31,8 @@ export function pickNearestEnemyInReach(
     if (id === attacker.id) continue;
     const e = index.byId.get(id);
     if (!e || e.injury.dead) continue;
-    if (!isEnemy(attacker, e)) continue;
+    const hostile = world ? areEntitiesHostile(attacker, e, world) : isEnemy(attacker, e);
+    if (!hostile) continue;
 
     if (q.requireFrontArc) {
       const dx = e.position_m.x - attacker.position_m.x;
