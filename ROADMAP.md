@@ -5050,6 +5050,6 @@ Potential future phases building on the RPG foundation:
 
 **Phase 48: Multi-Party Dynamics (COMPLETE)** — Managing multiple adventuring parties, companion loyalty, inter-party conflict.
 
-**Phase 49: Legacy & Inheritance** — Character death not ending campaign; heir inherits equipment, relationships partially transfer.
+**Phase 49: Legacy & Inheritance (COMPLETE)** — Character death not ending campaign; heir inherits equipment, relationships partially transfer.
 
 **Phase 50: Mythology & Legend** — Stories from chronicles become "legends" that NPCs reference, affecting their expectations and behavior.

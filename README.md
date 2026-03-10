@@ -233,7 +233,18 @@ distressTolerance → aggression, intrapersonal → caution, interpersonal → l
 logicalMathematical → opportunism. `entity.personality?: PersonalityTraits` is optional and
 backward-compatible (absent = neutral = q(0.50) on all axes, no behaviour change).
 
-**2085 tests.** All coverage thresholds met (statements 92.98 %, branches 84.01 %, functions 89.56 %, lines 92.98 %).
+**Phase 48** adds multi-party dynamics (`src/party.ts`): `Party` and `PartyMember` types with
+per-member `loyaltyQ`, `stepPartyLoyalty()` (leader interpersonal aura + resource/injury/hunger
+modifiers), `checkDefection()` (probabilistic when loyalty < q(0.20)), `resolvePartyConflict()`
+(combat-power ratio determines outcome), `recordMissionSuccess/Failure()`.
+
+**Phase 49** adds legacy and inheritance (`src/inheritance.ts`): character death does not end the
+campaign — `transferEquipment()` moves loadout items to the heir, `transferRelationships()` partially
+copies the relationship graph (trust/affinity scaled by `relationshipTransferRate_Q`, default q(0.50)),
+`transferInventory()` merges campaign inventories, and `applyInheritance()` orchestrates all three
+steps while updating the campaign registry and location tracking.
+
+**2198 tests.** All coverage thresholds met (statements 95.46 %, branches 83.89 %, functions 91.59 %, lines 95.46 %). Settlement-services module improved from 4.64 % to 94.93 %; `src/sim/step/effects.ts` from 71.83 % to 100 %; `src/competence/framework.ts` from 56.41 % to 90.7 %.
 
 See `ROADMAP.md` for the full development plan.
 

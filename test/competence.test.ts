@@ -479,3 +479,141 @@ describe("competence framework integration", () => {
     expect(longResult.timeTaken_s).toBeGreaterThan(quickResult.timeTaken_s);
   });
 });
+
+// ── Additional routing coverage ────────────────────────────────────────────────
+
+describe("resolveCompetence additional domain coverage", () => {
+  it("routes interSpecies task to resolver", () => {
+    const actor = mkEntity({ interSpecies: q(0.60) });
+    const action = mkAction("interSpecies", "signal_alien_species");
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("interSpecies");
+    expect(Number.isFinite(result.quality_Q)).toBe(true);
+  });
+
+  it("routes linguistic negotiate_treaty to negotiation branch", () => {
+    const actor = mkEntity({ linguistic: q(0.80), interpersonal: q(0.70) });
+    const action = mkAction("linguistic", "negotiate_treaty", { seed: 9999 });
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("linguistic");
+    expect(result.details).toHaveProperty("effectiveSkill_Q");
+  });
+
+  it("routes linguistic translate_foreign to default linguistic branch", () => {
+    const actor = mkEntity({ linguistic: q(0.75) });
+    const action = mkAction("linguistic", "translate_foreign");
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("linguistic");
+    expect(result.details).toHaveProperty("linguistic_Q");
+  });
+
+  it("routes interpersonal rally_troops to rally branch", () => {
+    const actor = mkEntity({ interpersonal: q(0.75) });
+    const action = mkAction("interpersonal", "rally_troops", { seed: 12345 });
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("interpersonal");
+    expect(result.details).toHaveProperty("fearReduction_Q");
+  });
+
+  it("routes interpersonal teach_skill with learner in world", () => {
+    const actor = mkEntity({ interpersonal: q(0.70) });
+    actor.id = 1;
+    const learner = mkEntity({ bodilyKinesthetic: q(0.40) });
+    learner.id = 2;
+    const action = mkAction("interpersonal", "teach_skill", { targetEntityId: 2 });
+    const world = mkWorld([learner]);
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("interpersonal");
+  });
+
+  it("interpersonal teach_skill without learner returns failure", () => {
+    const actor = mkEntity({ interpersonal: q(0.70) });
+    const action = mkAction("interpersonal", "teach_skill", { targetEntityId: 999 });
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.success).toBe(false);
+    expect(result.descriptor).toBe("failure");
+  });
+
+  it("intrapersonal resist_temptation path", () => {
+    const actor = mkEntity({ intrapersonal: q(0.80) });
+    const action = mkAction("intrapersonal", "resist_temptation", { seed: 42 });
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("intrapersonal");
+    expect(result.details).toHaveProperty("resistanceStrength_Q");
+  });
+
+  it("intrapersonal meditate returns willpowerRestored in details", () => {
+    const actor = mkEntity({ intrapersonal: q(0.80) });
+    const action = mkAction("intrapersonal", "meditate_focus");
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.success).toBe(true);
+    expect(result.details).toHaveProperty("willpowerRestored");
+  });
+
+  it("musical compose_march routes to compose branch", () => {
+    const actor = mkEntity({ musical: q(0.75) });
+    const action = mkAction("musical", "compose_march", { seed: 55555 });
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("musical");
+    expect(result.details).toHaveProperty("compositionQuality_Q");
+  });
+
+  it("naturalist tame_horse routes to taming branch", () => {
+    const actor = mkEntity({ naturalist: q(0.70), interSpecies: q(0.60) });
+    const action = mkAction("naturalist", "tame_horse", { seed: 777 });
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("naturalist");
+    expect(result.details).toHaveProperty("trust_Q");
+  });
+
+  it("naturalist forage_herbs routes to foraging branch", () => {
+    const actor = mkEntity({ naturalist: q(0.70) });
+    const action = mkAction("naturalist", "forage_herbs", { seed: 888 });
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("naturalist");
+    expect(result.details).toHaveProperty("itemsFound");
+  });
+
+  it("calm_agitated_beast routes to interSpecies calm branch", () => {
+    const actor = mkEntity({ interSpecies: q(0.65) });
+    const action = mkAction("interSpecies", "calm_agitated_beast");
+    const world = mkWorld();
+
+    const result = resolveCompetence(actor, action, world);
+
+    expect(result.domain).toBe("interSpecies");
+    expect(result.details).toHaveProperty("aggravated");
+  });
+});

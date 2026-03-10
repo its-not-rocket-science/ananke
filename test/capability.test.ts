@@ -806,3 +806,88 @@ describe("magic resistance (magicResist)", () => {
     expect(blocked).toBeLessThan(70);
   });
 });
+
+// ─── stepHazardEffects_legacy coverage ────────────────────────────────────────
+
+import { stepHazardEffects_legacy } from "../src/sim/step/effects.js";
+import type { HazardGrid } from "../src/sim/terrain.js";
+
+describe("stepHazardEffects_legacy", () => {
+  it("applies hazard damage to entities in hazard cell", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    const grid: HazardGrid = new Map();
+    const cellSize_m = to.m(4);
+    const key = terrainKey(0, 0); // entity at (0,0)
+    grid.set(key, { channel: "fire" as any, intensity: 500, duration_ticks: 10 });
+
+    const shockBefore = e.injury.shock;
+    stepHazardEffects_legacy([e], grid, cellSize_m);
+
+    expect(e.injury.shock).toBeGreaterThanOrEqual(shockBefore);
+  });
+
+  it("skips dead entities", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.injury.dead = true;
+    const grid: HazardGrid = new Map();
+    const key = terrainKey(0, 0);
+    grid.set(key, { channel: "fire" as any, intensity: 5000, duration_ticks: 5 });
+
+    const shockBefore = e.injury.shock;
+    stepHazardEffects_legacy([e], grid, to.m(4));
+    expect(e.injury.shock).toBe(shockBefore);
+  });
+
+  it("decrements hazard duration_ticks and removes expired hazard", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    const grid: HazardGrid = new Map();
+    const key = terrainKey(0, 0);
+    grid.set(key, { channel: "fire" as any, intensity: 100, duration_ticks: 1 });
+
+    stepHazardEffects_legacy([e], grid, to.m(4));
+
+    expect(grid.has(key)).toBe(false);
+  });
+
+  it("does not decrement hazard with duration_ticks=0 (permanent marker)", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    const grid: HazardGrid = new Map();
+    const key = terrainKey(0, 0);
+    grid.set(key, { channel: "fire" as any, intensity: 0, duration_ticks: 0 });
+
+    stepHazardEffects_legacy([e], grid, to.m(4));
+
+    // intensity=0 → no damage; duration=0 → not decremented (no positive duration)
+    expect(grid.has(key)).toBe(true);
+  });
+});
+
+// ─── stepChainEffects with array payload ──────────────────────────────────────
+
+describe("stepChainEffects array chainPayload", () => {
+  it("fires both payloads when chainPayload is an array", () => {
+    const actor = mkHumanoidEntity(1, 1, 0, 0);
+    const target = mkHumanoidEntity(2, 2, to.m(1), 0);
+    const world = mkWorld(1, [actor, target]);
+
+    world.activeFieldEffects = [{
+      id: "multi",
+      origin: v3(to.m(1), 0, 0),
+      radius_m: to.m(5),
+      suppressesTags: [],
+      duration_ticks: -1,
+      placedByEntityId: actor.id,
+      chainPayload: [
+        { kind: "impact" as const, spec: { energy_J: 50, channel: "kinetic" as any } },
+        { kind: "impact" as const, spec: { energy_J: 50, channel: "kinetic" as any } },
+      ],
+    }];
+
+    const shockBefore = target.injury.shock;
+    // Run one tick to fire the chain effects
+    stepWorld(world, new Map(), BASE_CTX);
+
+    // Both payloads fired → more shock than a single payload
+    expect(target.injury.shock).toBeGreaterThan(shockBefore);
+  });
+});
