@@ -244,7 +244,18 @@ copies the relationship graph (trust/affinity scaled by `relationshipTransferRat
 `transferInventory()` merges campaign inventories, and `applyInheritance()` orchestrates all three
 steps while updating the campaign registry and location tracking.
 
-**2198 tests.** All coverage thresholds met (statements 95.46 %, branches 83.89 %, functions 91.59 %, lines 95.46 %). Settlement-services module improved from 4.64 % to 94.93 %; `src/sim/step/effects.ts` from 71.83 % to 100 %; `src/competence/framework.ts` from 56.41 % to 90.7 %.
+**Phase 50** adds mythology and legend (`src/legend.ts`): high-significance chronicle entries crystallise
+into `Legend` objects with a `LegendReputation` (`heroic`, `notorious`, `legendary`, `forgotten`),
+a `fame_Q` (how widely known), and thematic `tags` derived from source events and story arcs.
+`createLegendFromChronicle(chronicle, subjectId, subjectName)` promotes qualifying entries (default
+significance ≥ 60) into a legend; `fame_Q` scales with total significance (7 × 100-pt entries →
+q(1.0)). `getLegendEffect(legend)` returns `LegendEffect` — persuasion, intimidation, fear, and
+morale bonuses that scale with fame. `npcKnowsLegend(legend, npcId, worldSeed, tick)` is a
+deterministic fame roll (same inputs = same result). `applyLegendToDialogueContext(initiatorId,
+targetId, registry, worldSeed, tick)` aggregates effects for NPCs who know the legend. `stepLegendFame`
+decays fame over time (legendary legends have a q(0.50) floor). Full serialisation support.
+
+**2234 tests.** All coverage thresholds met (statements 95.52 %, branches 84.06 %, functions 91.72 %, lines 95.52 %).
 
 See `ROADMAP.md` for the full development plan.
 

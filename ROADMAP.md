@@ -5052,4 +5052,4 @@ Potential future phases building on the RPG foundation:
 
 **Phase 49: Legacy & Inheritance (COMPLETE)** — Character death not ending campaign; heir inherits equipment, relationships partially transfer.
 
-**Phase 50: Mythology & Legend** — Stories from chronicles become "legends" that NPCs reference, affecting their expectations and behavior.
+**Phase 50: Mythology & Legend (COMPLETE)** — Stories from chronicles become "legends" that NPCs reference, affecting their expectations and behavior.
