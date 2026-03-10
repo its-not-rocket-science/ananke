@@ -4765,7 +4765,7 @@ export interface QuestUpdateEvent {
 
 ---
 
-## Phase 42 — Personal Relationship Graph
+## Phase 42 — Personal Relationship Graph (COMPLETE)
 
 ### Overview
 

@@ -33,3 +33,5 @@ export * from "./sim/testing.js";
 
 export * from "./quest.js";
 export * from "./quest-generators.js";
+export * from "./relationships.js";
+export * from "./relationships-effects.js";
