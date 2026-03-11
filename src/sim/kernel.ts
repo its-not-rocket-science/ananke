@@ -58,6 +58,7 @@ import { buildLimbStates, stepLimbFatigue } from "./limb.js";
 import { stepCapabilitySources } from "./step/capability.js";
 import { stepMovement } from "./step/movement.js";
 import { stepChainEffects, stepFieldEffects, stepHazardEffects } from "./step/effects.js";
+import { deriveWeatherModifiers, computeWindAimError } from "./weather.js";
 
 import {
   resolveGrappleAttempt,
@@ -174,6 +175,27 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   // Phase 4: attach sensory environment to world for use in resolveAttack / resolveShoot.
   // WorldState is a plain data object; we use a type-cast side-channel to avoid widening the type.
   (world).__sensoryEnv = ctx.sensoryEnv ?? DEFAULT_SENSORY_ENV;
+
+  // Phase 51: apply weather modifiers to traction, sensory environment, and thermal ambient.
+  if (ctx.weather) {
+    const wMod = deriveWeatherModifiers(ctx.weather);
+
+    // Traction: rain/snow/ice reduce friction.
+    ctx.tractionCoeff = Math.trunc((ctx.tractionCoeff * wMod.tractionMul_Q) / SCALE.Q) as Q;
+
+    // Sensory: fog and precipitation reduce vision range.
+    const baseEnv = (world as any).__sensoryEnv as SensoryEnvironment;
+    (world as any).__sensoryEnv = {
+      ...baseEnv,
+      lightMul: Math.trunc((baseEnv.lightMul * wMod.lightMul_Q) / SCALE.Q) as Q,
+      smokeMul: Math.trunc((baseEnv.smokeMul * wMod.precipVisionMul_Q) / SCALE.Q) as Q,
+    };
+
+    // Thermal: precipitation cools the ambient temperature (Phase 29 encoding).
+    if (ctx.thermalAmbient_Q !== undefined && wMod.thermalOffset_Q !== 0) {
+      ctx.thermalAmbient_Q = (ctx.thermalAmbient_Q + wMod.thermalOffset_Q) as Q;
+    }
+  }
 
   world.entities.sort((a, b) => a.id - b.id);
 
@@ -1379,6 +1401,16 @@ function resolveShoot(
   const targetVelMag = Math.trunc(Math.sqrt(tvx * tvx + tvy * tvy));
   const leadError_m = mulDiv(targetVelMag, 2_000, SCALE.mps);  // 0.2s reaction × SCALE.m
   gRadius_m += leadError_m;
+
+  // Phase 51: wind drift — crosswind component adds to grouping radius.
+  if (ctx.weather?.wind && v_impact_mps > 0 && dist_m > 0) {
+    gRadius_m += computeWindAimError(
+      ctx.weather.wind,
+      Number(dx), Number(dy),
+      dist_m,
+      v_impact_mps,
+    );
+  }
 
   // Body half-width: ~20% of stature (≈0.35m for 1.75m human).
   // Phase 6: cover fraction reduces effective target width → harder to hit.

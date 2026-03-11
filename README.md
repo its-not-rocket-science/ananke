@@ -255,7 +255,17 @@ deterministic fame roll (same inputs = same result). `applyLegendToDialogueConte
 targetId, registry, worldSeed, tick)` aggregates effects for NPCs who know the legend. `stepLegendFame`
 decays fame over time (legendary legends have a q(0.50) floor). Full serialisation support.
 
-**2234 tests.** All coverage thresholds met (statements 95.52 %, branches 84.06 %, functions 91.72 %, lines 95.52 %).
+**Phase 51** adds weather and atmospheric environment (`src/sim/weather.ts`): `WeatherState` bundles
+`WindField`, `PrecipitationType` (`none` / `rain` / `heavy_rain` / `snow` / `blizzard` / `hail`),
+and `fogDensity_Q`. `deriveWeatherModifiers(weather)` returns `WeatherModifiers` — traction,
+vision, and thermal deltas. Per-tick kernel integration: rain/snow reduce `ctx.tractionCoeff`
+(blizzard → q(0.40)), fog and precipitation reduce `SensoryEnvironment.lightMul` and `.smokeMul`,
+precipitation cools `ctx.thermalAmbient_Q` (snow −5 °C, blizzard −12 °C). `computeWindAimError`
+adds crosswind drift to ranged-combat grouping radius (drift = v_wind_perp × range / v_proj).
+`adjustConeRange` modulates breath-weapon range ±20 % for head/tailwind. All effects are additive
+with existing sensory and thermal modifiers; `weather` absent = backward-compatible.
+
+**2266 tests.** All coverage thresholds met (statements 95.50 %, branches 84.08 %, functions 91.75 %, lines 95.50 %).
 
 See `ROADMAP.md` for the full development plan.
 

@@ -5,6 +5,7 @@ import type { DensityField } from "./density.js";
 import type { SensoryEnvironment } from "./sensory.js";
 import type { ObstacleGrid, ElevationGrid,  SlopeGrid, HazardGrid } from "./terrain.js";
 import type { TechContext } from "./tech.js";
+import type { WeatherState } from "./weather.js";
 import type { Q, I32 } from "../units.js";
 
 export interface KernelContext {
@@ -70,4 +71,12 @@ export interface KernelContext {
    * When absent, stepCoreTemp is not called and core temperature is not updated.
    */
   thermalAmbient_Q?: Q;
+
+  /**
+   * Phase 51: current weather conditions.
+   * When present, deriveWeatherModifiers() applies per-tick modifiers to
+   * tractionCoeff, sensoryEnv, thermalAmbient_Q, and ranged aim error.
+   * When absent, weather has no effect (backward-compatible).
+   */
+  weather?: WeatherState;
 }
