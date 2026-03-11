@@ -285,7 +285,18 @@ penalties for the withdrawal duration. `deriveCumulativeToxicity(entity)` → Q 
 exposure queries. Stepped at 1 Hz alongside nutrition and Phase 32C venom. Backward-compatible:
 absent fields = no change.
 
-**2329 tests.** All coverage thresholds met (statements 95.55 %, branches 84.27 %, functions 91.87 %, lines 95.55 %).
+**Phase 54** adds wound aging and long-term sequelae (`src/sim/wound-aging.ts`):
+`stepWoundAging(entity, elapsedSeconds)` models four time-scale processes — uninfected-region
+healing (surface 1%/day, internal 0.5%/day, clamped to permanentDamage floor), infection
+worsening (1.5%/day internalDamage, sepsis threshold at q(0.85)), chronic fatigue from
+sustained permanent damage, and phantom pain shock from fractured+permanent regions.
+`recordTraumaEvent` / `deriveFearThresholdMul` implement PTSD-like trauma accumulation
+with natural q(0.002)/day decay; max trauma halves the effective fear threshold (q(0.50)).
+`deriveSepsisRisk(entity)` → Q aggregates infected-region severity for medical triage AI.
+`TraumaState` added to `Entity`. All healing and worsening rates are deterministic from
+elapsed seconds — no RNG required. Backward-compatible: absent `traumaState` = no effect.
+
+**2364 tests.** All coverage thresholds met (statements 95.51 %, branches 84.33 %, functions 91.91 %, lines 95.51 %).
 
 See `ROADMAP.md` for the full development plan.
 

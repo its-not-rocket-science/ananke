@@ -17,6 +17,7 @@ import type { ActiveVenom } from "./toxicology.js";
 import type { LimbState } from "./limb.js";
 import type { ExtendedSenses } from "./sensory-extended.js";
 import type { ActiveIngestedToxin, CumulativeExposureRecord, WithdrawalState } from "./systemic-toxicology.js";
+import type { TraumaState } from "./wound-aging.js";
 
 /** Phase 12B: state for an active concentration aura (castTime_ticks = -1 effect). */
 export interface ConcentrationState {
@@ -139,6 +140,12 @@ export interface Entity {
 
   /** Phase 53: active withdrawal states from addictive toxin removal. */
   withdrawal?: WithdrawalState[];
+
+  /**
+   * Phase 54: PTSD-like trauma state accumulated from severe shock events.
+   * Reduces effective fear threshold via `deriveFearThresholdMul`.
+   */
+  traumaState?: TraumaState;
 
   // anatomy related cache
   compiledAnatomy?: CompiledAnatomyModel;
