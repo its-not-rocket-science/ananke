@@ -16,6 +16,7 @@ import type { CapabilitySource, PendingActivation } from "./capability.js";
 import type { ActiveVenom } from "./toxicology.js";
 import type { LimbState } from "./limb.js";
 import type { ExtendedSenses } from "./sensory-extended.js";
+import type { ActiveIngestedToxin, CumulativeExposureRecord, WithdrawalState } from "./systemic-toxicology.js";
 
 /** Phase 12B: state for an active concentration aura (castTime_ticks = -1 effect). */
 export interface ConcentrationState {
@@ -129,6 +130,15 @@ export interface Entity {
 
   /** Phase 52: extended sensory modalities (echolocation, electroreception, olfaction). */
   extendedSenses?: ExtendedSenses;
+
+  /** Phase 53: active ingested toxins (alcohol, sedatives, alkaloids, heavy metals, radiation). */
+  activeIngestedToxins?: ActiveIngestedToxin[];
+
+  /** Phase 53: cumulative lifetime dose records for heavy metals and radiation. */
+  cumulativeExposure?: CumulativeExposureRecord[];
+
+  /** Phase 53: active withdrawal states from addictive toxin removal. */
+  withdrawal?: WithdrawalState[];
 
   // anatomy related cache
   compiledAnatomy?: CompiledAnatomyModel;

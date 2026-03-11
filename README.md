@@ -274,7 +274,18 @@ integration with `SensoryEnvironment.lightMul`. `canDetectExtended` wraps Phase 
 additionally checks each extended modality in quality order: electroreception q(0.80),
 echolocation q(0.70), olfaction q(0.20–0.40).
 
-**2296 tests.** All coverage thresholds met (statements 95.52 %, branches 84.16 %, functions 91.80 %, lines 95.52 %).
+**Phase 53** adds systemic toxicology for ingested substances (`src/sim/systemic-toxicology.ts`):
+five toxin profiles — `alcohol` (15 min onset, motor impairment + disinhibition, addictive),
+`sedative_plant` (30 min onset, consciousness erosion, addictive), `alkaloid_poison` (20 min,
+internal damage + fear), `heavy_lead` and `radiation_dose` (cumulative irreversible dose
+accumulation via `CumulativeExposureRecord`). Exponential concentration decay via metabolic
+half-life (fixed-point minimum-1/s guarantee ensures clearance). Withdrawal states
+(`WithdrawalState`) are triggered after sustained addictive use, applying fatigue and fear
+penalties for the withdrawal duration. `deriveCumulativeToxicity(entity)` → Q for chronic
+exposure queries. Stepped at 1 Hz alongside nutrition and Phase 32C venom. Backward-compatible:
+absent fields = no change.
+
+**2329 tests.** All coverage thresholds met (statements 95.55 %, branches 84.27 %, functions 91.87 %, lines 95.55 %).
 
 See `ROADMAP.md` for the full development plan.
 

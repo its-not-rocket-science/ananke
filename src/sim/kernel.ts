@@ -54,6 +54,7 @@ import { stepConditionsToInjury, stepInjuryProgression } from "./step/injury.js"
 import { stepCoreTemp, deriveTempModifiers, CORE_TEMP_NORMAL_Q } from "./thermoregulation.js";
 import { stepNutrition } from "./nutrition.js";
 import { stepToxicology } from "./toxicology.js";
+import { stepIngestedToxicology } from "./systemic-toxicology.js";
 import { buildLimbStates, stepLimbFatigue } from "./limb.js";
 import { stepCapabilitySources } from "./step/capability.js";
 import { stepMovement } from "./step/movement.js";
@@ -616,6 +617,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
           const nAct: Q = nVMag >= Math.trunc(SCALE.mps) ? q(0.50) as Q : q(0) as Q;
           stepNutrition(e, 1.0, nAct);
           if (e.activeVenoms?.length) stepToxicology(e, 1.0);
+          if (e.activeIngestedToxins?.length || e.withdrawal?.length) stepIngestedToxicology(e, 1.0);
         }
       }
     }
