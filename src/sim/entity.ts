@@ -15,6 +15,7 @@ import type { ActiveSubstance } from "./substance.js";
 import type { CapabilitySource, PendingActivation } from "./capability.js";
 import type { ActiveVenom } from "./toxicology.js";
 import type { LimbState } from "./limb.js";
+import type { ExtendedSenses } from "./sensory-extended.js";
 
 /** Phase 12B: state for an active concentration aura (castTime_ticks = -1 effect). */
 export interface ConcentrationState {
@@ -125,6 +126,9 @@ export interface Entity {
 
   /** Phase 47: individual AI personality traits (aggression, caution, loyalty, opportunism). */
   personality?: PersonalityTraits;
+
+  /** Phase 52: extended sensory modalities (echolocation, electroreception, olfaction). */
+  extendedSenses?: ExtendedSenses;
 
   // anatomy related cache
   compiledAnatomy?: CompiledAnatomyModel;

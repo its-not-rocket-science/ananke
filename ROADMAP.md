@@ -5055,3 +5055,5 @@ Potential future phases building on the RPG foundation:
 **Phase 50: Mythology & Legend (COMPLETE)** — Stories from chronicles become "legends" that NPCs reference, affecting their expectations and behavior.
 
 **Phase 51: Weather & Atmospheric Environment (COMPLETE)** — `WeatherState` (wind, precipitation, fog) flows through `KernelContext.weather`; `deriveWeatherModifiers` produces traction, vision, and thermal deltas applied each tick; `computeWindAimError` adds crosswind drift to ranged aim; `adjustConeRange` modulates breath weapons; 32 tests.
+
+**Phase 52: Extended Sensory Systems (COMPLETE)** — `ExtendedSenses` on `Entity` enables echolocation (darkness-independent, noise-degraded), electroreception (bioelectric short-range, fails on dead targets), and olfaction (wind/precipitation-aware scent detection). `computeDaylightMul(hourOfDay)` → Q for time-of-day lighting. `canDetectExtended` wraps Phase 4 `canDetect` with all modalities. 30 tests.

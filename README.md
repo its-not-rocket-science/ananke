@@ -265,7 +265,16 @@ adds crosswind drift to ranged-combat grouping radius (drift = v_wind_perp × ra
 `adjustConeRange` modulates breath-weapon range ±20 % for head/tailwind. All effects are additive
 with existing sensory and thermal modifiers; `weather` absent = backward-compatible.
 
-**2266 tests.** All coverage thresholds met (statements 95.50 %, branches 84.08 %, functions 91.75 %, lines 95.50 %).
+**Phase 52** adds extended sensory modalities (`src/sim/sensory-extended.ts`): `ExtendedSenses` on
+`Entity` enables echolocation (range-checked, darkness-independent, degraded by noiseMul — dead
+targets still detected via physical echo), electroreception (bioelectric field detection, dead
+targets not detected), and olfaction (wind-direction-aware, precipitation-dispersed scent tracking).
+`computeDaylightMul(hourOfDay)` returns a Q multiplier (q(0.10) at midnight → q(1.0) at noon) for
+integration with `SensoryEnvironment.lightMul`. `canDetectExtended` wraps Phase 4 `canDetect` and
+additionally checks each extended modality in quality order: electroreception q(0.80),
+echolocation q(0.70), olfaction q(0.20–0.40).
+
+**2296 tests.** All coverage thresholds met (statements 95.52 %, branches 84.16 %, functions 91.80 %, lines 95.52 %).
 
 See `ROADMAP.md` for the full development plan.
 
