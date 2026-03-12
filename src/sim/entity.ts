@@ -18,6 +18,7 @@ import type { LimbState } from "./limb.js";
 import type { ExtendedSenses } from "./sensory-extended.js";
 import type { ActiveIngestedToxin, CumulativeExposureRecord, WithdrawalState } from "./systemic-toxicology.js";
 import type { TraumaState } from "./wound-aging.js";
+import type { DiseaseState, ImmunityRecord } from "./disease.js";
 
 /** Phase 12B: state for an active concentration aura (castTime_ticks = -1 effect). */
 export interface ConcentrationState {
@@ -146,6 +147,12 @@ export interface Entity {
    * Reduces effective fear threshold via `deriveFearThresholdMul`.
    */
   traumaState?: TraumaState;
+
+  /** Phase 56: active systemic disease states (incubating or symptomatic). */
+  activeDiseases?: DiseaseState[];
+
+  /** Phase 56: post-recovery immunity records preventing re-infection. */
+  immunity?: ImmunityRecord[];
 
   // anatomy related cache
   compiledAnatomy?: CompiledAnatomyModel;

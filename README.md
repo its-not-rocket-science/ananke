@@ -311,7 +311,19 @@ the best `interpersonal` score, shortens travel time via a speed factor ∈ [q(0
 and computes `supplySufficiency_Q` from available rations vs. travel-day demand.
 No kernel integration — all three systems are host-application-driven downtime APIs.
 
-**2399 tests.** All coverage thresholds met (statements 95.5%+, branches 84%+, functions 91%+, lines 95.5%+).
+**Phase 56** adds entity-to-entity disease transmission (`src/sim/disease.ts`):
+six disease profiles (common_fever, wound_fever, plague_pneumonic, dysentery, marsh_fever,
+wasting_sickness) each with `transmissionRoute`, daily fatigue drain, incubation/symptomatic
+phase timers, a mortality roll via deterministic `eventSeed`, and graduated immunity.
+`exposeToDisease(entity, id)` adds an incubating state (skips immune/already-infected
+entities); `stepDiseaseForEntity(entity, delta_s, worldSeed, tick)` advances phases, drains
+fatigue, rolls mortality on recovery, grants immunity; `computeTransmissionRisk` returns Q
+risk — airborne decays linearly to zero at `airborneRange_Sm`, contact/vector/waterborne are
+flat within 2 m; `spreadDisease(entityMap, pairs, worldSeed, tick)` performs a deterministic
+batch exposure from host-supplied spatial pairs. `DiseaseState` and `ImmunityRecord` added
+to `Entity`. Backward-compatible: absent `activeDiseases` = no effect.
+
+**2436 tests.** All coverage thresholds met (statements 95.5%+, branches 84%+, functions 91%+, lines 95.5%+).
 
 See `ROADMAP.md` for the full development plan.
 
