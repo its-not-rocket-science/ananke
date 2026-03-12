@@ -296,7 +296,22 @@ with natural q(0.002)/day decay; max trauma halves the effective fear threshold 
 `TraumaState` added to `Entity`. All healing and worsening rates are deterministic from
 elapsed seconds — no RNG required. Backward-compatible: absent `traumaState` = no effect.
 
-**2364 tests.** All coverage thresholds met (statements 95.51 %, branches 84.33 %, functions 91.91 %, lines 95.51 %).
+**Phase 55** adds collective non-combat activities (`src/collective-activities.ts`):
+three self-contained group systems for downtime and logistics. **Siege engineering**:
+`createCollectiveProject` / `contributeToCollectiveProject` maintain a shared `progress_Q`
+pool; each entity's contribution = `deriveEngineeringCompetence(entity) × hoursWorked /
+requiredWorkHours`, where competence is the average of `logicalMathematical + bodilyKinesthetic`;
+`isProjectComplete` and `completedAtTick` track completion. **Ritual & ceremony**:
+`stepRitual(participants, elapsedSeconds)` produces a `moraleBonus_Q` (cap q(0.30)) and
+`fearReduction_Q` (60 % of morale bonus) by pooling each participant's average `(intrapersonal
++ musical) / 2` with sqrt(N) group scaling and a linear time ramp over one hour. **Trade
+caravan logistics**: `planCaravanRoute(waypoints, participants, inventory)` derives
+`routeQuality_Q` from the best navigator's `logicalMathematical`, a `negotiationBonus_Q` from
+the best `interpersonal` score, shortens travel time via a speed factor ∈ [q(0.80), q(1.00)],
+and computes `supplySufficiency_Q` from available rations vs. travel-day demand.
+No kernel integration — all three systems are host-application-driven downtime APIs.
+
+**2399 tests.** All coverage thresholds met (statements 95.5%+, branches 84%+, functions 91%+, lines 95.5%+).
 
 See `ROADMAP.md` for the full development plan.
 

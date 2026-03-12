@@ -4675,16 +4675,11 @@ and Physics Realism Summary entries.
   (PTSD-equivalent), phantom pain, recurring infection risk.
 - Relevant for multi-year campaign simulation.
 
-### Collective non-combat activities
+### Collective non-combat activities — **RESOLVED in Phase 55**
 
-- Siege engineering: formation-scale crafting where many entities contribute to a shared
-  progress pool, each contributing `competenceQuality × hoursWorked`.
-- Ritual and ceremony: collective musical and intrapersonal intelligence pool produces
-  emergent morale effects above what individual performance achieves.
-- Trade caravan logistics: economy (Phase 25) interacting with Phase 40 competence and
-  Phase 38 engineering for route and supply planning.
+See Phase 55 entry in the phase log above.
 
-**Test suite**: 1,313 tests passing. Coverage: statements 96.9%, branches 85.8%, functions 95.9%, lines 96.9%.
+**Test suite**: 2,399 tests passing. Coverage: statements 95.5%+, branches 84%+, functions 91%+, lines 95.5%+.
 
 ---
 
@@ -5060,6 +5055,8 @@ Potential future phases building on the RPG foundation:
 **Phase 53: Systemic Toxicology — Ingested / Cumulative (COMPLETE)** — Extends Phase 32C (injection venom) and Phase 10 (pharmacokinetics) with ingested toxins (alcohol, sedative alkaloid, plant poison, heavy lead, radiation dose). Metabolic half-life decay, long-onset symptom timing (minutes vs. seconds for injected venom), motor/cognitive impairment modelled as fatigue and consciousness drain, signed fear modifiers (disinhibition vs. panic), cumulative irreversible dose accumulation for heavy metals and radiation (`CumulativeExposureRecord`), withdrawal states after sustained addictive use. `deriveCumulativeToxicity(entity)` sums chronic exposure for AI/combat queries. Stepped at 1 Hz alongside nutrition and Phase 32C venom. 33 tests.
 
 **Phase 54: Wound Aging & Long-Term Sequelae (COMPLETE)** — Extends Phase 21 (injury) and Phase 9 (infection) with time-based wound progression for downtime / campaign simulation. `stepWoundAging(entity, elapsedSeconds)` → `WoundAgingResult`: uninfected regions heal surface (1%/day) and internal (0.5%/day) damage clamped to permanentDamage floor; infected regions worsen at 1.5%/day with sepsis detection at q(0.85) internalDamage; fractured regions with permanentDamage ≥ q(0.30) inject phantom-pain shock; sustained permanent damage above threshold drains chronic fatigue. `recordTraumaEvent` / `deriveFearThresholdMul` implement PTSD-like trauma with natural decay. `deriveSepsisRisk` aggregates infection severity for the medical AI. `TraumaState` added to `Entity`. 35 tests; 100% coverage.
+
+**Phase 55: Collective Non-Combat Activities (COMPLETE)** — Three group-scale systems for downtime and logistics. **Siege Engineering**: `createCollectiveProject` / `contributeToCollectiveProject` maintain a shared `progress_Q` pool accumulating Σ(competence × hoursWorked / requiredWorkHours); `deriveEngineeringCompetence` averages `logicalMathematical + bodilyKinesthetic`; `isProjectComplete` detects crossing the threshold; `completedAtTick` stamped once. **Ritual & Ceremony**: `stepRitual(participants, elapsedSeconds)` → `{ moraleBonus_Q, fearReduction_Q }` using average `(intrapersonal + musical) / 2` per participant with sqrt(N) collective scaling (diminishing returns) and linear time ramp over `RITUAL_DURATION_s = 3600 s`; moraleBonus capped at `RITUAL_MAX_BONUS = q(0.30)`; fear reduction = 60% of morale bonus. **Trade Caravan Logistics**: `planCaravanRoute(waypoints, participants, inventory)` → `CaravanPlan`; route quality from best `logicalMathematical`; negotiation bonus from best `interpersonal`; speed factor ∈ [q(0.80), q(1.00)] shortens travel time; `supplySufficiency_Q` from ration count vs. travel-day demand. 35 tests; 100% statement/function/line coverage.
 
 ---
 
