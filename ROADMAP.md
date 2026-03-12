@@ -5060,3 +5060,155 @@ Potential future phases building on the RPG foundation:
 **Phase 53: Systemic Toxicology — Ingested / Cumulative (COMPLETE)** — Extends Phase 32C (injection venom) and Phase 10 (pharmacokinetics) with ingested toxins (alcohol, sedative alkaloid, plant poison, heavy lead, radiation dose). Metabolic half-life decay, long-onset symptom timing (minutes vs. seconds for injected venom), motor/cognitive impairment modelled as fatigue and consciousness drain, signed fear modifiers (disinhibition vs. panic), cumulative irreversible dose accumulation for heavy metals and radiation (`CumulativeExposureRecord`), withdrawal states after sustained addictive use. `deriveCumulativeToxicity(entity)` sums chronic exposure for AI/combat queries. Stepped at 1 Hz alongside nutrition and Phase 32C venom. 33 tests.
 
 **Phase 54: Wound Aging & Long-Term Sequelae (COMPLETE)** — Extends Phase 21 (injury) and Phase 9 (infection) with time-based wound progression for downtime / campaign simulation. `stepWoundAging(entity, elapsedSeconds)` → `WoundAgingResult`: uninfected regions heal surface (1%/day) and internal (0.5%/day) damage clamped to permanentDamage floor; infected regions worsen at 1.5%/day with sepsis detection at q(0.85) internalDamage; fractured regions with permanentDamage ≥ q(0.30) inject phantom-pain shock; sustained permanent damage above threshold drains chronic fatigue. `recordTraumaEvent` / `deriveFearThresholdMul` implement PTSD-like trauma with natural decay. `deriveSepsisRisk` aggregates infection severity for the medical AI. `TraumaState` added to `Entity`. 35 tests; 100% coverage.
+
+---
+
+## Integration & Adoption Roadmap
+
+The following items are not simulation phases but pre-production milestones for teams
+evaluating or adopting Ananke as a game-engine foundation. They should be addressed
+in the order below before committing to full-scale production.
+
+---
+
+### 1 · Confirm Fit for Purpose: Use-Case Validation
+
+**Rigorously validate that a physics-first, deterministic simulation is the right
+foundation for the intended player experience.**
+
+Ananke's extreme depth is its defining feature, but it is overkill for many game types.
+An action RPG or story-driven adventure likely does not need to simulate joule-based energy
+expenditure or cavitation from high-velocity rounds. To validate the fit:
+
+- **Create a Design Document Addendum.** Explicitly outline how Ananke's specific features
+  (per-region injuries, stamina in watts, fear accumulation, Q-scaled attributes) will
+  translate into tangible, fun player mechanics. If the translation is opaque or laboured,
+  the fit may be wrong.
+
+- **Build a "Vertical Slice" Prototype.** Implement a small-scale core gameplay loop
+  (e.g., a 1v1 melee encounter) using the actual Ananke kernel. This is the ultimate
+  test of whether simulation depth creates engaging gameplay or merely adds complexity
+  without payoff. If the prototype feels bogged down, or the depth is invisible to the
+  player, reconsider the architecture before sinking further resource.
+
+**Decision gate:** Proceed to onboarding only if the vertical slice demonstrates that
+physics fidelity meaningfully enhances the target experience.
+
+---
+
+### 2 · Deep Integration & Technical Onboarding
+
+**Acknowledge the learning curve and commit to a structured evaluation spike.**
+
+Integrating Ananke is not a plug-and-play endeavor. It requires a significant time
+investment to understand its core systems, data structures (`Entity`, `BodyPlan`,
+`InjuryState`, Q-scaled fixed-point arithmetic), and its deterministic, event-driven
+output model. Before committing to full-scale development, conduct a 2–4 week spike:
+
+- Trace the data flow of a simple melee attack from `Command` input through the kernel
+  to injury output — including tick accumulation, `resolveHit`, and region selection.
+- Build a minimal "observer" that reads `WorldState` after each `stepWorld` call and
+  prints entity positions, condition, and injury summaries to a console or debug overlay.
+- Experiment with saving and loading a complete `WorldState` to understand the
+  serialization format and any Map/BigInt round-trip concerns.
+
+The goal is not to build a game, but to map the terrain and identify the steepest
+learning curves before they impact production timelines.
+
+**Deliverable:** An internal "Ananke Integration Primer" document capturing data-flow
+diagrams, type glossaries, and gotchas discovered during the spike.
+
+---
+
+### 3 · Asset Pipeline & Renderer Bridge
+
+**Design and implement a translation layer between Ananke's simulation state and the
+target game engine's visual representation.**
+
+Ananke provides data (positions, velocities, pose modifiers, animation hints, grapple
+constraints) but renders nothing. A dedicated engineering task is required to build a
+"bridge" that:
+
+- **Consumes simulation output.** Reads `PoseModifier` data, `GrapplePoseConstraint`
+  information, and `AnimationHints` from the kernel after each tick.
+- **Translates to engine primitives.** Maps Ananke's abstract segments (e.g., `"torso"`,
+  `"leftArm"`) to specific bones in the target engine's 3D skeleton and converts blend
+  weights into engine-specific animation parameters (blend tree values, IK targets,
+  procedural lean, ragdoll blending).
+- **Handles multiple body plans.** The bridge must accommodate all body plans Ananke
+  supports — humanoid, quadruped, octopoid, avian — which may require entirely different
+  rigging and animation strategies per plan type.
+- **Manages tick-rate mismatch.** The sim runs at `TICK_HZ` (20 Hz by default); the
+  renderer typically runs at 60–120 Hz. The bridge must interpolate or extrapolate
+  transforms between simulation ticks without introducing temporal artefacts.
+
+**Deliverable:** A documented bridge API with at least one working example (humanoid
+body plan connected to a reference renderer).
+
+---
+
+### 4 · Systematic Validation Against Real-World Data
+
+**Treat the simulation as a scientific model and establish a process for empirical
+validation against real-world datasets.**
+
+To move beyond "calibrated" to "validated," a formal assessment framework is needed.
+This involves iteratively testing sub-systems against real-world data to build
+confidence in the simulation's outputs.
+
+#### Step 1 — Isolate a sub-system
+Break the complex simulation into testable components: impact force, bleeding rate,
+sprint speed, fear-response latency, fatigue-under-load curves.
+
+#### Step 2 — Run parallel experiments
+Configure Ananke to replicate the conditions of a real-world experiment, matching
+virtual entity attributes (mass, anthropometry, `peakForce_N`, `reactionTime_s`)
+to subjects in the target study.
+
+#### Step 3 — Compare outputs statistically
+Run the simulation across a range of deterministic seeds and compare the distribution
+of outcomes against the real-world dataset. Flag sub-systems where the simulated
+distribution falls outside the empirical confidence interval and adjust tuning constants.
+
+**Example datasets for comparison:**
+
+| Sub-system | Potential datasets |
+|:---|:---|
+| Impact force / injury | AFRL Biodynamics Data Bank (6,000+ human/dummy impact tests); CAVEMAN Human Body Model validation methodology against cadaveric data |
+| Athletic performance | Kaggle martial-arts sensor datasets (accelerometer/pressure from punches and kicks); EMG Physical Action Dataset (muscle-activation timing for aggressive vs. normal motion) |
+| Biomechanical benchmarks | SPHERIC benchmark cases (standardised numerical-model validation); sports-science literature on sprint speeds, jump heights, and strike forces |
+
+**Deliverable:** A validation report for each major sub-system documenting methodology,
+dataset source, comparison metric, and residual error. Update `TUNING` constants where
+deviations exceed ±20 % of the empirical mean.
+
+---
+
+### 5 · Community & Ecosystem Development
+
+**Acknowledge the project's current single-maintainer nature and build a support and
+contribution strategy.**
+
+Ananke is a highly ambitious effort currently without a large public community, extensive
+tutorials, or pre-made integration asset packs. Adopting it means committing to its
+specific vision and architecture largely independently. To mitigate this risk:
+
+- **Plan for internal forks and extensions.** Accept that you may need to develop and
+  maintain internal extensions to the kernel for project-specific needs (custom body
+  plans, non-standard damage channels, proprietary AI layers). Contribute these back
+  upstream where the licence and architecture permit.
+- **Allocate time for documentation.** Budget dedicated developer time for internal
+  team documentation — wikis, practical guides, onboarding tutorials — that go beyond
+  the inline JSDoc. A new engineer should be able to ship a working prototype within
+  their first two weeks using internal docs alone.
+- **Establish a versioning contract.** Pin to a specific Ananke commit hash in your
+  dependency manifest. Breaking changes to the `Entity` interface or kernel contract
+  have historically landed without semver-style signalling; track the changelog
+  manually and audit impacts on each upgrade.
+- **Seed community resources.** Consider publishing worked examples, body-plan
+  definitions for common species, and renderer-bridge boilerplate as open-source
+  companion repositories. Community tooling reduces the bus-factor risk of a
+  single-maintainer core library.
+
+**Deliverable:** A living "Ananke Ecosystem" internal wiki, a contribution guide
+for upstream PRs, and a pinned dependency with a defined upgrade-review cadence.
