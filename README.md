@@ -356,7 +356,14 @@ forced-dismount detection (rider over-shock, mount death, mount bolt). `checkMou
 returns a pure `MountStepResult` with no entity mutation. `MountState { mountId, riderId,
 gait }` added to `Entity`.
 
-**2555 tests.** All coverage thresholds met (statements 95.6%+, branches 84%+, functions 92%+, lines 95.6%+).
+**Phase 60** adds environmental hazard zones (`src/sim/hazard.ts`): persistent 2-D circular areas
+with linear exposure falloff that inflict per-second effects (fatigue, thermal shift, radiation dose,
+surface damage, disease exposure). Five types: fire, radiation, toxic_gas, acid, extreme_cold.
+`computeHazardExposure(dist_Sm, hazard)` → Q; `deriveHazardEffect(hazard, exposureQ)` → `HazardEffect`;
+`stepHazardZone` ticks duration (permanent zones are untouched); `isHazardExpired` signals removal.
+No entity field needed — hazards are world-level objects the host iterates each tick.
+
+**2611 tests.** All coverage thresholds met (statements 95.66%+, branches 84.56%+, functions 92.27%+, lines 95.66%+).
 
 See `ROADMAP.md` for the full development plan.
 
