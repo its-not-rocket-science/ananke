@@ -323,7 +323,32 @@ flat within 2 m; `spreadDisease(entityMap, pairs, worldSeed, tick)` performs a d
 batch exposure from host-supplied spatial pairs. `DiseaseState` and `ImmunityRecord` added
 to `Entity`. Backward-compatible: absent `activeDiseases` = no effect.
 
-**2436 tests.** All coverage thresholds met (statements 95.5%+, branches 84%+, functions 91%+, lines 95.5%+).
+**Phase 57** adds aging and lifespan simulation (`src/sim/aging.ts`):
+species-agnostic attribute curves parameterized by normalized age fraction
+(`ageFrac = ageYears / lifespanYears`). Seven piecewise-linear Q dimensions —
+muscular strength (peaks at ageFrac ≈ 0.28), reaction time (faster at peak,
+slowest in infancy and antiquity), motor control, stature (stable adult, slight
+compression in ancient), fluid cognition (logical/spatial/musical — peaks young),
+crystallized cognition (linguistic/interpersonal/intrapersonal — peaks mid-life,
+wisdom outlasts speed), and distress tolerance (peaks middle age). A 25-year-old
+human and a 187-year-old elf (lifespan 600) share the same ageFrac and therefore
+the same developmental multipliers. `applyAgingToAttributes(base, ageYears)` returns
+a new `IndividualAttributes` without mutating the peak baseline; `stepAging(entity,
+elapsedSeconds)` accumulates `entity.age.ageSeconds` for campaign-scale time tracking.
+
+**Phase 58** adds sleep and circadian rhythm (`src/sim/sleep.ts`): a two-factor
+deprivation model tracking `awakeSeconds` (continuous wake duration) and `sleepDebt_s`
+(cumulative nightly shortfall, capped at 72 h). `circadianAlertness(hourOfDay)` → Q
+piecewise-linear alertness curve (peak 17:00, nadir 03:00). Impairment begins after 17 h
+awake and degrades four attributes linearly to max at 72 h: fluid cognition −45%, reaction
+time +45% slower, stability −25%, distress tolerance −35%. Sleep-phase cycling follows the
+90-minute NREM/REM cycle (light 45 min → deep 25 min → rem 20 min → repeat). Prior-night
+debt persists even after short sleep: effective driver = max(awakeSeconds, sleepDebt_s).
+`applySleepToAttributes(base, state)` returns a new `IndividualAttributes` (immutable,
+same pattern as Phase 57); `stepSleep(entity, elapsedSeconds, isSleeping)` mutates
+`entity.sleep`; `entitySleepDebt_h(entity)` convenience helper.
+
+**2513 tests.** All coverage thresholds met (statements 95.6%+, branches 84%+, functions 92%+, lines 95.6%+).
 
 See `ROADMAP.md` for the full development plan.
 

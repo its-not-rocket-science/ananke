@@ -19,6 +19,8 @@ import type { ExtendedSenses } from "./sensory-extended.js";
 import type { ActiveIngestedToxin, CumulativeExposureRecord, WithdrawalState } from "./systemic-toxicology.js";
 import type { TraumaState } from "./wound-aging.js";
 import type { DiseaseState, ImmunityRecord } from "./disease.js";
+import type { AgeState } from "./aging.js";
+import type { SleepState } from "./sleep.js";
 
 /** Phase 12B: state for an active concentration aura (castTime_ticks = -1 effect). */
 export interface ConcentrationState {
@@ -153,6 +155,12 @@ export interface Entity {
 
   /** Phase 56: post-recovery immunity records preventing re-infection. */
   immunity?: ImmunityRecord[];
+
+  /** Phase 57: elapsed life-seconds for aging calculations. */
+  age?: AgeState;
+
+  /** Phase 58: sleep-phase state, debt accumulator, and continuous wake time. */
+  sleep?: SleepState;
 
   // anatomy related cache
   compiledAnatomy?: CompiledAnatomyModel;
