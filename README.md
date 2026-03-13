@@ -348,7 +348,15 @@ debt persists even after short sleep: effective driver = max(awakeSeconds, sleep
 same pattern as Phase 57); `stepSleep(entity, elapsedSeconds, isSleeping)` mutates
 `entity.sleep`; `entitySleepDebt_h(entity)` convenience helper.
 
-**2513 tests.** All coverage thresholds met (statements 95.6%+, branches 84%+, functions 92%+, lines 95.6%+).
+**Phase 59** adds mounted combat (`src/sim/mount.ts`): five mount profiles (pony, horse,
+warhorse, camel, war_elephant) with physics-based charge energy (`bonusEnergy_J = ½mv²`),
+rider height advantage (aim bonus proportional to seat elevation, q(0.12)/m, max q(0.30)),
+mount-to-rider fear contagion (40% of excess shock beyond fearThreshold), and
+forced-dismount detection (rider over-shock, mount death, mount bolt). `checkMountStep`
+returns a pure `MountStepResult` with no entity mutation. `MountState { mountId, riderId,
+gait }` added to `Entity`.
+
+**2555 tests.** All coverage thresholds met (statements 95.6%+, branches 84%+, functions 92%+, lines 95.6%+).
 
 See `ROADMAP.md` for the full development plan.
 

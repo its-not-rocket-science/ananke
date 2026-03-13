@@ -21,6 +21,7 @@ import type { TraumaState } from "./wound-aging.js";
 import type { DiseaseState, ImmunityRecord } from "./disease.js";
 import type { AgeState } from "./aging.js";
 import type { SleepState } from "./sleep.js";
+import type { MountState } from "./mount.js";
 
 /** Phase 12B: state for an active concentration aura (castTime_ticks = -1 effect). */
 export interface ConcentrationState {
@@ -161,6 +162,9 @@ export interface Entity {
 
   /** Phase 58: sleep-phase state, debt accumulator, and continuous wake time. */
   sleep?: SleepState;
+
+  /** Phase 59: rider/mount pair state for cavalry and mounted combat. */
+  mount?: MountState;
 
   // anatomy related cache
   compiledAnatomy?: CompiledAnatomyModel;
