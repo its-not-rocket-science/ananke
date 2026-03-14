@@ -14,7 +14,7 @@
 
     "rewriteRelativeImportExtensions": true,
 
-    "types": [],
+    "types": ["node"],
     "skipLibCheck": true,
     "noEmitOnError": true
   },
