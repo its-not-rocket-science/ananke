@@ -43,3 +43,4 @@ export * from "./chronicle.js";
 export * from "./story-arcs.js";
 export * from "./narrative-render.js";
 export * from "./world-generation.js";
+export * from "./bridge/index.js";

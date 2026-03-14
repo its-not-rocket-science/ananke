@@ -17,7 +17,8 @@
     "run:observer": "node dist/tools/observer.js",
     "run:serialize": "node dist/tools/serialize.js",
     "run:trace-attack": "node dist/tools/trace-attack.js",
-    "run:validation": "node dist/tools/validation.js"
+    "run:validation": "node dist/tools/validation.js",
+    "run:bridge-demo": "node dist/tools/bridge-demo.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

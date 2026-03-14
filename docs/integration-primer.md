@@ -169,7 +169,63 @@ After deserialization, the simulation can be continued from the saved state and 
 
 ---
 
-## 5. Type Glossary
+## 5. Connecting to a Renderer (Bridge API)
+
+Milestone 3 delivers a complete bridge module (`src/bridge/`) that handles tick‑rate conversion, segment‑to‑bone mapping, and deterministic interpolation between simulation ticks. The bridge is a double‑buffered engine that ingests simulation snapshots at 20 Hz and provides smooth interpolated state at render frequency (60 Hz or higher).
+
+### Key features
+
+- **Mapping system** – connect simulation segment IDs (`"leftArm"`, `"torso"`) to your skeleton’s bone names (`"arm_L"`, `"spine_02"`).
+- **Fixed‑point interpolation** – deterministic linear interpolation of positions, velocities, animation weights, pose modifiers, and condition.
+- **Extrapolation control** – optional velocity‑based prediction when render time runs ahead of simulation.
+- **Full API documentation** – see [`bridge‑api.md`](./bridge‑api.md) for detailed reference and examples.
+
+### Minimal setup example
+
+```typescript
+import { BridgeEngine } from "ananke";
+import { extractRigSnapshots, extractMotionVectors, extractConditionSamples } from "ananke";
+
+const config = {
+  mappings: [{
+    bodyPlanId: "humanoid",
+    segments: [
+      { segmentId: "head",    boneName: "head" },
+      { segmentId: "torso",   boneName: "spine_02" },
+      // … map all segments your skeleton uses
+    ],
+  }],
+};
+const engine = new BridgeEngine(config);
+
+// Simulation thread (20 Hz)
+const snapshots = extractRigSnapshots(world);
+const motion = extractMotionVectors(world);
+const condition = extractConditionSamples(world);
+engine.update(snapshots, motion, condition);
+
+// Render thread (60 Hz)
+const state = engine.getInterpolatedState(entityId, renderTime_s);
+if (state) {
+  // Apply state.position_m, state.facing, state.poseModifiers, etc.
+}
+```
+
+### Working demo
+
+Run `npm run run:bridge‑demo` to see a complete bridge workflow with humanoid and quadruped body plans, simulation loop, render‑loop simulation, and determinism verification.
+
+### Integration steps
+
+1. Read the [bridge API documentation](./bridge‑api.md) to understand mapping and interpolation details.
+2. Author mappings for each body plan your game uses (humanoid, quadruped, avian, etc.).
+3. Integrate the bridge into your simulation and render threads as shown above.
+4. Use the `poseModifiers` array to drive vertex‑shader weights or morph targets for injury visualisation.
+5. Use `animation` hints (`idle`, `walk`, `run`, `sprint`) to blend animation clips.
+
+---
+
+## 6. Type Glossary
 
 | Type | Purpose | Module |
 |:---|:---|:---|
@@ -187,7 +243,7 @@ After deserialization, the simulation can be continued from the saved state and 
 
 ---
 
-## 6. Integration Gotchas
+## 7. Integration Gotchas
 
 ### Exact optional property types
 
@@ -235,18 +291,18 @@ When mapping injury regions to a 3D skeleton, note that region IDs are **camelCa
 
 ---
 
-## 7. Recommended Integration Steps
+## 8. Recommended Integration Steps
 
 1. **Start with the vertical slice** (`npm run run:vertical-slice`) to see a complete 1v1 duel.
 2. **Trace a single attack** (`npm run run:trace-attack`) to internalise the data flow.
 3. **Build an observer** that logs the state of your own entities each tick (copy `observer.ts`).
 4. **Implement save/load** using the serialisation pattern (`serialize.ts`).
-5. **Connect the 3D rig** using `extractRigSnapshots` from `model3d.ts`.
+5. **Connect the 3D rig** using the bridge API (`npm run run:bridge‑demo`). See [Bridge API documentation](./bridge‑api.md).
 6. **Profile performance** with many entities (100+) to ensure your bridge does not become a bottleneck.
 
 ---
 
-## 8. Conclusion
+## 9. Conclusion
 
 The evaluation spike confirms that Ananke’s deterministic, physics‑first simulation is **technically integrable** into a host application. The kernel’s data flow is transparent, state observation is straightforward, and serialization round‑trips work as expected. The main challenges are the **fixed‑point arithmetic** and **exact optional property types**, which require disciplined coding patterns.
 
