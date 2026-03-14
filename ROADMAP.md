@@ -5078,7 +5078,7 @@ in the order below before committing to full-scale production.
 
 ---
 
-### 1 · Confirm Fit for Purpose: Use-Case Validation
+### 1 · Confirm Fit for Purpose: Use-Case Validation **COMPLETE** (see Integration Milestone 1)
 
 **Rigorously validate that a physics-first, deterministic simulation is the right
 foundation for the intended player experience.**
@@ -5103,7 +5103,7 @@ physics fidelity meaningfully enhances the target experience.
 
 ---
 
-### 2 · Deep Integration & Technical Onboarding
+### 2 · Deep Integration & Technical Onboarding **COMPLETE** (see Integration Milestone 2)
 
 **Acknowledge the learning curve and commit to a structured evaluation spike.**
 
@@ -5154,7 +5154,9 @@ body plan connected to a reference renderer).
 
 ---
 
-### 4 · Systematic Validation Against Real-World Data
+### 4 · Systematic Validation Against Real-World Data **COMPLETE** (2026-03-14)
+
+**Delivered:** Validation framework (`tools/validation.ts`) with CLI, statistical comparison, calibration scenario validation, and report generation. All six `CALIBRATION_*` scenarios pass expectations. Reports saved to `docs/validation-*.md`. Constants update mechanism ready for low‑level physical constants.
 
 **Treat the simulation as a scientific model and establish a process for empirical
 validation against real-world datasets.**
