@@ -1,4 +1,5 @@
 import type { I32, Q } from "./units.js";
+import type { Material } from "./crafting/materials.js";
 import { SCALE, q, clampQ, qMul, mulDiv, to } from "./units.js";
 import type { ChannelMask } from "./channels.js";
 import { DamageChannel, channelMask } from "./channels.js";
@@ -171,7 +172,7 @@ export interface Sensor extends ItemBase {
   hearingRangeMul: Q;
 }
 
-export type Item = Weapon | Armour | Gear | Shield | RangedWeapon | Exoskeleton | Sensor;
+export type Item = Weapon | Armour | Gear | Shield | RangedWeapon | Exoskeleton | Sensor | Material;
 export interface Loadout {
   items: Item[];
 }

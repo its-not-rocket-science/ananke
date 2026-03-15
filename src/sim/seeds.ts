@@ -5,3 +5,10 @@ export function eventSeed(worldSeed: number, tick: number, aId: number, bId: num
   x ^= x >>> 16;
   return x >>> 0;
 }
+
+/** Deterministic hash of a string to a number (simple sum of char codes). */
+export function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h += s.charCodeAt(i);
+  return h;
+}

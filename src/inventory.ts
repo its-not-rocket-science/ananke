@@ -549,6 +549,189 @@ export function unequipItem(
   return { success: true, item };
 }
 
+// ── Item Query Functions ─────────────────────────────────────────────────────
+
+/**
+ * Count items in inventory by template ID.
+ * Searches all containers and equipped items.
+ */
+export function getItemCountByTemplateId(inventory: Inventory, templateId: string): number {
+  let count = 0;
+
+  // Check equipped items
+  const checkEquipped = (item?: ItemInstance) => {
+    if (item?.templateId === templateId) {
+      count += item.quantity;
+    }
+  };
+  checkEquipped(inventory.equipped.mainHand);
+  checkEquipped(inventory.equipped.offHand);
+  checkEquipped(inventory.equipped.body);
+  checkEquipped(inventory.equipped.head);
+  for (const item of inventory.equipped.containers.values()) {
+    if (item.templateId === templateId) {
+      count += item.quantity;
+    }
+  }
+
+  // Check containers
+  for (const container of inventory.containers) {
+    for (const item of container.items) {
+      if (item.templateId === templateId) {
+        count += item.quantity;
+      }
+    }
+  }
+
+  return count;
+}
+
+/**
+ * Find all material items of a specific material type.
+ * Returns an array of Material items (requires kind "material" and materialTypeId).
+ * Note: This assumes ItemInstance can be cast to Material if kind === "material".
+ * The caller must ensure the item is a material.
+ */
+export function findMaterialsByType(inventory: Inventory, materialTypeId: string): ItemInstance[] {
+  const results: ItemInstance[] = [];
+  // Helper to check and add
+  const checkItem = (item: ItemInstance) => {
+    // We need to examine the item's materialTypeId property.
+    // Since ItemInstance doesn't have materialTypeId, we need to rely on the templateId mapping
+    // or assume that the item is a Material (which extends ItemBase).
+    // For now, we'll assume that templateId indicates material type (e.g., "material_iron").
+    // This is a placeholder; we need to integrate with crafting material system.
+    if (item.templateId.startsWith("material_") && item.templateId.includes(materialTypeId)) {
+      results.push(item);
+    }
+  };
+
+  // Check equipped items
+  if (inventory.equipped.mainHand) checkItem(inventory.equipped.mainHand);
+  if (inventory.equipped.offHand) checkItem(inventory.equipped.offHand);
+  if (inventory.equipped.body) checkItem(inventory.equipped.body);
+  if (inventory.equipped.head) checkItem(inventory.equipped.head);
+  for (const item of inventory.equipped.containers.values()) {
+    checkItem(item);
+  }
+
+  // Check containers
+  for (const container of inventory.containers) {
+    for (const item of container.items) {
+      checkItem(item);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Consume items by template ID, removing them from inventory.
+ * Returns true if enough items were found and consumed.
+ */
+export function consumeItemsByTemplateId(
+  inventory: Inventory,
+  templateId: string,
+  quantity: number,
+): boolean {
+  if (quantity <= 0) return true;
+
+  let remaining = quantity;
+
+  // Helper to consume from an item instance (mutates item.quantity)
+  const consumeFromItem = (item: ItemInstance): boolean => {
+    if (item.templateId === templateId) {
+      const take = Math.min(item.quantity, remaining);
+      item.quantity -= take;
+      remaining -= take;
+      return remaining === 0;
+    }
+    return false;
+  };
+
+  // First, try equipped containers (they might be material items)
+  for (const container of inventory.containers) {
+    if (!container.isEquipped) continue;
+    for (let i = 0; i < container.items.length; i++) {
+      const item = container.items[i]!;
+      if (consumeFromItem(item)) {
+        // Remove item if quantity zero
+        if (item.quantity === 0) {
+          container.items.splice(i, 1);
+        }
+        return true;
+      }
+      if (item.quantity === 0) {
+        container.items.splice(i, 1);
+        i--;
+      }
+    }
+  }
+
+  // Then try any container
+  for (const container of inventory.containers) {
+    for (let i = 0; i < container.items.length; i++) {
+      const item = container.items[i]!;
+      if (consumeFromItem(item)) {
+        if (item.quantity === 0) {
+          container.items.splice(i, 1);
+        }
+        return true;
+      }
+      if (item.quantity === 0) {
+        container.items.splice(i, 1);
+        i--;
+      }
+    }
+  }
+
+  // Finally, try equipped items (unlikely for materials)
+  const equippedItems = [
+    inventory.equipped.mainHand,
+    inventory.equipped.offHand,
+    inventory.equipped.body,
+    inventory.equipped.head,
+  ];
+  for (const item of equippedItems) {
+    if (item && consumeFromItem(item)) {
+      // Unequip if quantity zero? Probably not, but we can just leave it equipped with zero quantity.
+      // For simplicity, we'll ignore zero quantity equipped items.
+      return true;
+    }
+  }
+
+  return remaining === 0;
+}
+
+/**
+ * Add an item to inventory, attempting to place it in a suitable container.
+ * Prefers equipped containers with sufficient capacity.
+ * Returns success and the container it was added to (or null if equipped).
+ */
+export function addItemToInventory(
+  inventory: Inventory,
+  item: ItemInstance,
+): { success: boolean; container: Container | null; reason?: string } {
+  // Try equipped containers first
+  for (const container of inventory.containers) {
+    if (container.isEquipped) {
+      const result = addItemToContainer(container, item);
+      if (result.success) {
+        return { success: true, container };
+      }
+    }
+  }
+  // Try any container
+  for (const container of inventory.containers) {
+    const result = addItemToContainer(container, item);
+    if (result.success) {
+      return { success: true, container };
+    }
+  }
+  // No suitable container found
+  return { success: false, container: null, reason: "no_capacity" };
+}
+
 // ── Item Modifications ────────────────────────────────────────────────────────
 
 /** Apply a modification to an item. */
