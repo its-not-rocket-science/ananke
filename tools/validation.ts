@@ -38,6 +38,15 @@ import { TUNING } from "../src/sim/tuning.js";
 import type { CommandMap } from "../src/sim/commands.js";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
 import { v3 } from "../src/sim/vec3.js";
+import { cToQ } from "../src/sim/thermoregulation.js";
+import { DT_S } from "../src/sim/tick.js";
+
+/** Convert Q-coded temperature to Celsius (mirroring thermoregulation.ts internal qToC). */
+function qToC(qVal: number): number {
+  const TEMP_MIN_C = 10;
+  const TEMP_RANGE_C = 54;
+  return TEMP_MIN_C + (qVal / SCALE.Q) * TEMP_RANGE_C;
+}
 
 // ─── CLI argument handling ──────────────────────────────────────────────────────
 
@@ -263,16 +272,32 @@ const directValidationScenarios: DirectValidationScenario[] = [
     },
     setup: (seed: number) => {
       const entity = mkHumanoidEntity(1, 1, 0, 0);
+      // Set initial core temperature to ambient (25°C)
+      const ambientTemp = cToQ(25.0);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (entity.condition as any).coreTemp_Q = ambientTemp;
       const world = mkWorld(seed, [entity]);
       const ctx: KernelContext = {
         tractionCoeff: q(1.0),
         tuning: TUNING.tactical,
-        ambientTemperature_Q: q(0.5),
+        ambientTemperature_Q: ambientTemp,
       };
-      return { world, ctx, steps: 1000 };
+      // Run for 5 seconds (100 ticks at 20 Hz) to observe temperature rise
+      return { world, ctx, steps: 100 };
     },
     extractOutcome: (world: WorldState) => {
-      return 1.06;
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const finalCoreQ = (entity.condition as any).coreTemp_Q ?? cToQ(37.0);
+      const initialCoreQ = cToQ(25.0);
+      const deltaC = qToC(finalCoreQ) - qToC(initialCoreQ);
+      const massReal_kg = entity.attributes.morphology.mass_kg / SCALE.kg;
+      const thermalMass = massReal_kg * 3500; // J/°C
+      const delta_s = 100 * DT_S / SCALE.s; // seconds elapsed
+      const metabolicHeat = deltaC * thermalMass / delta_s; // W
+      const specific = metabolicHeat / massReal_kg; // W/kg
+      return specific;
     },
     unit: "W/kg",
     tolerancePercent: 20,
