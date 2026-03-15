@@ -45,13 +45,13 @@ export const RALLY_COOLDOWN_TICKS = 60;
 // ── Fear decay constants ──────────────────────────────────────────────────────
 
 /** Base fear decay per tick, multiplied by distressTolerance. */
-const BASE_DECAY: Q = q(0.008);
+export const BASE_DECAY: Q = q(0.008);
 
 /** Additional fear decay per nearby living ally (cohesion effect). */
-const ALLY_COHESION: Q = q(0.002);
+export const ALLY_COHESION: Q = q(0.002);
 
 /** Additional fear decay per ally in a tight formation (Phase 32E). */
-const FORMATION_COHESION: Q = q(0.003);
+export const FORMATION_COHESION: Q = q(0.003);
 
 // ── Pure functions ────────────────────────────────────────────────────────────
 

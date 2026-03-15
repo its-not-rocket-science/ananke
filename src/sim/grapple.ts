@@ -38,7 +38,7 @@ const REF_H:     I32 = to.m(1.75);   //  17_500 fixed-point units
 
 // ---------- Grip decay per tick ----------
 // 0.5% per tick → released after ~200 ticks (10 s) without maintenance
-const GRIP_DECAY_PER_TICK: Q = 50;  // = q(0.005)
+export const GRIP_DECAY_PER_TICK: Q = 50;  // = q(0.005)
 
 // ============================================================
 //  Physics-derived cost helpers

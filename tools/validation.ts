@@ -10,7 +10,7 @@
 //  6. Generate validation report documenting methodology and residual error
 //
 // Usage: node dist/tools/validation.js [subsystem] [seedStart] [seedEnd]
-//   subsystem: "impact", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology"
+//   subsystem: "impact", "grappling", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology"
 //   seedStart: first seed (default: 1)
 //   seedEnd: last seed inclusive (default: 100)
 //
@@ -49,6 +49,7 @@ import { computeChargeBonus, HORSE, CHARGE_MASS_FRAC } from "../src/sim/mount.js
 import { stepRitual, RITUAL_MAX_BONUS } from "../src/collective-activities.js";
 import { stepWoundAging, deriveSepsisRisk, SEPSIS_THRESHOLD } from "../src/sim/wound-aging.js";
 import { getIngestedToxinProfile, stepIngestedToxicology, deriveCumulativeToxicity, INGESTED_TOXIN_PROFILES } from "../src/sim/systemic-toxicology.js";
+import { GRIP_DECAY_PER_TICK } from "../src/sim/grapple.js";
 
 /** Convert Q-coded temperature to Celsius (mirroring thermoregulation.ts internal qToC). */
 function qToC(qVal: number): number {
@@ -1158,6 +1159,46 @@ const directValidationScenarios: DirectValidationScenario[] = [
       const effect = deriveHazardEffect(CAMPFIRE, exposureQ);
       // Convert fatigueInc_Q to fraction per second
       return effect.fatigueInc_Q / SCALE.Q;
+    },
+    unit: "fraction",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Grappling Grip Decay",
+    description: "Grip decay rate per tick without maintenance. Measure gripQ after 100 ticks of grapple hold.",
+    empiricalDataset: {
+      name: "Grip decay rate (simulation-calibrated)",
+      description: "GRIP_DECAY_PER_TICK = q(0.005) per tick",
+      dataPoints: [
+        { value: 0.005, unit: "fraction", source: "Simulation constant GRIP_DECAY_PER_TICK", notes: "Grip decay per tick" },
+      ],
+      mean: 0.005,
+      confidenceIntervalHalf: 0.001,
+    },
+    setup: (seed: number) => {
+      const attacker = mkHumanoidEntity(1, 1, 0, 0);
+      const target = mkHumanoidEntity(2, 2, 0, 0);
+      // Set high energy reserve to avoid exhaustion
+      attacker.energy.reserveEnergy_J = 100000;
+      // Simulate grapple initiation by setting grip directly
+      attacker.grapple.holdingTargetId = target.id;
+      attacker.grapple.gripQ = q(0.5);
+      target.grapple.heldByIds.push(attacker.id);
+      const world = mkWorld(seed, [attacker, target]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      // Steps to simulate decay (100 ticks)
+      return { world, ctx, steps: 100 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const attacker = world.entities.find(e => e.id === 1);
+      if (!attacker) return 0;
+      const initialGripQ = q(0.5);
+      const finalGripQ = attacker.grapple.gripQ;
+      const decayPerTick = (initialGripQ - finalGripQ) / 100;
+      return decayPerTick / SCALE.Q; // convert to fraction
     },
     unit: "fraction",
     tolerancePercent: 20,

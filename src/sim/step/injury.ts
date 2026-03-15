@@ -13,6 +13,13 @@ import { v3 } from "../vec3.js";
 import { TICK_HZ, DT_S } from "../tick.js";
 /* ------------------ Conditions -> injury (armour-aware) ------------------ */
 
+export const SHOCK_FROM_FLUID = q(0.0040);
+export const SHOCK_FROM_INTERNAL = q(0.0020);
+export const CONSC_LOSS_FROM_SHOCK = q(0.0100);
+export const CONSC_LOSS_FROM_SUFF = q(0.0200);
+export const FATAL_FLUID_LOSS: Q = q(0.80) as Q;
+
+
 export function stepConditionsToInjury(e: Entity, world: WorldState, ambientTemperature_Q?: Q): void {
   const traitProfile = buildTraitProfile(e.traits);
   const armour = deriveArmourProfile(e.loadout);
@@ -348,8 +355,6 @@ export function stepInjuryProgression(e: Entity, tick: number): void {
     : rawBleedThisTick;
   e.injury.fluidLoss = clampQ(e.injury.fluidLoss + bleedThisTick, 0, SCALE.Q);
 
-  const SHOCK_FROM_FLUID = q(0.0040);
-  const SHOCK_FROM_INTERNAL = q(0.0020);
 
   e.injury.shock = clampQ(
     e.injury.shock + qMul(e.injury.fluidLoss, SHOCK_FROM_FLUID) + qMul(e.injury.byRegion["torso"]?.internalDamage ?? q(0), SHOCK_FROM_INTERNAL),
