@@ -43,6 +43,7 @@ import { DT_S } from "../src/sim/tick.js";
 import { deriveAgeMultipliers } from "../src/sim/aging.js";
 import { deriveSleepDeprivationMuls } from "../src/sim/sleep.js";
 import type { SleepState } from "../src/sim/sleep.js";
+import { stepDiseaseForEntity, exposeToDisease, getDiseaseProfile, DISEASE_PROFILES } from "../src/sim/disease.js";
 
 /** Convert Q-coded temperature to Celsius (mirroring thermoregulation.ts internal qToC). */
 function qToC(qVal: number): number {
