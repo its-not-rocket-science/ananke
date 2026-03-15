@@ -362,14 +362,10 @@ export function stepInjuryProgression(e: Entity, tick: number): void {
     SCALE.Q
   );
 
-  const CONSC_LOSS_FROM_SHOCK = q(0.0100);
-  const CONSC_LOSS_FROM_SUFF = q(0.0200);
-
   const loss = clampQ(qMul(e.injury.shock, CONSC_LOSS_FROM_SHOCK) + qMul(e.condition.suffocation, CONSC_LOSS_FROM_SUFF) + qMul(regionKOFactor(e.injury), q(0.0100)), 0, SCALE.Q);
   e.injury.consciousness = clampQ(e.injury.consciousness - loss, 0, SCALE.Q);
 
   // Phase 9: explicit fatal fluid loss threshold (complements the shock path)
-  const FATAL_FLUID_LOSS: Q = q(0.80) as Q;
   if (e.injury.fluidLoss >= FATAL_FLUID_LOSS || e.injury.shock >= SCALE.Q || e.injury.consciousness === 0) {
     e.injury.dead = true;
     e.injury.consciousness = q(0);
