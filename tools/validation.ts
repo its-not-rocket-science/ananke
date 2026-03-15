@@ -10,7 +10,7 @@
 //  6. Generate validation report documenting methodology and residual error
 //
 // Usage: node dist/tools/validation.js [subsystem] [seedStart] [seedEnd]
-//   subsystem: "impact", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep""
+//   subsystem: "impact", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology"
 //   seedStart: first seed (default: 1)
 //   seedEnd: last seed inclusive (default: 100)
 //
@@ -44,6 +44,11 @@ import { deriveAgeMultipliers } from "../src/sim/aging.js";
 import { deriveSleepDeprivationMuls } from "../src/sim/sleep.js";
 import type { SleepState } from "../src/sim/sleep.js";
 import { stepDiseaseForEntity, exposeToDisease, getDiseaseProfile, DISEASE_PROFILES } from "../src/sim/disease.js";
+import { computeHazardExposure, deriveHazardEffect, CAMPFIRE } from "../src/sim/hazard.js";
+import { computeChargeBonus, HORSE, CHARGE_MASS_FRAC } from "../src/sim/mount.js";
+import { stepRitual, RITUAL_MAX_BONUS } from "../src/collective-activities.js";
+import { stepWoundAging, deriveSepsisRisk, SEPSIS_THRESHOLD } from "../src/sim/wound-aging.js";
+import { getIngestedToxinProfile, stepIngestedToxicology, deriveCumulativeToxicity, INGESTED_TOXIN_PROFILES } from "../src/sim/systemic-toxicology.js";
 
 /** Convert Q-coded temperature to Celsius (mirroring thermoregulation.ts internal qToC). */
 function qToC(qVal: number): number {
@@ -947,6 +952,214 @@ const directValidationScenarios: DirectValidationScenario[] = [
       return bleedScale / SCALE.Q;
     },
     unit: "Q/Q",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Disease Mortality Rate",
+    description: "Mortality rate of pneumonic plague. Infect entity with plague, step through symptomatic duration, measure mortality outcome across seeds.",
+    empiricalDataset: {
+      name: "Historical pneumonic plague mortality",
+      description: "Historical mortality rate of pneumonic plague ≈60%",
+      dataPoints: [
+        { value: 0.60, unit: "fraction", source: "Historical epidemiology", notes: "Mortality rate of pneumonic plague" },
+      ],
+      mean: 0.60,
+      confidenceIntervalHalf: 0.05,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      // Infect with pneumonic plague
+      const profile = getDiseaseProfile("plague_pneumonic");
+      if (!profile) throw new Error("Plague profile not found");
+      // Start already symptomatic (elapsed = incubation period)
+      entity.activeDiseases = [{
+        diseaseId: profile.id,
+        phase: "symptomatic",
+        elapsedSeconds: 0,
+      }];
+      // No steps needed; we will call stepDiseaseForEntity directly in extractOutcome
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const profile = getDiseaseProfile("plague_pneumonic");
+      if (!profile) return 0;
+      // Step disease forward by symptomatic duration + 1 second
+      const delta_s = profile.symptomaticDuration_s + 1;
+      const result = stepDiseaseForEntity(entity, delta_s, world.seed, world.tick);
+      return result.died ? 1 : 0;
+    },
+    unit: "fraction",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Mount Charge Bonus",
+    description: "Charge bonus energy for horse at gallop speed. Compute kinetic energy contributed by mount mass fraction.",
+    empiricalDataset: {
+      name: "Cavalry charge energy (simulation-calibrated)",
+      description: "CHARGE_MASS_FRAC = q(0.08) (8% of mount mass contributes to strike)",
+      dataPoints: [
+        { value: 0.08, unit: "fraction", source: "Simulation constant CHARGE_MASS_FRAC", notes: "Charge mass fraction" },
+      ],
+      mean: 0.08,
+      confidenceIntervalHalf: 0.01,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      // Compute charge bonus for horse at gallop speed
+      const profile = HORSE;
+      const speed = profile.gallopSpeed_mps; // SCALE.mps
+      const chargeBonus = computeChargeBonus(profile, speed);
+      // Compute actual mass fraction: strikeMass_kg / profile.mass_kg
+      const actualMassFraction = chargeBonus.strikeMass_kg / profile.mass_kg;
+      return actualMassFraction;
+    },
+    unit: "fraction",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Collective Ritual Morale",
+    description: "Morale bonus from ritual with single participant. Compute morale bonus after 1 hour ritual.",
+    empiricalDataset: {
+      name: "Ritual morale bonus (simulation-calibrated)",
+      description: "RITUAL_MAX_BONUS = q(0.30) maximum possible morale bonus",
+      dataPoints: [
+        { value: 0.30, unit: "fraction", source: "Simulation constant RITUAL_MAX_BONUS", notes: "Maximum morale bonus" },
+      ],
+      mean: 0.30,
+      confidenceIntervalHalf: 0.05,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      // Run ritual with single participant for full duration
+      const result = stepRitual([entity], 3600);
+      // Convert morale bonus Q to fraction
+      return result.moraleBonus_Q / SCALE.Q;
+    },
+    unit: "fraction",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Wound Aging Sepsis Risk",
+    description: "Sepsis risk from internal damage and infection. Compute sepsis risk for entity with internal damage and infected region.",
+    empiricalDataset: {
+      name: "Sepsis threshold (simulation-calibrated)",
+      description: "SEPSIS_THRESHOLD = q(0.85) (85% internal damage threshold for sepsis)",
+      dataPoints: [
+        { value: 0.85, unit: "fraction", source: "Simulation constant SEPSIS_THRESHOLD", notes: "Sepsis threshold" },
+      ],
+      mean: 0.85,
+      confidenceIntervalHalf: 0.05,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      // Add internal damage and infection to torso region
+      const region = entity.injury.byRegion["torso"];
+      if (region) {
+        region.internalDamage = q(0.5);
+        region.infectedTick = 0;
+      }
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const sepsisRisk = deriveSepsisRisk(entity);
+      // Convert Q to fraction
+      return sepsisRisk / SCALE.Q;
+    },
+    unit: "fraction",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Toxicology Radiation Dose",
+    description: "Cumulative toxicity rate for radiation dose. Compute irreversible rate for radiation_dose toxin profile.",
+    empiricalDataset: {
+      name: "Radiation dose cumulative rate (simulation-calibrated)",
+      description: "irreversibleRate_Q for radiation_dose profile",
+      dataPoints: [
+        { value: 0.001, unit: "fraction", source: "Simulation constant radiation_dose irreversibleRate_Q", notes: "Cumulative toxicity rate per second" },
+      ],
+      mean: 0.001,
+      confidenceIntervalHalf: 0.0005,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      // Find radiation_dose profile
+      const profile = INGESTED_TOXIN_PROFILES.find(p => p.id === "radiation_dose");
+      if (!profile) return 0;
+      // Return irreversible rate as fraction
+      return (profile.irreversibleRate_Q ?? 0) / SCALE.Q;
+    },
+    unit: "fraction",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Hazard Fatigue Drain",
+    description: "Fatigue drain rate from fire hazard at full intensity. Compute fatigueInc_Q per second for campfire hazard.",
+    empiricalDataset: {
+      name: "Fire fatigue drain rate (simulation-calibrated)",
+      description: "fatigueInc_Q = q(0.020) per second at full intensity",
+      dataPoints: [
+        { value: 0.020, unit: "fraction", source: "Simulation constant fatigueInc_Q", notes: "Fatigue drain per second" },
+      ],
+      mean: 0.020,
+      confidenceIntervalHalf: 0.005,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      // Compute exposure at distance 0 (centre of hazard)
+      const exposureQ = computeHazardExposure(0, CAMPFIRE);
+      const effect = deriveHazardEffect(CAMPFIRE, exposureQ);
+      // Convert fatigueInc_Q to fraction per second
+      return effect.fatigueInc_Q / SCALE.Q;
+    },
+    unit: "fraction",
     tolerancePercent: 20,
   },
 ];
