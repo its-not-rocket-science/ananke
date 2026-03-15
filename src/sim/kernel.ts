@@ -859,7 +859,8 @@ function resolveAttack(world: WorldState,
     const tgtWpn = findWeapon(target.loadout);
     if (tgtWpn) {
       const tgtReach_m = tgtWpn.reach_m ?? Math.trunc(target.attributes.morphology.stature_m * 0.45);
-      attackSkill = clampQ(qMul(attackSkill, reachDomPenaltyQ(reach_m, tgtReach_m)), q(0.01), q(0.99));
+      const penalty = reachDomPenaltyQ(reach_m, tgtReach_m);
+      attackSkill = clampQ(qMul(attackSkill, penalty), q(0.01), q(0.99));
     }
   }
 
@@ -1625,7 +1626,7 @@ function impactEnergy_J(attacker: Entity, wpn: Weapon, relVel_mps: Vec3): number
   return Math.max(0, Number(num / denom));
 }
 
-function applyImpactToInjury(
+export function applyImpactToInjury(
   target: Entity,
   wpn: Weapon,
   energy_J: number,
@@ -1660,8 +1661,8 @@ function applyImpactToInjury(
     if (energy_J === 0) return;
   }
 
-  const SURF_J = 100;
-  const INT_J = 160;
+  const SURF_J = 6930;
+  const INT_J = 1000;
   const STR_J = 220;
 
   const energyQ = energy_J * SCALE.Q;
