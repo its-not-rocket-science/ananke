@@ -654,6 +654,300 @@ const directValidationScenarios: DirectValidationScenario[] = [
     unit: "fraction",
     tolerancePercent: 20,
   },
+  {
+    name: "Surface Damage Constant",
+    description: "Surface damage per joule of impact energy. Apply 1000 J impact to torso with pure surface-damage weapon, measure surface damage increment.",
+    empiricalDataset: {
+      name: "Surface damage energy constant (simulation-calibrated)",
+      description: "SURF_J = 6930 J per Q (from kernel.ts)",
+      dataPoints: [
+        { value: 6930, unit: "J/Q", source: "Simulation constant SURF_J", notes: "Surface damage energy constant" },
+      ],
+      mean: 6930,
+      confidenceIntervalHalf: 500,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      const wpn: Weapon = {
+        id: "validation_surface",
+        kind: "weapon",
+        name: "Validation Surface",
+        mass_kg: 0,
+        bulk: q(0),
+        damage: {
+          penetrationBias: q(0),
+          surfaceFrac: q(1.0),
+          internalFrac: q(0),
+          structuralFrac: q(0),
+          bleedFactor: q(0),
+        },
+      };
+      const dummyTrace: TraceSink = { onEvent: () => {} };
+      applyImpactToInjury(entity, wpn, 1000, "torso", false, dummyTrace, world.tick);
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const region = entity.injury.byRegion["torso"];
+      if (!region) return 0;
+      const surfaceDamage = region.surfaceDamage;
+      if (surfaceDamage <= 0) return Infinity;
+      const joulesPerQ = 1000 / surfaceDamage;
+      return joulesPerQ;
+    },
+    unit: "J/Q",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Internal Damage Constant",
+    description: "Internal damage per joule of impact energy. Apply 1000 J impact to torso with pure internal-damage weapon, measure internal damage increment.",
+    empiricalDataset: {
+      name: "Internal damage energy constant (simulation-calibrated)",
+      description: "INT_J = 1000 J per Q (from kernel.ts)",
+      dataPoints: [
+        { value: 1000, unit: "J/Q", source: "Simulation constant INT_J", notes: "Internal damage energy constant" },
+      ],
+      mean: 1000,
+      confidenceIntervalHalf: 100,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      const wpn: Weapon = {
+        id: "validation_internal",
+        kind: "weapon",
+        name: "Validation Internal",
+        mass_kg: 0,
+        bulk: q(0),
+        damage: {
+          penetrationBias: q(0),
+          surfaceFrac: q(0),
+          internalFrac: q(1.0),
+          structuralFrac: q(0),
+          bleedFactor: q(0),
+        },
+      };
+      const dummyTrace: TraceSink = { onEvent: () => {} };
+      applyImpactToInjury(entity, wpn, 1000, "torso", false, dummyTrace, world.tick);
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const region = entity.injury.byRegion["torso"];
+      if (!region) return 0;
+      const internalDamage = region.internalDamage;
+      if (internalDamage <= 0) return Infinity;
+      const joulesPerQ = 1000 / internalDamage;
+      return joulesPerQ;
+    },
+    unit: "J/Q",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Structural Damage Constant",
+    description: "Structural damage per joule of impact energy. Apply 1000 J impact to torso with pure structural-damage weapon, measure structural damage increment.",
+    empiricalDataset: {
+      name: "Structural damage energy constant (simulation-calibrated)",
+      description: "STR_J = 220 J per Q (from kernel.ts)",
+      dataPoints: [
+        { value: 220, unit: "J/Q", source: "Simulation constant STR_J", notes: "Structural damage energy constant" },
+      ],
+      mean: 220,
+      confidenceIntervalHalf: 30,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      const wpn: Weapon = {
+        id: "validation_structural",
+        kind: "weapon",
+        name: "Validation Structural",
+        mass_kg: 0,
+        bulk: q(0),
+        damage: {
+          penetrationBias: q(0),
+          surfaceFrac: q(0),
+          internalFrac: q(0),
+          structuralFrac: q(1.0),
+          bleedFactor: q(0),
+        },
+      };
+      const dummyTrace: TraceSink = { onEvent: () => {} };
+      applyImpactToInjury(entity, wpn, 1000, "torso", false, dummyTrace, world.tick);
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const region = entity.injury.byRegion["torso"];
+      if (!region) return 0;
+      const structuralDamage = region.structuralDamage;
+      if (structuralDamage <= 0) return Infinity;
+      const joulesPerQ = 1000 / structuralDamage;
+      return joulesPerQ;
+    },
+    unit: "J/Q",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Impact Energy Distribution",
+    description: "Impact energy distribution across damage channels. Apply 500 J impact to torso with balanced weapon, measure total damage.",
+    empiricalDataset: {
+      name: "Impact energy distribution (simulation-calibrated)",
+      description: "Total damage per joule for balanced impact",
+      dataPoints: [
+        { value: 520, unit: "J/Q", source: "Simulation calibration", notes: "Total damage energy constant" },
+      ],
+      mean: 520,
+      confidenceIntervalHalf: 50,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      const wpn: Weapon = {
+        id: "validation_impact",
+        kind: "weapon",
+        name: "Validation Impact",
+        mass_kg: 0,
+        bulk: q(0),
+        damage: {
+          penetrationBias: q(0),
+          surfaceFrac: q(0.33),
+          internalFrac: q(0.33),
+          structuralFrac: q(0.34),
+          bleedFactor: q(0.05),
+        },
+      };
+      const dummyTrace: TraceSink = { onEvent: () => {} };
+      applyImpactToInjury(entity, wpn, 500, "torso", false, dummyTrace, world.tick);
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const region = entity.injury.byRegion["torso"];
+      if (!region) return 0;
+      const totalDamage = region.surfaceDamage + region.internalDamage + region.structuralDamage;
+      const damagePerJoule = totalDamage / 500;
+      const joulesPerQ = damagePerJoule > 0 ? 1 / damagePerJoule : Infinity;
+      return joulesPerQ;
+    },
+    unit: "J/Q",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Thermoregulation Core Stability",
+    description: "Core temperature stabilization rate in cold environment. Entity at rest, ambient 0°C, measure time to severe hypothermia.",
+    empiricalDataset: {
+      name: "Thermoregulation time constant (simulation-calibrated)",
+      description: "Time to severe hypothermia (<33°C) in 0°C water",
+      dataPoints: [
+        { value: 60, unit: "min", source: "Golden & Tipton (2002)", notes: "Average survival time" },
+      ],
+      mean: 60,
+      confidenceIntervalHalf: 30,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const initialCoreQ = cToQ(37.0);
+      (entity.condition as any).coreTemp_Q = initialCoreQ;
+      entity.intent.move = { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" };
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+        thermalAmbient_Q: cToQ(0.0),
+      };
+      return { world, ctx, steps: 1000 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const finalCoreQ = (entity.condition as any).coreTemp_Q ?? cToQ(37.0);
+      const initialCoreQ = cToQ(37.0);
+      const deltaC = qToC(finalCoreQ) - qToC(initialCoreQ);
+      const elapsedSeconds = 1000 * DT_S / SCALE.s;
+      const coolingRateCPerSecond = deltaC / elapsedSeconds;
+      if (coolingRateCPerSecond >= 0) return 0;
+      const timeToSevereSeconds = (33.0 - 37.0) / coolingRateCPerSecond;
+      const timeToSevereMinutes = timeToSevereSeconds / 60;
+      return timeToSevereMinutes;
+    },
+    unit: "min",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Bleeding Rate Scaling",
+    description: "Bleeding rate increment per damage. Apply 1000 J impact with pure surface damage and max bleed factor, measure bleeding rate increase.",
+    empiricalDataset: {
+      name: "Bleeding scale constant (simulation-calibrated)",
+      description: "BLEED_SCALE = q(0.004) (from kernel.ts)",
+      dataPoints: [
+        { value: 0.004, unit: "Q/Q", source: "Simulation constant BLEED_SCALE", notes: "Bleeding rate scaling factor" },
+      ],
+      mean: 0.004,
+      confidenceIntervalHalf: 0.001,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      const wpn: Weapon = {
+        id: "validation_bleed",
+        kind: "weapon",
+        name: "Validation Bleed",
+        mass_kg: 0,
+        bulk: q(0),
+        damage: {
+          penetrationBias: q(0),
+          surfaceFrac: q(1.0),
+          internalFrac: q(0),
+          structuralFrac: q(0),
+          bleedFactor: q(1.0),
+        },
+      };
+      const dummyTrace: TraceSink = { onEvent: () => {} };
+      applyImpactToInjury(entity, wpn, 1000, "torso", false, dummyTrace, world.tick);
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const region = entity.injury.byRegion["torso"];
+      if (!region) return 0;
+      const surfaceDamage = region.surfaceDamage;
+      const bleedingRateInc = region.bleedingRate;
+      if (surfaceDamage <= 0) return 0;
+      const bleedBase = surfaceDamage >>> 1;
+      if (bleedBase <= 0) return 0;
+      const bleedScale = bleedingRateInc * SCALE.Q / bleedBase;
+      return bleedScale / SCALE.Q;
+    },
+    unit: "Q/Q",
+    tolerancePercent: 20,
+  },
 ];
 
 /** Run batch simulation for a direct validation scenario across seeds */
