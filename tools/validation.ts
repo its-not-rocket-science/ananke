@@ -37,6 +37,7 @@ import { stepWorld, applyImpactToInjury } from "../src/sim/kernel.js";
 import { TUNING } from "../src/sim/tuning.js";
 import type { CommandMap } from "../src/sim/commands.js";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
+import { v3 } from "../src/sim/vec3.js";
 
 // ─── CLI argument handling ──────────────────────────────────────────────────────
 
@@ -384,6 +385,42 @@ const directValidationScenarios: DirectValidationScenario[] = [
       return 60;
     },
     unit: "min",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Human Sprint Speed",
+    description: "Maximum sprint speed of average human on flat terrain. Entity sprints for 5 seconds to reach terminal velocity.",
+    empiricalDataset: {
+      name: "Human sprint speed literature",
+      description: "Average maximal sprint speed for adult humans 6-8 m/s",
+      dataPoints: [
+        { value: 6.0, unit: "m/s", source: "Sports science literature", notes: "Lower bound" },
+        { value: 8.0, unit: "m/s", source: "Sports science literature", notes: "Upper bound" },
+      ],
+      mean: 7.0,
+      confidenceIntervalHalf: 1.0,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      // Set sprint intent in x direction
+      entity.intent.move = { dir: v3(SCALE.m, 0, 0), intensity: q(1.0), mode: "sprint" };
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      // Run for 5 seconds (100 ticks at 20 Hz)
+      return { world, ctx, steps: 100 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const v = entity.velocity_mps;
+      const speed = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+      // Convert from fixed-point m/s to real m/s
+      return speed / SCALE.mps;
+    },
+    unit: "m/s",
     tolerancePercent: 20,
   },
 ];

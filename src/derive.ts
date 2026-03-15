@@ -45,7 +45,7 @@ export function deriveMaxSprintSpeed_mps(a: IndividualAttributes): number {
   const reachSqrt = sqrtQ(a.morphology.reachScale);
 
   const controlFactor = q(0.6) + qMul(q(0.4), a.control.controlQuality);
-  const K = q(6.2);
+  const K = q(2.86);
 
   const mult = qMul(qMul(qMul(qMul(K, c), reachSqrt), controlFactor), a.performance.conversionEfficiency);
   return mulDiv(mult, SCALE.mps, SCALE.Q);
