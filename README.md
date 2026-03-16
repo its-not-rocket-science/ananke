@@ -369,6 +369,27 @@ See `ROADMAP.md` for the full development plan.
 
 ---
 
+## Validation against real-world data
+
+Ananke's physics-based approach is systematically validated against external real-world datasets and literature sources. The validation framework (`tools/validation.ts`) compares simulation outputs with empirical measurements across multiple sub‑systems, ensuring the simulation's predictions remain grounded in reality.
+
+**Key validated sub‑systems:**
+- Movement energy cost (AddBiomechanics walking metabolic dataset)
+- Projectile drag (BVR Air Combat dataset)
+- Jump height and sprint speed (sports‑science literature)
+- Fracture thresholds (Yamada 1970, McElhaney 1970)
+- Thoracic and pelvic impact tolerance (AFRL Biodynamics Data Bank)
+- Damage energy constants (NATO STANAG 4526)
+- Sleep deprivation cognitive impairment (Van Dongen et al. 2003 meta‑analysis)
+- Disease mortality rates (historical epidemiology)
+- Calibration scenarios: armed vs. unarmed, untreated knife wound, first‑aid saves lives, fracture recovery, untreated infection, plate armour effectiveness
+
+Each validation scenario runs a deterministic simulation that replicates the experimental conditions of the external dataset, then compares the simulated mean against the empirical mean with a ±20 % tolerance. A constant‑suggestion system provides actionable recommendations for tuning constants when deviations exceed tolerance.
+
+**Validation inventory:** A comprehensive catalogue of all validated and potential future datasets is maintained in [`docs/external-dataset-validation-inventory.md`](docs/external-dataset-validation-inventory.md). The inventory includes 19 currently validated sources and identifies 11 high‑value external datasets for future validation work across muscle mechanics, ground‑reaction forces, blast physics, cognitive state, and melee combat.
+
+**Run validation:** `npm run run:validation <subsystem>` generates a validation report for a specific sub‑system.
+
 ## Physics realism summary (post-Phase 30)
 
 Ananke now models the complete survivability stack. Five independent threat vectors can kill

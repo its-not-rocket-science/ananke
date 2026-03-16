@@ -5158,7 +5158,7 @@ body plan connected to a reference renderer).
 
 ### 4 · Systematic Validation Against Real-World Data **COMPLETE** (2026-03-14)
 
-**Delivered:** Validation framework (`tools/validation.ts`) with CLI, statistical comparison, calibration scenario validation, and report generation. All six `CALIBRATION_*` scenarios pass expectations. Reports saved to `docs/validation-*.md`. Constants update mechanism ready for low‑level physical constants.
+**Delivered:** Validation framework (`tools/validation.ts`) with CLI, statistical comparison, calibration scenario validation, and report generation. All six `CALIBRATION_*` scenarios pass expectations. Reports saved to `docs/validation-*.md`. Constants update mechanism ready for low‑level physical constants. The framework now includes direct validation against three external real‑world datasets (AddBiomechanics walking metabolic cost, BVR Air Combat projectile drag, sports‑science jump height) and a comprehensive inventory of validated and potential future datasets (`docs/external-dataset-validation-inventory.md`).
 
 **Treat the simulation as a scientific model and establish a process for empirical
 validation against real-world datasets.**
@@ -5188,6 +5188,12 @@ distribution falls outside the empirical confidence interval and adjust tuning c
 | Impact force / injury | AFRL Biodynamics Data Bank (6,000+ human/dummy impact tests); CAVEMAN Human Body Model validation methodology against cadaveric data |
 | Athletic performance | Kaggle martial-arts sensor datasets (accelerometer/pressure from punches and kicks); EMG Physical Action Dataset (muscle-activation timing for aggressive vs. normal motion) |
 | Biomechanical benchmarks | SPHERIC benchmark cases (standardised numerical-model validation); sports-science literature on sprint speeds, jump heights, and strike forces |
+| Muscle mechanics & tissue deformation | OpenArm Multisensor 2.0 (ultrasound muscle deformation + sEMG + force); OpenArm 1.0/2.0 volumetric arm scans |
+| Ground reaction forces & injury biomechanics | One‑Legged Stand Test Dataset (32 participants, force plates); Runner Injury GRF Dataset (534 runners, 2025); Tibial Stress Injury GRF Dataset (66 runners, 2025) |
+| Blast & hypervelocity impact | Confined Blast Loading Dataset (C‑4 detonations in steel cylinders); pyBLOSSUM Hypervelocity Impact Database (>1700 hypervelocity‑impact data points) |
+| Cognitive & physiological state | NASA SOTERIA Flight Simulation Dataset (24 pilots, EEG/ECG/eye‑tracking); RealPDEBench (real‑world measurements + paired numerical simulations) |
+| Melee combat & weapon dynamics | 5 Master Long Sword Strikes Database (5MUDM); Martial Arts, Dancing and Sports Dataset (stereo multi‑view for 3D pose estimation) |
+| Supporting resources | Forensic Biomechanics textbook; FOROST Osteological Database; Neural Network Classification of Master Cuts (Klempous et al., 2021); Response Timing and Muscular Coordination in Fencing (Williams & Walmsley, 2000) |
 
 **Deliverable:** A validation report for each major sub-system documenting methodology,
 dataset source, comparison metric, and residual error. Update `TUNING` constants where
