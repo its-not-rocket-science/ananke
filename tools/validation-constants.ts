@@ -251,6 +251,46 @@ export const SCENARIO_CONSTANT_MAP: Readonly<Record<string, ConstantReference[]>
       description: "Mortality rate for pneumonic plague (fraction)"
     }
   ],
+  "Movement Energy Cost (AddBiomechanics)": [
+    {
+      file: "src/sim/step/energy.ts",
+      name: "BASE_IDLE_W",
+      currentValue: 80,
+      line: 11,
+      type: "numeric",
+      description: "Base idle power demand (watts)"
+    }
+  ],
+  "Projectile Drag (BVR Air Combat)": [
+    {
+      file: "src/equipment.ts",
+      name: "rng_pistol.dragCoeff_perM",
+      currentValue: 200, // q(0.002) * SCALE.Q
+      line: 726,
+      type: "q",
+      fractionalValue: 0.002,
+      description: "Drag coefficient per metre for pistol projectile (fraction)"
+    }
+  ],
+  "Jump Height (Sports Science Literature)": [
+    {
+      file: "src/derive.ts",
+      name: "JUMP_ENERGY_FRACTION",
+      currentValue: 283, // q(0.0283) * SCALE.Q
+      line: 18,
+      type: "q",
+      fractionalValue: 0.0283,
+      description: "Fraction of reserve energy that can be spent on a single jump (fraction)"
+    },
+    {
+      file: "src/units.ts",
+      name: "G_mps2",
+      currentValue: 98067,
+      line: 16,
+      type: "numeric",
+      description: "Gravitational acceleration (m/s² scaled by SCALE.mps2)"
+    }
+  ],
 } as const;
 
 // -----------------------------------------------------------------------------

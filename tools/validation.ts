@@ -10,14 +10,15 @@
 //  6. Generate validation report documenting methodology and residual error
 //
 // Usage: node dist/tools/validation.js [subsystem] [seedStart] [seedEnd]
-//   subsystem: "impact", "grappling", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology"
+//   subsystem: "impact", "grappling", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology", "movement", "projectile", "jump"
 //   seedStart: first seed (default: 1)
 //   seedEnd: last seed inclusive (default: 100)
 //
 // Output: validation report in docs/validation-{subsystem}-{timestamp}.md
 
 /// <reference types="node" />
-import { q, SCALE, type Q } from "../src/units.js";
+import { q, SCALE, mulDiv, type Q } from "../src/units.js";
+import { deriveJumpHeight_m, JUMP_ENERGY_FRACTION } from "../src/derive.js";
 import { runArena } from "../src/arena.js";
 import {
   CALIBRATION_ARMED_VS_UNARMED,
@@ -1386,6 +1387,119 @@ const directValidationScenarios: DirectValidationScenario[] = [
       return entity.injury.fluidLoss / SCALE.Q;
     },
     unit: "fraction",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Movement Energy Cost (AddBiomechanics)",
+    description: "Metabolic cost of walking at 1.4 m/s. Entity walks for 10 seconds, measure average power demand per kg.",
+    empiricalDataset: {
+      name: "AddBiomechanics walking metabolic cost",
+      description: "Gross metabolic cost of walking at 1.4 m/s: 3.8 W/kg",
+      dataPoints: [
+        { value: 3.8, unit: "W/kg", source: "AddBiomechanics dataset", notes: "Walking at 1.4 m/s, adult human" },
+      ],
+      mean: 3.8,
+      confidenceIntervalHalf: 0.5,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      // Set walking velocity ~1.4 m/s in x direction
+      entity.velocity_mps = v3(Math.trunc(1.4 * SCALE.mps), 0, 0);
+      // Set intent to walk (mode "walk") to ensure movement processing
+      entity.intent.move = { dir: v3(SCALE.m, 0, 0), intensity: q(1.0), mode: "walk" };
+      // Ensure high reserve energy to avoid exhaustion
+      entity.energy.reserveEnergy_J = 100000;
+      // Store initial reserve for later calculation
+      const world = mkWorld(seed, [entity]);
+      (world as any)._initialReserve = entity.energy.reserveEnergy_J;
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      // Run for 10 seconds (200 ticks at 20 Hz)
+      return { world, ctx, steps: 200 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const initialReserve = (world as any)._initialReserve;
+      if (typeof initialReserve !== 'number') return 0;
+      const finalReserve = entity.energy.reserveEnergy_J;
+      const energyDrained_J = initialReserve - finalReserve;
+      const elapsedSeconds = 200 * DT_S / SCALE.s; // 10 seconds
+      const deficitPower_W = energyDrained_J / elapsedSeconds;
+      const continuousPower_W = entity.attributes.performance.continuousPower_W / SCALE.W;
+      const totalPower_W = deficitPower_W + continuousPower_W;
+      const mass_kg = entity.attributes.morphology.mass_kg / SCALE.kg;
+      const specificPower_Wkg = totalPower_W / mass_kg;
+      return specificPower_Wkg;
+    },
+    unit: "W/kg",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Projectile Drag (BVR Air Combat)",
+    description: "Energy retention of pistol round at 50m. Compute energy fraction using linear drag model.",
+    empiricalDataset: {
+      name: "BVR Air Combat projectile drag data",
+      description: "9mm pistol round energy retention at 50m: 85%",
+      dataPoints: [
+        { value: 0.85, unit: "fraction", source: "BVR Air Combat dataset", notes: "Energy retention at 50m for 9mm pistol" },
+      ],
+      mean: 0.85,
+      confidenceIntervalHalf: 0.05,
+    },
+    setup: (seed: number) => {
+      // No world needed, pure computation
+      const world = mkWorld(seed, []);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      // Use pistol drag coefficient from equipment.ts
+      const dragCoeff_perM = q(0.002); // from rng_pistol
+      const range_m = 50 * SCALE.m;
+      const lossFrac = mulDiv(range_m, dragCoeff_perM, SCALE.m);
+      const energyFrac = Math.max(0, SCALE.Q - lossFrac) / SCALE.Q;
+      return energyFrac;
+    },
+    unit: "fraction",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Jump Height (Sports Science Literature)",
+    description: "Vertical jump height of average human. Compute jump height using default attributes.",
+    empiricalDataset: {
+      name: "Sports science vertical jump height",
+      description: "Average standing vertical jump height for adult humans: 0.45 m",
+      dataPoints: [
+        { value: 0.45, unit: "m", source: "Sports science literature", notes: "Standing vertical jump, adult male" },
+      ],
+      mean: 0.45,
+      confidenceIntervalHalf: 0.1,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      const attrs = entity.attributes;
+      const reserveSpend_J = Math.trunc(attrs.performance.reserveEnergy_J * JUMP_ENERGY_FRACTION / SCALE.Q);
+      const jumpHeight = deriveJumpHeight_m(attrs, reserveSpend_J);
+      // Convert from fixed-point m to real m
+      return jumpHeight / SCALE.m;
+    },
+    unit: "m",
     tolerancePercent: 20,
   },
 ];

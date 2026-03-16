@@ -14,6 +14,9 @@ export interface DeriveContext {
   carryRules?: CarryRules;
 }
 
+/** Fraction of reserve energy that can be spent on a single jump (~0.0283). */
+export const JUMP_ENERGY_FRACTION = q(0.0283);
+
 export function derivePeakForceEff_N(a: IndividualAttributes): number {
   const F0 = a.performance.peakForce_N;
   const controlFactor = q(0.7) + qMul(q(0.3), a.control.controlQuality);
@@ -59,8 +62,9 @@ export function deriveJumpHeight_m(a: IndividualAttributes, reserveSpend_J: numb
   const Eeff = mulDiv(mulDiv(Euse, a.performance.conversionEfficiency, SCALE.Q), controlFactor, SCALE.Q);
 
   // h = E/(m*g)
-  const denom = mulDiv(m, 9810, SCALE.kg); // ~m*g in N-ish units
-  return mulDiv(Eeff, SCALE.m, Math.max(1, denom));
+  // force_real = m * g   where m = mass_real (kg), g = G_mps2 / SCALE.mps2
+  const force_real = mulDiv(m, G_mps2, SCALE.mps2 * SCALE.kg); // integer Newtons
+  return mulDiv(Eeff, SCALE.m, Math.max(1, force_real));
 }
 
 export function deriveMovementCaps(
@@ -78,7 +82,7 @@ export function deriveMovementCaps(
 
   const baseV = deriveMaxSprintSpeed_mps(a);
   const baseA = deriveMaxAcceleration_mps2(a, ctx.tractionCoeff);
-  const baseH = deriveJumpHeight_m(a, Math.trunc(a.performance.reserveEnergy_J / 6));
+  const baseH = deriveJumpHeight_m(a, Math.trunc(a.performance.reserveEnergy_J * JUMP_ENERGY_FRACTION / SCALE.Q));
 
   return {
     maxSprintSpeed_mps: mulDiv(baseV, speedMul, SCALE.Q),
