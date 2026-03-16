@@ -52,6 +52,7 @@ import { getIngestedToxinProfile, stepIngestedToxicology, deriveCumulativeToxici
 import { GRIP_DECAY_PER_TICK } from "../src/sim/grapple.js";
 import { BASE_DECAY, ALLY_COHESION, FORMATION_COHESION } from "../src/sim/morale.js";
 import { SHOCK_FROM_FLUID, SHOCK_FROM_INTERNAL, CONSC_LOSS_FROM_SHOCK, CONSC_LOSS_FROM_SUFF, FATAL_FLUID_LOSS } from "../src/sim/step/injury.js";
+import { generateConstantSuggestions } from "./validation-constants.js";
 
 /** Convert Q-coded temperature to Celsius (mirroring thermoregulation.ts internal qToC). */
 function qToC(qVal: number): number {
@@ -628,14 +629,14 @@ const directValidationScenarios: DirectValidationScenario[] = [
     name: "Sleep Deprivation Cognitive Impairment",
     description: "Cognitive fluid intelligence decline after 48 hours of continuous wakefulness.",
     empiricalDataset: {
-      name: "Sleep deprivation literature (simulation-calibrated)",
-      description: "Simulation models gradual cognitive decline; calibrated to 48h awake",
+      name: "Sleep deprivation literature (real-world)",
+      description: "Van Dongen et al. (2003) meta-analysis of cognitive performance after 48h total sleep deprivation",
       dataPoints: [
-        { value: 0.746, unit: "fraction", source: "Simulation calibration", notes: "Cognitive fluid performance after 48h awake" },
         { value: 0.55, unit: "fraction", source: "Van Dongen et al. (2003) sleep restriction meta-analysis", notes: "Cognitive performance after 48h total sleep deprivation (literature range)" },
+        { value: 0.746, unit: "fraction", source: "Previous simulation calibration", notes: "Prior model overestimated performance; needs adjustment to match real data" },
       ],
-      mean: 0.746,
-      confidenceIntervalHalf: 0.05,
+      mean: 0.55,
+      confidenceIntervalHalf: 0.1,
     },
     setup: (seed: number) => {
       // No world needed, just compute multiplier directly
@@ -1516,6 +1517,8 @@ ${empiricalCIHalf ? `**95% CI half-width:** ±${empiricalCIHalf} ${scenario.unit
 ${pass ? '**PASS** — Simulated mean matches empirical dataset within tolerance.' : '**FAIL** — Simulated mean differs from empirical dataset beyond tolerance.'}
 
 ${!pass ? `**Recommendation:** Review constants affecting ${scenario.name}. Compare simulation outputs with source data and adjust constants as needed.` : '**Recommendation:** No changes needed.'}
+
+${!pass ? generateConstantSuggestions(scenario.name, simulatedMean, empiricalMean) : ''}
 
 ---
 
