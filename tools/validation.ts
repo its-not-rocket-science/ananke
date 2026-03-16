@@ -10,7 +10,7 @@
 //  6. Generate validation report documenting methodology and residual error
 //
 // Usage: node dist/tools/validation.js [subsystem] [seedStart] [seedEnd]
-//   subsystem: "impact", "grappling", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology", "movement", "projectile", "jump"
+//   subsystem: "impact", "grappling", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology", "movement", "projectile", "jump", "muscle"
 //   seedStart: first seed (default: 1)
 //   seedEnd: last seed inclusive (default: 100)
 //
@@ -38,6 +38,8 @@ import { stepWorld, applyImpactToInjury } from "../src/sim/kernel.js";
 import { TUNING } from "../src/sim/tuning.js";
 import type { CommandMap } from "../src/sim/commands.js";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
+import { generateIndividual } from "../src/generate.js";
+import { HUMAN_BASE } from "../src/archetypes.js";
 import { v3 } from "../src/sim/vec3.js";
 import { cToQ } from "../src/sim/thermoregulation.js";
 import { DT_S } from "../src/sim/tick.js";
@@ -1500,6 +1502,116 @@ const directValidationScenarios: DirectValidationScenario[] = [
       return jumpHeight / SCALE.m;
     },
     unit: "m",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Muscle Force Scaling Exponent (OpenArm)",
+    description: "Allometric scaling of peak force with body mass across generated population. Compute exponent (slope) of log(peakForce_N) vs log(mass_kg).",
+    empiricalDataset: {
+      name: "Allometric scaling literature",
+      description: "Muscle strength scales with body mass^0.67 (geometric similarity). Empirical exponent range 0.60-0.75.",
+      dataPoints: [
+        { value: 0.67, unit: "exponent", source: "Biomechanics literature", notes: "Geometric similarity exponent for muscle strength" },
+      ],
+      mean: 0.67,
+      confidenceIntervalHalf: 0.05,
+    },
+    setup: (seed: number) => {
+      // Generate 100 individuals with deterministic sub-seeds
+      const individuals: Array<{logMass: number, logForce: number}> = [];
+      const N = 100;
+      for (let i = 0; i < N; i++) {
+        const subSeed = seed * 1000 + i;
+        const attrs = generateIndividual(subSeed, HUMAN_BASE);
+        const mass_kg = attrs.morphology.mass_kg / SCALE.kg;
+        const force_N = attrs.performance.peakForce_N / SCALE.N;
+        // Avoid log(0) or negative
+        if (mass_kg <= 0 || force_N <= 0) continue;
+        individuals.push({
+          logMass: Math.log(mass_kg),
+          logForce: Math.log(force_N),
+        });
+        if (seed === 1 && i < 5) {
+          console.log(`[Muscle scaling] seed=${seed} i=${i} mass=${mass_kg.toFixed(2)} kg force=${force_N.toFixed(1)} N`);
+        }
+      }
+      // Store for extraction
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      (world as any)._scalingData = individuals;
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const data = (world as any)._scalingData;
+      if (!Array.isArray(data) || data.length < 10) return 0;
+      // Simple linear regression: slope = cov(x,y) / var(x)
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+      const n = data.length;
+      for (const point of data) {
+        sumX += point.logMass;
+        sumY += point.logForce;
+        sumXY += point.logMass * point.logForce;
+        sumXX += point.logMass * point.logMass;
+      }
+      const cov = sumXY - sumX * sumY / n;
+      const varX = sumXX - sumX * sumX / n;
+      const slope = cov / varX;
+      console.log(`[Muscle scaling] n=${n} slope=${slope} cov=${cov} varX=${varX} meanX=${sumX/n} meanY=${sumY/n}`);
+      return slope;
+    },
+    unit: "exponent",
+    tolerancePercent: 20,
+  },
+  {
+    name: "Muscle Force Coefficient of Variation (OpenArm)",
+    description: "Coefficient of variation (CV) of peak force across generated population. Compute CV = std(peakForce_N) / mean(peakForce_N).",
+    empiricalDataset: {
+      name: "Human strength variability literature",
+      description: "Coefficient of variation for maximum voluntary contraction force in human populations: ~18%.",
+      dataPoints: [
+        { value: 0.18, unit: "fraction", source: "Biomechanics literature", notes: "Typical CV for muscle strength" },
+      ],
+      mean: 0.18,
+      confidenceIntervalHalf: 0.03,
+    },
+    setup: (seed: number) => {
+      // Generate 100 individuals with deterministic sub-seeds
+      const individuals: Array<{force_N: number}> = [];
+      const N = 100;
+      for (let i = 0; i < N; i++) {
+        const subSeed = seed * 1000 + i;
+        const attrs = generateIndividual(subSeed, HUMAN_BASE);
+        const force_N = attrs.performance.peakForce_N / SCALE.N;
+        if (force_N <= 0) continue;
+        individuals.push({ force_N });
+      }
+      // Store for extraction
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      const world = mkWorld(seed, [entity]);
+      (world as any)._cvData = individuals;
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+      };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const data = (world as any)._cvData;
+      if (!Array.isArray(data) || data.length < 10) return 0;
+      const forces = data.map(d => d.force_N);
+      const n = forces.length;
+      const mean = forces.reduce((a, b) => a + b, 0) / n;
+      const variance = forces.reduce((sq, f) => sq + (f - mean) ** 2, 0) / n;
+      const std = Math.sqrt(variance);
+      const cv = std / mean;
+      console.log(`[Muscle CV] n=${n} mean force=${mean.toFixed(1)} N std=${std.toFixed(1)} N cv=${cv.toFixed(3)}`);
+      return cv;
+    },
+    unit: "fraction",
     tolerancePercent: 20,
   },
 ];

@@ -291,6 +291,46 @@ export const SCENARIO_CONSTANT_MAP: Readonly<Record<string, ConstantReference[]>
       description: "Gravitational acceleration (m/s² scaled by SCALE.mps2)"
     }
   ],
+  "Muscle Force Scaling Exponent (OpenArm)": [
+    {
+      file: "src/archetypes.ts",
+      name: "actuatorScaleVar",
+      currentValue: 1800, // q(0.18) * SCALE.Q
+      line: 83,
+      type: "q",
+      fractionalValue: 0.18,
+      description: "Coefficient of variation for actuator strength (fraction)"
+    },
+    {
+      file: "src/archetypes.ts",
+      name: "actuatorMassFrac",
+      currentValue: 4000, // q(0.40) * SCALE.Q
+      line: 86,
+      type: "q",
+      fractionalValue: 0.40,
+      description: "Fraction of total mass that is actuator/muscle (fraction)"
+    }
+  ],
+  "Muscle Force Coefficient of Variation (OpenArm)": [
+    {
+      file: "src/archetypes.ts",
+      name: "actuatorScaleVar",
+      currentValue: 1800, // q(0.18) * SCALE.Q
+      line: 83,
+      type: "q",
+      fractionalValue: 0.18,
+      description: "Coefficient of variation for actuator strength (fraction)"
+    },
+    {
+      file: "src/archetypes.ts",
+      name: "peakForceVar",
+      currentValue: 2200, // q(0.22) * SCALE.Q
+      line: 90,
+      type: "q",
+      fractionalValue: 0.22,
+      description: "Coefficient of variation for peak force (fraction)"
+    }
+  ],
 } as const;
 
 // -----------------------------------------------------------------------------
