@@ -76,18 +76,18 @@ export const HUMAN_BASE: Archetype = {
   attentionDepth: 4,              // track up to 4 threats simultaneously
   threatHorizon_m: to.m(40),      // process threats within 40m
 
-  statureVar: q(0.08),
-  massVar: q(0.18),
+  statureVar: q(0.04),
+  massVar: q(0.09),
 
   reachVar: q(0.10),
-  actuatorScaleVar: q(0.18),
+  actuatorScaleVar: q(0.005),
   structureScaleVar: q(0.14),
 
   actuatorMassFrac: q(0.40),
-  actuatorMassVar: q(0.20),
+  actuatorMassVar: q(0.025),
 
   peakForce_N: to.N(1840),
-  peakForceVar: q(0.22),
+  peakForceVar: q(0.005),
 
   peakPower_W: to.W(1200),
   peakPowerVar: q(0.30),

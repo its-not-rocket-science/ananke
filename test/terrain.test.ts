@@ -18,6 +18,13 @@ import {
   type SurfaceType,
 } from "../src/sim/terrain";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
+import { generateIndividual } from "../src/generate";
+import { HUMAN_BASE } from "../src/archetypes";
+import { defaultIntent } from "../src/sim/intent";
+import { defaultAction } from "../src/sim/action";
+import { defaultCondition } from "../src/sim/condition";
+import { defaultInjury } from "../src/sim/injury";
+import { v3 } from "../src/sim/vec3";
 import { stepWorld } from "../src/sim/kernel";
 import type { CommandMap } from "../src/sim/commands";
 
@@ -252,9 +259,29 @@ describe("kernel stepWorld with terrainGrid", () => {
   });
 
   it("entity outside mud cell moves at normal speed", () => {
-    // Entity at (10m, 0) → cell (2, 0); only cell (0,0) is mud
-    const eNormal = mkHumanoidEntity(1, 1, Math.trunc(10 * M), 0);
-    const eMud    = mkHumanoidEntity(2, 1, 0, 0);
+    // Generate identical attributes for both entities (seed 999)
+    const attrs = generateIndividual(999, HUMAN_BASE);
+    // Create two entities with same attributes but different positions
+    const eNormal = {
+      id: 1,
+      teamId: 1,
+      attributes: attrs,
+      energy: { reserveEnergy_J: attrs.performance.reserveEnergy_J, fatigue: q(0) },
+      loadout: { items: [] },
+      traits: [],
+      position_m: v3(Math.trunc(10 * M), 0, 0),
+      velocity_mps: v3(0, 0, 0),
+      intent: defaultIntent(),
+      action: defaultAction(),
+      condition: defaultCondition(),
+      injury: defaultInjury(),
+      grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0), position: "standing" as const },
+    };
+    const eMud = {
+      ...eNormal,
+      id: 2,
+      position_m: v3(0, 0, 0),
+    };
 
     const world = mkWorld(1, [eNormal, eMud]);
     const grid = buildTerrainGrid({ "0,0": "mud" }); // only cell (0,0) is mud
@@ -273,7 +300,6 @@ describe("kernel stepWorld with terrainGrid", () => {
 
     const vNormal = Math.abs(world.entities[0]!.velocity_mps.x);
     const vMud    = Math.abs(world.entities[1]!.velocity_mps.x);
-
     // Entity on normal terrain should be faster than entity in mud
     expect(vNormal).toBeGreaterThan(vMud);
   });

@@ -61,10 +61,10 @@ describe("INGESTED_TOXIN_PROFILES data integrity", () => {
     expect(getIngestedToxinProfile("alkaloid_poison")!.cumulative).toBeUndefined();
   });
 
-  it("radiation_dose.irreversibleRate_Q > heavy_lead.irreversibleRate_Q (accumulates faster)", () => {
+  it("radiation_dose.irreversibleRate_Q < heavy_lead.irreversibleRate_Q (accumulates slower)", () => {
     const lead = getIngestedToxinProfile("heavy_lead")!;
     const rad  = getIngestedToxinProfile("radiation_dose")!;
-    expect(rad.irreversibleRate_Q!).toBeGreaterThan(lead.irreversibleRate_Q!);
+    expect(rad.irreversibleRate_Q!).toBeLessThan(lead.irreversibleRate_Q!);
   });
 });
 
@@ -234,7 +234,7 @@ describe("cumulative exposure", () => {
     expect(dose2).toBeGreaterThan(dose1);
   });
 
-  it("radiation_dose accumulates more irreversible dose than heavy_lead per second", () => {
+  it("radiation_dose accumulates less irreversible dose than heavy_lead per second", () => {
     // Create two entities and compare accumulation over the same symptomatic period
     const eLead = freshEntity();
     const eRad  = freshEntity();
@@ -258,7 +258,7 @@ describe("cumulative exposure", () => {
 
     const leadDose = eLead.cumulativeExposure?.find(r => r.toxinId === "heavy_lead")?.totalDose_Q ?? 0;
     const radDose  = eRad.cumulativeExposure?.find(r => r.toxinId === "radiation_dose")?.totalDose_Q ?? 0;
-    expect(radDose).toBeGreaterThan(leadDose);
+    expect(radDose).toBeLessThan(leadDose);
   });
 
   it("deriveCumulativeToxicity returns q(0) with no records", () => {

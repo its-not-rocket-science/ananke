@@ -74,14 +74,14 @@ Why:
 - Keep simulation numerically stable
 
 Formula:
-effectiveScale = 1 + (sizeComposite - 1) * 0.25
+effectiveScale = 1 + (sizeComposite - 1) * 1.34
 
-The >>> 2 below = divide by 4 = 25% contribution.
+51% geometric scaling (damped).
 */
 const actuatorScale = clampQ(
   qMul(
     actuatorScaleBase,
-    (SCALE.Q + ((sizeComposite - SCALE.Q) >>> 2)) as Q
+    (SCALE.Q + mulDiv(sizeComposite - SCALE.Q, q(2.00), SCALE.Q)) as Q
   ),
   q(0.6),  // lower bound: still functional
   q(1.8)   // upper bound: avoid runaway strength

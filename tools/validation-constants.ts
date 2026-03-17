@@ -222,10 +222,10 @@ export const SCENARIO_CONSTANT_MAP: Readonly<Record<string, ConstantReference[]>
     {
       file: "src/sim/systemic-toxicology.ts",
       name: "INGESTED_TOXIN_PROFILES[4].irreversibleRate_Q",
-      currentValue: 100, // q(0.010) * SCALE.Q
+      currentValue: 10, // q(0.001) * SCALE.Q
       line: 185,
       type: "q",
-      fractionalValue: 0.010,
+      fractionalValue: 0.001,
       description: "Irreversible dose accumulation rate per second for radiation_dose toxin (fraction)"
     }
   ],
@@ -233,10 +233,10 @@ export const SCENARIO_CONSTANT_MAP: Readonly<Record<string, ConstantReference[]>
     {
       file: "src/sim/hazard.ts",
       name: "BASE_EFFECTS.fire.fatigueInc_Q",
-      currentValue: 200, // q(0.020) * SCALE.Q
+      currentValue: 333, // q(0.0333) * SCALE.Q
       line: 96,
       type: "q",
-      fractionalValue: 0.020,
+      fractionalValue: 0.0333,
       description: "Fatigue increase per second at full fire exposure (fraction)"
     }
   ],
@@ -295,10 +295,10 @@ export const SCENARIO_CONSTANT_MAP: Readonly<Record<string, ConstantReference[]>
     {
       file: "src/archetypes.ts",
       name: "actuatorScaleVar",
-      currentValue: 1800, // q(0.18) * SCALE.Q
+      currentValue: 50, // q(0.005) * SCALE.Q
       line: 83,
       type: "q",
-      fractionalValue: 0.18,
+      fractionalValue: 0.005,
       description: "Coefficient of variation for actuator strength (fraction)"
     },
     {
@@ -315,20 +315,50 @@ export const SCENARIO_CONSTANT_MAP: Readonly<Record<string, ConstantReference[]>
     {
       file: "src/archetypes.ts",
       name: "actuatorScaleVar",
-      currentValue: 1800, // q(0.18) * SCALE.Q
+      currentValue: 50, // q(0.005) * SCALE.Q
       line: 83,
       type: "q",
-      fractionalValue: 0.18,
+      fractionalValue: 0.005,
       description: "Coefficient of variation for actuator strength (fraction)"
     },
     {
       file: "src/archetypes.ts",
       name: "peakForceVar",
-      currentValue: 2200, // q(0.22) * SCALE.Q
+      currentValue: 50, // q(0.005) * SCALE.Q
       line: 90,
       type: "q",
-      fractionalValue: 0.22,
+      fractionalValue: 0.005,
       description: "Coefficient of variation for peak force (fraction)"
+    }
+  ],
+  "Sleep Deprivation Cognitive Impairment": [
+    {
+      file: "src/sim/sleep.ts",
+      name: "COGNITION_FLUID_COEFF",
+      currentValue: 0.798,
+      line: 68,
+      type: "numeric",
+      description: "Coefficient for cognition fluid degradation per unit impair fraction"
+    }
+  ],
+  "One-Legged Stand Test Balance (placeholder)": [
+    {
+      file: "src/sim/tuning.ts",
+      name: "TUNING.tactical.stumbleBaseChance",
+      currentValue: 200, // q(0.002) * SCALE.Q
+      line: 48,
+      type: "q",
+      fractionalValue: 0.002,
+      description: "Base chance of stumbling per tick when sprinting (tactical tuning)"
+    },
+    {
+      file: "src/archetypes.ts",
+      name: "HUMAN_BASE.stability",
+      currentValue: 7000, // q(0.70) * SCALE.Q
+      line: 109,
+      type: "q",
+      fractionalValue: 0.70,
+      description: "Default stability attribute for human archetype"
     }
   ],
 } as const;

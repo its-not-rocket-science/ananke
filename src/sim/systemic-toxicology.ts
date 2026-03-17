@@ -182,7 +182,7 @@ export const INGESTED_TOXIN_PROFILES: readonly IngestedToxinProfile[] = [
     damageRate_Q:  q(0.002) as Q,
     motorMul_Q:    q(0.80) as Q,   // bone marrow suppression → fatigue
     cumulative:    true,
-    irreversibleRate_Q: q(0.010) as Q,  // 100 Q/s — DNA damage accumulates faster than lead
+    irreversibleRate_Q: q(0.001) as Q,  // 10 Q/s — DNA damage accumulates slower than lead
   },
 ] as const;
 

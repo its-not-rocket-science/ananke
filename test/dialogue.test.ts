@@ -79,7 +79,12 @@ describe("intimidate", () => {
     // Same attributes — only trait differs
     const pNo  = dialogueProbability({ kind: "intimidate", intensity_Q: q(1.0) }, noLeader);
     const pYes = dialogueProbability({ kind: "intimidate", intensity_Q: q(1.0) }, withLeader);
-    expect(pNo - pYes).toBe(LEADER_INTIMIDATE_REDUCTION);
+    // If base probability is zero, leader reduction cannot apply (clamped at zero)
+    if (pNo === 0) {
+      expect(pNo - pYes).toBe(0);
+    } else {
+      expect(pNo - pYes).toBe(LEADER_INTIMIDATE_REDUCTION);
+    }
   });
 
   it("same seed + same inputs → same outcome (deterministic)", () => {

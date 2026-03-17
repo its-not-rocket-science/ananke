@@ -64,6 +64,18 @@ export const IMPAIR_THRESHOLD_S = 17 * 3600;   // 61 200
 /** Maximum sleep debt tracked (3 days of total sleep deprivation) [s]. */
 export const MAX_SLEEP_DEBT_S = 72 * 3600;     // 259 200
 
+/** Coefficient for cognition fluid degradation per unit impair fraction [numeric]. */
+export const COGNITION_FLUID_COEFF = 0.798;
+
+/** Coefficient for reaction time slowdown per unit impair fraction [numeric]. */
+export const REACTION_TIME_COEFF = 0.45;
+
+/** Coefficient for stability degradation per unit impair fraction [numeric]. */
+export const STABILITY_COEFF = 0.25;
+
+/** Coefficient for distress tolerance degradation per unit impair fraction [numeric]. */
+export const DISTRESS_TOLERANCE_COEFF = 0.35;
+
 /** Duration of the light-sleep (NREM-1/2) phase per cycle [s]. */
 export const LIGHT_PHASE_S = 45 * 60;   // 2 700
 
@@ -122,10 +134,10 @@ export function circadianAlertness(hourOfDay: number): Q {
  * Full impairment is reached at MAX_SLEEP_DEBT_S (72 h).
  *
  * Multiplier ranges at max deprivation:
- *   cognitionFluid_Q:    q(1.0) → q(0.55)   (−45%)
- *   reactionTime_Q:      q(1.0) → q(1.45)   (+45% slower)
- *   stability_Q:         q(1.0) → q(0.75)   (−25%)
- *   distressTolerance_Q: q(1.0) → q(0.65)   (−35%)
+ *   cognitionFluid_Q:    q(1.0) → q(0.202)   (−79.8%)
+ *   reactionTime_Q:      q(1.0) → q(1.45)    (+45% slower)
+ *   stability_Q:         q(1.0) → q(0.75)    (−25%)
+ *   distressTolerance_Q: q(1.0) → q(0.65)    (−35%)
  */
 export function deriveSleepDeprivationMuls(state: SleepState): SleepDeprivationMuls {
   const effectiveS   = Math.max(state.awakeSeconds, state.sleepDebt_s);
@@ -138,20 +150,20 @@ export function deriveSleepDeprivationMuls(state: SleepState): SleepDeprivationM
   );
 
   const cognitionFluid_Q = clampQ(
-    (SCALE.Q - Math.round(impairFrac_Q * 0.45)) as Q,
+    (SCALE.Q - Math.round(impairFrac_Q * COGNITION_FLUID_COEFF)) as Q,
     q(0) as Q, SCALE.Q as Q,
   );
 
   // > SCALE.Q means slower than baseline (mirrors aging reactionTime_Q convention)
-  const reactionTime_Q = (SCALE.Q + Math.round(impairFrac_Q * 0.45)) as Q;
+  const reactionTime_Q = (SCALE.Q + Math.round(impairFrac_Q * REACTION_TIME_COEFF)) as Q;
 
   const stability_Q = clampQ(
-    (SCALE.Q - Math.round(impairFrac_Q * 0.25)) as Q,
+    (SCALE.Q - Math.round(impairFrac_Q * STABILITY_COEFF)) as Q,
     q(0) as Q, SCALE.Q as Q,
   );
 
   const distressTolerance_Q = clampQ(
-    (SCALE.Q - Math.round(impairFrac_Q * 0.35)) as Q,
+    (SCALE.Q - Math.round(impairFrac_Q * DISTRESS_TOLERANCE_COEFF)) as Q,
     q(0) as Q, SCALE.Q as Q,
   );
 

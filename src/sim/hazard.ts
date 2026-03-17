@@ -93,7 +93,7 @@ interface BaseEffect {
 
 const BASE_EFFECTS: Readonly<Record<HazardType, BaseEffect>> = {
   fire: {
-    fatigueInc_Q:       q(0.020) as Q,  // 2 % fatigue/s → fully fatigued in 50 s
+    fatigueInc_Q:       q(0.0333) as Q,  // 3.33 % fatigue/s at full intensity → fully fatigued in 30 s
     thermalDelta_Q:     1_000   as Q,   // ≈ +5.4 °C ambient bias
     radiationDose_Q:    q(0)    as Q,
     surfaceDamageInc_Q: q(0.005) as Q,  // 0.5 % surface damage/s
