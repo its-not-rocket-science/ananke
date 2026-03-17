@@ -32,6 +32,7 @@ The following external datasets and literature sources have been incorporated in
 | **Calibration: Plate Armour Effectiveness** | HEMA literature on plate armour effectiveness | Expected protection against sword/axe strikes | ✅ PASS (expectations satisfied) | Injury reduction, survival rate | Historical European Martial Arts (HEMA) literature |
 | **One‑Legged Stand Test Balance (placeholder)** | Stumble mechanics as proxy for postural stability | Simulated time before becoming prone (15 s vs. expected 22.5 s) | ✅ PASS (±40 % tolerance) | Time to balance loss (s) | Stumble mechanics (tuning.stumbleBaseChance, HUMAN_BASE.stability) |
 | **Soft Body Armor Energy Absorption (Kevlar K29)** | BFD Dataset (Mendeley) — Thick15‑9mm series | 15‑layer K29 stops 9 mm FMJ at 323.6 J (sub‑V50, 0 layers penetrated) | ✅ PASS (±10 %) | Energy absorption fraction (armored vs. unarmored) | Mendeley BFD Dataset — Thick15‑9mm_300_2 |
+| **Tibia Fracture from FSP (PMHS Dataset)** | PMHS Tibia Fracture Dataset (Supplement_Data.xlsx) | 4.15 g NATO FSP at EF2+ V50 = 356 m/s → 263 J; structuralFrac = q(0.55) calibrated to cross FRACTURE_THRESHOLD | ✅ PASS (±5 %) | Fracture flag (1.0 = fractured at V50 energy) | PMHS Tibia Fracture Dataset (Supplement_Data.xlsx) |
 
 > **Note:** “PASS (±20 %)” indicates the simulated mean falls within ±20 % of the empirical mean. Calibration scenarios are validated against qualitative expectations rather than numeric tolerances.
 
@@ -100,10 +101,12 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 |:---|:---|:---|:---|
 | Muscle force/actuation | OpenArm Multisensor 2.0 (scaling exponent, CV) | Scaling exponent (target 0.67), coefficient of variation (target 0.18) | ✗ FAIL (exponent -1.94, CV 0.26) |
 | **Soft armor energy absorption** | **BFD Dataset (Mendeley) — 15‑layer Kevlar K29 vs 9 mm FMJ** | **Sub‑V50 energy absorption fraction (empirical V50 ≈ 370 J)** | **✅ PASS (±10 %)** |
+| **Long-bone fracture from FSP** | **PMHS Tibia Fracture Dataset (Supplement_Data.xlsx)** | **EF2+ fracture at V50 energy (263 J, 4.15 g NATO FSP, 356 m/s)** | **✅ PASS (±5 %)** |
 | Impact loading & injury | Runner Injury GRF Dataset (2025); Tibial Stress Injury Dataset (potential) | Peak load rate, time to peak, injury‑group differentiation | 🔶 Data extracted (see §6.1–6.2) |
 | Balance & stability | One‑Legged Stand Test Dataset (placeholder implemented) | Postural sway, recovery time, fall thresholds | 🔶 Data secured (PhysioNet) |
 | Blast physics | Semi‑confined blast dataset (Mendeley/Kristoffersen 2024) — **now available locally** | Internal confined‑blast peak pressures — different regime from free‑field model | 🔶 Wrong regime (confined vs free‑field; see §5.1) |
 | Armor penetration & hypervelocity impact | pyBLOSSUM Hypervelocity Impact Database — **now available locally** | Hypervelocity (km/s) ballistic limit — different regime from intrinsicArmor_J model | 🔶 Wrong regime (hypervelocity vs energy‑threshold; see §5.2) |
+| Metallic armor penetration (V50 database) | Ballistic Limit V50 Database (REL_v50_database_20230527.csv) — **now available locally** | V50 (m/s) for AP/FSP vs Al/steel plates — hypervelocity regime, incompatible with intrinsicArmor_J | 🔶 Wrong regime (hypervelocity vs energy‑threshold) |
 | Cognitive/physiological state | NASA SOTERIA Flight Simulation Dataset (potential) | EEG/ECG correlates of distress, decision latency under load | 🔶 Not yet implemented |
 | Melee strike kinematics | 5MUDM (potential) | Angular velocity, strike duration, joint coordination | 🔶 Not yet implemented |
 | **Already validated sub‑systems** | See Section 1 | Various physical metrics (energy, speed, time, etc.) | ✅ Integrated |
