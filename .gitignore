@@ -40,6 +40,12 @@ Thumbs.db
 *.tmp
 *.bak
 
+# External dataset files — raw data too large and/or binary to commit.
+# Only the README.md index file is tracked; actual dataset files are local-only.
+# Pattern: ignore everything inside docs/unavailable-resources/ EXCEPT README.md
+docs/unavailable-resources/*
+!docs/unavailable-resources/README.md
+
 # Tools
 CLAUDE.md
 .claude/

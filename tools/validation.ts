@@ -10,7 +10,7 @@
 //  6. Generate validation report documenting methodology and residual error
 //
 // Usage: node dist/tools/validation.js [subsystem] [seedStart] [seedEnd]
-//   subsystem: "impact", "grappling", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology", "movement", "projectile", "jump", "muscle"
+//   subsystem: "impact", "grappling", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology", "movement", "projectile", "jump", "muscle", "armor", "olst"
 //   seedStart: first seed (default: 1)
 //   seedEnd: last seed inclusive (default: 100)
 //
@@ -38,6 +38,7 @@ import { stepWorld, applyImpactToInjury } from "../src/sim/kernel.js";
 import { TUNING } from "../src/sim/tuning.js";
 import type { CommandMap } from "../src/sim/commands.js";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
+import { HUMANOID_PLAN } from "../src/sim/bodyplan.js";
 import { generateIndividual } from "../src/generate.js";
 import { HUMAN_BASE } from "../src/archetypes.js";
 import { v3 } from "../src/sim/vec3.js";
@@ -1611,12 +1612,98 @@ const directValidationScenarios: DirectValidationScenario[] = [
     unit: "fraction",
     tolerancePercent: 20,
   },
-  // NOTE: Two external datasets identified but lacking specific empirical values for validation:
-  // 1. Confined Blast Loading Dataset (DOI: 10.17632/zv7y78twd9.2) - needs pressure vs distance measurements
-  //    and charge-mass-to-radius conversion formula for blast energy falloff validation.
-  // 2. pyBLOSSUM Hypervelocity Impact Database - needs ballistic limit equations for various shield types,
-  //    material-specific penetration thresholds, and hypervelocity fragmentation models.
-  // Both require specific empirical formulas not currently available in the simulation.
+  // Soft Body Armor energy absorption — Mendeley BFD dataset
+  // (docs/unavailable-resources/Data for Soft Body Armor Time-Dependent Back Face Deformation)
+  // 15-layer Kevlar K29 (467 g/m²) stops 9 mm FMJ at 323.6 J (Thick15-9mm_300_2, 0 layers penetrated).
+  // V50 calibrated at ≈ 370 J (transition between 0-penetration at ≤ 325 J and 2-layer penetration at ≈ 418 J).
+  {
+    name: "Soft Body Armor Energy Absorption (Kevlar K29 BFD Dataset)",
+    description: "15-layer Kevlar K29 stops 9mm FMJ at 323.6 J (below V50 ≈ 370 J). Entity with intrinsicArmor_J = 370 (calibrated to empirical V50) must absorb 100% of sub-V50 energy. Compares armored vs. unarmored damage ratio.",
+    empiricalDataset: {
+      name: "Soft Body Armor Time-Dependent BFD Dataset (Mendeley)",
+      description: "15-layer Kevlar K29 (467 g/m²): 9mm FMJ (8.751 g) at 271.9 m/s → 323.6 J, 0 layers penetrated, BFD = 37.1 mm (Thick15-9mm_300_2). Energy absorption fraction = 100% at sub-V50.",
+      dataPoints: [
+        { value: 1.0, unit: "fraction", source: "Mendeley BFD Dataset — Thick15-9mm_300_2", notes: "100% absorption below V50: 0 layers of 15-layer K29 penetrated at 323.6 J" },
+      ],
+      mean: 1.0,
+      confidenceIntervalHalf: 0.05,
+    },
+    setup: (seed: number) => {
+      // Armored entity: 15-layer Kevlar K29 on torso, V50 ≈ 370 J
+      // Assign HUMANOID_PLAN with torso intrinsicArmor_J = 370 (without mutating the shared plan)
+      const armoredEntity = mkHumanoidEntity(1, 1, 0, 0);
+      armoredEntity.bodyPlan = {
+        ...HUMANOID_PLAN,
+        segments: HUMANOID_PLAN.segments.map(seg =>
+          seg.id === "torso" ? { ...seg, intrinsicArmor_J: 370 } : seg
+        ),
+      };
+
+      // Unarmored entity: control (same shot, no armor)
+      const unarmoredEntity = mkHumanoidEntity(2, 1, 100, 0);
+      unarmoredEntity.bodyPlan = HUMANOID_PLAN;
+
+      const world = mkWorld(seed, [armoredEntity, unarmoredEntity]);
+      const ctx: KernelContext = { tractionCoeff: q(1.0), tuning: TUNING.tactical };
+
+      // 9mm FMJ damage profile (FMJ: moderate penetration bias)
+      const wpn: Weapon = {
+        id: "9mm_fmj_bfd",
+        kind: "weapon",
+        name: "9mm FMJ BFD test (8.751 g, 271.9 m/s, 323.6 J)",
+        mass_kg: 0,
+        bulk: q(0),
+        damage: {
+          penetrationBias: q(0.60),
+          surfaceFrac: q(0.25),
+          internalFrac: q(0.40),
+          structuralFrac: q(0.35),
+          bleedFactor: q(0.60),
+        },
+      };
+      const dummyTrace: TraceSink = { onEvent: () => {} };
+
+      // Apply sub-V50 shot to both entities
+      applyImpactToInjury(armoredEntity, wpn, 323.6, "torso", false, dummyTrace, world.tick);
+      applyImpactToInjury(unarmoredEntity, wpn, 323.6, "torso", false, dummyTrace, world.tick);
+
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const armored = world.entities[0];
+      const unarmored = world.entities[1];
+      if (!armored || !unarmored) return 0;
+
+      const getTorsoDamage = (e: (typeof world.entities)[0]) => {
+        const region = e.injury.byRegion["torso"];
+        if (!region) return 0;
+        return region.surfaceDamage + region.internalDamage + region.structuralDamage;
+      };
+
+      const armoredDamage = getTorsoDamage(armored);
+      const unarmoredDamage = getTorsoDamage(unarmored);
+
+      // Edge case: if unarmored entity somehow has 0 damage
+      if (unarmoredDamage === 0) return 1.0;
+
+      // Absorption fraction = 1 − (damage with armor / damage without armor)
+      return 1 - armoredDamage / unarmoredDamage;
+    },
+    unit: "fraction",
+    tolerancePercent: 10,
+  },
+
+  // NOTE: Confined Blast Loading Dataset (DOI: 10.17632/zv7y78twd9.2) is NOW AVAILABLE locally
+  // (docs/unavailable-resources/MENDELEY Pressure measurements from internal confined blast loading using C-4 charges).
+  // However, this dataset measures semi-confined internal blast in steel cylinders (Di = 200 mm and 400 mm).
+  // Ananke's blastEnergyFracQ uses a free-field quadratic falloff model, which is a different physical regime.
+  // Confined blast produces significantly higher peak pressures due to reflections and wave focusing.
+  // Validation would require a separate confined-blast model. Deferred pending that feature.
+  //
+  // NOTE: pyBLOSSUM Hypervelocity Impact Database is NOW AVAILABLE locally (pyBLOSSUM-main.zip).
+  // The BLEs operate in the hypervelocity regime (km/s) using projectile-diameter-based equations,
+  // whereas Ananke models armor as an energy threshold (intrinsicArmor_J). Mapping between regimes
+  // requires additional assumptions; deferred pending physics alignment work.
 
   // One-Legged Stand Test validation placeholder - currently uses estimated duration values.
   // Actual validation requires postural sway metrics (COP trajectories) and fall thresholds
