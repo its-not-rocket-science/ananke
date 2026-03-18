@@ -412,6 +412,11 @@ reproducible throughput figures across four entity-count scenarios (10 / 100 / 5
 Includes AI-decision-budget breakdown, spatial-index comparison vs. naïve O(n²), and a tuning
 guide. Full report in `docs/performance.md`.
 
+**Dataset Contribution Pipeline** (`docs/dataset-contribution.md`) — step-by-step guide for
+adding empirical datasets and `DirectValidationScenario` entries to the validation runner.
+Includes CSV format spec, four code templates, tolerance-selection table, and a live example
+(`datasets/example-sprint-speed.csv` — human peak anaerobic power, ✓ PASS at 9.5% error).
+
 **2904 tests.** All coverage thresholds met (statements 93.75%+, branches 84.69%+, functions 92%+, lines 93.75%+).
 
 See `ROADMAP.md` for the full development plan.

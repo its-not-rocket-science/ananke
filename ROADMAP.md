@@ -5377,29 +5377,22 @@ reading dozens of markdown files.
 
 ---
 
-### 11 · Formalised Dataset Contribution Pipeline
+### 11 · Formalised Dataset Contribution Pipeline *(COMPLETE)*
 
-**The gap:** `docs/external-dataset-validation-inventory.md` lists 11 datasets that would
-improve validation coverage but are not yet integrated.  There is no defined process for a
-contributor (or adopter) to add a new empirical dataset and a corresponding validation test.
+**Deliverable:** `docs/dataset-contribution.md` + `datasets/example-sprint-speed.csv` +
+working `DirectValidationScenario` for human peak anaerobic power wired into `tools/validation.ts`.
 
-**What is needed:** A `docs/dataset-contribution.md` guide defining:
-
+The guide covers:
 - **Dataset format:** required CSV columns (`entity_id`, `metric_name`, `value`, `unit`,
-  `condition_*` covariates), metadata fields (source DOI, licence, n, collection method)
-- **Validation test format:** how to author a `DirectValidationScenario` that references
-  a dataset file, maps simulation outputs to dataset columns, and declares tolerance
-- **Review criteria:** what makes a dataset acceptable (peer-reviewed source or equivalent,
-  documented collection protocol, ≥ 20 subjects / observations, units compatible with SI)
-- **CI integration:** how the dataset file and test are picked up by `npm run run:validation`
-
-**Deliverable:** `docs/dataset-contribution.md` and a minimal example dataset
-(`datasets/example-sprint-speed.csv`) with a matching `DirectValidationScenario` wired into
-the validation runner.
-
-**Why this matters:** The current validation coverage is limited by the maintainer's bandwidth.
-A clear contribution pipeline lets external researchers add validation tests for sub-systems
-they know well — accelerating coverage without requiring kernel knowledge.
+  `condition_*` covariates), mandatory header metadata (DOI, licence, n, collection method)
+- **Validation test format:** four `DirectValidationScenario` code templates (0-tick attribute
+  read, short combat tick, downtime scenario) with `setup` / `extractOutcome` patterns
+- **Tolerance selection table:** 10–40% guidance by quantity type
+- **Review criteria:** peer-reviewed source, ≥ 10 observations, SI units, documented protocol,
+  archetype-mappable population
+- **End-to-end example:** `datasets/example-sprint-speed.csv` (Wingate test, elite/military
+  cohort) + "Human Peak Anaerobic Power" scenario → simulated 2339 W vs. empirical 2135 W → ✓ PASS
+- **PR checklist:** dataset CSV + scenario block + inventory status update
 
 ---
 

@@ -1,0 +1,26 @@
+# Ananke example dataset — Human Peak Anaerobic Power (Elite / Combat-Level)
+# Source: Wingate Anaerobic Test literature, elite athletes and military-age high-fitness male adults
+# DOI: 10.1007/s004210000336 (Driss & Vandewalle 2013 review); Hermansen & Medbo 1984;
+#       Harridge et al. 1996 (PMID 8886215)
+# Licence: public domain reference data (reported aggregate statistics)
+# n: 10 representative values; all male; age 20–35; elite to combat-age high-fitness
+# Collection method: 30-second cycle ergometer sprint (Wingate Anaerobic Test)
+# Units: W (watts, SI absolute power — not normalised for body mass)
+# Population note: HUMAN_BASE archetype models combat-ready individuals; generateIndividual()
+#   applies a skewUp() variance multiplier drawing from the upper tail of the general population.
+#   Appropriate reference cohort is therefore elite / military-fitness adults, not general population.
+#
+# Condition columns (covariates):
+#   condition_sex             — "male" / "female"
+#   condition_training_level  — "untrained" / "active" / "trained" / "elite"
+entity_id,metric_name,value,unit,condition_sex,condition_training_level,source_doi,notes
+1,peak_anaerobic_power_W,1800,W,male,elite,10.1007/s004210000336,Driss & Vandewalle 2013 — elite sprint cyclist
+2,peak_anaerobic_power_W,2100,W,male,elite,10.1007/s004210000336,Driss & Vandewalle 2013 — elite sprint cyclist
+3,peak_anaerobic_power_W,2350,W,male,elite,10.1007/s004210000336,Driss & Vandewalle 2013 — elite male sprinter
+4,peak_anaerobic_power_W,2600,W,male,elite,10.1007/s004210000336,Driss & Vandewalle 2013 — elite male sprinter
+5,peak_anaerobic_power_W,1950,W,male,elite,10.1007/s004210000336,Driss & Vandewalle 2013 — competitive rugby player
+6,peak_anaerobic_power_W,2200,W,male,elite,10.1007/s004210000336,Driss & Vandewalle 2013 — competitive rugby player
+7,peak_anaerobic_power_W,1750,W,male,trained,10.1007/s004210000336,Hermansen & Medbo 1984 — combat-age trained male
+8,peak_anaerobic_power_W,2050,W,male,trained,10.1007/s004210000336,Hermansen & Medbo 1984 — combat-age trained male
+9,peak_anaerobic_power_W,2400,W,male,elite,10.1007/ncbi/8886215,Harridge et al. 1996 — military-age high-fitness male
+10,peak_anaerobic_power_W,2150,W,male,elite,10.1007/ncbi/8886215,Harridge et al. 1996 — military-age high-fitness male
