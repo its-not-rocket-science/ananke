@@ -5245,3 +5245,181 @@ for upstream PRs, and a pinned dependency with a defined upgrade-review cadence.
 - `docs/contributing.md` — contribution guide: engine vs. external boundaries, code conventions, PR checklist, module skeleton
 - `docs/versioning.md` — versioning contract: commit-hash pinning, breaking-change tiers, changelog format, upgrade cadence, fork guidance
 - `docs/ecosystem.md` — ecosystem index: worked examples, body-plan authoring templates, renderer bridge boilerplate (Unity/Godot sketches), suggested companion repositories
+
+---
+
+## Next Priorities
+
+The five integration milestones are complete.  The following items represent the critical path
+for raising adoption and scientific credibility.  They are sequenced: items 6–8 lower the
+integration barrier; items 9–11 deepen validation and infrastructure.
+
+---
+
+### 6 · Reference Renderer Implementation
+
+**The gap:** `src/model3d.ts` / `src/bridge/` provide pure data-extraction functions and
+documented output formats, but every adopter must independently solve the mapping of Ananke's
+abstract segment IDs to a specific engine's skeleton, the 20 Hz → 60+ Hz interpolation, and
+the animation state machine wiring.  The bridge sketches in `docs/ecosystem.md` are
+pseudocode, not runnable code.
+
+**What is needed:** A minimal, runnable plugin in a real engine — Godot 4 or Unity 6 — living
+in a separate companion repository.  The scope is deliberately narrow:
+
+- A single humanoid character rig driven by `extractRigSnapshots` each tick
+- Tick-rate interpolation (20 Hz sim → renderer frame rate) handled by the plugin
+- `AnimationHints` mapped to a simple animation state machine (idle / walk / attack / prone / dead)
+- `GrapplePoseConstraint` used to lock relative pose for a two-character grapple pair
+- A self-contained demo scene: Knight vs. Brawler, same as `tools/vertical-slice.ts`, but visual
+
+**Deliverable:** A tagged companion repository (`ananke-godot-reference` or
+`ananke-unity-reference`) with a README explaining how to connect it to any Ananke build.
+
+**Why this matters:** Until this exists, the integration barrier is high.  A working plugin
+makes the project credible to engine integrators within minutes rather than weeks.
+
+---
+
+### 7 · Emergent Behaviour Validation Suite
+
+**The gap:** The current validation framework tests 19+ isolated sub-systems, each against
+a single empirical dataset with a ±20 % tolerance on the simulated mean.  This is necessary
+but not sufficient.  A ±20 % match on isolated parts does not guarantee plausible emergent
+outcomes when multiple systems interact — weather, morale, injury, sleep debt, and formation
+cohesion all combine in a real engagement.
+
+**What is needed:** A dedicated suite of complex, long-duration scenarios where the
+*distribution of outcomes* (not just the mean of a single variable) is compared against
+historical or experimental data on small-unit combat.
+
+Candidate scenarios:
+
+| Scenario | Metric | Reference |
+|----------|--------|-----------|
+| 10 vs. 10 skirmish, open ground | Casualty rate, fight duration | Ardant du Picq, *Battle Studies* (historical small-unit data) |
+| 10 vs. 10 skirmish, rain + fog | Casualty rate vs. clear-weather baseline | Keegan, *The Face of Battle* (environmental attrition analysis) |
+| Shield wall (8) vs. loose line (8) | Front-rank casualty differential | Halsall, *Warfare and Society in the Barbarian West* |
+| Siege attrition (garrison 20, attacker 60, 30 days) | Survivor count and disease spread | Raudzens, *Firepower* (pre-gunpowder siege mortality rates) |
+
+**Deliverable:** A new `tools/emergent-validation.ts` script and corresponding report format.
+Each scenario produces a distribution of outcomes across ≥ 100 seeds; the report documents
+the simulated distribution vs. the historical reference range and flags scenarios where the
+simulation falls outside the expected envelope.
+
+**Why this matters:** Isolated sub-system validation establishes that the physics are correct.
+Emergent validation establishes that the *system* is correct — that the parts combine
+plausibly.  This is the step that makes Ananke scientifically defensible at the scenario level,
+not just the sub-system level.
+
+---
+
+### 8 · Visual Editors for Non-Developers
+
+**The gap:** Adding a new species, body plan, or validation scenario currently requires
+writing TypeScript, understanding fixed-point arithmetic, and knowing the archetype variance
+system.  Game designers, biomechanics researchers, and historians who are potential heavy users
+of the system cannot contribute without a kernel developer acting as an intermediary.
+
+**What is needed:** Two standalone web-based tools (no build step, no TypeScript knowledge
+required):
+
+**Body Plan Editor**
+- Input: species name, segment list (drag to connect parent/child), mass share sliders,
+  locomotion and manipulation segment toggles
+- Output: a `BodyPlan` TypeScript literal ready to paste into a companion species pack
+- Validation: ensures mass shares sum to q(1.0), flags missing locomotion segments
+
+**Validation Scenario Builder**
+- Input: scenario name, entity archetypes (dropdown from built-ins), simulation parameters
+  (tick count, seed range), expected output metric (e.g. "consciousness_Q < q(0.10) within N ticks")
+- Output: a `DirectValidationScenario` block ready to paste into `tools/validation.ts`
+- Preview: runs the scenario in the browser (WASM or API call) and shows a histogram of outcomes
+
+**Deliverable:** Two standalone HTML/JS tools hosted as GitHub Pages in a companion repository
+(`ananke-tools`).  No server required — all computation client-side.
+
+**Why this matters:** Lowers the contribution barrier from "kernel developer" to "domain
+expert".  A biomechanics researcher can add a new validation scenario; a game designer can
+author a new species without touching the kernel.
+
+---
+
+### 9 · Performance & Scalability Benchmarks
+
+**The gap:** The kernel is architecturally designed for scalability (spatial indexing,
+frontage caps, density modelling) but no reproducible throughput numbers exist.  README says
+"single entity to squad to formation to army" but provides no latency figures.  Host
+applications cannot make informed architectural decisions without benchmarks.
+
+**What is needed:** A dedicated benchmark suite (`tools/benchmark.ts`) measuring:
+
+| Scenario | What is measured |
+|----------|-----------------|
+| 10 entities, melee skirmish | Ticks per second; memory per entity |
+| 100 entities, mixed ranged/melee | Ticks per second; spatial index rebuild cost |
+| 500 entities, formation combat | Ticks per second; AI decision budget |
+| 1 000 entities, battle with weather + disease | Ticks per second; GC pressure |
+
+**Deliverable:** A `docs/performance.md` report documenting median tick latency, p99 tick
+latency, and memory footprint on reference hardware (Intel i7-12700, Node 22 LTS).
+Committed benchmark results are re-run on each breaking change to detect regressions.
+The report includes a tuning guide: which `KernelContext` flags to disable for high entity
+counts, and at what entity count the spatial index provides a net benefit over a naïve O(n²)
+pair scan.
+
+**Why this matters:** Adopters sizing server infrastructure or evaluating whether Ananke can
+run in a browser need numbers.  Without them the scalability claims in the README are
+unverifiable.
+
+---
+
+### 10 · Public Validation Dashboard
+
+**The gap:** Validation results live in timestamped markdown files in `docs/`.  They are not
+browsable, not comparable across runs, and not visible to the scientific community that might
+most benefit from them.
+
+**What is needed:** A static web dashboard (GitHub Pages, no backend) that:
+
+- Displays a table of all validation scenarios with their current pass/fail status and
+  simulated vs. empirical means
+- Shows a sparkline of validation history (did this scenario regress between commits?)
+- Renders the ±20 % tolerance band alongside the empirical reference value
+- Is regenerated automatically by a CI step that runs `npm run run:validation` and
+  commits the updated `docs/validation-dashboard.json`
+
+**Deliverable:** A `docs/dashboard/` directory containing a self-contained HTML/JS dashboard
+and a `validation-dashboard.json` data file generated by the validation runner.  A GitHub
+Actions workflow regenerates it on every push to `master`.
+
+**Why this matters:** Making validation results public and interactive transforms a development
+tool into a credibility signal.  A scientific audience evaluating Ananke can immediately see
+which sub-systems are validated, to what precision, and against which datasets — without
+reading dozens of markdown files.
+
+---
+
+### 11 · Formalised Dataset Contribution Pipeline
+
+**The gap:** `docs/external-dataset-validation-inventory.md` lists 11 datasets that would
+improve validation coverage but are not yet integrated.  There is no defined process for a
+contributor (or adopter) to add a new empirical dataset and a corresponding validation test.
+
+**What is needed:** A `docs/dataset-contribution.md` guide defining:
+
+- **Dataset format:** required CSV columns (`entity_id`, `metric_name`, `value`, `unit`,
+  `condition_*` covariates), metadata fields (source DOI, licence, n, collection method)
+- **Validation test format:** how to author a `DirectValidationScenario` that references
+  a dataset file, maps simulation outputs to dataset columns, and declares tolerance
+- **Review criteria:** what makes a dataset acceptable (peer-reviewed source or equivalent,
+  documented collection protocol, ≥ 20 subjects / observations, units compatible with SI)
+- **CI integration:** how the dataset file and test are picked up by `npm run run:validation`
+
+**Deliverable:** `docs/dataset-contribution.md` and a minimal example dataset
+(`datasets/example-sprint-speed.csv`) with a matching `DirectValidationScenario` wired into
+the validation runner.
+
+**Why this matters:** The current validation coverage is limited by the maintainer's bandwidth.
+A clear contribution pipeline lets external researchers add validation tests for sub-systems
+they know well — accelerating coverage without requiring kernel knowledge.

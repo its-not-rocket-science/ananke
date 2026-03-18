@@ -969,6 +969,13 @@ Map each `segmentId` to a skeleton bone and drive blend-shape or constraint weig
 **Grapple constraints** — `isHolder`/`isHeld` flags, `holdingEntityId`, `heldByIds`, `position`
 (`standing`/`prone`/`pinned`), and `gripQ`. Use to lock relative pose between grappling entities.
 
+**Integration note:** These functions provide data snapshots only.  Mapping Ananke's abstract
+segment IDs to a specific engine's skeleton, handling tick-rate mismatch (20 Hz → 60+ Hz), and
+wiring animation hints into a state machine are the host's responsibility.  See
+`docs/bridge-api.md` for the full API reference and `docs/ecosystem.md` for Unity/Godot adapter
+sketches.  A minimal runnable reference plugin (ROADMAP item 6) is the next priority for
+lowering this integration barrier.
+
 ---
 
 ## Determinism rules
@@ -1881,3 +1888,62 @@ docs/
   bridge-api.md         Renderer bridge API reference
   use-case-validation.md Integration Milestone 1 — use-case fit validation
 ```
+
+---
+
+## Known gaps and next steps
+
+The following are the highest-priority items that remain unaddressed.  They do not affect the
+correctness of the simulation kernel but limit adoption and scientific credibility.
+
+### 1. The renderer integration gap
+
+**What exists:** `src/model3d.ts` provides `extractRigSnapshots`, `derivePoseModifiers`, and
+`deriveGrappleConstraint` as pure data-extraction functions.  The bridge module (`src/bridge/`)
+documents the output format and provides Unity/Godot adapter sketches in `docs/ecosystem.md`.
+
+**What is still missing:** A minimal, runnable reference implementation that actually drives a
+real character rig in a specific engine.  Mapping Ananke's abstract segment IDs (`"torso"`,
+`"leftArm"`) to a concrete engine skeleton, handling tick-rate mismatch (20 Hz simulation vs.
+60+ Hz renderer), and blending pose modifiers into an animation state machine are all
+left to the host.  Until a reference plugin exists, each adopter must solve this from scratch.
+
+**Next step (ROADMAP item 6):** A minimal Godot 4 or Unity 6 plugin — a separate repository —
+that drives a humanoid character rig from `extractRigSnapshots` output.  See ROADMAP for scope.
+
+### 2. Validation depth: emergent behaviour
+
+**What exists:** The validation framework tests 19+ isolated sub-systems (sprint speed,
+bleeding rate, impact energy, sleep deprivation, etc.) each against an empirical dataset with
+a ±20 % tolerance on the simulated mean.
+
+**What is missing:** Validation of *multi-system interactions*.  A ±20 % match on isolated
+parts does not guarantee that a 10 vs. 10 skirmish in rain produces plausible casualty rates,
+rout distances, and fight durations.  Emergent behaviour is not tested.
+
+**Next step (ROADMAP item 7):** An Emergent Behaviour Validation Suite — complex long-duration
+scenarios (small-unit skirmishes, siege attrition, epidemic spread) where the *distribution of
+outcomes* is compared against historical or experimental data.
+
+### 3. Tooling for non-developers
+
+**What exists:** Species, body plans, and validation scenarios are defined as TypeScript code.
+Adding a new archetype requires understanding `IndividualAttributes`, fixed-point arithmetic,
+and the archetype variance system.
+
+**What is missing:** A GUI layer that allows a game designer or biomechanics researcher to
+author body plans and validation scenarios without writing kernel code.
+
+**Next step (ROADMAP item 8):** A Body Plan Editor and Validation Scenario Builder — standalone
+web-based tools that emit TypeScript/JSON compatible with the kernel's data structures.
+
+### 4. Performance benchmarks
+
+**What exists:** The kernel is designed for scalability (spatial indexing, frontage caps,
+formation depth) but no official throughput numbers exist.
+
+**What is missing:** Benchmarks for 10, 100, and 1 000 entity simulations on reference hardware,
+bottleneck identification, and optimisation guidance for host applications.
+
+**Next step (ROADMAP item 9):** A Performance & Scalability phase producing reproducible
+benchmarks and a tuning guide.  See ROADMAP for scope.
