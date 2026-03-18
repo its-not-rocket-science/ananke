@@ -402,6 +402,13 @@ major phase simultaneously (disease, polity economics, war, sleep debt, skill pr
 Validates 4 emergent-behaviour claims: social hierarchy, disease mortality spikes, morale–economy
 correlation, and skill accumulation hierarchy. All 4/4 claims pass on seed 1.
 
+**"What If?" / Alternate History Engine** (`tools/what-if.ts`, `npm run run:what-if`, Phase 64) —
+polity-scale alternate-history simulator that runs a `WhatIfScenario` across N seeds and reports
+probability-weighted outcome distributions. Three built-in scenarios: plague devastating a capital
+(−92.5% population; density-floor mechanics), a charismatic leader's morale surge (+22% military
+at day 90), and a sudden war between equal polities (−100% aggressor stability; −40% treasury for
+both; war persists all 180 days). Demonstrates geopolitical consequence modelling built on Phase 61.
+
 **Emergent Behaviour Validation Suite** (`tools/emergent-validation.ts`, `npm run run:emergent-validation`) —
 four historical combat scenarios validated across 100 seeds each: 10v10 open-ground skirmish
 (Ardant du Picq), environmental friction in rain + fog (Keegan), Lanchester's numerical
@@ -1951,6 +1958,7 @@ tools/             Developer utilities and runnable demos
   blade-runner.ts         Artificial Life Validation — 365-day city-scale emergent-behaviour test
   emergent-validation.ts  Emergent Behaviour Validation Suite — 4 historical combat scenarios × 100 seeds
   benchmark.ts            Performance & Scalability Benchmarks — 10/100/500/1 000 entity throughput
+  what-if.ts              "What If?" Alternate History Engine — polity divergence × 100 seeds (Phase 64)
 docs/
   onboarding.md         New-engineer two-week onboarding guide
   contributing.md       Contribution guide: conventions, PR checklist, module skeleton

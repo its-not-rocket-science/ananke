@@ -5535,6 +5535,48 @@ optionally saves a successful replay for visual inspection.
 
 ---
 
+### Phase 64 — "What If?" / Alternate History Engine *(COMPLETE)*
+
+**Concept:** Polity-scale alternate-history simulator.  A scenario defines a baseline
+`PolityRegistry` and a single divergence point; the engine runs both the baseline and the
+diverged world across N seeds and reports the probability-weighted outcome distribution.
+
+**Deliverable:** `tools/what-if.ts` — run via `npm run run:what-if`.
+
+**WhatIfScenario interface:**
+
+```typescript
+interface WhatIfScenario {
+  name: string;
+  description: string;
+  divergenceDescription: string;
+  durationDays: number;
+  setup(): { registry: PolityRegistry; pairs: PolityPair[] };
+  applyDivergence(registry: PolityRegistry, seed: number): void;
+  metrics: Array<{
+    name: string;
+    description: string;
+    extract(registry: PolityRegistry): number;
+  }>;
+}
+```
+
+**Three built-in scenarios:**
+
+| Scenario | Divergence | Duration | Key finding |
+|----------|-----------|----------|-------------|
+| Plague Strikes the Capital | plague_pneumonic in empire on day 30 | 365 days | −92.5% population; density floor at 3 × 5k/location |
+| Charismatic Leader Emerges | morale +q(0.20) on day 1 | 90 days | +22% military strength before equilibrium convergence |
+| Sudden War | war declared on day 1 | 180 days | −100% stability for aggressor; −40% treasury; war persists |
+
+**Key insight:** Plague kills until population density drops below the airborne-spread
+threshold (`DENSITY_SPREAD_THRESHOLD = 5 000` people/location), producing a natural
+population floor — consistent with pre-modern epidemic dynamics.
+
+**Depends on:** Phase 61 (Polity), Phase 56 (Disease), `eventSeed`, `makeRng`.
+
+---
+
 ## Long-Term Vision
 
 The following ideas are directionally sound and build naturally on existing Ananke systems,
@@ -5543,7 +5585,7 @@ here so the architectural decisions made in near-term phases account for them.
 
 ---
 
-### "What If?" / Alternate History Engine
+### "What If?" / Alternate History Engine *(COMPLETE — Phase 64)*
 
 **Concept:** Combine Phase 61 (Polity system) with the Narrative Stress Test (Phase 63) at
 geopolitical scale.  A user defines a historical or fictional world state and a single
@@ -5557,6 +5599,20 @@ Phase 25 (Economy), Phase 50 (Legend system for recording events), Phase 63 (see
 divergence runs).
 
 **Prerequisite:** Phase 61.
+
+**Delivered:** `tools/what-if.ts` — run via `npm run run:what-if`.
+
+Three built-in scenarios across 100 seeds each:
+
+| Scenario | Divergence | Largest impact |
+|----------|-----------|----------------|
+| Plague Strikes the Capital | plague_pneumonic in most-populous polity on day 30 | −92.5% population (200k → 15k; density floor reached) |
+| Charismatic Leader Emerges | morale +q(0.20) on day 1 | +22% military strength at day 90 |
+| Sudden War | war declared between two equal polities on day 1 | −100% stability for aggressor; −39% treasury for both; war persists all 180 days |
+
+Key insight: plague kills until population density drops below the airborne-spread threshold
+(5 000 people/location), producing a natural population floor — historically consistent with
+pre-modern epidemic mechanics.
 
 ---
 

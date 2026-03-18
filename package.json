@@ -24,7 +24,8 @@
     "run:blade-runner": "node dist/tools/blade-runner.js",
     "run:emergent-validation": "node dist/tools/emergent-validation.js",
     "run:benchmark": "node dist/tools/benchmark.js",
-    "run:validation-dashboard": "node dist/tools/validation.js --dashboard"
+    "run:validation-dashboard": "node dist/tools/validation.js --dashboard",
+    "run:what-if": "node dist/tools/what-if.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
