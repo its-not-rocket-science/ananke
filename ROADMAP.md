@@ -5329,32 +5329,25 @@ author a new species without touching the kernel.
 
 ---
 
-### 9 · Performance & Scalability Benchmarks
+### 9 · Performance & Scalability Benchmarks *(COMPLETE)*
 
-**The gap:** The kernel is architecturally designed for scalability (spatial indexing,
-frontage caps, density modelling) but no reproducible throughput numbers exist.  README says
-"single entity to squad to formation to army" but provides no latency figures.  Host
-applications cannot make informed architectural decisions without benchmarks.
+**Deliverable:** `tools/benchmark.ts` + `docs/performance.md`. Run with `npm run run:benchmark`.
 
-**What is needed:** A dedicated benchmark suite (`tools/benchmark.ts`) measuring:
+| Scenario | Entities | Median tick | Throughput |
+|----------|----------|-------------|------------|
+| Melee skirmish | 10 | 0.19 ms | 5.3k ticks/s |
+| Mixed ranged/melee | 100 | 4.68 ms | 214 ticks/s |
+| Formation combat | 500 | 31 ms | 32 ticks/s |
+| Weather + disease | 1 000 | 64 ms | 16 ticks/s |
 
-| Scenario | What is measured |
-|----------|-----------------|
-| 10 entities, melee skirmish | Ticks per second; memory per entity |
-| 100 entities, mixed ranged/melee | Ticks per second; spatial index rebuild cost |
-| 500 entities, formation combat | Ticks per second; AI decision budget |
-| 1 000 entities, battle with weather + disease | Ticks per second; GC pressure |
-
-**Deliverable:** A `docs/performance.md` report documenting median tick latency, p99 tick
-latency, and memory footprint on reference hardware (Intel i7-12700, Node 22 LTS).
-Committed benchmark results are re-run on each breaking change to detect regressions.
-The report includes a tuning guide: which `KernelContext` flags to disable for high entity
-counts, and at what entity count the spatial index provides a net benefit over a naïve O(n²)
-pair scan.
-
-**Why this matters:** Adopters sizing server infrastructure or evaluating whether Ananke can
-run in a browser need numbers.  Without them the scalability claims in the README are
-unverifiable.
+**Key findings:**
+- `stepWorld` (kernel physics) consumes ≥ 95% of tick budget at all entity counts; AI command
+  generation is negligible (< 1% at 500 entities).
+- SpatialIndex with 4 m cells provides no throughput benefit vs. naïve O(n²) at ≤ 500 entities
+  in dense close-formation scenarios; benefit appears only in sparse large-area engagements.
+- At 20 Hz real-time rate, 500 entities is within budget (62%); 1 000 entities exceeds it (129%).
+- `docs/performance.md` documents full results, AI-budget breakdown, spatial-index comparison,
+  memory footprint estimates, and a tuning guide with recommended entity caps per use case.
 
 ---
 

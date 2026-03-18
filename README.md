@@ -407,6 +407,11 @@ four historical combat scenarios validated across 100 seeds each: 10v10 open-gro
 (Ardant du Picq), environmental friction in rain + fog (Keegan), Lanchester's numerical
 superiority law (5 vs. 10), and siege attrition via disease (Raudzens). All 4/4 scenarios pass.
 
+**Performance & Scalability Benchmarks** (`tools/benchmark.ts`, `npm run run:benchmark`) —
+reproducible throughput figures across four entity-count scenarios (10 / 100 / 500 / 1 000).
+Includes AI-decision-budget breakdown, spatial-index comparison vs. naïve O(n²), and a tuning
+guide. Full report in `docs/performance.md`.
+
 **2904 tests.** All coverage thresholds met (statements 93.75%+, branches 84.69%+, functions 92%+, lines 93.75%+).
 
 See `ROADMAP.md` for the full development plan.
@@ -1927,6 +1932,7 @@ test/              Vitest test suite (one file per feature area)
 tools/             Developer utilities and runnable demos
   blade-runner.ts         Artificial Life Validation — 365-day city-scale emergent-behaviour test
   emergent-validation.ts  Emergent Behaviour Validation Suite — 4 historical combat scenarios × 100 seeds
+  benchmark.ts            Performance & Scalability Benchmarks — 10/100/500/1 000 entity throughput
 docs/
   onboarding.md         New-engineer two-week onboarding guide
   contributing.md       Contribution guide: conventions, PR checklist, module skeleton
