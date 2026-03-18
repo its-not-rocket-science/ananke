@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Body Plan Editor</title>
+<style>
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--border:#2e3245;--text:#e0e4f0;
+    --muted:#7a81a0;--pass:#22c55e;--fail:#ef4444;--accent:#6366f1;--warn:#f59e0b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:ui-monospace,"Cascadia Code",Menlo,monospace;font-size:13px;padding:1.5rem}
+  h1{font-size:1.3rem;margin-bottom:.25rem}
+  .sub{color:var(--muted);font-size:.82rem;margin-bottom:1.5rem}
+  .row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;align-items:flex-end}
+  label{display:block;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem}
+  input,select{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:13px;padding:.3rem .5rem;outline:none;width:100%}
+  input:focus,select:focus{border-color:var(--accent)}
+  .field{display:flex;flex-direction:column}
+  .field.w80{width:80px}
+  .field.w120{width:120px}
+  .field.w160{width:160px}
+  .field.w200{width:200px}
+  .field.grow{flex:1}
+  table{width:100%;border-collapse:collapse;margin-bottom:1rem}
+  thead th{background:var(--surface);border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.05em;padding:.4rem .5rem;text-align:left;text-transform:uppercase;white-space:nowrap}
+  tbody tr{border-bottom:1px solid var(--border)}
+  tbody tr:hover{background:rgba(255,255,255,.02)}
+  td{padding:.3rem .4rem;vertical-align:middle}
+  td input,td select{padding:.2rem .4rem;font-size:12px}
+  .btn{background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:.35rem .75rem;transition:opacity .1s}
+  .btn:hover{opacity:.85}
+  .btn.sm{font-size:11px;padding:.2rem .5rem}
+  .btn.danger{background:#7f1d1d;color:#fca5a5}
+  .btn.sec{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+  .stats{background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;gap:1.5rem;margin-bottom:1rem;padding:.75rem 1rem;flex-wrap:wrap}
+  .stat{display:flex;flex-direction:column;gap:.1rem}
+  .stat-val{font-size:1.1rem;font-weight:700}
+  .stat-val.ok{color:var(--pass)}
+  .stat-val.warn{color:var(--warn)}
+  .stat-val.err{color:var(--fail)}
+  .stat-label{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em}
+  .errors{background:#2d0a0a;border:1px solid var(--fail);border-radius:4px;color:#fca5a5;font-size:12px;margin-bottom:.75rem;padding:.5rem .75rem;display:none}
+  .errors ul{margin-left:1rem}
+  textarea{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:#a5f3fc;font-family:inherit;font-size:12px;height:340px;line-height:1.5;padding:.5rem;resize:vertical;width:100%}
+  .copy-row{display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end}
+  hr{border:none;border-top:1px solid var(--border);margin:1.25rem 0}
+  .hint{color:var(--muted);font-size:.78rem;margin-top:.3rem}
+</style>
+</head>
+<body>
+
+<h1>Body Plan Editor</h1>
+<p class="sub">Author a new species <code>BodyPlan</code> TypeScript literal. No TypeScript knowledge required.</p>
+
+<div class="row">
+  <div class="field w200"><label>Species name</label><input id="speciesName" value="MySpecies" oninput="regen()"></div>
+  <div class="field w160"><label>Plan ID (snake_case)</label><input id="planId" value="my_species" oninput="regen()"></div>
+  <div class="field w120"><label>Total body mass (kg)</label><input id="totalMass" type="number" value="70" min="0.1" step="0.1" oninput="regen()"></div>
+  <div class="field w120"><label>Locomotion type</label>
+    <select id="locomotionType" onchange="regen()">
+      <option value="biped">biped</option>
+      <option value="quadruped">quadruped</option>
+      <option value="hexapod">hexapod</option>
+      <option value="undulation">undulation</option>
+      <option value="flight">flight</option>
+      <option value="distributed">distributed</option>
+    </select>
+  </div>
+  <div class="field w120"><label>CNS layout</label>
+    <select id="cnsLayout" onchange="regen()">
+      <option value="centralized">centralized</option>
+      <option value="distributed">distributed</option>
+    </select>
+  </div>
+</div>
+
+<hr>
+
+<div style="display:flex;gap:.5rem;margin-bottom:.75rem;align-items:center">
+  <strong>Segments</strong>
+  <button class="btn sm" onclick="addRow()">+ Add segment</button>
+  <button class="btn sm sec" onclick="loadHumanoid()">Load humanoid template</button>
+  <button class="btn sm sec" onclick="loadQuadruped()">Load quadruped template</button>
+</div>
+
+<p class="hint" style="margin-bottom:.5rem">
+  Mass share (%): each segment's fraction of total body mass — must sum to 100.<br>
+  Exposure (%): relative hit probability weight (kinetic channel) — auto-normalised to sum to 1.0 across segments.
+</p>
+
+<table id="segTable">
+  <thead>
+    <tr>
+      <th>ID</th><th>Parent (or empty=root)</th><th>Mass share %</th><th>Exposure %</th>
+      <th>Locomotion role</th><th>Manipulation role</th><th>CNS role</th><th></th>
+    </tr>
+  </thead>
+  <tbody id="segBody"></tbody>
+</table>
+
+<div class="stats" id="stats"></div>
+<div class="errors" id="errors"></div>
+
+<hr>
+
+<strong>Generated TypeScript</strong>
+<p class="hint" style="margin-bottom:.5rem">Copy this block and paste into a new file in <code>src/</code>, then import it where needed.</p>
+<textarea id="output" readonly spellcheck="false"></textarea>
+<div class="copy-row">
+  <button class="btn sec sm" onclick="copyCode()">Copy to clipboard</button>
+</div>
+
+<script>
+const SCALE_KG = 1000;
+const SCALE_Q  = 10000;
+const q = x => Math.round(x * SCALE_Q);
+
+let rows = [];
+let nextId = 1;
+
+function mkRow(id, parent, massShare, exposure, locomotion, manipulation, cns) {
+  return { _id: nextId++, id, parent, massShare, exposure, locomotion, manipulation, cns };
+}
+
+function loadHumanoid() {
+  rows = [
+    mkRow("torso",    "",        45, 35, "none",    "none",      "none"),
+    mkRow("head",     "torso",   8,  20, "none",    "none",      "central"),
+    mkRow("leftArm",  "torso",   7,  10, "none",    "primary",   "none"),
+    mkRow("rightArm", "torso",   7,  10, "none",    "primary",   "none"),
+    mkRow("leftLeg",  "torso",   16, 12, "primary", "none",      "none"),
+    mkRow("rightLeg", "torso",   16, 12, "primary", "none",      "none"),
+    mkRow("groin",    "torso",   1,  1,  "none",    "none",      "none"),
+  ];
+  renderTable();
+  regen();
+}
+
+function loadQuadruped() {
+  rows = [
+    mkRow("torso",       "",       50, 30, "none",      "none",    "none"),
+    mkRow("head",        "torso",  10, 20, "none",      "none",    "central"),
+    mkRow("neck",        "torso",  5,  8,  "none",      "none",    "none"),
+    mkRow("frontLeft",   "torso",  8,  10, "primary",   "secondary","none"),
+    mkRow("frontRight",  "torso",  8,  10, "primary",   "secondary","none"),
+    mkRow("backLeft",    "torso",  9,  11, "primary",   "none",    "none"),
+    mkRow("backRight",   "torso",  9,  11, "primary",   "none",    "none"),
+    mkRow("tail",        "torso",  1,  0,  "none",      "none",    "none"),
+  ];
+  renderTable();
+  regen();
+}
+
+function addRow() {
+  rows.push(mkRow("newSegment", "", 0, 5, "none", "none", "none"));
+  renderTable();
+  regen();
+}
+
+function deleteRow(rid) {
+  rows = rows.filter(r => r._id !== rid);
+  renderTable();
+  regen();
+}
+
+function renderTable() {
+  const roleOpts = o => ['none','primary','secondary'].map(v => `<option${v===o?' selected':''}>${v}</option>`).join('');
+  const cnsOpts  = o => ['none','central','ganglionic'].map(v => `<option${v===o?' selected':''}>${v}</option>`).join('');
+
+  document.getElementById('segBody').innerHTML = rows.map(r => `
+    <tr data-rid="${r._id}">
+      <td><input value="${r.id}" onchange="upd(${r._id},'id',this.value)" style="width:110px"></td>
+      <td><input value="${r.parent}" onchange="upd(${r._id},'parent',this.value)" style="width:110px" placeholder="(root)"></td>
+      <td><input type="number" value="${r.massShare}" min="0" max="100" step="0.1" onchange="upd(${r._id},'massShare',+this.value)" style="width:70px"></td>
+      <td><input type="number" value="${r.exposure}" min="0" max="100" step="0.5" onchange="upd(${r._id},'exposure',+this.value)" style="width:70px"></td>
+      <td><select onchange="upd(${r._id},'locomotion',this.value)">${roleOpts(r.locomotion)}</select></td>
+      <td><select onchange="upd(${r._id},'manipulation',this.value)">${roleOpts(r.manipulation)}</select></td>
+      <td><select onchange="upd(${r._id},'cns',this.value)">${cnsOpts(r.cns)}</select></td>
+      <td><button class="btn sm danger" onclick="deleteRow(${r._id})">✕</button></td>
+    </tr>`).join('');
+}
+
+function upd(rid, key, val) {
+  const r = rows.find(r => r._id === rid);
+  if (r) { r[key] = val; regen(); }
+}
+
+function regen() {
+  const speciesName = document.getElementById('speciesName').value.trim() || 'MySpecies';
+  const planId      = document.getElementById('planId').value.trim() || 'my_species';
+  const totalMass   = parseFloat(document.getElementById('totalMass').value) || 70;
+  const locoType    = document.getElementById('locomotionType').value;
+  const cnsType     = document.getElementById('cnsLayout').value;
+
+  const errors = [];
+  const totalShare = rows.reduce((s, r) => s + +r.massShare, 0);
+  const hasCentral = rows.some(r => r.cns === 'central');
+  const hasLoco    = rows.some(r => r.locomotion !== 'none');
+  const totalExposure = rows.reduce((s, r) => s + +r.exposure, 0);
+
+  if (Math.abs(totalShare - 100) > 0.5) errors.push(`Mass shares sum to ${totalShare.toFixed(1)}% — must be 100%.`);
+  if (rows.some(r => !r.id.trim())) errors.push('All segments must have a non-empty ID.');
+  if (new Set(rows.map(r => r.id)).size !== rows.length) errors.push('Segment IDs must be unique.');
+  if (!hasCentral) errors.push('At least one segment must have cnsRole = "central".');
+  if (!hasLoco && locoType !== 'distributed') errors.push('At least one segment should have locomotionRole = "primary".');
+  if (totalExposure === 0) errors.push('Total exposure weight is 0 — add non-zero exposure to segments.');
+
+  // stats
+  const statsEl = document.getElementById('stats');
+  statsEl.innerHTML = `
+    <div class="stat"><div class="stat-val ${Math.abs(totalShare-100)<0.5?'ok':'err'}">${totalShare.toFixed(1)}%</div><div class="stat-label">Mass share total (needs 100%)</div></div>
+    <div class="stat"><div class="stat-val ok">${totalExposure.toFixed(1)}%</div><div class="stat-label">Exposure sum (auto-normalised)</div></div>
+    <div class="stat"><div class="stat-val ${hasCentral?'ok':'err'}">${rows.filter(r=>r.cns==='central').length}</div><div class="stat-label">CNS central segments</div></div>
+    <div class="stat"><div class="stat-val ${hasLoco?'ok':'warn'}">${rows.filter(r=>r.locomotion==='primary').length}</div><div class="stat-label">Primary locomotion segs</div></div>
+    <div class="stat"><div class="stat-val ok">${rows.length}</div><div class="stat-label">Segments</div></div>
+  `;
+
+  const errEl = document.getElementById('errors');
+  if (errors.length) {
+    errEl.style.display = 'block';
+    errEl.innerHTML = '<ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+  } else {
+    errEl.style.display = 'none';
+  }
+
+  // code generation
+  const segs = rows.map(r => {
+    const massKg     = Math.round(totalMass * r.massShare / 100 * SCALE_KG);
+    const normExp    = totalExposure > 0 ? r.exposure / totalExposure : 0;
+    const expQ       = Math.round(normExp * SCALE_Q);
+    const parts = [`id: "${r.id}"`, `parent: ${r.parent.trim() ? `"${r.parent.trim()}"` : 'null'}`, `mass_kg: ${massKg}`, `exposureWeight: { kinetic: ${expQ} }`];
+    if (r.locomotion !== 'none') parts.push(`locomotionRole: "${r.locomotion}"`);
+    if (r.manipulation !== 'none') parts.push(`manipulationRole: "${r.manipulation}"`);
+    if (r.cns !== 'none') parts.push(`cnsRole: "${r.cns}"`);
+    return `    { ${parts.join(', ')} }`;
+  }).join(',\n');
+
+  const code = `import type { BodyPlan } from "../src/sim/bodyplan.js";
+
+export const ${speciesName.replace(/\W+/g,'_').toUpperCase()}_BODY_PLAN: BodyPlan = {
+  id: "${planId}",
+  locomotion: { type: "${locoType}" },
+  cnsLayout: { type: "${cnsType}" },
+  segments: [
+${segs}
+  ],
+};
+
+// Usage: import this constant and pass it to compileAnatomyDefinition()
+// or assign it to an Entity's bodyPlan field.
+// Total body mass: ${totalMass} kg  |  Segments: ${rows.length}
+`;
+
+  document.getElementById('output').value = code;
+}
+
+function copyCode() {
+  const ta = document.getElementById('output');
+  navigator.clipboard?.writeText(ta.value).catch(() => {
+    ta.select(); document.execCommand('copy');
+  });
+}
+
+// initialise
+loadHumanoid();
+document.getElementById('speciesName').value = 'Humanoid';
+document.getElementById('planId').value = 'humanoid';
+regen();
+</script>
+</body>
+</html>

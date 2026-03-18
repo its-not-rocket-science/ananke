@@ -5298,34 +5298,27 @@ ranges. Run with `npm run run:emergent-validation`.
 
 ---
 
-### 8 · Visual Editors for Non-Developers
+### 8 · Visual Editors for Non-Developers *(COMPLETE)*
 
-**The gap:** Adding a new species, body plan, or validation scenario currently requires
-writing TypeScript, understanding fixed-point arithmetic, and knowing the archetype variance
-system.  Game designers, biomechanics researchers, and historians who are potential heavy users
-of the system cannot contribute without a kernel developer acting as an intermediary.
+**Deliverable:** Two standalone HTML/JS tools in `docs/editors/` (no build step, no TypeScript
+required). Serve locally or via GitHub Pages.
 
-**What is needed:** Two standalone web-based tools (no build step, no TypeScript knowledge
-required):
+**Body Plan Editor** (`docs/editors/body-plan-editor.html`):
+- Species name, locomotion type, CNS layout, total body mass
+- Segment table: ID, parent, mass-share %, hit-exposure %, locomotion/manipulation/CNS roles
+- Live validation: mass shares must sum to 100%, flags missing CNS central and locomotion segments
+- Pre-loaded templates: humanoid (7 segments) and quadruped (8 segments)
+- Generates a complete `BodyPlan` TypeScript literal (SCALE-corrected mass_kg and exposureWeight)
 
-**Body Plan Editor**
-- Input: species name, segment list (drag to connect parent/child), mass share sliders,
-  locomotion and manipulation segment toggles
-- Output: a `BodyPlan` TypeScript literal ready to paste into a companion species pack
-- Validation: ensures mass shares sum to q(1.0), flags missing locomotion segments
+**Validation Scenario Builder** (`docs/editors/scenario-builder.html`):
+- Up to 4 configurable entities (team, archetype, weapon, armour, position)
+- Simulation parameters: tick count, traction coefficient, weather preset
+- Metric dropdown: peak power, force, reaction time, shock, fatigue, fluid loss, consciousness,
+  region damage, survivor fraction, ticks-to-end, or custom expression
+- Empirical reference: dataset name, mean, CI half-width, tolerance %, source citation
+- Generates a complete `DirectValidationScenario` block ready to paste into `tools/validation.ts`
 
-**Validation Scenario Builder**
-- Input: scenario name, entity archetypes (dropdown from built-ins), simulation parameters
-  (tick count, seed range), expected output metric (e.g. "consciousness_Q < q(0.10) within N ticks")
-- Output: a `DirectValidationScenario` block ready to paste into `tools/validation.ts`
-- Preview: runs the scenario in the browser (WASM or API call) and shows a histogram of outcomes
-
-**Deliverable:** Two standalone HTML/JS tools hosted as GitHub Pages in a companion repository
-(`ananke-tools`).  No server required — all computation client-side.
-
-**Why this matters:** Lowers the contribution barrier from "kernel developer" to "domain
-expert".  A biomechanics researcher can add a new validation scenario; a game designer can
-author a new species without touching the kernel.
+Landing page: `docs/editors/index.html` links both tools and the validation dashboard.
 
 ---
 

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Validation Scenario Builder</title>
+<style>
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--border:#2e3245;--text:#e0e4f0;
+    --muted:#7a81a0;--pass:#22c55e;--fail:#ef4444;--accent:#6366f1;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:ui-monospace,"Cascadia Code",Menlo,monospace;font-size:13px;padding:1.5rem;max-width:960px}
+  h1{font-size:1.3rem;margin-bottom:.25rem}
+  .sub{color:var(--muted);font-size:.82rem;margin-bottom:1.5rem}
+  section{margin-bottom:1.25rem}
+  h2{font-size:.85rem;font-weight:700;color:var(--accent);letter-spacing:.07em;text-transform:uppercase;margin-bottom:.6rem}
+  .grid{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+  .grid.wide{grid-template-columns:1fr 1fr}
+  label{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.22rem}
+  input,select,textarea{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:13px;padding:.3rem .5rem;outline:none;width:100%}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  textarea.short{height:70px;resize:vertical}
+  hr{border:none;border-top:1px solid var(--border);margin:1rem 0}
+  .entity-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.75rem;position:relative}
+  .entity-card h3{font-size:.78rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem}
+  .entity-grid{display:grid;gap:.5rem;grid-template-columns:1fr 1fr 80px 80px}
+  .btn{background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:.35rem .75rem;transition:opacity .1s}
+  .btn:hover{opacity:.85}
+  .btn.sm{font-size:11px;padding:.2rem .5rem}
+  .btn.sec{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+  .entities-row{display:flex;gap:.75rem;flex-wrap:wrap}
+  .add-entity{display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px dashed var(--border);border-radius:6px;min-width:140px;cursor:pointer;color:var(--muted);font-size:12px;padding:.75rem}
+  .add-entity:hover{border-color:var(--accent);color:var(--accent)}
+  .del-btn{position:absolute;right:.5rem;top:.5rem;background:none;border:none;color:var(--fail);cursor:pointer;font-size:14px;line-height:1;padding:.1rem .3rem}
+  textarea#output{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:#a5f3fc;font-family:inherit;font-size:12px;height:380px;line-height:1.5;padding:.5rem;resize:vertical;width:100%}
+  .copy-row{display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end}
+  .hint{color:var(--muted);font-size:.78rem}
+  .metric-desc{color:var(--muted);font-size:.77rem;grid-column:1/-1;margin-top:-.2rem}
+</style>
+</head>
+<body>
+
+<h1>Validation Scenario Builder</h1>
+<p class="sub">Generate a <code>DirectValidationScenario</code> block ready to paste into <code>tools/validation.ts</code>.</p>
+
+<section>
+  <h2>Scenario identity</h2>
+  <div class="grid wide">
+    <div><label>Scenario name</label><input id="scenName" value="My Validation Scenario" oninput="regen()"></div>
+    <div><label>Description (shown in reports)</label><input id="scenDesc" value="Brief description of what is being validated." oninput="regen()"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Entities</h2>
+  <p class="hint" style="margin-bottom:.6rem">Add 1–4 entities. Each gets a fixed ID (1, 2, …). Position is in metres from origin.</p>
+  <div class="entities-row" id="entitiesRow"></div>
+</section>
+
+<section>
+  <h2>Simulation parameters</h2>
+  <div class="grid">
+    <div><label>Steps (ticks)</label><input id="steps" type="number" value="100" min="0" step="10" oninput="regen()"></div>
+    <div><label>Traction coeff (0.5–1.0)</label><input id="traction" type="number" value="0.85" min="0.1" max="1.0" step="0.05" oninput="regen()"></div>
+    <div><label>Weather</label>
+      <select id="weather" onchange="regen()">
+        <option value="none">None (clear)</option>
+        <option value="rain">Rain</option>
+        <option value="heavy_rain">Heavy rain</option>
+        <option value="fog_light">Fog (light)</option>
+        <option value="fog_heavy">Fog (heavy)</option>
+        <option value="rain_fog">Rain + fog</option>
+      </select>
+    </div>
+    <div><label>Min seeds (statistical reliability)</label><input id="minSeeds" type="number" value="30" min="1" step="5" oninput="regen()"></div>
+  </div>
+</section>
+
+<section>
+  <h2>Outcome metric</h2>
+  <div class="grid">
+    <div>
+      <label>Metric type</label>
+      <select id="metricType" onchange="onMetricChange()">
+        <optgroup label="Physical constants">
+          <option value="peakPower_W">Peak anaerobic power (W)</option>
+          <option value="peakForce_N">Peak force (N)</option>
+          <option value="reactionTime_s">Reaction time (s)</option>
+          <option value="reserveEnergy_J">Energy reserve (J)</option>
+        </optgroup>
+        <optgroup label="Injury state (entity 0)">
+          <option value="shock">Shock (Q, 0–1)</option>
+          <option value="fatigue">Fatigue (Q, 0–1)</option>
+          <option value="fluidLoss">Fluid loss (Q, 0–1)</option>
+          <option value="consciousness">Consciousness (Q, 0–1)</option>
+          <option value="surfaceDamage_torso">Surface damage — torso (Q)</option>
+          <option value="internalDamage_torso">Internal damage — torso (Q)</option>
+        </optgroup>
+        <optgroup label="Combat outcome">
+          <option value="survivorsFrac">Survivor fraction (team 1)</option>
+          <option value="ticksToEnd">Ticks to combat end</option>
+        </optgroup>
+        <optgroup label="Custom">
+          <option value="custom">Custom extractOutcome expression</option>
+        </optgroup>
+      </select>
+    </div>
+    <div><label>Unit (for report)</label><input id="unit" value="W" oninput="regen()"></div>
+    <div id="customExprDiv" style="display:none;grid-column:1/-1">
+      <label>Custom expression (entity 0 = <code>world.entities[0]!</code>)</label>
+      <input id="customExpr" value="entity.energy.fatigue / 10000" oninput="regen()" placeholder="e.g. entity.injury.shock / 10000">
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Empirical reference</h2>
+  <p class="hint" style="margin-bottom:.5rem">Values should be in the same SI unit as the metric above.</p>
+  <div class="grid">
+    <div><label>Dataset / source name</label><input id="dsName" value="Author Year — dataset name" oninput="regen()"></div>
+    <div><label>Empirical mean</label><input id="empMean" type="number" value="1200" step="any" oninput="regen()"></div>
+    <div><label>CI half-width (±)</label><input id="empCI" type="number" value="200" step="any" oninput="regen()"></div>
+    <div><label>Tolerance %</label>
+      <select id="tolPct" onchange="regen()">
+        <option value="10">10% — physical constant</option>
+        <option value="15">15% — physiological parameter</option>
+        <option value="20" selected>20% — default</option>
+        <option value="25">25% — noisy physiological</option>
+        <option value="30">30% — statistical outcome</option>
+        <option value="40">40% — emergent aggregate</option>
+      </select>
+    </div>
+    <div><label>Source citation (DOI or reference)</label><input id="srcCite" value="10.1000/xyz123" oninput="regen()"></div>
+    <div><label>Notes</label><input id="srcNotes" value="" oninput="regen()" placeholder="e.g. trained male adults"></div>
+  </div>
+</section>
+
+<hr>
+<strong>Generated TypeScript block</strong>
+<p class="hint" style="margin-bottom:.5rem">Add this entry to the <code>directValidationScenarios</code> array in <code>tools/validation.ts</code>.</p>
+<textarea id="output" readonly spellcheck="false"></textarea>
+<div class="copy-row">
+  <button class="btn sec sm" onclick="copyCode()">Copy to clipboard</button>
+</div>
+
+<script>
+const SCALE_Q = 10000; const SCALE_KG = 1000; const SCALE_W = 1; const SCALE_N = 100; const SCALE_S = 10000;
+
+const ARCHETYPES = ['lineInfantry','berserker','skirmisher','defender'];
+const WEAPONS = [
+  {idx:0,label:'Club (idx 0)'},
+  {idx:1,label:'Knife (idx 1)'},
+  {idx:2,label:'Longsword (idx 2)'},
+  {idx:3,label:'Boxing gloves (idx 3)'},
+];
+const ARMOUR = [
+  {idx:0,label:'Leather (idx 0)'},
+  {idx:1,label:'Mail (idx 1)'},
+  {idx:2,label:'Plate (idx 2)'},
+];
+
+let entities = [];
+let nextEId = 1;
+
+function mkEntity() {
+  return { _id: nextEId++, teamId: 1, x: 0, y: 0, weapon: 2, armour: 0, archetype: 'lineInfantry' };
+}
+
+function addEntity() {
+  if (entities.length >= 4) return;
+  const e = mkEntity();
+  e.teamId = entities.length < 2 ? 1 : 2;
+  e.y = entities.length === 0 ? 0 : Math.round(entities.length * 2);
+  entities.push(e);
+  renderEntities();
+  regen();
+}
+
+function removeEntity(eid) {
+  entities = entities.filter(e => e._id !== eid);
+  renderEntities();
+  regen();
+}
+
+function updEnt(eid, key, val) {
+  const e = entities.find(e => e._id === eid);
+  if (e) { e[key] = key === 'teamId' || key === 'weapon' || key === 'armour' ? +val : val; regen(); }
+}
+
+function renderEntities() {
+  const row = document.getElementById('entitiesRow');
+  const archOpts = sel => ARCHETYPES.map(a => `<option${a===sel?' selected':''}>${a}</option>`).join('');
+  const wpnOpts = sel => WEAPONS.map(w => `<option value="${w.idx}"${w.idx===sel?' selected':''}>${w.label}</option>`).join('');
+  const armOpts = sel => ARMOUR.map(a => `<option value="${a.idx}"${a.idx===sel?' selected':''}>${a.label}</option>`).join('');
+
+  row.innerHTML = entities.map((e, i) => `
+    <div class="entity-card" style="min-width:240px">
+      <h3>Entity ${i+1} (ID ${i+1})</h3>
+      <button class="del-btn" onclick="removeEntity(${e._id})" title="Remove">✕</button>
+      <div class="entity-grid">
+        <div><label>Team</label><input type="number" value="${e.teamId}" min="1" max="4" onchange="updEnt(${e._id},'teamId',this.value)" style="width:60px"></div>
+        <div><label>Archetype</label><select onchange="updEnt(${e._id},'archetype',this.value)">${archOpts(e.archetype)}</select></div>
+        <div><label>x (m)</label><input type="number" value="${e.x}" step="1" onchange="updEnt(${e._id},'x',+this.value)"></div>
+        <div><label>y (m)</label><input type="number" value="${e.y}" step="1" onchange="updEnt(${e._id},'y',+this.value)"></div>
+        <div style="grid-column:1/3"><label>Weapon</label><select onchange="updEnt(${e._id},'weapon',this.value)">${wpnOpts(e.weapon)}</select></div>
+        <div style="grid-column:3/5"><label>Armour</label><select onchange="updEnt(${e._id},'armour',this.value)">${armOpts(e.armour)}</select></div>
+      </div>
+    </div>`).join('') +
+    (entities.length < 4 ? `<div class="add-entity" onclick="addEntity()">+ Add entity</div>` : '');
+}
+
+function onMetricChange() {
+  const m = document.getElementById('metricType').value;
+  const customDiv = document.getElementById('customExprDiv');
+  customDiv.style.display = m === 'custom' ? 'block' : 'none';
+  // auto-fill unit
+  const unitMap = {
+    peakPower_W:'W', peakForce_N:'N', reactionTime_s:'s', reserveEnergy_J:'J',
+    shock:'Q', fatigue:'Q', fluidLoss:'Q', consciousness:'Q',
+    surfaceDamage_torso:'Q', internalDamage_torso:'Q',
+    survivorsFrac:'fraction', ticksToEnd:'ticks', custom:'',
+  };
+  document.getElementById('unit').value = unitMap[m] ?? '';
+  regen();
+}
+
+function buildExtract(metric) {
+  switch (metric) {
+    case 'peakPower_W':     return 'entity.attributes.performance.peakPower_W';
+    case 'peakForce_N':     return 'entity.attributes.performance.peakForce_N / 100';
+    case 'reactionTime_s':  return 'entity.attributes.performance.reactionTime_s / 10000';
+    case 'reserveEnergy_J': return 'entity.attributes.performance.reserveEnergy_J';
+    case 'shock':           return 'entity.condition.shock / 10000';
+    case 'fatigue':         return 'entity.energy.fatigue / 10000';
+    case 'fluidLoss':       return 'entity.injury.fluidLoss / 10000';
+    case 'consciousness':   return 'entity.condition.consciousnessQ / 10000';
+    case 'surfaceDamage_torso': return '(entity.injury.byRegion["torso"]?.surfaceDamage ?? 0) / 10000';
+    case 'internalDamage_torso': return '(entity.injury.byRegion["torso"]?.internalDamage ?? 0) / 10000';
+    case 'survivorsFrac':   return 'world.entities.filter(e => e.teamId === 1 && !e.injury.dead).length / world.entities.filter(e => e.teamId === 1).length';
+    case 'ticksToEnd':      return 'world.tick';
+    case 'custom':          return document.getElementById('customExpr').value.trim() || '0';
+    default: return '0';
+  }
+}
+
+function buildWeatherCtx(w) {
+  if (w === 'none') return '';
+  const fogMap = { rain:'', heavy_rain:'', fog_light:`\n    fogDensity_Q: 2000 as Q,`, fog_heavy:`\n    fogDensity_Q: 7000 as Q,`, rain_fog:`\n    fogDensity_Q: 4500 as Q,` };
+  const precipMap = { rain:'rain', heavy_rain:'heavy_rain', fog_light:'', fog_heavy:'', rain_fog:'rain' };
+  const fog = fogMap[w] || '';
+  const prec = precipMap[w];
+  const lines = [];
+  if (prec) lines.push(`precipitation: "${prec}"`);
+  if (fog) lines.push(fog.trim());
+  return `,\n    weather: { ${lines.join(', ')} },`;
+}
+
+function regen() {
+  const name    = document.getElementById('scenName').value.trim() || 'My Scenario';
+  const desc    = document.getElementById('scenDesc').value.trim();
+  const steps   = parseInt(document.getElementById('steps').value) || 0;
+  const trac    = parseFloat(document.getElementById('traction').value) || 0.85;
+  const weather = document.getElementById('weather').value;
+  const metric  = document.getElementById('metricType').value;
+  const unit    = document.getElementById('unit').value.trim() || 'W';
+  const empMean = parseFloat(document.getElementById('empMean').value) || 0;
+  const empCI   = parseFloat(document.getElementById('empCI').value) || 0;
+  const tol     = document.getElementById('tolPct').value;
+  const dsName  = document.getElementById('dsName').value.trim();
+  const srcCite = document.getElementById('srcCite').value.trim();
+  const srcNotes= document.getElementById('srcNotes').value.trim();
+  const minSeeds= parseInt(document.getElementById('minSeeds').value) || 30;
+  const tracQ   = Math.round(trac * SCALE_Q);
+
+  const entitySetup = entities.map((e, i) => {
+    const lines = [];
+    lines.push(`const e${i+1} = mkHumanoidEntity(${i+1}, ${e.teamId}, Math.round(${e.x} * SCALE.m), Math.round(${e.y} * SCALE.m));`);
+    lines.push(`    e${i+1}.loadout = { items: [STARTER_WEAPONS[${e.weapon}]!, STARTER_ARMOUR[${e.armour}]!] };`);
+    return lines.join('\n    ');
+  }).join('\n    ');
+
+  const entityArr = entities.length
+    ? `[${entities.map((_,i) => `e${i+1}`).join(', ')}]`
+    : '[]';
+
+  const weatherCtx = buildWeatherCtx(weather);
+  const tracStr = `q(${trac}) as Q`;
+  const extractExpr = buildExtract(metric);
+
+  const setupIsZeroTick = steps === 0;
+  const seedComment = setupIsZeroTick
+    ? '// Use seed as entity ID to sample variance distribution; steps=0 reads attributes directly.'
+    : '// seed drives world RNG; entity IDs are fixed.';
+
+  const code = `  {
+    name: "${name}",
+    description: "${desc} Reference: ${srcCite}",
+    empiricalDataset: {
+      name: "${dsName}",
+      description: "${desc}",
+      dataPoints: [
+        { value: ${empMean}, unit: "${unit}", source: "${dsName}", notes: "${srcNotes}" },
+      ],
+      mean: ${empMean},
+      confidenceIntervalHalf: ${empCI},
+    },
+    setup: (seed: number) => {
+      ${seedComment}
+      ${entitySetup || 'const e1 = mkHumanoidEntity(1, 1, 0, 0);'}
+      const world = mkWorld(seed, ${entityArr || '[e1]'});
+      const ctx: KernelContext = { tractionCoeff: ${tracStr}${weatherCtx} };
+      return { world, ctx, steps: ${steps} };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0]!;
+      return ${extractExpr};
+    },
+    unit: "${unit}",
+    tolerancePercent: ${tol},
+    minSeeds: ${minSeeds},
+  },`;
+
+  document.getElementById('output').value = code;
+}
+
+function copyCode() {
+  const ta = document.getElementById('output');
+  navigator.clipboard?.writeText(ta.value).catch(() => {
+    ta.select(); document.execCommand('copy');
+  });
+}
+
+// init
+addEntity();
+addEntity();
+entities[1].teamId = 2;
+entities[1].y = 3;
+renderEntities();
+regen();
+</script>
+</body>
+</html>

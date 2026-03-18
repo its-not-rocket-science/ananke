@@ -423,6 +423,13 @@ simulated vs. empirical bars with ±tolerance bands, and filter controls. JSON d
 regenerated automatically on push via `.github/workflows/validation-dashboard.yml`.
 Serve locally with `python -m http.server` inside `docs/dashboard/`.
 
+**Visual Editors for Non-Developers** (`docs/editors/`) — two standalone HTML/JS tools
+requiring no build step or TypeScript knowledge. **Body Plan Editor**: define species segments
+with mass-share sliders, locomotion/manipulation/CNS roles, and live validation; generates a
+`BodyPlan` TypeScript literal. **Validation Scenario Builder**: configure entities, simulation
+parameters, weather, and empirical reference data; generates a `DirectValidationScenario`
+block. Both tools serve via GitHub Pages or `python -m http.server`.
+
 **2904 tests.** All coverage thresholds met (statements 93.75%+, branches 84.69%+, functions 92%+, lines 93.75%+).
 
 See `ROADMAP.md` for the full development plan.

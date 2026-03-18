@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ananke — Visual Editors</title>
+<style>
+  body{background:#0f1117;color:#e0e4f0;font-family:ui-monospace,monospace;padding:2rem;max-width:700px}
+  h1{font-size:1.4rem;margin-bottom:.5rem}
+  p{color:#7a81a0;margin-bottom:1.5rem;font-size:.9rem}
+  .cards{display:flex;flex-direction:column;gap:1rem}
+  .card{background:#1a1d27;border:1px solid #2e3245;border-radius:8px;padding:1.25rem 1.5rem;text-decoration:none;color:inherit;display:block;transition:border-color .15s}
+  .card:hover{border-color:#6366f1}
+  .card h2{font-size:1rem;margin-bottom:.3rem}
+  .card p{margin:0;font-size:.82rem}
+</style>
+</head>
+<body>
+<h1>Ananke — Visual Editors</h1>
+<p>Standalone HTML tools for non-developers. No build step, no TypeScript required.</p>
+<div class="cards">
+  <a class="card" href="body-plan-editor.html">
+    <h2>Body Plan Editor</h2>
+    <p>Define a new species: segments, mass shares, exposure weights, locomotion roles. Generates a <code>BodyPlan</code> TypeScript literal ready to paste into <code>src/</code>.</p>
+  </a>
+  <a class="card" href="scenario-builder.html">
+    <h2>Validation Scenario Builder</h2>
+    <p>Configure entities, simulation steps, and an output metric against empirical reference data. Generates a <code>DirectValidationScenario</code> block ready to paste into <code>tools/validation.ts</code>.</p>
+  </a>
+  <a class="card" href="../dashboard/index.html">
+    <h2>Validation Dashboard</h2>
+    <p>Live pass/fail status of all 43 validation scenarios across calibration and direct tests.</p>
+  </a>
+</div>
+</body>
+</html>
