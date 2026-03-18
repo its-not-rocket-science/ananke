@@ -5577,6 +5577,30 @@ population floor — consistent with pre-modern epidemic dynamics.
 
 ---
 
+### Phase 65 — Emotional Contagion at Polity Scale *(COMPLETE)*
+
+**Concept:** Fear and hope propagate between polities using the same transmission model as
+Phase 56 disease spread, with `fear_Q` / `hope_Q` as the "pathogen".  Structurally identical
+to epidemic modelling — both use `eventSeed`-based transmission rolls and per-day decay.
+
+**Delivered:** `src/emotional-contagion.ts` — 46 tests; 100% statement/function/line coverage.
+
+Four profiles: `military_rout` (fear, fast spread/decay), `plague_panic` (fear, slow decay),
+`victory_rally` (hope, medium), `charismatic_address` (hope, leader-amplified via Phase 39).
+
+Key functions:
+- `applyEmotionalContagion(registry, pairs, waves, profiles, worldSeed, tick)` → `ContagionResult[]`
+- `stepEmotionalWaves(waves, profiles)` → decayed array (returns new, does not mutate)
+- `computeEmotionalSpread(sourceId, targetId, wave, profile, worldSeed, tick)` → Q delta
+- `netEmotionalPressure(polityId, waves, profiles)` → signed Q for AI "panic" queries
+- Convenience triggers: `triggerMilitaryRout`, `triggerPlaguePanic`, `triggerVictoryRally`,
+  `triggerLeaderAddress(id, leaderPerformance_Q)` — Phase 39 hook amplifies wave intensity
+
+**Depends on:** Phase 61 (PolityRegistry, PolityPair), Phase 56 (transmission model pattern),
+Phase 39 (leaderAmplification_Q), `eventSeed`, `makeRng`.
+
+---
+
 ## Long-Term Vision
 
 The following ideas are directionally sound and build naturally on existing Ananke systems,
@@ -5616,7 +5640,7 @@ pre-modern epidemic mechanics.
 
 ---
 
-### Emotional Contagion at Polity Scale
+### Emotional Contagion at Polity Scale *(COMPLETE — Phase 65)*
 
 **Concept:** Extend the morale and fear systems upward from the individual entity to the
 polity.  A military defeat reduces `polity.moraleQ`; a charismatic leader's address (using
@@ -5631,6 +5655,22 @@ a social network the same way a respiratory illness does through a physical one.
 (transmission model reused for emotional state), Phase 32D (morale system constants).
 
 **Prerequisite:** Phase 61.
+
+**Delivered:** `src/emotional-contagion.ts` — 46 tests; 100% statement/function/line coverage.
+
+- `EmotionalContagionProfile`: id, name, `valence` ("fear"|"hope"), `baseTransmissionRate_Q`,
+  `decayRate_Q`, `maxMoraleDelta_Q`, `leaderAmplification_Q` (Phase 39 hook)
+- `EmotionalWave { profileId, sourcePolityId, intensity_Q, daysActive }` — decaying event
+- Four built-in profiles: `military_rout` (fear, fast decay), `plague_panic` (fear, slow decay),
+  `victory_rally` (hope, medium), `charismatic_address` (hope, leader-amplified, fast decay)
+- `computeEmotionalSpread(sourceId, targetId, wave, profile, worldSeed, tick)` → Q delta
+- `applyEmotionalContagion(registry, pairs, waves, profiles, worldSeed, tick)` → `ContagionResult[]`
+  — applies to source polity directly + spreads to adjacent polities via pairs
+- `stepEmotionalWaves(waves, profiles)` → new array with decayed waves; expired removed
+- Convenience triggers: `triggerMilitaryRout`, `triggerPlaguePanic`, `triggerVictoryRally`,
+  `triggerLeaderAddress(sourceId, leaderPerformance_Q)`
+- `netEmotionalPressure(polityId, waves, profiles)` → signed Q for AI queries
+- `isWaveExpired(wave)` → bool
 
 ---
 

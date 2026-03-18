@@ -402,6 +402,15 @@ major phase simultaneously (disease, polity economics, war, sleep debt, skill pr
 Validates 4 emergent-behaviour claims: social hierarchy, disease mortality spikes, morale–economy
 correlation, and skill accumulation hierarchy. All 4/4 claims pass on seed 1.
 
+**Phase 65 — Emotional Contagion at Polity Scale** (`src/emotional-contagion.ts`) — fear and hope
+propagate between polities using the Phase 56 disease transmission model with `fear_Q`/`hope_Q` as
+the "pathogen".  Four built-in profiles: `military_rout` (fast-spreading panic), `plague_panic`
+(slow-decaying dread), `victory_rally` (hope wave from a battle win), `charismatic_address`
+(leader-amplified; Phase 39 `leaderPerformance_Q` scales initial intensity).
+`applyEmotionalContagion(registry, pairs, waves, profiles, worldSeed, tick)` drives spread +
+moraleQ updates each polity day-tick.  `netEmotionalPressure` gives a signed Q for AI queries.
+46 tests; 100% statement/function/line coverage.
+
 **"What If?" / Alternate History Engine** (`tools/what-if.ts`, `npm run run:what-if`, Phase 64) —
 polity-scale alternate-history simulator that runs a `WhatIfScenario` across N seeds and reports
 probability-weighted outcome distributions. Three built-in scenarios: plague devastating a capital
