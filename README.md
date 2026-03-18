@@ -1,36 +1,82 @@
 # Ananke
 ![CI](../../actions/workflows/ci.yml/badge.svg)
 
-**Ananke** is a deterministic, lockstep-friendly simulation kernel for physics-first RPGs,
-tactical combat engines, and speculative physiology systems.
+**Ananke** is a deterministic, physics-grounded simulation engine for characters, combat,
+and survivability — from a single duel to a campaign-scale world.
 
 It models entities using **real physical quantities** rather than abstract hit points,
 using **SI units stored as fixed-point integers** for full determinism.
+Same seed + same inputs → identical results, at every scale.
 
-Designed for:
+The core promise is narrow and hard: deterministic, physics-grounded simulation for
+characters, combat, and survivability across tactical-to-campaign scales.
+Everything else — world simulation, mythology, emotional contagion, tech diffusion — is
+built on top of that foundation and can be adopted independently.
 
-- Simulation-first RPGs
-- Tactical and formation combat engines
-- Scientific and speculative biology modelling
-- Deterministic multiplayer simulation
-- Large-scale combat and geopolitical simulation
-- Narrative stress testing and plot-plausibility analysis
-- Alternate history and emergent world simulation
+---
+
+## Start here: three adoption paths
+
+Choose the path that matches your immediate need.  Ignore the rest until you need it.
+
+### Path A — "I want a deterministic combat kernel"
+
+**Minimal modules:** `src/units.ts`, `src/sim/kernel.ts`, `src/presets.ts`, `src/weapons.ts`
+
+**30-minute quickstart:** Run `tools/vertical-slice.ts` (`npm run run:vertical-slice`).
+A Knight fights a Brawler across three seeds, producing a physics-grounded combat log.
+Read `docs/integration-primer.md` for data-flow diagrams and type glossary.
+
+**Key entry points:** `stepWorld()`, `resolveHit()`, `generateIndividual()`, `mkKnight()`
+
+**What to ignore for now:** Phases 56–67 (campaign-scale systems), all `tools/` except `vertical-slice.ts`
+
+---
+
+### Path B — "I want a campaign / world simulation"
+
+**Minimal modules:** Path A + `src/campaign.ts`, `src/polity.ts`, `src/tech-diffusion.ts`
+
+**30-minute quickstart:** Run `npm run run:what-if` to see alternate-history polity scenarios
+(plague, charismatic leader, sudden war) with probability-weighted outcome distributions.
+
+**Key entry points:** `stepPolityDay()`, `stepTechDiffusion()`, `applyEmotionalContagion()`,
+`compressMythsFromHistory()`
+
+**What to ignore for now:** `src/sim/model3d.ts`, `src/bridge/`, `docs/editors/`
+
+---
+
+### Path C — "I want physiology / species modelling"
+
+**Minimal modules:** `src/units.ts`, `src/sim/bodyplan.ts`, `src/archetypes.ts`,
+`src/describe.ts`
+
+**30-minute quickstart:** Open `docs/editors/species-forge.html` in a browser.
+Design a body plan, set archetype sliders, and copy the generated TypeScript trio
+(`BodyPlan` + `Archetype` + `NarrativeBias`) into your project.
+
+**Key entry points:** `generateIndividual()`, `applyAgingToAttributes()`,
+`applySleepToAttributes()`, `extractRigSnapshots()`
+
+**What to ignore for now:** `src/polity.ts`, `src/tech-diffusion.ts`, all `tools/`
+
+---
 
 ### Where Ananke sits in a larger system
 
-Ananke is the physics and biology layer — Layer 2 in the stack below.  The layers above it
-are either partially implemented, planned, or left to the host.
+Ananke is the physics and biology layer — Layer 2 in the stack below.  Layers above it
+are partially or fully implemented; Layer 7 is long-term vision.
 
 | Layer | Purpose | Status |
 |-------|---------|--------|
 | **7 — The Universe** | Cosmological scale: planets, interstellar travel, multiple worlds | Long-term vision |
-| **6 — The World** | Geopolitical scale: nations, empires, diplomacy, trade, war | **Complete** (Phase 61) |
-| **5 — The Society** | Cultural scale: cities, factions, myths, legends, mass psychology | Partial (Phases 36, 45, 50); Generative Mythology (long-term) |
-| **4 — The Group** | Social scale: parties, armies, organisations, emotional contagion | Partial (Phases 22, 48, 51); Emotional Contagion (long-term) |
-| **3 — The Individual** | Character scale: generation, narrative shaping, skill progression | Mostly complete (Phases 21, 33–39, 57–58, 62) |
+| **6 — The World** | Geopolitical scale: nations, empires, diplomacy, trade, war, tech diffusion | **Complete** (Phases 61, 67) |
+| **5 — The Society** | Cultural scale: cities, factions, myths, legends, mass psychology | **Complete** (Phases 36, 45, 50, 66) |
+| **4 — The Group** | Social scale: parties, armies, organisations, emotional contagion | **Complete** (Phases 22, 48, 51, 65) |
+| **3 — The Individual** | Character scale: generation, narrative shaping, aging, sleep, skill progression | **Complete** (Phases 21, 33–39, 57–58, 62) |
 | **2 — The Simulation** | Physics and biology kernel | **Complete** (Phases 1–60) |
-| **1 — The Interface** | Visual editors, Species Forge, "What If?" engine, validation dashboard, Narrative Stress Test | ROADMAP items 6–11; Phases 62–63 |
+| **1 — The Interface** | Visual editors, Species Forge, "What If?" engine, validation dashboard, Narrative Stress Test | **Mostly complete** (ROADMAP items 7–11; Phases 62–63; item 6 pending) |
 
 The kernel's deterministic, physics-first foundation makes it suited to the full stack.  A
 scenario that would require hand-waving in a narrative RPG — "does the hero survive this
@@ -1087,6 +1133,22 @@ lowering this integration barrier.
 
 ---
 
+## API stability contract
+
+Ananke distinguishes three tiers of API stability so adopters know what to pin and what to
+expect to change.
+
+| Tier | What | Promise |
+|------|------|---------|
+| **Stable host API** | `stepWorld()`, `generateIndividual()`, `resolveHit()`, `Entity` shape (core fields), `q()` / `qMul()` / `clampQ()`, `ReplayRecorder` / `replayTo()`, `serializeReplay()` / `deserializeReplay()`, `extractRigSnapshots()` | No breaking changes without a major version bump and migration guide |
+| **Experimental extension API** | `stepPolityDay()`, `stepTechDiffusion()`, `applyEmotionalContagion()`, `compressMythsFromHistory()`, `stepNarrativeStress()`, `arena.ts` scenario DSL | Good-faith stability; may shift between minor versions with changelog |
+| **Internal kernel structures** | `src/sim/push.ts`, `src/sim/kernel.ts` internals, `src/rng.ts`, `eventSeed()` | No stability promise; do not import directly |
+
+All replay, serialization, and campaign round-trip guarantees apply only to the Stable tier.
+Experimental APIs are safe to use but may require migration on minor version updates.
+
+---
+
 ## Determinism rules
 
 To maintain lockstep safety:
@@ -2053,13 +2115,24 @@ author body plans and validation scenarios without writing kernel code.
 **Next step (ROADMAP item 8):** A Body Plan Editor and Validation Scenario Builder — standalone
 web-based tools that emit TypeScript/JSON compatible with the kernel's data structures.
 
-### 4. Performance benchmarks
+### 4. Performance baselines
 
-**What exists:** The kernel is designed for scalability (spatial indexing, frontage caps,
-formation depth) but no official throughput numbers exist.
+Performance is a published contract, not just a tool that exists.
 
-**What is missing:** Benchmarks for 10, 100, and 1 000 entity simulations on reference hardware,
-bottleneck identification, and optimisation guidance for host applications.
+| Scenario | Entities | Median tick | Throughput | 20 Hz budget |
+|----------|----------|-------------|------------|--------------|
+| Melee skirmish | 10 | 0.19 ms | 5 300 ticks/s | 4% |
+| Mixed ranged/melee | 100 | 4.68 ms | 214 ticks/s | 9% |
+| Formation combat | 500 | 31 ms | 32 ticks/s | 62% |
+| Weather + disease | 1 000 | 64 ms | 16 ticks/s | 129% (exceeds real-time) |
 
-**Next step (ROADMAP item 9):** A Performance & Scalability phase producing reproducible
-benchmarks and a tuning guide.  See ROADMAP for scope.
+Measured on Node 22, Apple M-series reference hardware.  Full methodology, AI-budget
+breakdown, spatial-index comparison, memory footprint, and tuning guidance are in
+`docs/performance.md`.  Run with `npm run run:benchmark`.
+
+**Key constraint:** at 20 Hz real-time rate, 500 entities fits comfortably within budget;
+1 000 entities requires a tick-rate reduction or spatial partitioning.  `stepWorld` (kernel
+physics) consumes ≥ 95% of tick budget at all entity counts; AI is negligible (< 1%).
+
+**Next step (ROADMAP item 15):** add a benchmark regression check to nightly CI so
+throughput regressions are caught before release.

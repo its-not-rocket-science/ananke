@@ -5250,9 +5250,13 @@ for upstream PRs, and a pinned dependency with a defined upgrade-review cadence.
 
 ## Next Priorities
 
-The five integration milestones are complete.  The following items represent the critical path
-for raising adoption and scientific credibility.  They are sequenced: items 6–8 lower the
-integration barrier; items 9–11 deepen validation and infrastructure.
+The five integration milestones are complete and all simulation layers (2–6) are implemented.
+Ananke is at a strategic inflection point: the core technology is mature and validated.
+The remaining work is about **making that depth legible and adoptable**.
+
+Items 6–8 lower the integration barrier.  Items 9–11 deepen validation and infrastructure.
+**Items 12–16 are the new adoption and credibility path** — the highest-leverage work for
+turning a technically excellent engine into a platform people can confidently build on.
 
 ---
 
@@ -5379,6 +5383,91 @@ The guide covers:
 - **End-to-end example:** `datasets/example-sprint-speed.csv` (Wingate test, elite/military
   cohort) + "Human Peak Anaerobic Power" scenario → simulated 2339 W vs. empirical 2135 W → ✓ PASS
 - **PR checklist:** dataset CSV + scenario block + inventory status update
+
+---
+
+### 12 · Stable Host API + Versioning Policy
+
+**The gap:** The `Entity` interface and `stepWorld()` contract are the surface that external
+adopters build against, but there is no declared versioning policy.  Adopters cannot safely
+pin a version or know what is safe to depend on.
+
+**What is needed:**
+- A documented `STABLE_API.md` listing the three tiers (stable / experimental / internal)
+  as defined in the README API stability contract section
+- Semver policy: patch for bug fixes; minor for additive changes; major for breaking stable-tier changes
+- A `CHANGELOG.md` with migration notes for every breaking change
+
+**Why this matters:** This is the single change with the highest impact on adoption confidence.
+A developer evaluating Ananke needs to know: "if I ship this in my game, what will break when
+you update the engine?"
+
+---
+
+### 13 · Three Canonical Adoption Quickstarts
+
+**The gap:** The README describes three adoption paths, but each path currently requires the
+reader to navigate Phase descriptions and piece together the minimal module set themselves.
+
+**What is needed:** Three self-contained, runnable examples — one per adoption path — each
+fitting in a single file:
+
+| Quickstart | Entry point | What it demonstrates |
+|-----------|-------------|---------------------|
+| `examples/quickstart-combat.ts` | Path A (combat kernel) | Two entities, one fight, physics-grounded result |
+| `examples/quickstart-campaign.ts` | Path B (world sim) | One polity, 90-day run, population and morale output |
+| `examples/quickstart-species.ts` | Path C (physiology) | One species, aging + sleep applied, described in plain English |
+
+Each file should be ≤ 60 lines, self-contained, and runnable via `npx ts-node examples/...`
+
+---
+
+### 14 · Golden Replay and Save Compatibility Fixtures
+
+**The gap:** Determinism, replay, and campaign round-tripping are core promises, but there
+are no golden fixture tests that catch regressions across versions.
+
+**What is needed:**
+- `fixtures/replay-knight-brawler.json` — serialised replay of the Knight vs. Brawler
+  vertical slice, checked in and compared against `replayTo()` output on every CI run
+- `fixtures/campaign-save-v1.json` — a minimal campaign save state, with a round-trip
+  test confirming it deserialises, advances one tick, and reserialises identically
+- A CI check: "same seed + same code version → same replay output"
+
+**Why this matters:** Without golden fixtures, regressions in determinism are invisible until
+a player reports "my replay from last week plays differently now."
+
+---
+
+### 15 · Published Benchmark Methodology + CI Regression Budget
+
+**The gap:** `tools/benchmark.ts` and `docs/performance.md` establish baseline numbers but
+there is no CI integration — a slow PR is invisible.
+
+**What is needed:**
+- A nightly CI job running the benchmark and comparing against baseline (10% regression = fail)
+- Published methodology: hardware spec, Node version, warm-up runs, measurement window
+- Versioned baseline JSON so regressions can be tracked over time
+
+**Why this matters:** Performance is part of the Stable tier contract.  Publishing baselines
+and regressing against them signals that performance is a first-class commitment, not an
+afterthought.
+
+---
+
+### 16 · Governance & Contribution Model
+
+**The gap:** The project is currently a solo effort with no documented path for external
+contributors.
+
+**What is needed:**
+- `CONTRIBUTING.md` — how to contribute code, datasets, and documentation; code style guide;
+  PR checklist referencing the three stability tiers; test and coverage requirements
+- `CODE_OF_CONDUCT.md` — standard community norms
+- A labelled issue template for: bug reports, dataset contributions, new phase proposals,
+  and renderer plugin requests
+- A documented decision process for accepting new simulation phases (must include: physics
+  source citation, test coverage ≥ 90%, benchmark impact assessment)
 
 ---
 
@@ -5824,6 +5913,69 @@ Four built-in templates loaded from the template dropdown:
 - **Large Beast** — 1.2 m / 300 kg / 8 segments / quadruped / Feral Beast bias
 - **War Machine** — 2.1 m / 800 kg / 6 segments / distributed / Tank bias
 - **Mind Swarm** — 0.3 m / 50 kg / 7 distributed nodes / distributed CNS
+
+---
+
+---
+
+### Culture Forge
+
+**Concept:** Extend the Species Forge to allow editing of cultural values, taboos, and myths.
+Users could define what a society considers "honourable" or "taboo," and these values would
+influence faction standing, diplomacy outcomes, and the generation of new myths by
+`compressMythsFromHistory`.  A warrior culture with a "death in battle is honourable" value
+would produce different myth archetypes than a mercantile culture with a "trade enriches all"
+value.
+
+**Ananke hooks:** Phase 66 (Generative Mythology), Phase 24 (faction standing), Phase 37
+(linguistic intelligence), Phase 45 (dialogue layer).  Would live in `docs/editors/culture-forge.html`.
+
+---
+
+### Simulation Zoo / Ananke Archive
+
+**Concept:** A public website hosting pre-built, runnable scenarios — "Knight vs. Boxer",
+"Dragon's Breath", "The Blade Runner Test", "Mongol Plague" — where visitors can trigger
+simulations and see outcome distributions in real time (or pre-computed replays).
+
+This serves two purposes: demonstration ("show, don't tell") and archive.  Over time, the
+archive would accumulate validated scenario outputs that researchers and world-builders could
+browse, filter by scenario type, and download as trace data.
+
+**Ananke hooks:** `ReplayRecorder`, `serializeReplay`, `tools/arena.ts` scenario DSL,
+validation framework, Blade Runner test.  Would require a minimal server-side runner and a
+browser-based replay viewer.
+
+---
+
+### Generative Cartography
+
+**Concept:** Based on terrain, polity borders, and historical trade and migration patterns
+from the world simulation (Phases 61, 64, 67), procedurally generate plausible maps.  The
+engine would not just simulate on a given map — it would generate the map itself from the
+simulated history of its inhabitants.  Mountain passes appear where trade routes cluster;
+cities grow at route intersections; borders follow defensible terrain.
+
+**Ananke hooks:** Terrain system (Phase 6), Campaign layer (Phase 22), "What If?" engine
+(Phase 64), Tech Diffusion (Phase 67).
+
+---
+
+### Persistent World Server
+
+**Concept:** Run a single, continuous world simulation for months of real time.  Players
+or AI agents log in, inhabit entities, and influence the course of history.  The world
+accumulates its own deep history, emergent cultures, ongoing conflicts, and myths — all
+generated by Ananke's existing systems.
+
+This is the ultimate proof of concept: a physics-grounded, persistent, multi-user world
+where every event is deterministically reproducible from its seed.
+
+**Engineering challenge:** Requires client–server architecture around the kernel, persistent
+state management, concurrency handling, and a checkpoint/replay system for crash recovery.
+This is a large standalone product built on top of Ananke, not a kernel extension.
+
+**Ananke hooks:** All layers — this is the full stack in production.
 
 ---
 
