@@ -40,7 +40,7 @@ import type { CommandMap } from "../src/sim/commands.js";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
 import { HUMANOID_PLAN } from "../src/sim/bodyplan.js";
 import { generateIndividual } from "../src/generate.js";
-import { HUMAN_BASE } from "../src/archetypes.js";
+import { HUMAN_BASE, type Archetype } from "../src/archetypes.js";
 import { v3 } from "../src/sim/vec3.js";
 import { cToQ } from "../src/sim/thermoregulation.js";
 import { DT_S } from "../src/sim/tick.js";
@@ -1507,7 +1507,7 @@ const directValidationScenarios: DirectValidationScenario[] = [
   },
   {
     name: "Muscle Force Scaling Exponent (OpenArm)",
-    description: "Allometric scaling of peak force with body mass across generated population. Compute exponent (slope) of log(peakForce_N) vs log(mass_kg).",
+    description: "Allometric scaling exponent of peak force vs body mass. Uses a wide-mass HUMAN_BASE variant (massVar=q(0.35), ~42–108 kg range) with near-zero other variances to isolate the mass→force coupling. OLS slope of log(force) on log(mass) should equal ~0.67 (geometric similarity: force ∝ mass^(2/3)).",
     empiricalDataset: {
       name: "Allometric scaling literature",
       description: "Muscle strength scales with body mass^0.67 (geometric similarity). Empirical exponent range 0.60-0.75.",
@@ -1518,38 +1518,36 @@ const directValidationScenarios: DirectValidationScenario[] = [
       confidenceIntervalHalf: 0.05,
     },
     setup: (seed: number) => {
-      // Generate 100 individuals with deterministic sub-seeds
+      // Wide-mass variant: isolates mass→force coupling by suppressing other variance sources.
+      // massVar=q(0.35) spans roughly 42–108 kg from the 75 kg baseline.
+      const wideArch: Archetype = {
+        ...HUMAN_BASE,
+        massVar: q(0.35),
+        statureVar: q(0.001),
+        actuatorScaleVar: q(0.001),
+        actuatorMassVar: q(0.001),
+        peakForceVar: q(0.001),
+      };
       const individuals: Array<{logMass: number, logForce: number}> = [];
-      const N = 100;
+      const N = 200;
       for (let i = 0; i < N; i++) {
         const subSeed = seed * 1000 + i;
-        const attrs = generateIndividual(subSeed, HUMAN_BASE);
+        const attrs = generateIndividual(subSeed, wideArch);
         const mass_kg = attrs.morphology.mass_kg / SCALE.kg;
         const force_N = attrs.performance.peakForce_N / SCALE.N;
-        // Avoid log(0) or negative
         if (mass_kg <= 0 || force_N <= 0) continue;
-        individuals.push({
-          logMass: Math.log(mass_kg),
-          logForce: Math.log(force_N),
-        });
-        if (seed === 1 && i < 5) {
-          console.log(`[Muscle scaling] seed=${seed} i=${i} mass=${mass_kg.toFixed(2)} kg force=${force_N.toFixed(1)} N`);
-        }
+        individuals.push({ logMass: Math.log(mass_kg), logForce: Math.log(force_N) });
       }
-      // Store for extraction
       const entity = mkHumanoidEntity(1, 1, 0, 0);
       const world = mkWorld(seed, [entity]);
       (world as any)._scalingData = individuals;
-      const ctx: KernelContext = {
-        tractionCoeff: q(1.0),
-        tuning: TUNING.tactical,
-      };
+      const ctx: KernelContext = { tractionCoeff: q(1.0), tuning: TUNING.tactical };
       return { world, ctx, steps: 0 };
     },
     extractOutcome: (world: WorldState) => {
       const data = (world as any)._scalingData;
       if (!Array.isArray(data) || data.length < 10) return 0;
-      // Simple linear regression: slope = cov(x,y) / var(x)
+      // OLS: slope = cov(logMass, logForce) / var(logMass)
       let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
       const n = data.length;
       for (const point of data) {
@@ -1560,9 +1558,7 @@ const directValidationScenarios: DirectValidationScenario[] = [
       }
       const cov = sumXY - sumX * sumY / n;
       const varX = sumXX - sumX * sumX / n;
-      const slope = cov / varX;
-      console.log(`[Muscle scaling] n=${n} slope=${slope} cov=${cov} varX=${varX} meanX=${sumX/n} meanY=${sumY/n}`);
-      return slope;
+      return cov / varX;
     },
     unit: "exponent",
     tolerancePercent: 20,

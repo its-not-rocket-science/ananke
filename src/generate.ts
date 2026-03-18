@@ -81,7 +81,7 @@ effectiveScale = 1 + (sizeComposite - 1) * 1.34
 const actuatorScale = clampQ(
   qMul(
     actuatorScaleBase,
-    (SCALE.Q + mulDiv(sizeComposite - SCALE.Q, q(2.00), SCALE.Q)) as Q
+    (SCALE.Q + mulDiv(sizeComposite - SCALE.Q, q(1.34), SCALE.Q)) as Q
   ),
   q(0.6),  // lower bound: still functional
   q(1.8)   // upper bound: avoid runaway strength
@@ -104,7 +104,7 @@ const actuatorScale = clampQ(
   );
 
   const forceRand = mulFromVariation(triSym(rng), arch.peakForceVar);
-  const forceCouple = clampQ(qMul(actuatorScale, (SCALE.Q + ((actuatorFrac - arch.actuatorMassFrac) >>> 1)) as Q), q(0.6), q(2.2));
+  const forceCouple = clampQ(qMul(actuatorScale, (SCALE.Q + ((actuatorFrac - arch.actuatorMassFrac) >> 1)) as Q), q(0.6), q(2.2));
   const peakForceMult = clampQ(qMul(forceRand, forceCouple), q(0.5), q(2.5));
 
   const powerRand = mulFromVariation(triSym(rng), arch.peakPowerVar);

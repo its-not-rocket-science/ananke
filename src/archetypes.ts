@@ -87,7 +87,7 @@ export const HUMAN_BASE: Archetype = {
   actuatorMassVar: q(0.025),
 
   peakForce_N: to.N(1840),
-  peakForceVar: q(0.005),
+  peakForceVar: q(0.74),
 
   peakPower_W: to.W(1200),
   peakPowerVar: q(0.30),
