@@ -182,7 +182,7 @@ Goal: deterministic close-combat control.
 
 ---
 
-## Phase 3 — Ranged and Projectile Combat
+## Phase 3 — Ranged and Projectile Combat *(core complete; indirect fire → Phase 10; energy weapons → far future)*
 
 Ranged combat is a first-class system, not an extension of melee.
 
@@ -1179,7 +1179,7 @@ import { TechEra, ERA_DEFAULTS } from "../src/sim/tech.js";
 
 **Design principle — Clarke's Third Law**: "Any sufficiently advanced technology is
 indistinguishable from magic." The engine implements this literally: magic and advanced
-technology are the same abstraction with different flavor metadata. A fireball and a plasma
+technology are the same abstraction with different flavour metadata. A fireball and a plasma
 grenade, a healing spell and a nanobot swarm, a mana pool and a fusion reactor — all resolve
 through identical engine primitives. The engine cannot tell them apart. Only the tags differ.
 
@@ -1199,7 +1199,7 @@ same unit as `reserveEnergy_J` — regardless of the physical or metaphysical so
 export interface CapabilitySource {
   id: string;
   label: string;             // human-readable: "Arcane mana", "Fusion cell", "Void tap"
-  tags: string[];            // flavor + suppression: ["magic"], ["tech","fusion"], ["cosmic","void"]
+  tags: string[];            // flavour + suppression: ["magic"], ["tech","fusion"], ["cosmic","void"]
   reserve_J: number;         // current stored energy (joules, fixed-point integer)
   maxReserve_J: number;      // capacity ceiling; Number.MAX_SAFE_INTEGER for boundless sources
   regenModel: RegenModel;
@@ -1207,7 +1207,7 @@ export interface CapabilitySource {
 }
 ```
 
-#### RegenModel — pluggable, flavor-agnostic
+#### RegenModel — pluggable, flavour-agnostic
 
 ```typescript
 export type RegenModel =
@@ -1252,7 +1252,7 @@ export interface CapabilityEffect {
   range_m?: number;          // undefined = self-only
   aoeRadius_m?: number;      // if set, payload applied to all entities within radius
   payload: EffectPayload | EffectPayload[];  // multiple payloads allowed per effect
-  tags?: string[];           // effect flavor: ["fire", "healing", "force", "nano"]
+  tags?: string[];           // effect flavour: ["fire", "healing", "force", "nano"]
 }
 ```
 
@@ -4183,7 +4183,7 @@ export function resolveNavigation(entity: Entity, spec: NavigationSpec, seed: nu
 
 ### Overview
 
-Naturalist intelligence ("the ability to recognize patterns in living organisms and the
+Naturalist intelligence ("the ability to recognise patterns in living organisms and the
 natural world") grounds tracking, foraging, herbalism, and animal taming into the same
 Q-based resolution model used for crafting and navigation.
 
@@ -4392,7 +4392,7 @@ P_detect = clamp(
 | `src/competence/language.ts` | `LanguageCapacity`, `resolveCommandTransmission`, `computeCommandRange_m` |
 | `src/competence/teaching.ts` | `resolveTeaching`, `computeDeceptionDetectionProbability` |
 | `src/types.ts` | Add `LanguageCapacity` interface, `languages` to `IndividualAttributes` |
-| `src/dialogue.ts` | Update `deceive` with interpersonal defense factor |
+| `src/dialogue.ts` | Update `deceive` with interpersonal defence factor |
 | `test/language.test.ts` | 16 tests |
 | `test/teaching.test.ts` | 14 tests |
 
@@ -5057,7 +5057,7 @@ Potential future phases building on the RPG foundation:
 
 **Phase 49: Legacy & Inheritance (COMPLETE)** — Character death not ending campaign; heir inherits equipment, relationships partially transfer.
 
-**Phase 50: Mythology & Legend (COMPLETE)** — Stories from chronicles become "legends" that NPCs reference, affecting their expectations and behavior.
+**Phase 50: Mythology & Legend (COMPLETE)** — Stories from chronicles become "legends" that NPCs reference, affecting their expectations and behaviour.
 
 **Phase 51: Weather & Atmospheric Environment (COMPLETE)** — `WeatherState` (wind, precipitation, fog) flows through `KernelContext.weather`; `deriveWeatherModifiers` produces traction, vision, and thermal deltas applied each tick; `computeWindAimError` adds crosswind drift to ranged aim; `adjustConeRange` modulates breath weapons; 32 tests.
 
@@ -5127,7 +5127,7 @@ output model. Before committing to full-scale development, conduct a 2–4 week 
 - Build a minimal "observer" that reads `WorldState` after each `stepWorld` call and
   prints entity positions, condition, and injury summaries to a console or debug overlay.
 - Experiment with saving and loading a complete `WorldState` to understand the
-  serialization format and any Map/BigInt round-trip concerns.
+  serialisation format and any Map/BigInt round-trip concerns.
 
 The goal is not to build a game, but to map the terrain and identify the steepest
 learning curves before they impact production timelines.
@@ -5211,7 +5211,7 @@ deviations exceed ±20 % of the empirical mean.
 
 ---
 
-### 5 · Community & Ecosystem Development
+### 5 · Community & Ecosystem Development **COMPLETE** (2026-03-18)
 
 **Acknowledge the project's current single-maintainer nature and build a support and
 contribution strategy.**
@@ -5239,3 +5239,9 @@ specific vision and architecture largely independently. To mitigate this risk:
 
 **Deliverable:** A living "Ananke Ecosystem" internal wiki, a contribution guide
 for upstream PRs, and a pinned dependency with a defined upgrade-review cadence.
+
+**Delivered:** Four documentation files covering all milestone deliverables:
+- `docs/onboarding.md` — two-week new-engineer onboarding guide with day-by-day plan
+- `docs/contributing.md` — contribution guide: engine vs. external boundaries, code conventions, PR checklist, module skeleton
+- `docs/versioning.md` — versioning contract: commit-hash pinning, breaking-change tiers, changelog format, upgrade cadence, fork guidance
+- `docs/ecosystem.md` — ecosystem index: worked examples, body-plan authoring templates, renderer bridge boilerplate (Unity/Godot sketches), suggested companion repositories

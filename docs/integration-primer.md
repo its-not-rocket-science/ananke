@@ -12,7 +12,7 @@ The spike consisted of three concrete experiments:
 
 1. **Tracing the data flow of a simple melee attack** — from `Command` input through the kernel to injury output (`tools/trace‑attack.ts`).
 2. **Building a minimal observer** that reads `WorldState` after each `stepWorld` call and prints entity positions, condition, and injury summaries (`tools/observer.ts`).
-3. **Experimenting with saving and loading a complete `WorldState`** to understand the serialization format and any Map/BigInt round‑trip concerns (`tools/serialize.ts`).
+3. **Experimenting with saving and loading a complete `WorldState`** to understand the serialisation format and any Map/BigInt round‑trip concerns (`tools/serialize.ts`).
 
 Each experiment is documented below, followed by a glossary of critical types and a list of integration gotchas.
 
@@ -131,11 +131,11 @@ for (let tick = 0; tick < maxTicks; tick++) {
 
 ## 4. Serialization and Deterministic Replay
 
-The serialization demo (`tools/serialize.ts`) shows how to round‑trip a `WorldState` through JSON while preserving determinism.
+The serialisation demo (`tools/serialize.ts`) shows how to round‑trip a `WorldState` through JSON while preserving determinism.
 
 ### Map fields
 
-Optional Map fields on `Entity` (`foodInventory`, `armourState`, `reputations`) must be explicitly converted to an array of entries for JSON serialization:
+Optional Map fields on `Entity` (`foodInventory`, `armourState`, `reputations`) must be explicitly converted to an array of entries for JSON serialisation:
 
 ```typescript
 function serializeEntity(e: Entity): unknown {
@@ -148,7 +148,7 @@ function serializeEntity(e: Entity): unknown {
 }
 ```
 
-On deserialization, reconstruct the Map from the array:
+On deserialisation, reconstruct the Map from the array:
 
 ```typescript
 function deserializeEntity(e: any): Entity {
@@ -163,9 +163,9 @@ function deserializeEntity(e: any): Entity {
 
 ### Deterministic equality
 
-After deserialization, the simulation can be continued from the saved state and will produce **identical results** to the original run, provided the same seed and commands are used. This is a direct consequence of the kernel’s pure‑deterministic design.
+After deserialisation, the simulation can be continued from the saved state and will produce **identical results** to the original run, provided the same seed and commands are used. This is a direct consequence of the kernel’s pure‑deterministic design.
 
-> **Gotcha:** The `__sensoryEnv` and `activeFieldEffects` side‑channel fields are not required for basic combat simulation; they can be omitted during serialization if not needed.
+> **Gotcha:** The `__sensoryEnv` and `activeFieldEffects` side‑channel fields are not required for basic combat simulation; they can be omitted during serialisation if not needed.
 
 ---
 
@@ -304,7 +304,7 @@ When mapping injury regions to a 3D skeleton, note that region IDs are **camelCa
 
 ## 9. Conclusion
 
-The evaluation spike confirms that Ananke’s deterministic, physics‑first simulation is **technically integrable** into a host application. The kernel’s data flow is transparent, state observation is straightforward, and serialization round‑trips work as expected. The main challenges are the **fixed‑point arithmetic** and **exact optional property types**, which require disciplined coding patterns.
+The evaluation spike confirms that Ananke’s deterministic, physics‑first simulation is **technically integrable** into a host application. The kernel’s data flow is transparent, state observation is straightforward, and serialisation round‑trips work as expected. The main challenges are the **fixed‑point arithmetic** and **exact optional property types**, which require disciplined coding patterns.
 
 With this primer, a team can proceed to **Milestone 3 (Asset Pipeline & Renderer Bridge)** with a solid understanding of the kernel’s internals and the gotchas to avoid.
 

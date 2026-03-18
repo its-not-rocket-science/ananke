@@ -74,7 +74,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–37 complete** (including 2ext, 3ext, 8C, 10B, 10C, 11C, 12B, 31–37). Melee combat,
+**Phases 1–60 complete** (including Phase 6 Formation System, 2ext, 3ext, 8B, 8C, 10B, 10C, 11C, 12B, 31–60). Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
@@ -1868,6 +1868,16 @@ src/
       decide.ts     decideCommandsForEntity() — with decision latency cooldown
       system.ts     buildAICommands() — full AI pass over world
 
+    formation-unit.ts   computeShieldWallCoverage, deriveRankSplit, stepFormationCasualtyFill, computeFormationMomentum, deriveFormationCohesion, deriveFormationAllyFearDecay — Phase 6 formation system
+
 test/              Vitest test suite (one file per feature area)
-tools/             Developer utilities (run-demo.ts, fix-imports.mjs)
+tools/             Developer utilities and runnable demos
+docs/
+  onboarding.md         New-engineer two-week onboarding guide
+  contributing.md       Contribution guide: conventions, PR checklist, module skeleton
+  versioning.md         Versioning contract: commit-hash pinning, breaking-change tiers, upgrade cadence
+  ecosystem.md          Ecosystem index: body-plan templates, renderer bridge boilerplate, companion repo suggestions
+  integration-primer.md Deep technical onboarding (architecture, data-flow, gotchas)
+  bridge-api.md         Renderer bridge API reference
+  use-case-validation.md Integration Milestone 1 — use-case fit validation
 ```

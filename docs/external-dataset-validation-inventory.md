@@ -55,9 +55,9 @@ High‑resolution force‑plate data for validating movement physics, impact loa
 
 | Dataset Name | Description & Relevance | Resource URL |
 |:---|:---|:---|
-| **One‑Legged Stand Test Dataset** | Synchronized motion capture, force plate, and radar recordings from 32 healthy participants performing fall‑risk assessment. Includes labeled events (foot‑lift, stability periods, foot‑touchdown) derived from dual ground‑reaction force plates. Validates balance mechanics, postural stability, and fall physics. *A placeholder validation using stumble mechanics has been implemented.* | doi.org/10.13026/46hn‑6b25 |
+| **One‑Legged Stand Test Dataset** | Synchronized motion capture, force plate, and radar recordings from 32 healthy participants performing fall‑risk assessment. Includes labelled events (foot‑lift, stability periods, foot‑touchdown) derived from dual ground‑reaction force plates. Validates balance mechanics, postural stability, and fall physics. *A placeholder validation using stumble mechanics has been implemented.* | doi.org/10.13026/46hn‑6b25 |
 | **Runner Injury GRF Dataset (2025)** | 534 runners assessed on instrumented treadmill with 3D kinematic capture; includes classification of injured vs. uninjured runners and rearfoot vs. non‑rearfoot strikers. Key finding: injured rearfoot strikers had 18 % higher peak positive load rate and 6 % shorter time to peak. Directly validates impact‑loading calculations and injury‑prediction models. | PubMed ID: 40885827 |
-| **Tibial Stress Injury GRF Dataset (2025)** | 66 runners across four groups (symptomatic MTSS, recovering from tibial stress fractures, uninjured controls) with double‑Gaussian waveform modeling of ground‑reaction forces. Validates ability to differentiate injury status based on loading patterns. | PubMed ID: 40868315 |
+| **Tibial Stress Injury GRF Dataset (2025)** | 66 runners across four groups (symptomatic MTSS, recovering from tibial stress fractures, uninjured controls) with double‑Gaussian waveform modelling of ground‑reaction forces. Validates ability to differentiate injury status based on loading patterns. | PubMed ID: 40868315 |
 
 ### 2.3 Blast & Hypervelocity Impact
 For validating explosive damage models, fragmentation, and high‑velocity projectile physics.
@@ -88,7 +88,7 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 
 | Resource | Description & Relevance | How to Use It |
 |:---|:---|:---|
-| **Forensic Biomechanics (Kieser, Taylor & Carr)** | Comprehensive textbook covering biomechanics of sharp‑force trauma, blunt‑force trauma, and behavior of bone/soft tissue under weapon impacts. Chapters on bone‑trauma patterns, skin/soft‑tissue wounding, and sharp impacts to textiles/fabrics (stab/slash mechanics). | Provides scientific foundation for mapping applyImpactToInjury outputs to real‑world wound patterns. |
+| **Forensic Biomechanics (Kieser, Taylor & Carr)** | Comprehensive textbook covering biomechanics of sharp‑force trauma, blunt‑force trauma, and behaviour of bone/soft tissue under weapon impacts. Chapters on bone‑trauma patterns, skin/soft‑tissue wounding, and sharp impacts to textiles/fabrics (stab/slash mechanics). | Provides scientific foundation for mapping applyImpactToInjury outputs to real‑world wound patterns. |
 | **FOROST Osteological Database** | Searchable database of skeletal trauma cases where users can search by bone, trauma type, or injury mechanism. Includes blunt‑force‑trauma presentations on human remains. | Search for “sharp force trauma” or “blunt force trauma” to find documented injury patterns for comparison. |
 | **Neural Network Classification of Master Cuts (Klempous et al., 2021)** | Demonstrates that the five master cuts have distinguishable kinematic signatures—useful for validating that Ananke's strike mechanics produce correctly differentiated attack types. | Compare simulated strike kinematics against published signature profiles. |
 | **Response Timing and Muscular Coordination in Fencing (Williams & Walmsley, 2000)** | Provides comparative data on elite vs. novice fencers, which could validate skill‑system effects on reactionTime_s and controlQuality. | Compare simulated reaction times and coordination metrics against elite/novice performance data. |
@@ -164,7 +164,7 @@ The following datasets have been identified but require additional empirical for
 
 ### 5.3 One‑Legged Stand Test Dataset (doi.org/10.13026/46hn‑6b25)
 
-**Dataset description:** Synchronized motion capture, force plate, and radar recordings from 32 healthy participants performing fall‑risk assessment. Includes labeled events (foot‑lift, stability periods, foot‑touchdown) derived from dual ground‑reaction force plates.
+**Dataset description:** Synchronized motion capture, force plate, and radar recordings from 32 healthy participants performing fall‑risk assessment. Includes labelled events (foot‑lift, stability periods, foot‑touchdown) derived from dual ground‑reaction force plates.
 
 **Current status:** A placeholder validation scenario has been implemented using Ananke's stumble mechanics (`TUNING.tactical.stumbleBaseChance` and `HUMAN_BASE.stability`). This approximates balance loss but does not use real GRF data.
 
@@ -194,7 +194,7 @@ Direct URL: https://physionet.org/content/olst-mocap-forceplate-radar/1.0/
 
 **Access:** Full text available via Nature Publishing Group and as a Free PMC article. No explicit dataset repository linked in the article; contact authors for raw GRF data.
 
-**Relevance for Ananke validation:** Can validate whether simulated `peakForce_N` and loading rates during foot strikes fall within plausible ranges for injured vs. uninjured runners. Identifies gap: Ananke currently lacks explicit GRF waveform modeling.
+**Relevance for Ananke validation:** Can validate whether simulated `peakForce_N` and loading rates during foot strikes fall within plausible ranges for injured vs. uninjured runners. Identifies gap: Ananke currently lacks explicit GRF waveform modelling.
 
 **Tibial Stress Injury GRF Dataset (2025) – PubMed ID 40868315**
 
@@ -216,7 +216,7 @@ Direct URL: https://physionet.org/content/olst-mocap-forceplate-radar/1.0/
 3. **Charge‑mass‑to‑blast‑radius conversion** – Effective blast radius (m) as function of charge mass (kg) and explosive type (C‑4 TNT‑equivalent factor ≈ 1.37).
 4. **Confinement factors** – Multipliers for overpressure/impulse increase in confined geometries (e.g., steel cylinders).
 
-**Current status:** The documents are likely controlled military publications; declassified versions or publicly released excerpts may exist on defense‑engineering portals (e.g., *globalsecurity.org*, *archive.org*). Direct search for "TM 5-855-1 pdf" or "NATO STANAG 4569 blast levels" is required.
+**Current status:** The documents are likely controlled military publications; declassified versions or publicly released excerpts may exist on defence‑engineering portals (e.g., *globalsecurity.org*, *archive.org*). Direct search for "TM 5-855-1 pdf" or "NATO STANAG 4569 blast levels" is required.
 
 **Relevance for Ananke validation:** These formulas would allow direct coding of `applyExplosion` blast‑wave physics using empirical pressure‑distance curves rather than the current simplified quadratic falloff.
 
@@ -290,7 +290,7 @@ wget -r -N -c -np https://physionet.org/files/olst-mocap-forceplate-radar/1.0/
 
 **Key metrics available:**
 - Ground reaction forces (1200 Hz)
-- Postural sway (center‑of‑pressure displacement, velocity, area)
+- Postural sway (centre‑of‑pressure displacement, velocity, area)
 - 3D marker trajectories (100 Hz)
 - Stability phase durations, event timing
 
@@ -307,7 +307,7 @@ The following datasets remain deferred because essential empirical equations are
 **Next steps:**
 - Contact authors of the blast dataset for pressure‑distance tables.
 - Search for open‑access versions of the pyBLOSSUM paper (arXiv, ResearchGate).
-- Look for declassified excerpts of military blast manuals on archive.org or defense‑engineering portals.
+- Look for declassified excerpts of military blast manuals on archive.org or defence‑engineering portals.
 
 ---
 

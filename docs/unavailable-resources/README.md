@@ -82,7 +82,7 @@ When you locate any of these files, save them here with the suggested filename. 
 
 **How to obtain:**
 1. NATO standardization office (restricted distribution).
-2. Declassified excerpts on defense‑engineering portals.
+2. Declassified excerpts on defence‑engineering portals.
 3. Secondary sources that quote the blast‑pressure tables.
 
 **Use in validation:** Provide standardized blast‑pressure vs distance curves for military‑relevant scenarios.
