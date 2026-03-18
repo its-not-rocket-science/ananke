@@ -452,14 +452,24 @@ in `decideCommandsForEntity`.
 
 ---
 
-## Phase 6 — Large-Scale Simulation
+## Phase 6 — Large-Scale Simulation *(COMPLETE)*
 
-### Formation system expansion
+### Formation system expansion *(COMPLETE)*
 
-- Shield walls: adjacent shield-bearing entities share block coverage across arc
-- Rank depth effects: rear ranks contribute push force and replace front-rank casualties
-- Push-of-pike dynamics: formation momentum as a mass × velocity product (kg·m/s)
-- Formation morale sharing: cohesion bonus when formation is intact
+`src/sim/formation-unit.ts` — pure computation module (no Entity/WorldState imports); 49 tests.
+
+- **Shield walls:** `computeShieldWallCoverage` — highest-coverage bearer contributes fully; each
+  additional bearer at `SHIELD_SHARING_FRAC = q(0.60)` efficiency; capped at `q(1.0)`.
+- **Rank depth / casualty fill:** `deriveRankSplit` projects entity positions onto the facing direction
+  (Q-scaled unit vector); front rank = within `RANK_DEPTH_DEFAULT_m` (2 m) of frontmost entity.
+  `stepFormationCasualtyFill` removes dead entities and promotes the front of the rear rank to fill vacancies.
+- **Push-of-pike dynamics:** `computeFormationMomentum` — `Σ trunc(mass_Skg × speed_Smps / SCALE.mps)`
+  for all entities with speed > 0; divide result by `SCALE.kg` for physical kg·m/s.
+- **Formation morale sharing:** `deriveFormationCohesion` — intact when `intactFrac_Q ≥ q(0.60)`;
+  grants `FORMATION_MORALE_BONUS = q(0.008)` fear-decay/tick; broken formation applies
+  `FORMATION_MORALE_PENALTY = q(0.010)` fear-increment/tick.
+- **Formation ally fear decay:** `deriveFormationAllyFearDecay` — `q(0.004)` per alive ally,
+  capped at `FORMATION_ALLY_DECAY_CAP = 8` allies.
 
 ### Battlefield systems
 
@@ -648,7 +658,7 @@ Archetype baseline, not modifying the simulation kernel.
 
 ---
 
-## Phase 8B — Exoskeleton Biology
+## Phase 8B — Exoskeleton Biology *(COMPLETE)*
 
 **Depends on Phase 8 (body plan system) and Phase 9 (injury model). Implement after Phase 9.**
 
