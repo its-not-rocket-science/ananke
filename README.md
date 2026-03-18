@@ -396,7 +396,13 @@ armour" (the story never happens without explicit intervention). Beat predicate 
 produces a human-readable breakdown labelled "none — plausible" / "light" / "moderate" /
 "heavy" / "extreme — plot armour". Demo: `npm run run:narrative-stress-test`.
 
-**2904 tests.** All coverage thresholds met (statements 93.66%+, branches 84.60%+, functions 91.85%+, lines 93.66%+).
+**Artificial Life Validation ("Blade Runner" Test)** (`tools/blade-runner.ts`, `npm run run:blade-runner`) —
+the ultimate integration test: 198 named NPCs, 3 polities, and 365 simulated days wiring every
+major phase simultaneously (disease, polity economics, war, sleep debt, skill progression).
+Validates 4 emergent-behaviour claims: social hierarchy, disease mortality spikes, morale–economy
+correlation, and skill accumulation hierarchy. All 4/4 claims pass on seed 1.
+
+**2904 tests.** All coverage thresholds met (statements 93.75%+, branches 84.69%+, functions 92%+, lines 93.75%+).
 
 See `ROADMAP.md` for the full development plan.
 
@@ -1914,6 +1920,7 @@ src/
 
 test/              Vitest test suite (one file per feature area)
 tools/             Developer utilities and runnable demos
+  blade-runner.ts  Artificial Life Validation — 365-day city-scale emergent-behaviour test
 docs/
   onboarding.md         New-engineer two-week onboarding guide
   contributing.md       Contribution guide: conventions, PR checklist, module skeleton

@@ -5639,7 +5639,7 @@ Phase 60 (hazard zones as disaster myth triggers), Phase 24 (faction culture), P
 
 ---
 
-### Artificial Life Validation ("Blade Runner" Test)
+### Artificial Life Validation ("Blade Runner" Test) *(COMPLETE)*
 
 **Concept:** Run a city-scale simulation (1 000+ entities, Phase 61 Polity providing the
 economic and social frame) for months of simulated time without intervention.  Then analyse
@@ -5656,9 +5656,15 @@ demonstration of the system's depth.
 
 **Ananke hooks:** All phases — this is a scenario, not new code.
 
-**How to run it today:** Use `src/campaign.ts` + `src/faction.ts` + `src/economy.ts` with
-a large seeded population.  The infrastructure already exists; the missing piece is
-Phase 61 (Polity) to provide the geopolitical frame and a long-running runner script.
+**Implementation:** `tools/blade-runner.ts` — run via `npm run run:blade-runner`.
+198 named NPCs across 9 settlements, 3 polities with 100k abstract population each.
+365-day simulation seeding plague_pneumonic on day 30 and war days 180–270.
+
+**Validated claims (4/4 PASS, seed 1):**
+1. Social Hierarchy — rich/poor treasury spread reaches 4.88× (threshold 2×) ✓
+2. Disease Mortality — plague kills 8.08% of population in peak week (threshold 0.5%) ✓
+3. Morale–Economy — war polity morale drops 0.115 during 90-day conflict ✓
+4. Skill Hierarchy — top-quartile NPCs earn 1.08× more milestones than bottom-quartile ✓
 
 ---
 
