@@ -496,8 +496,8 @@ export const STARTER_WEAPONS: Weapon[] = [
     handedness: "twoHand",
     momentArm_m: Math.round(0.55 * SCALE.m),
     handlingMul: q(1.05),
-    strikeEffectiveMassFrac: q(0.06),
-    strikeSpeedMul: q(0.85),
+    strikeEffectiveMassFrac: q(0.15),
+    strikeSpeedMul: q(1.00),
     readyTime_s: to.s(0.75),
     damage: {
       surfaceFrac: q(0.35),
