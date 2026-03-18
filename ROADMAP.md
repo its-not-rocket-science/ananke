@@ -5601,6 +5601,32 @@ Phase 39 (leaderAmplification_Q), `eventSeed`, `makeRng`.
 
 ---
 
+### Phase 66 — Generative Mythology *(COMPLETE)*
+
+**Concept:** Narrative compression of the Legend/Chronicle log into in-world cultural
+beliefs (`Myth`) held by factions.  Each myth carries a `MythEffect` that modifies faction
+combat behaviour (fear threshold, morale), diplomacy success, and tech ambition.
+
+**Delivered:** `src/mythology.ts` — 39 tests; 100% coverage.
+
+Six archetypes detected by `compressMythsFromHistory(legendRegistry, entries, factionIds)`:
+
+- `hero` — heroic/legendary fame ≥ q(0.30) → +morale/diplomacy/bravery
+- `monster` — notorious fame ≥ q(0.20) → −threshold, −diplomacy
+- `great_plague` — ≥3 entity_death/tragic within 30 sim-days → −diplomacy, −tech
+- `divine_wrath` — settlement_destroyed + 2 deaths in 14-day window → −morale
+- `golden_age` — ≥5 consecutive constructive events without conflict → +tech/diplomacy
+- `trickster` — relationship_betrayal + quest_failed → −diplomacy, +tech (cunning)
+
+`stepMythologyYear(registry)` — 12%/year belief decay, floor q(0.10).
+`scaledMythEffect(myth)` — scales effect by belief_Q.
+`aggregateFactionMythEffect(registry, factionId)` → net `MythEffect` for polity-day AI use.
+
+**Depends on:** Phase 50 (Legend, Chronicle), Phase 56 (death-cluster pattern),
+Phase 24 (faction believingIds).
+
+---
+
 ## Long-Term Vision
 
 The following ideas are directionally sound and build naturally on existing Ananke systems,
@@ -5674,7 +5700,7 @@ a social network the same way a respiratory illness does through a physical one.
 
 ---
 
-### Generative Mythology
+### Generative Mythology *(COMPLETE — Phase 66)*
 
 **Concept:** As a long-running simulation accumulates significant events — a volcanic eruption
 that kills hundreds, a plague that halves a city's population, a single warrior who defeats
@@ -5688,6 +5714,24 @@ Phase 60 (hazard zones as disaster myth triggers), Phase 24 (faction culture), P
 (personality traits of legendary individuals).
 
 **Prerequisite:** Phase 61 (to run at the timescale where myths form).
+
+**Delivered:** `src/mythology.ts` — 39 tests; 100% statement/branch/function/line coverage.
+
+Six myth archetypes with cultural effect profiles (`MythEffect`):
+
+| Archetype | Trigger | Key effects |
+|-----------|---------|-------------|
+| `hero` | Heroic/legendary fame ≥ q(0.30) | +morale, +diplomacy, +fear threshold |
+| `monster` | Notorious fame ≥ q(0.20) | −fear threshold, −diplomacy |
+| `great_plague` | ≥3 deaths within 30-day window | −diplomacy, −tech (fatalism) |
+| `divine_wrath` | settlement_destroyed + 2 nearby deaths | −fear threshold, −morale |
+| `golden_age` | ≥5 consecutive constructive events | +diplomacy, +tech, +morale |
+| `trickster` | relationship_betrayal + quest_failed | −diplomacy, +cunning/tech |
+
+- `compressMythsFromHistory(legendRegistry, entries, factionIds, ticksPerDay)` → `Myth[]`
+- `stepMythologyYear(registry)` — decays belief_Q by 12%/year; floor at q(0.10)
+- `scaledMythEffect(myth)` — scales effects by current belief_Q
+- `aggregateFactionMythEffect(registry, factionId)` → net `MythEffect` for AI/polity use
 
 ---
 

@@ -402,6 +402,14 @@ major phase simultaneously (disease, polity economics, war, sleep debt, skill pr
 Validates 4 emergent-behaviour claims: social hierarchy, disease mortality spikes, morale–economy
 correlation, and skill accumulation hierarchy. All 4/4 claims pass on seed 1.
 
+**Phase 66 — Generative Mythology** (`src/mythology.ts`) — narrative compression of the Legend/
+Chronicle log into in-world cultural beliefs.  `compressMythsFromHistory(legendRegistry, entries,
+factionIds)` detects six archetypal patterns (hero, monster, great_plague, divine_wrath, golden_age,
+trickster) from accumulated legends and chronicle events; each myth carries a `MythEffect` (fear
+threshold, diplomacy, morale, tech modifiers) scaled by its `belief_Q`.  `stepMythologyYear`
+decays belief 12%/year to a floor of q(0.10).  `aggregateFactionMythEffect` gives the net cultural
+modifier for polity-day AI use.  39 tests; 100% statement/branch/function/line coverage.
+
 **Phase 65 — Emotional Contagion at Polity Scale** (`src/emotional-contagion.ts`) — fear and hope
 propagate between polities using the Phase 56 disease transmission model with `fear_Q`/`hope_Q` as
 the "pathogen".  Four built-in profiles: `military_rout` (fast-spreading panic), `plague_panic`
