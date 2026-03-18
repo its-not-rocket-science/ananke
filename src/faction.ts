@@ -279,6 +279,31 @@ export function extractWitnessEvents(
   return results;
 }
 
+// ── Faction-level standing mutation ──────────────────────────────────────────
+
+/**
+ * Adjust the global faction-to-faction standing of `factionAId` toward
+ * `factionBId` by `delta`, clamped to [0, SCALE.Q].
+ *
+ * Used by the Polity diplomacy system (Phase 61) to apply `standingDelta`
+ * from `resolveDiplomacy`.  The relation is one-directional; call twice with
+ * swapped arguments for a symmetric update.
+ */
+export function applyFactionStanding(
+  registry:   FactionRegistry,
+  factionAId: string,
+  factionBId: string,
+  delta:      Q,
+): void {
+  let row = registry.globalStanding.get(factionAId);
+  if (!row) {
+    row = new Map<string, Q>();
+    registry.globalStanding.set(factionAId, row);
+  }
+  const current = row.get(factionBId) ?? STANDING_NEUTRAL;
+  row.set(factionBId, clampQ(current + delta, 0, SCALE.Q) as Q);
+}
+
 // ── Serialisation ─────────────────────────────────────────────────────────────
 
 /**

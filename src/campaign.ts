@@ -7,6 +7,7 @@
 // No kernel import — this is a pure data-management and bookkeeping module.
 
 import type { Q } from "./units.js";
+import type { Polity } from "./polity.js";
 import type { Entity } from "./sim/entity.js";
 import type { InjuryState } from "./sim/injury.js";
 import type {
@@ -56,6 +57,11 @@ export interface CampaignState {
    */
   entityInventories: Map<number, Map<string, number>>;
   log:              Array<{ worldTime_s: number; text: string }>;
+  /**
+   * Polities active in this campaign (Phase 61).
+   * Absent until the first call to `addPolity`.
+   */
+  polities?:        Map<string, Polity>;
 }
 
 // ── Map-aware serialisation helpers ──────────────────────────────────────────
@@ -310,6 +316,26 @@ export function getInventoryCount(
   itemId:   string,
 ): number {
   return campaign.entityInventories.get(entityId)?.get(itemId) ?? 0;
+}
+
+// ── Polity integration (Phase 61) ────────────────────────────────────────────
+
+/**
+ * Register a Polity in the campaign.
+ *
+ * The polity is stored by reference (not cloned); the caller owns the object.
+ * Initialises `campaign.polities` on first use.
+ */
+export function addPolity(campaign: CampaignState, polity: Polity): void {
+  if (!campaign.polities) campaign.polities = new Map();
+  campaign.polities.set(polity.id, polity);
+}
+
+/**
+ * Retrieve a Polity by id, or undefined if not registered.
+ */
+export function getPolity(campaign: CampaignState, polityId: string): Polity | undefined {
+  return campaign.polities?.get(polityId);
 }
 
 // ── Serialisation ─────────────────────────────────────────────────────────────

@@ -25,7 +25,7 @@ are either partially implemented, planned, or left to the host.
 | Layer | Purpose | Status |
 |-------|---------|--------|
 | **7 — The Universe** | Cosmological scale: planets, interstellar travel, multiple worlds | Long-term vision |
-| **6 — The World** | Geopolitical scale: nations, empires, diplomacy, trade, war | Phase 61 (Polity system) |
+| **6 — The World** | Geopolitical scale: nations, empires, diplomacy, trade, war | **Complete** (Phase 61) |
 | **5 — The Society** | Cultural scale: cities, factions, myths, legends, mass psychology | Partial (Phases 36, 45, 50); Generative Mythology (long-term) |
 | **4 — The Group** | Social scale: parties, armies, organisations, emotional contagion | Partial (Phases 22, 48, 51); Emotional Contagion (long-term) |
 | **3 — The Individual** | Character scale: generation, narrative shaping, skill progression | Mostly complete (Phases 21, 33–39, 57–58, 62) |
@@ -396,7 +396,7 @@ armour" (the story never happens without explicit intervention). Beat predicate 
 produces a human-readable breakdown labelled "none — plausible" / "light" / "moderate" /
 "heavy" / "extreme — plot armour". Demo: `npm run run:narrative-stress-test`.
 
-**2833 tests.** All coverage thresholds met (statements 93.66%+, branches 84.60%+, functions 91.85%+, lines 93.66%+).
+**2904 tests.** All coverage thresholds met (statements 93.66%+, branches 84.60%+, functions 91.85%+, lines 93.66%+).
 
 See `ROADMAP.md` for the full development plan.
 
@@ -1839,6 +1839,7 @@ src/
   archetypes.ts     Reference archetype baselines (HUMAN_BASE, SERVICE_ROBOT, AMATEUR_BOXER, PRO_BOXER, GRECO_WRESTLER, KNIGHT_INFANTRY, LARGE_PACIFIC_OCTOPUS)
   equipment.ts      Weapon, Armour, Shield, RangedWeapon, Loadout types and starter item catalogue (includes wpn_boxing_gloves)
   generate.ts       Procedural individual generation from archetype with variance distributions; NarrativeBias parameter (Phase 62)
+  polity.ts         Phase 61: Polity & World-State System — createPolity/Registry, trade, war, diplomacy, tech advancement, population-scale disease spread; integrates with Faction/Economy/Tech/Disease/Campaign
   presets.ts        Entity factory functions for named real-world archetypes (mkBoxer, mkWrestler, mkKnight, mkOctopus, mkScubaDiver)
   derive.ts         Movement caps and energy/fatigue derived from attributes and loadout
   replay.ts         ReplayRecorder, replayTo, serializeReplay/deserializeReplay — deterministic replay

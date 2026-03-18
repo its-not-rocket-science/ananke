@@ -5433,7 +5433,7 @@ infrastructure items above.  Each builds directly on existing Ananke infrastruct
 
 ---
 
-### Phase 61 — Polity & World-State System (Layer 6)
+### Phase 61 — Polity & World-State System (Layer 6) *(COMPLETE)*
 
 **Concept:** Introduce a `Polity` entity (city, nation, empire) as a first-class simulation
 object operating at a lower tick rate than individual combat (1 per simulated day rather than
