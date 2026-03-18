@@ -385,7 +385,18 @@ surface damage, disease exposure). Five types: fire, radiation, toxic_gas, acid,
 `stepHazardZone` ticks duration (permanent zones are untouched); `isHazardExpired` signals removal.
 No entity field needed — hazards are world-level objects the host iterates each tick.
 
-**2611 tests.** All coverage thresholds met (statements 95.66%+, branches 84.56%+, functions 92.27%+, lines 95.66%+).
+**Phase 63** adds a **narrative stress test** framework (`src/narrative-stress.ts`): given a
+scene described as a sequence of `NarrativeBeat` predicates — each with a tick window in which
+it must become true — `runNarrativeStressTest` runs the simulation across hundreds of seeds
+and measures what fraction of runs spontaneously produce that sequence. The complement is the
+**narrative push**: `0.00` = plausible (no authorial pressure needed); `1.00` = "extreme — plot
+armour" (the story never happens without explicit intervention). Beat predicate helpers
+(`beatEntityDefeated`, `beatEntitySurvives`, `beatTeamDefeated`, `beatEntityShockExceeds`,
+`beatEntityFatigued`) cover the most common story requirements. `formatStressTestReport`
+produces a human-readable breakdown labelled "none — plausible" / "light" / "moderate" /
+"heavy" / "extreme — plot armour". Demo: `npm run run:narrative-stress-test`.
+
+**2798 tests.** All coverage thresholds met (statements 93.66%+, branches 84.60%+, functions 91.85%+, lines 93.66%+).
 
 See `ROADMAP.md` for the full development plan.
 
@@ -1844,6 +1855,7 @@ src/
   dialogue.ts       resolveDialogue(), applyDialogueOutcome(), narrateDialogue(), dialogueProbability() — social encounter resolution (intimidate/persuade/deceive/surrender/negotiate)
   faction.ts        createFactionState(), adjustStanding(), extractWitnessEvents(), applyReputationDelta() — faction tracking and reputation system
   economy.ts        computeItemValue(), applyWear(), resolveDrops(), evaluateTradeOffer() — item valuation, wear, loot drops, trade evaluation
+  narrative-stress.ts  runNarrativeStressTest(), formatStressTestReport(), beatEntityDefeated/Survives/TeamDefeated/ShockExceeds/Fatigued() — narrative push analyser (Phase 63)
 
   sim/
     kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
@@ -1909,6 +1921,7 @@ docs/
   integration-primer.md Deep technical onboarding (architecture, data-flow, gotchas)
   bridge-api.md         Renderer bridge API reference
   use-case-validation.md Integration Milestone 1 — use-case fit validation
+  narrative-stress-test.md Narrative Stress Test guide: API, Deus Ex score, cinematic benchmark table
 ```
 
 ---

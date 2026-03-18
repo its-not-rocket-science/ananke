@@ -5514,7 +5514,7 @@ A heavily biased character is extreme but not physically impossible.
 
 ---
 
-### Phase 63 — Narrative Stress Test ("Plot Armour Analyser")
+### Phase 63 — Narrative Stress Test ("Plot Armour Analyser") *(COMPLETE)*
 
 **Concept:** Given a narrative scene described as a sequence of expected outcomes (e.g., "the
 hero defeats the guard and escapes"), run the simulation thousands of times with perturbed
