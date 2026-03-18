@@ -173,6 +173,8 @@ interface DirectValidationScenario {
   unit: string;
   /** Tolerance percentage (default 20%) */
   tolerancePercent?: number;
+  /** Minimum seeds required for statistical reliability; runner extends the seed range if CLI provides fewer */
+  minSeeds?: number;
 }
 
 // ─── calibration scenarios ─────────────────────────────────────────────────────
@@ -1005,6 +1007,7 @@ const directValidationScenarios: DirectValidationScenario[] = [
     },
     unit: "fraction",
     tolerancePercent: 20,
+    minSeeds: 30,
   },
   {
     name: "Mount Charge Bonus",
@@ -1987,7 +1990,10 @@ async function runValidation() {
       console.log(`\n--- Validating: ${scenario.name} ---`);
       console.log(`  Empirical dataset: ${scenario.empiricalDataset.name}`);
 
-      const { simulatedMean, simulatedCIHalf, pass } = runDirectValidation(scenario, seeds);
+      const effectiveSeeds = (scenario.minSeeds && seeds.length < scenario.minSeeds)
+        ? Array.from({ length: scenario.minSeeds }, (_, i) => SEED_START + i)
+        : seeds;
+      const { simulatedMean, simulatedCIHalf, pass } = runDirectValidation(scenario, effectiveSeeds);
       const empiricalCIHalf = scenario.empiricalDataset.confidenceIntervalHalf;
 
       console.log(`  Simulated mean: ${simulatedMean} ${scenario.unit}`);
@@ -2001,7 +2007,7 @@ async function runValidation() {
         scenario.empiricalDataset.mean,
         empiricalCIHalf,
         pass,
-        seeds
+        effectiveSeeds
       );
       const timestamp = new Date().toISOString().slice(0, 19).replace(/[:]/g, "-");
       const filename = `docs/validation-${scenario.name.toLowerCase().replace(/\s+/g, "-")}-${timestamp}.md`;
