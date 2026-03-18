@@ -5627,6 +5627,40 @@ Phase 24 (faction believingIds).
 
 ---
 
+### Phase 67 — Technology Diffusion at Polity Scale *(COMPLETE)*
+
+**Concept:** Technology eras spread from more-advanced polities to less-advanced neighbours
+via trade routes and cultural contact.  Each day, for every pair where one polity leads the
+other by at least one era, the lagging polity rolls for a chance to advance — exactly one
+era at a time, never skipping.  Historically grounded in Silk Road / Hanseatic League
+mechanics and Bockstette et al. (2002) "States and Markets".
+
+**Delivered:** `src/tech-diffusion.ts` — 34 tests; 100% statement/branch/function/line coverage.
+
+Diffusion pressure scales with:
+
+| Factor | Effect |
+|--------|--------|
+| Era gap | Larger gaps → stronger "pull"; +50% per extra era, capped at ×3.0× base |
+| Route quality | q(0)→q(1) maps to 1×→2× base rate |
+| Shared locations | +20% per extra location, capped at +80% (5 locations) |
+| War | Active war → zero diffusion |
+| Stability | `stabilityQ < q(0.25)` → zero diffusion (unstable polities can't adopt ideas) |
+
+- `BASE_DIFFUSION_RATE_Q = q(0.005)` — ~200 days per era advance at median conditions
+- `computeDiffusionPressure(source, target, pair, warActive)` → Q probability (per-day)
+- `stepTechDiffusion(registry, pairs, worldSeed, tick)` → `TechDiffusionResult[]` — mutates
+  `techEra`; calls `deriveMilitaryStrength`; one advance per polity per tick maximum
+- `totalInboundPressure(polityId, registry, pairs)` → signed Q for AI queries
+- `techEraName(era)` → "Prehistoric"…"DeepSpace", fallback "Era{n}"
+
+Long-run test confirms: lagging polity (era 1) catches up to era 3 within 2 000 daily ticks
+under median route conditions — ~5.5 years, historically consistent with pre-modern diffusion.
+
+**Depends on:** Phase 61 (PolityRegistry, PolityPair, areAtWar), Phase 11C (TechEra enum).
+
+---
+
 ## Long-Term Vision
 
 The following ideas are directionally sound and build naturally on existing Ananke systems,

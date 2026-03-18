@@ -410,6 +410,16 @@ preset profiles (Warrior/Scholar/Rogue/Tank/Feral Beast/Clear). Tab 4: live-gene
 trio (`BodyPlan` + `Archetype` + `NarrativeBias`). Four templates: Humanoid, Large Beast, War
 Machine, Mind Swarm. Linked from `docs/editors/index.html`.
 
+**Phase 67 — Technology Diffusion at Polity Scale** (`src/tech-diffusion.ts`) — tech eras
+spread from advanced polities to lagging neighbours via trade routes and cultural contact.
+`computeDiffusionPressure(source, target, pair, warActive)` computes per-day advance probability
+scaling with era gap (×1–3×), route quality, shared locations, and stability threshold.
+`stepTechDiffusion(registry, pairs, worldSeed, tick)` rolls for advances each tick, mutates
+`techEra`, and refreshes military strength; one advance per polity per tick maximum.
+`totalInboundPressure` provides a signed-Q AI query for "how likely is this polity to advance?"
+Long-run convergence test: era-1 polity reaches era-3 within 2 000 daily ticks (~5.5 years).
+34 tests; 100% coverage.
+
 **Phase 66 — Generative Mythology** (`src/mythology.ts`) — narrative compression of the Legend/
 Chronicle log into in-world cultural beliefs.  `compressMythsFromHistory(legendRegistry, entries,
 factionIds)` detects six archetypal patterns (hero, monster, great_plague, divine_wrath, golden_age,
