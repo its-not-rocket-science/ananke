@@ -402,6 +402,11 @@ major phase simultaneously (disease, polity economics, war, sleep debt, skill pr
 Validates 4 emergent-behaviour claims: social hierarchy, disease mortality spikes, morale–economy
 correlation, and skill accumulation hierarchy. All 4/4 claims pass on seed 1.
 
+**Emergent Behaviour Validation Suite** (`tools/emergent-validation.ts`, `npm run run:emergent-validation`) —
+four historical combat scenarios validated across 100 seeds each: 10v10 open-ground skirmish
+(Ardant du Picq), environmental friction in rain + fog (Keegan), Lanchester's numerical
+superiority law (5 vs. 10), and siege attrition via disease (Raudzens). All 4/4 scenarios pass.
+
 **2904 tests.** All coverage thresholds met (statements 93.75%+, branches 84.69%+, functions 92%+, lines 93.75%+).
 
 See `ROADMAP.md` for the full development plan.
@@ -1920,7 +1925,8 @@ src/
 
 test/              Vitest test suite (one file per feature area)
 tools/             Developer utilities and runnable demos
-  blade-runner.ts  Artificial Life Validation — 365-day city-scale emergent-behaviour test
+  blade-runner.ts         Artificial Life Validation — 365-day city-scale emergent-behaviour test
+  emergent-validation.ts  Emergent Behaviour Validation Suite — 4 historical combat scenarios × 100 seeds
 docs/
   onboarding.md         New-engineer two-week onboarding guide
   contributing.md       Contribution guide: conventions, PR checklist, module skeleton
