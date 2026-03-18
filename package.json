@@ -23,7 +23,8 @@
     "run:narrative-stress-cinema": "node dist/tools/narrative-stress-cinema.js",
     "run:blade-runner": "node dist/tools/blade-runner.js",
     "run:emergent-validation": "node dist/tools/emergent-validation.js",
-    "run:benchmark": "node dist/tools/benchmark.js"
+    "run:benchmark": "node dist/tools/benchmark.js",
+    "run:validation-dashboard": "node dist/tools/validation.js --dashboard"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

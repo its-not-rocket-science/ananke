@@ -417,6 +417,12 @@ adding empirical datasets and `DirectValidationScenario` entries to the validati
 Includes CSV format spec, four code templates, tolerance-selection table, and a live example
 (`datasets/example-sprint-speed.csv` — human peak anaerobic power, ✓ PASS at 9.5% error).
 
+**Public Validation Dashboard** (`docs/dashboard/`, `npm run run:validation-dashboard`) —
+self-contained HTML dashboard showing all 43 validation scenarios with pass/fail status,
+simulated vs. empirical bars with ±tolerance bands, and filter controls. JSON data is
+regenerated automatically on push via `.github/workflows/validation-dashboard.yml`.
+Serve locally with `python -m http.server` inside `docs/dashboard/`.
+
 **2904 tests.** All coverage thresholds met (statements 93.75%+, branches 84.69%+, functions 92%+, lines 93.75%+).
 
 See `ROADMAP.md` for the full development plan.

@@ -1,0 +1,39 @@
+name: Regenerate Validation Dashboard
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run validation dashboard
+        run: npm run run:validation-dashboard
+
+      - name: Commit updated dashboard data
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/dashboard/validation-dashboard.json
+          git diff --staged --quiet || git commit -m "chore: regenerate validation dashboard [skip ci]"
+          git push

@@ -67,11 +67,16 @@ function qToC(qVal: number): number {
 
 // ─── CLI argument handling ──────────────────────────────────────────────────────
 
-declare const process: { argv?: string[] } | undefined;
+declare const process: {
+  argv?: string[];
+  stdout?: { write?: (s: string) => void };
+} | undefined;
 const args = (typeof process !== "undefined" ? process.argv?.slice(2) : []) ?? [];
-const SUBSYSTEM = args[0] ?? "all";
-const SEED_START = parseInt(args[1] ?? "1", 10);
-const SEED_END = parseInt(args[2] ?? "100", 10);
+const DASHBOARD_MODE = args.includes("--dashboard");
+const nonFlagArgs = args.filter(a => !a.startsWith("--"));
+const SUBSYSTEM = nonFlagArgs[0] ?? "all";
+const SEED_START = parseInt(nonFlagArgs[1] ?? "1", 10);
+const SEED_END = parseInt(nonFlagArgs[2] ?? "100", 10);
 
 if (SEED_START < 1 || SEED_END < SEED_START) {
   console.error("Invalid seed range");
@@ -2106,9 +2111,93 @@ async function runValidation() {
   console.log("\n=== Validation complete ===");
 }
 
+// ─── dashboard JSON generation ─────────────────────────────────────────────────
+
+interface DashboardScenario {
+  name: string;
+  type: "calibration" | "direct";
+  pass: boolean;
+  simulatedMean: number | null;
+  empiricalMean: number | null;
+  tolerancePercent: number | null;
+  unit: string | null;
+  source: string | null;
+  expectationsSummary: string | null;
+}
+
+interface DashboardData {
+  generatedAt: string;
+  seedRange: [number, number];
+  scenarios: DashboardScenario[];
+  summary: { total: number; passed: number; failed: number };
+}
+
+async function runDashboard() {
+  console.log("=== Ananke Validation Dashboard Regeneration ===\n");
+  const seeds = Array.from({ length: SEED_END - SEED_START + 1 }, (_, i) => SEED_START + i);
+  const entries: DashboardScenario[] = [];
+
+  // ── calibration scenarios ────────────────────────────────────────────────
+  console.log("Running calibration scenarios…");
+  for (const scenario of calibrationScenarios) {
+    console.log(`  ${scenario.name}…`);
+    const trials = scenario.trials ?? seeds.length;
+    const result = runArena(scenario.scenario, trials, { seedOffset: SEED_START - 1 });
+    const passed = result.expectationResults.every(er => er.passed);
+    const ok = result.expectationResults.filter(er => er.passed).length;
+    entries.push({
+      name: scenario.name,
+      type: "calibration",
+      pass: passed,
+      simulatedMean: null,
+      empiricalMean: null,
+      tolerancePercent: null,
+      unit: null,
+      source: scenario.source,
+      expectationsSummary: `${ok}/${result.expectationResults.length} expectations passed`,
+    });
+  }
+
+  // ── direct validation scenarios ──────────────────────────────────────────
+  console.log("\nRunning direct validation scenarios…");
+  for (const scenario of directValidationScenarios) {
+    console.log(`  ${scenario.name}…`);
+    const effectiveSeeds =
+      scenario.minSeeds && seeds.length < scenario.minSeeds
+        ? Array.from({ length: scenario.minSeeds }, (_, i) => SEED_START + i)
+        : seeds;
+    const { simulatedMean, pass } = runDirectValidation(scenario, effectiveSeeds);
+    entries.push({
+      name: scenario.name,
+      type: "direct",
+      pass,
+      simulatedMean: Math.round(simulatedMean * 100) / 100,
+      empiricalMean: scenario.empiricalDataset.mean,
+      tolerancePercent: scenario.tolerancePercent ?? 20,
+      unit: scenario.unit,
+      source: scenario.empiricalDataset.dataPoints[0]?.source ?? null,
+      expectationsSummary: null,
+    });
+  }
+
+  const passed = entries.filter(e => e.pass).length;
+  const data: DashboardData = {
+    generatedAt: new Date().toISOString(),
+    seedRange: [SEED_START, SEED_END],
+    scenarios: entries,
+    summary: { total: entries.length, passed, failed: entries.length - passed },
+  };
+
+  const jsonPath = "docs/dashboard/validation-dashboard.json";
+  fs.writeFileSync(jsonPath, JSON.stringify(data, null, 2));
+  console.log(`\nWrote ${jsonPath}`);
+  console.log(`Summary: ${passed}/${entries.length} scenarios passing`);
+}
+
 // ─── entry point ───────────────────────────────────────────────────────────────
 
-runValidation().catch(err => {
+const entryFn = DASHBOARD_MODE ? runDashboard : runValidation;
+entryFn().catch(err => {
   console.error("Validation failed:", err);
   if (typeof process !== "undefined" && (process as any).exit) {
     (process as any).exit(1);

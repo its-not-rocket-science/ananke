@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Validation Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --border: #2e3245;
+    --text: #e0e4f0;
+    --muted: #7a81a0;
+    --pass: #22c55e;
+    --fail: #ef4444;
+    --pass-bg: #052e16;
+    --fail-bg: #2d0a0a;
+    --accent: #6366f1;
+    --band: #2d3560;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: ui-monospace, "Cascadia Code", Menlo, monospace; font-size: 13px; line-height: 1.6; padding: 1.5rem; }
+  h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .subtitle { color: var(--muted); margin-bottom: 1.5rem; font-size: 0.85rem; }
+  .summary { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem 1.25rem; }
+  .stat-val { font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
+  .stat-val.pass { color: var(--pass); }
+  .stat-val.fail { color: var(--fail); }
+  .stat-val.total { color: var(--accent); }
+  .stat-label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .filters { margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .filter-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--muted); cursor: pointer; font-family: inherit; font-size: 12px; padding: 0.3rem 0.75rem; transition: all 0.1s; }
+  .filter-btn.active, .filter-btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--surface); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; padding: 0.5rem 0.75rem; text-align: left; text-transform: uppercase; position: sticky; top: 0; z-index: 1; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.05s; }
+  tbody tr:hover { background: var(--surface); }
+  tbody tr.row-pass { background: rgba(34,197,94,0.04); }
+  tbody tr.row-fail { background: rgba(239,68,68,0.08); }
+  tbody tr.row-fail:hover { background: rgba(239,68,68,0.14); }
+  td { padding: 0.45rem 0.75rem; vertical-align: middle; }
+  .badge { border-radius: 3px; display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 0.15rem 0.45rem; }
+  .badge-pass { background: var(--pass-bg); color: var(--pass); }
+  .badge-fail { background: var(--fail-bg); color: var(--fail); }
+  .badge-type { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+  .bar-wrap { display: flex; align-items: center; gap: 0.4rem; min-width: 180px; }
+  .bar-track { background: var(--border); border-radius: 2px; flex: 1; height: 6px; overflow: hidden; position: relative; }
+  .bar-fill { border-radius: 2px; height: 100%; transition: width 0.3s; }
+  .bar-fill.pass { background: var(--pass); }
+  .bar-fill.fail { background: var(--fail); }
+  .bar-band { background: var(--band); border-radius: 2px; height: 100%; position: absolute; top: 0; }
+  .bar-sim { border-radius: 50%; height: 8px; width: 8px; flex-shrink: 0; }
+  .bar-sim.pass { background: var(--pass); }
+  .bar-sim.fail { background: var(--fail); }
+  .num { color: var(--text); font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .src { color: var(--muted); font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { color: var(--muted); font-size: 11px; margin-top: 1.25rem; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<h1>Ananke — Validation Dashboard</h1>
+<p class="subtitle" id="subtitle">Loading…</p>
+
+<div class="summary" id="summary"></div>
+
+<div class="filters">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="pass">Passing</button>
+  <button class="filter-btn" data-filter="fail">Failing</button>
+  <button class="filter-btn" data-filter="calibration">Calibration</button>
+  <button class="filter-btn" data-filter="direct">Direct</button>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Scenario</th>
+      <th>Type</th>
+      <th>Status</th>
+      <th>Simulated vs. Empirical</th>
+      <th>Details</th>
+      <th>Source</th>
+    </tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<p class="meta" id="meta"></p>
+
+<script>
+const DATA_URL = "./validation-dashboard.json";
+
+function pct(sim, emp, tol) {
+  if (sim == null || emp == null || emp === 0) return null;
+  return Math.round(Math.abs(sim - emp) / emp * 100);
+}
+
+function renderBar(s) {
+  if (s.simulatedMean == null || s.empiricalMean == null) return "—";
+  const emp = s.empiricalMean;
+  const sim = s.simulatedMean;
+  const tol = (s.tolerancePercent ?? 20) / 100;
+  const lo = emp * (1 - tol);
+  const hi = emp * (1 + tol);
+  const range = hi * 1.4 - lo * 0.6;
+  const rangeMin = lo * 0.6;
+
+  const bandLeft = Math.max(0, Math.min(100, (lo - rangeMin) / range * 100));
+  const bandWidth = Math.max(0, Math.min(100 - bandLeft, (hi - lo) / range * 100));
+  const simLeft = Math.max(0, Math.min(100, (sim - rangeMin) / range * 100));
+
+  const cls = s.pass ? "pass" : "fail";
+  const err = pct(sim, emp, tol);
+  const label = `${sim.toFixed(1)} ${s.unit} (${err != null ? (err > 0 ? '+' : '') + (sim > emp ? '' : '-') + err + '%' : ''})`;
+
+  return `<div class="bar-wrap">
+    <div class="bar-track">
+      <div class="bar-band" style="left:${bandLeft.toFixed(1)}%;width:${bandWidth.toFixed(1)}%" title="±${s.tolerancePercent}% tolerance band"></div>
+      <div class="bar-fill ${cls}" style="width:${simLeft.toFixed(1)}%"></div>
+    </div>
+    <span class="num" style="font-size:11px;color:var(--${cls})">${label}</span>
+  </div>`;
+}
+
+function renderRow(s) {
+  const statusBadge = s.pass
+    ? '<span class="badge badge-pass">✓ PASS</span>'
+    : '<span class="badge badge-fail">✗ FAIL</span>';
+  const typeBadge = `<span class="badge badge-type">${s.type}</span>`;
+  const details = s.expectationsSummary
+    ? `<span class="muted">${s.expectationsSummary}</span>`
+    : s.empiricalMean != null
+      ? `<span class="muted">emp: ${s.empiricalMean} ${s.unit ?? ''} ±${s.tolerancePercent ?? 20}%</span>`
+      : '—';
+  const src = s.source ? `<span class="src" title="${s.source}">${s.source}</span>` : '—';
+  const rowCls = s.pass ? 'row-pass' : 'row-fail';
+  const barCell = s.simulatedMean != null ? renderBar(s) : (s.expectationsSummary ? `<span class="muted">${s.expectationsSummary}</span>` : '—');
+  return `<tr class="${rowCls}" data-pass="${s.pass}" data-type="${s.type}">
+    <td>${s.name}</td>
+    <td>${typeBadge}</td>
+    <td>${statusBadge}</td>
+    <td>${barCell}</td>
+    <td>${details}</td>
+    <td>${src}</td>
+  </tr>`;
+}
+
+function applyFilter(filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+  document.querySelectorAll('#tbody tr').forEach(row => {
+    const pass = row.dataset.pass === 'true';
+    const type = row.dataset.type;
+    const show = filter === 'all' || filter === type || (filter === 'pass' && pass) || (filter === 'fail' && !pass);
+    row.classList.toggle('hidden', !show);
+  });
+}
+
+async function load() {
+  let data;
+  try {
+    const res = await fetch(DATA_URL);
+    if (!res.ok) throw new Error(res.statusText);
+    data = await res.json();
+  } catch (e) {
+    document.getElementById('subtitle').textContent =
+      'Error loading validation-dashboard.json. Serve from a local HTTP server (e.g. python -m http.server) or GitHub Pages.';
+    return;
+  }
+
+  const { summary, scenarios, generatedAt, seedRange } = data;
+  const date = new Date(generatedAt).toLocaleString();
+
+  document.getElementById('subtitle').textContent =
+    `Seeds ${seedRange[0]}–${seedRange[1]} · Generated ${date}`;
+
+  document.getElementById('summary').innerHTML = `
+    <div class="stat"><div class="stat-val total">${summary.total}</div><div class="stat-label">Total</div></div>
+    <div class="stat"><div class="stat-val pass">${summary.passed}</div><div class="stat-label">Passing</div></div>
+    <div class="stat"><div class="stat-val fail">${summary.failed}</div><div class="stat-label">Failing</div></div>
+    <div class="stat"><div class="stat-val ${summary.failed === 0 ? 'pass' : 'fail'}">${Math.round(summary.passed / summary.total * 100)}%</div><div class="stat-label">Coverage</div></div>
+  `;
+
+  document.getElementById('tbody').innerHTML = scenarios.map(renderRow).join('');
+  document.getElementById('meta').textContent =
+    `Regenerate: npm run build && npm run run:validation-dashboard · ` +
+    `Legend: coloured bar = simulated value; shaded band = ±tolerance empirical range`;
+
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyFilter(btn.dataset.filter));
+  });
+}
+
+load();
+</script>
+</body>
+</html>
