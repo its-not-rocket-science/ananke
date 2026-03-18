@@ -13,7 +13,29 @@ Designed for:
 - Tactical and formation combat engines
 - Scientific and speculative biology modelling
 - Deterministic multiplayer simulation
-- Large-scale combat experiments
+- Large-scale combat and geopolitical simulation
+- Narrative stress testing and plot-plausibility analysis
+- Alternate history and emergent world simulation
+
+### Where Ananke sits in a larger system
+
+Ananke is the physics and biology layer — Layer 2 in the stack below.  The layers above it
+are either partially implemented, planned, or left to the host.
+
+| Layer | Purpose | Status |
+|-------|---------|--------|
+| **7 — The Universe** | Cosmological scale: planets, interstellar travel, multiple worlds | Long-term vision |
+| **6 — The World** | Geopolitical scale: nations, empires, diplomacy, trade, war | Phase 61 (Polity system) |
+| **5 — The Society** | Cultural scale: cities, factions, myths, legends, mass psychology | Partial (Phases 36, 45, 50); Generative Mythology (long-term) |
+| **4 — The Group** | Social scale: parties, armies, organisations, emotional contagion | Partial (Phases 22, 48, 51); Emotional Contagion (long-term) |
+| **3 — The Individual** | Character scale: generation, narrative shaping, skill progression | Mostly complete (Phases 21, 33–39, 57–58); Phase 62 (narrative bias) |
+| **2 — The Simulation** | Physics and biology kernel | **Complete** (Phases 1–60) |
+| **1 — The Interface** | Visual editors, Species Forge, "What If?" engine, validation dashboard, Narrative Stress Test | ROADMAP items 6–11; Phases 62–63 |
+
+The kernel's deterministic, physics-first foundation makes it suited to the full stack.  A
+scenario that would require hand-waving in a narrative RPG — "does the hero survive this
+battle?" — becomes a distribution of outcomes across thousands of seeded runs, each
+physically grounded.
 
 ---
 

@@ -5423,3 +5423,270 @@ the validation runner.
 **Why this matters:** The current validation coverage is limited by the maintainer's bandwidth.
 A clear contribution pipeline lets external researchers add validation tests for sub-systems
 they know well — accelerating coverage without requiring kernel knowledge.
+
+---
+
+## New Simulation Phases
+
+The following phases extend the simulation kernel itself — as opposed to the tooling and
+infrastructure items above.  Each builds directly on existing Ananke infrastructure.
+
+---
+
+### Phase 61 — Polity & World-State System (Layer 6)
+
+**Concept:** Introduce a `Polity` entity (city, nation, empire) as a first-class simulation
+object operating at a lower tick rate than individual combat (1 per simulated day rather than
+20 Hz).  This extends the existing Campaign layer (Phase 22), Faction system (Phase 36),
+Economy layer (Phase 25), and TechContext (Phase 11C) to geopolitical scale.
+
+**Core types:**
+
+```typescript
+interface Polity {
+  id: string;
+  name: string;
+  factionId: string;           // ties into existing Faction system
+  locationIds: string[];       // locations it controls (Campaign layer)
+  population: number;          // headcount (integer)
+  treasury_cu: number;         // cost-unit wealth (Economy layer scale)
+  techEra: TechEra;            // current tech level (Phase 11C)
+  militaryStrength_Q: Q;       // 0–1 fraction of theoretical max force
+  stabilityQ: Q;               // internal cohesion; below threshold → unrest
+  moraleQ: Q;                  // population morale; feeds into militaryStrength
+}
+```
+
+**Mechanics:**
+
+- **Trade:** polities with connected locations (Phase 22 `travelCost`) exchange goods each
+  day tick; route quality scales with the best `logicalMathematical` navigator available
+- **War:** military conflict resolved as a scaled formation engagement using
+  `computeFormationMomentum` with aggregated `militaryStrength_Q` rather than individual
+  entity stats; outcome feeds back into `stabilityQ`
+- **Diplomacy:** uses Phase 37 (linguistic intelligence) and Phase 36 (inter-species
+  communication) constants to derive negotiation success probability; standing adjustments
+  mirror Phase 24 faction standing changes
+- **Technological progression:** `techEra` can advance when `treasury_cu` crosses a
+  threshold and a research project (`CollectiveProject` from Phase 55) completes
+- **Epidemic spread:** Phase 56 disease transmission operates at polity level for airborne
+  diseases when `population` density exceeds a threshold
+
+**Tick rate:** 1 polity tick = 1 simulated day = `86 400 × TICK_HZ` individual ticks.
+The host decides how many individual ticks to run between each polity tick.
+
+**Depends on:** Phases 22, 24, 25, 36, 37, 51, 55, 56.
+
+---
+
+### Phase 62 — Narrative Bias Parameter for `generateIndividual`
+
+**Concept:** Add an optional `NarrativeBias` parameter to `generateIndividual` that skews
+the RNG sampling toward a requested profile while preserving physical plausibility.  A designer
+can say "I want a strong but slow-witted character" without overriding constants or writing
+custom generation code.
+
+**Interface:**
+
+```typescript
+interface NarrativeBias {
+  /** Signed bias [-1, 1] applied to the triangular distribution for each variance field.
+   *  0 = no bias (default); +1 = strongly skewed toward high end; -1 = toward low end. */
+  strength?: number;     // biases peakForce_N, peakPower_W, continuousPower_W
+  speed?: number;        // biases reactionTime_s (negative bias = faster)
+  intellect?: number;    // biases logicalMathematical, spatial cognition
+  resilience?: number;   // biases distressTolerance, shockTolerance
+  agility?: number;      // biases controlQuality, fineControl, stability
+  size?: number;         // biases stature_m, mass_kg
+}
+```
+
+**Implementation:** `triSym(rng)` currently returns a value in [-1, 1] from the symmetric
+triangular distribution.  With a bias *b*, the output is `clamp(triSym(rng) + b * 0.5, -1, 1)`
+before being passed to `mulFromVariation`.  This shifts the mean without collapsing the
+distribution — a biased character is still drawn from the population, just from a different
+part of the tail.
+
+**Constraint:** Bias does not permit values outside the archetype's existing `clampQ` bounds.
+A heavily biased character is extreme but not physically impossible.
+
+**Depends on:** Phase 33 (Multiple Intelligences), `src/generate.ts`.
+
+---
+
+### Phase 63 — Narrative Stress Test ("Plot Armour Analyser")
+
+**Concept:** Given a narrative scene described as a sequence of expected outcomes (e.g., "the
+hero defeats the guard and escapes"), run the simulation thousands of times with perturbed
+initial conditions and measure how probable that sequence of outcomes is.  The inverse of the
+probability is the **narrative push** — the amount of authorial intervention required to make
+the story beat happen.
+
+This is a unique capability that no other simulation engine offers.  It turns Ananke into
+a tool for writers, game designers, and historians: *is this story plausible, or is it
+pure plot armour?*
+
+**Core types:**
+
+```typescript
+interface NarrativeBeat {
+  /** Tick range within which this beat must occur. */
+  tickWindow: [number, number];
+  /** Predicate on WorldState that must be true to pass this beat. */
+  predicate: (world: WorldState) => boolean;
+  description: string;
+}
+
+interface NarrativeScenario {
+  name: string;
+  setup: () => WorldState;     // deterministic world factory
+  commands: CommandProvider;   // supplies commands each tick
+  beats: NarrativeBeat[];
+}
+
+interface StressTestResult {
+  scenarioName: string;
+  runsTotal: number;
+  /** Fraction of runs where ALL beats were satisfied. */
+  successRate: number;
+  /** 1 - successRate.  0 = no push needed; 1 = miracle required. */
+  narrativePush: number;
+  /** Per-beat failure rates, so designers can identify which beat is the bottleneck. */
+  beatResults: Array<{ description: string; passRate: number }>;
+  /** Seeds that produced successful runs — can be replayed for inspection. */
+  successSeeds: number[];
+}
+```
+
+**Implementation:** Uses the existing `ReplayRecorder` and `makeRng` infrastructure.
+The runner perturbs `world.seed` across `runsTotal` independent runs.  Each run is
+deterministic; only the seed differs.  No floating-point randomness is introduced.
+
+**Example use cases:**
+
+| Scenario | Narrative push | Interpretation |
+|----------|---------------|----------------|
+| Trained knight defeats single lightly armoured guard | 0.03 | Plausible; almost no authorial push needed |
+| Outnumbered hero (1v5) escapes without injury | 0.94 | Heavy plot armour required |
+| Historical: Henry V survives Agincourt | 0.41 | Plausible but not guaranteed — fortune played a role |
+| "Sneak attack from behind, target never reacts" | 0.85 | Requires specific reaction-time conditions |
+
+**Tool:** `tools/narrative-stress-test.ts` — a CLI that accepts a scenario file and
+`--runs N` flag, prints a report showing `narrativePush` per beat and overall, and
+optionally saves a successful replay for visual inspection.
+
+**Depends on:** `ReplayRecorder` (Phase 13), `makeRng`, `eventSeed`.
+
+---
+
+## Long-Term Vision
+
+The following ideas are directionally sound and build naturally on existing Ananke systems,
+but require substantial design work before they become concrete phases.  They are recorded
+here so the architectural decisions made in near-term phases account for them.
+
+---
+
+### "What If?" / Alternate History Engine
+
+**Concept:** Combine Phase 61 (Polity system) with the Narrative Stress Test (Phase 63) at
+geopolitical scale.  A user defines a historical or fictional world state and a single
+divergence point ("What if the Mongol fleet reached Japan?").  The simulation runs forward
+at campaign-tick rate across hundreds of seeds, tracking polity rise and fall, technological
+progression, and major events.  The output is a distribution of possible timelines with a
+probability-weighted summary.
+
+**Ananke hooks:** Phase 61 (Polity), Phase 22 (Campaign), Phase 24 (Faction standing),
+Phase 25 (Economy), Phase 50 (Legend system for recording events), Phase 63 (seed-based
+divergence runs).
+
+**Prerequisite:** Phase 61.
+
+---
+
+### Emotional Contagion at Polity Scale
+
+**Concept:** Extend the morale and fear systems upward from the individual entity to the
+polity.  A military defeat reduces `polity.moraleQ`; a charismatic leader's address (using
+Phase 39 musical/performance intelligence) can trigger a morale wave across a city; panic
+spreads between adjacent entities using the same transmission model as Phase 56 disease
+spread but with `fear_Q` as the "pathogen".
+
+This is structurally identical to epidemic modelling — `fear` and `hope` propagate through
+a social network the same way a respiratory illness does through a physical one.
+
+**Ananke hooks:** Phase 61 (Polity morale), Phase 39 (Performance intelligence), Phase 56
+(transmission model reused for emotional state), Phase 32D (morale system constants).
+
+**Prerequisite:** Phase 61.
+
+---
+
+### Generative Mythology
+
+**Concept:** As a long-running simulation accumulates significant events — a volcanic eruption
+that kills hundreds, a plague that halves a city's population, a single warrior who defeats
+an army — the Legend system (Phase 50) records them.  A second pass over the legend log
+applies narrative compression: recurring patterns become myths, exceptional individuals
+become folk heroes or demons, natural disasters become divine acts.  The output is a set of
+in-world cultural beliefs held by each faction that influence their AI decision-making.
+
+**Ananke hooks:** Phase 50 (Legend system), Phase 56 (disease as plague myth trigger),
+Phase 60 (hazard zones as disaster myth triggers), Phase 24 (faction culture), Phase 47
+(personality traits of legendary individuals).
+
+**Prerequisite:** Phase 61 (to run at the timescale where myths form).
+
+---
+
+### Artificial Life Validation ("Blade Runner" Test)
+
+**Concept:** Run a city-scale simulation (1 000+ entities, Phase 61 Polity providing the
+economic and social frame) for months of simulated time without intervention.  Then analyse
+the emergent population:
+
+- Do stable social hierarchies form based on faction standing and economic inequality?
+- Does disease (Phase 56) create mortality spikes that match historical epidemic curves?
+- Do morale waves (Phase 32D) correlate with economic downturns (Phase 25)?
+- Do skilled characters (Phase 21) accumulate more wealth and faction standing over time?
+
+This is not a new simulation phase — it is a validation methodology that uses *all* existing
+phases simultaneously.  It is the ultimate integration test and the most compelling
+demonstration of the system's depth.
+
+**Ananke hooks:** All phases — this is a scenario, not new code.
+
+**How to run it today:** Use `src/campaign.ts` + `src/faction.ts` + `src/economy.ts` with
+a large seeded population.  The infrastructure already exists; the missing piece is
+Phase 61 (Polity) to provide the geopolitical frame and a long-running runner script.
+
+---
+
+### Visual Tooling — Species Forge
+
+*Extends ROADMAP item 8 (Visual Editors for Non-Developers)*
+
+The Body Plan Editor described in item 8 should be extended into a full **Species Forge**:
+a visual tool for mixing body plans, adjusting archetype variance distributions, and applying
+`NarrativeBias` presets (Phase 62).  The output is a `BodyPlan` + `Archetype` pair in the
+kernel's JSON format, ready to load without writing TypeScript.
+
+Species Forge would allow a biologist to model a real animal, a game designer to create a
+fantasy species, or a writer to design an alien — all without touching the kernel.  This
+directly addresses the tooling gap for non-developers and makes the species-building
+capability accessible to domain experts.
+
+---
+
+*Ideas not included:*
+
+- **Procedural Language Generation** — While Phase 37 (linguistic intelligence) provides
+  a numeric proxy for language capability, generating a plausible evolving pidgin/creole
+  requires a natural-language model that is outside Ananke's physics-first scope.  This is
+  better addressed by an external language model layer that reads Ananke's faction/contact
+  history as input.
+
+- **Full standalone UI** — A complete application (world creation, entity editing, command
+  input, simulation playback, data visualisation) is a separate product, not a kernel
+  extension.  The kernel's clean API is designed precisely so that such a UI can be built
+  on top of it independently.  See ROADMAP item 6 (Reference Renderer) as the first step.
