@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Species Forge</title>
+<style>
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3245;--text:#e0e4f0;
+    --muted:#7a81a0;--pass:#22c55e;--fail:#ef4444;--accent:#6366f1;--warn:#f59e0b;--cyan:#22d3ee;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:ui-monospace,"Cascadia Code",Menlo,monospace;font-size:13px;padding:1.5rem}
+  h1{font-size:1.3rem;margin-bottom:.2rem}
+  .sub{color:var(--muted);font-size:.82rem;margin-bottom:1.5rem}
+  /* Tabs */
+  .tabs{display:flex;gap:.25rem;margin-bottom:1rem;border-bottom:1px solid var(--border);padding-bottom:0}
+  .tab{background:transparent;border:1px solid transparent;border-bottom:none;border-radius:4px 4px 0 0;color:var(--muted);cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:.4rem .9rem;transition:all .12s}
+  .tab.active{background:var(--surface);border-color:var(--border);color:var(--text)}
+  .tab:hover:not(.active){color:var(--text)}
+  .panel{display:none}.panel.active{display:block}
+  /* Fields */
+  label{display:block;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem}
+  input[type=text],input[type=number],select{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:13px;padding:.3rem .5rem;outline:none}
+  input:focus,select:focus{border-color:var(--accent)}
+  input[type=range]{-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;height:4px;outline:none;width:100%;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer}
+  .field{display:flex;flex-direction:column;gap:.25rem}
+  .row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;align-items:flex-end}
+  .w80{width:80px}.w120{width:120px}.w160{width:160px}.w200{width:200px}.grow{flex:1}
+  /* Tables */
+  table{width:100%;border-collapse:collapse;margin-bottom:1rem}
+  thead th{background:var(--surface);border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:600;letter-spacing:.05em;padding:.4rem .5rem;text-align:left;text-transform:uppercase;white-space:nowrap}
+  tbody tr{border-bottom:1px solid var(--border)}tbody tr:hover{background:rgba(255,255,255,.02)}
+  td{padding:.3rem .4rem;vertical-align:middle}
+  td input,td select{padding:.2rem .4rem;font-size:12px}
+  /* Buttons */
+  .btn{background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:.35rem .75rem;transition:opacity .1s}
+  .btn:hover{opacity:.85}.btn.sm{font-size:11px;padding:.2rem .5rem}
+  .btn.danger{background:#7f1d1d;color:#fca5a5}.btn.sec{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+  /* Stats bar */
+  .stats{background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;gap:1.5rem;margin-bottom:1rem;padding:.75rem 1rem;flex-wrap:wrap}
+  .stat{display:flex;flex-direction:column;gap:.1rem}
+  .stat-val{font-size:1.1rem;font-weight:700}.stat-val.ok{color:var(--pass)}.stat-val.warn{color:var(--warn)}.stat-val.err{color:var(--fail)}
+  .stat-label{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em}
+  /* Errors */
+  .errors{background:#2d0a0a;border:1px solid var(--fail);border-radius:4px;color:#fca5a5;font-size:12px;margin-bottom:.75rem;padding:.5rem .75rem;display:none}
+  .errors ul{margin-left:1rem}
+  /* Slider rows */
+  .slider-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem 1.5rem;margin-bottom:1rem}
+  .slider-row{display:flex;flex-direction:column;gap:.25rem}
+  .slider-header{display:flex;justify-content:space-between;align-items:center}
+  .slider-name{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+  .slider-val{color:var(--cyan);font-size:.78rem;font-weight:600;min-width:55px;text-align:right}
+  .bias-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.6rem;margin-bottom:1rem}
+  .bias-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.6rem .75rem}
+  .bias-name{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem}
+  .bias-slider{width:100%;margin-bottom:.3rem}
+  .bias-val{color:var(--accent);font-size:.82rem;font-weight:700;text-align:center}
+  /* Section headers */
+  .sec-head{color:var(--warn);font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:1rem 0 .5rem}
+  /* Output */
+  textarea{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:#a5f3fc;font-family:inherit;font-size:12px;height:420px;line-height:1.5;padding:.5rem;resize:vertical;width:100%}
+  .copy-row{display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end}
+  hr{border:none;border-top:1px solid var(--border);margin:1.25rem 0}
+  .hint{color:var(--muted);font-size:.78rem;margin-top:.3rem;margin-bottom:.5rem}
+  .section-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:1rem 1.25rem;margin-bottom:1rem}
+  .tag{display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:3px;color:var(--muted);font-size:.7rem;padding:.1rem .35rem;margin:.1rem}
+</style>
+</head>
+<body>
+
+<h1>Species Forge</h1>
+<p class="sub">Design a complete species: body plan, attribute archetype, and narrative bias. Generates a TypeScript pair ready to paste into <code>src/</code>.</p>
+
+<div class="row">
+  <div class="field w200"><label>Species name</label><input id="speciesName" value="MySpecies" oninput="regen()"></div>
+  <div class="field w160"><label>Identifier (snake_case)</label><input id="speciesId" value="my_species" oninput="regen()"></div>
+  <div class="field w120"><label>Locomotion type</label>
+    <select id="locomotionType" onchange="regen()">
+      <option>biped</option><option>quadruped</option><option>hexapod</option>
+      <option>undulation</option><option>flight</option><option>distributed</option>
+    </select>
+  </div>
+  <div class="field w120"><label>CNS layout</label>
+    <select id="cnsLayout" onchange="regen()">
+      <option>centralized</option><option>distributed</option>
+    </select>
+  </div>
+  <div class="field" style="align-self:flex-end">
+    <select id="template" onchange="loadTemplate(this.value)" style="width:160px">
+      <option value="">— Load template —</option>
+      <option value="humanoid">Humanoid</option>
+      <option value="beast">Large Beast</option>
+      <option value="construct">Construct</option>
+      <option value="swarm">Distributed Swarm</option>
+    </select>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('body')">Body Plan</button>
+  <button class="tab" onclick="showTab('arch')">Archetype Stats</button>
+  <button class="tab" onclick="showTab('bias')">Narrative Bias</button>
+  <button class="tab" onclick="showTab('output')">Generated Code</button>
+</div>
+
+<!-- ── Tab 1: Body Plan ──────────────────────────────────────────────────── -->
+<div id="tab-body" class="panel active">
+  <div style="display:flex;gap:.5rem;margin-bottom:.75rem;align-items:center">
+    <strong>Segments</strong>
+    <button class="btn sm" onclick="addSeg()">+ Add segment</button>
+  </div>
+  <p class="hint">Mass share (%): each segment's fraction of total body mass — must sum to 100.<br>
+  Exposure (%): relative hit probability weight (kinetic channel) — auto-normalised to 1.0.</p>
+  <div class="field w120" style="margin-bottom:.75rem"><label>Total body mass (kg)</label>
+    <input id="totalMass" type="number" value="70" min="0.1" step="0.1" oninput="regen()">
+  </div>
+  <table id="segTable">
+    <thead><tr>
+      <th>ID</th><th>Parent (empty=root)</th><th>Mass%</th><th>Exposure%</th>
+      <th>Locomotion</th><th>Manipulation</th><th>CNS role</th><th></th>
+    </tr></thead>
+    <tbody id="segBody"></tbody>
+  </table>
+  <div class="stats" id="bodyStats"></div>
+  <div class="errors" id="bodyErrors"></div>
+</div>
+
+<!-- ── Tab 2: Archetype Stats ─────────────────────────────────────────────── -->
+<div id="tab-arch" class="panel">
+  <p class="hint">Adjust base attribute values and variance (spread) for the species archetype.
+  Values are converted to internal fixed-point units in the generated code.</p>
+
+  <div class="sec-head">Physical Dimensions</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Stature (m)</span><span class="slider-val" id="sv-stature">1.75</span></div>
+      <input type="range" id="sl-stature" min="0.3" max="5.0" step="0.05" value="1.75" oninput="slUpdate('stature',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Mass (kg)</span><span class="slider-val" id="sv-mass">75</span></div>
+      <input type="range" id="sl-mass" min="1" max="3000" step="1" value="75" oninput="slUpdate('mass',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Stature variance</span><span class="slider-val" id="sv-statureVar">4%</span></div>
+      <input type="range" id="sl-statureVar" min="0" max="40" step="1" value="4" oninput="slUpdate('statureVar',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Mass variance</span><span class="slider-val" id="sv-massVar">9%</span></div>
+      <input type="range" id="sl-massVar" min="0" max="60" step="1" value="9" oninput="slUpdate('massVar',this.value)" class="bias-slider">
+    </div>
+  </div>
+
+  <div class="sec-head">Muscular Performance</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Peak force (N)</span><span class="slider-val" id="sv-peakForce">1840</span></div>
+      <input type="range" id="sl-peakForce" min="50" max="50000" step="50" value="1840" oninput="slUpdate('peakForce',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Peak power (W)</span><span class="slider-val" id="sv-peakPower">1200</span></div>
+      <input type="range" id="sl-peakPower" min="10" max="50000" step="10" value="1200" oninput="slUpdate('peakPower',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Force variance</span><span class="slider-val" id="sv-peakForceVar">74%</span></div>
+      <input type="range" id="sl-peakForceVar" min="0" max="150" step="1" value="74" oninput="slUpdate('peakForceVar',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Power variance</span><span class="slider-val" id="sv-peakPowerVar">30%</span></div>
+      <input type="range" id="sl-peakPowerVar" min="0" max="100" step="1" value="30" oninput="slUpdate('peakPowerVar',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Continuous power (W)</span><span class="slider-val" id="sv-continuousPower">200</span></div>
+      <input type="range" id="sl-continuousPower" min="10" max="10000" step="10" value="200" oninput="slUpdate('continuousPower',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Reserve energy (kJ)</span><span class="slider-val" id="sv-reserveEnergy">20</span></div>
+      <input type="range" id="sl-reserveEnergy" min="1" max="500" step="1" value="20" oninput="slUpdate('reserveEnergy',this.value)" class="bias-slider">
+    </div>
+  </div>
+
+  <div class="sec-head">Motor Control</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Reaction time (ms)</span><span class="slider-val" id="sv-reactionTime">200</span></div>
+      <input type="range" id="sl-reactionTime" min="50" max="2000" step="10" value="200" oninput="slUpdate('reactionTime',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Control quality</span><span class="slider-val" id="sv-controlQuality">75%</span></div>
+      <input type="range" id="sl-controlQuality" min="1" max="100" step="1" value="75" oninput="slUpdate('controlQuality',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Stability</span><span class="slider-val" id="sv-stability">70%</span></div>
+      <input type="range" id="sl-stability" min="1" max="100" step="1" value="70" oninput="slUpdate('stability',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Fine control</span><span class="slider-val" id="sv-fineControl">70%</span></div>
+      <input type="range" id="sl-fineControl" min="1" max="100" step="1" value="70" oninput="slUpdate('fineControl',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Decision latency (ms)</span><span class="slider-val" id="sv-decisionLatency">500</span></div>
+      <input type="range" id="sl-decisionLatency" min="50" max="3000" step="50" value="500" oninput="slUpdate('decisionLatency',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Attention depth</span><span class="slider-val" id="sv-attentionDepth">4</span></div>
+      <input type="range" id="sl-attentionDepth" min="1" max="16" step="1" value="4" oninput="slUpdate('attentionDepth',this.value)" class="bias-slider">
+    </div>
+  </div>
+
+  <div class="sec-head">Resilience</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Distress tolerance</span><span class="slider-val" id="sv-distressTolerance">50%</span></div>
+      <input type="range" id="sl-distressTolerance" min="1" max="100" step="1" value="50" oninput="slUpdate('distressTolerance',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Shock tolerance</span><span class="slider-val" id="sv-shockTolerance">50%</span></div>
+      <input type="range" id="sl-shockTolerance" min="1" max="100" step="1" value="50" oninput="slUpdate('shockTolerance',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Heat tolerance</span><span class="slider-val" id="sv-heatTolerance">50%</span></div>
+      <input type="range" id="sl-heatTolerance" min="1" max="100" step="1" value="50" oninput="slUpdate('heatTolerance',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Cold tolerance</span><span class="slider-val" id="sv-coldTolerance">50%</span></div>
+      <input type="range" id="sl-coldTolerance" min="1" max="100" step="1" value="50" oninput="slUpdate('coldTolerance',this.value)" class="bias-slider">
+    </div>
+  </div>
+
+  <div class="sec-head">Perception</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Vision range (m)</span><span class="slider-val" id="sv-visionRange">200</span></div>
+      <input type="range" id="sl-visionRange" min="1" max="2000" step="10" value="200" oninput="slUpdate('visionRange',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Hearing range (m)</span><span class="slider-val" id="sv-hearingRange">50</span></div>
+      <input type="range" id="sl-hearingRange" min="1" max="500" step="5" value="50" oninput="slUpdate('hearingRange',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Vision arc (°)</span><span class="slider-val" id="sv-visionArc">120</span></div>
+      <input type="range" id="sl-visionArc" min="30" max="360" step="5" value="120" oninput="slUpdate('visionArc',this.value)" class="bias-slider">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Threat horizon (m)</span><span class="slider-val" id="sv-threatHorizon">40</span></div>
+      <input type="range" id="sl-threatHorizon" min="5" max="500" step="5" value="40" oninput="slUpdate('threatHorizon',this.value)" class="bias-slider">
+    </div>
+  </div>
+</div>
+
+<!-- ── Tab 3: Narrative Bias ──────────────────────────────────────────────── -->
+<div id="tab-bias" class="panel">
+  <p class="hint">
+    Narrative bias shifts where individuals are drawn from within the archetype's variance distribution.
+    <strong>0</strong> = unbiased (symmetric). <strong>+1</strong> = skewed toward the high end.
+    <strong>−1</strong> = skewed toward the low end. Bias does not exceed archetype clamp bounds.
+  </p>
+  <div class="bias-grid" id="biasGrid">
+    <!-- Populated by JS -->
+  </div>
+  <div class="section-card" id="biasPresets" style="margin-top:.5rem">
+    <div class="sec-head" style="margin-top:0">Preset bias profiles</div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <button class="btn sm sec" onclick="loadBiasPreset('warrior')">Warrior</button>
+      <button class="btn sm sec" onclick="loadBiasPreset('scholar')">Scholar</button>
+      <button class="btn sm sec" onclick="loadBiasPreset('rogue')">Rogue</button>
+      <button class="btn sm sec" onclick="loadBiasPreset('tank')">Tank</button>
+      <button class="btn sm sec" onclick="loadBiasPreset('beast')">Feral Beast</button>
+      <button class="btn sm sec" onclick="loadBiasPreset('none')">Clear biases</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tab 4: Generated Code ─────────────────────────────────────────────── -->
+<div id="tab-output" class="panel">
+  <p class="hint" style="margin-bottom:.5rem">
+    Copy this block and paste into a new file in <code>src/</code>.
+    Import the constants where needed and pass to <code>generateIndividual(seed, MY_ARCHETYPE, MY_BIAS)</code>.
+  </p>
+  <textarea id="output" readonly spellcheck="false"></textarea>
+  <div class="copy-row">
+    <button class="btn sec sm" onclick="copyCode()">Copy to clipboard</button>
+  </div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const SCALE_KG = 1000, SCALE_Q = 10000, SCALE_M = 10000;
+
+// ── Sliders state ──────────────────────────────────────────────────────────
+const arch = {
+  stature: 1.75, mass: 75,
+  statureVar: 4, massVar: 9,
+  peakForce: 1840, peakPower: 1200, continuousPower: 200,
+  peakForceVar: 74, peakPowerVar: 30,
+  reserveEnergy: 20,
+  reactionTime: 200, controlQuality: 75, stability: 70, fineControl: 70,
+  decisionLatency: 500, attentionDepth: 4,
+  distressTolerance: 50, shockTolerance: 50, heatTolerance: 50, coldTolerance: 50,
+  visionRange: 200, hearingRange: 50, visionArc: 120, threatHorizon: 40,
+};
+
+const BIAS_KEYS = ['strength','speed','resilience','agility','size'];
+const BIAS_LABELS = {
+  strength:  'Strength',
+  speed:     'Speed',
+  resilience:'Resilience',
+  agility:   'Agility',
+  size:      'Size',
+};
+const bias = { strength: 0, speed: 0, resilience: 0, agility: 0, size: 0 };
+
+const BIAS_PRESETS = {
+  warrior:   { strength: 0.7, speed: 0.3, resilience: 0.5, agility: 0.2, size: 0.1 },
+  scholar:   { strength:-0.3, speed: 0.1, resilience: 0.0, agility: 0.4, size:-0.1 },
+  rogue:     { strength:-0.1, speed: 0.8, resilience:-0.2, agility: 0.9, size:-0.3 },
+  tank:      { strength: 0.8, speed:-0.5, resilience: 1.0, agility:-0.3, size: 0.7 },
+  beast:     { strength: 1.0, speed: 0.6, resilience: 0.6, agility: 0.3, size: 0.4 },
+  none:      { strength: 0,   speed: 0,   resilience: 0,   agility: 0,   size: 0   },
+};
+
+function slUpdate(key, val) {
+  arch[key] = parseFloat(val);
+  const el = document.getElementById('sv-' + key);
+  if (!el) return;
+  if (['statureVar','massVar','peakForceVar','peakPowerVar','controlQuality',
+       'stability','fineControl','distressTolerance','shockTolerance',
+       'heatTolerance','coldTolerance'].includes(key)) {
+    el.textContent = val + '%';
+  } else if (key === 'reactionTime' || key === 'decisionLatency') {
+    el.textContent = val + ' ms';
+  } else if (key === 'reserveEnergy') {
+    el.textContent = val + ' kJ';
+  } else {
+    el.textContent = val;
+  }
+  regen();
+}
+
+function loadBiasPreset(name) {
+  const preset = BIAS_PRESETS[name];
+  if (!preset) return;
+  for (const k of BIAS_KEYS) {
+    bias[k] = preset[k];
+    const slider = document.getElementById('bias-sl-' + k);
+    const val    = document.getElementById('bias-sv-' + k);
+    if (slider) slider.value = preset[k];
+    if (val)    val.textContent = preset[k].toFixed(2);
+  }
+  regen();
+}
+
+function biasChange(key, val) {
+  bias[key] = parseFloat(val);
+  const vEl = document.getElementById('bias-sv-' + key);
+  if (vEl) vEl.textContent = parseFloat(val).toFixed(2);
+  regen();
+}
+
+function buildBiasGrid() {
+  const grid = document.getElementById('biasGrid');
+  grid.innerHTML = BIAS_KEYS.map(k => `
+    <div class="bias-card">
+      <div class="bias-name">${BIAS_LABELS[k]}</div>
+      <input type="range" id="bias-sl-${k}" class="bias-slider" min="-1" max="1" step="0.05"
+        value="0" oninput="biasChange('${k}',this.value)">
+      <div class="bias-val" id="bias-sv-${k}">0.00</div>
+    </div>`).join('');
+}
+
+// ── Segments (body plan) ───────────────────────────────────────────────────
+let rows = [], nextId = 1;
+function mkSeg(id, parent, massShare, exposure, locomotion, manipulation, cns) {
+  return { _id: nextId++, id, parent, massShare, exposure, locomotion, manipulation, cns };
+}
+
+function loadHumanoidSegs() {
+  rows = [
+    mkSeg('torso',   '',       45, 35, 'none',    'none',    'none'),
+    mkSeg('head',    'torso',   8, 20, 'none',    'none',    'central'),
+    mkSeg('leftArm', 'torso',   7, 10, 'none',    'primary', 'none'),
+    mkSeg('rightArm','torso',   7, 10, 'none',    'primary', 'none'),
+    mkSeg('leftLeg', 'torso',  16, 12, 'primary', 'none',    'none'),
+    mkSeg('rightLeg','torso',  16, 12, 'primary', 'none',    'none'),
+    mkSeg('groin',   'torso',   1,  1, 'none',    'none',    'none'),
+  ];
+}
+
+function loadBeastSegs() {
+  rows = [
+    mkSeg('torso',      '',        50, 30, 'none',    'none',      'none'),
+    mkSeg('head',       'torso',   10, 20, 'none',    'none',      'central'),
+    mkSeg('neck',       'torso',    5,  8, 'none',    'none',      'none'),
+    mkSeg('frontLeft',  'torso',    8, 10, 'primary', 'secondary', 'none'),
+    mkSeg('frontRight', 'torso',    8, 10, 'primary', 'secondary', 'none'),
+    mkSeg('backLeft',   'torso',    9, 11, 'primary', 'none',      'none'),
+    mkSeg('backRight',  'torso',    9, 11, 'primary', 'none',      'none'),
+    mkSeg('tail',       'torso',    1,  0, 'none',    'none',      'none'),
+  ];
+}
+
+function loadConstructSegs() {
+  rows = [
+    mkSeg('chassis',     '',        60, 25, 'none',    'none',      'central'),
+    mkSeg('leftTread',   'chassis', 10, 10, 'primary', 'none',      'none'),
+    mkSeg('rightTread',  'chassis', 10, 10, 'primary', 'none',      'none'),
+    mkSeg('leftArm',     'chassis',  8, 20, 'none',    'primary',   'none'),
+    mkSeg('rightArm',    'chassis',  8, 20, 'none',    'primary',   'none'),
+    mkSeg('sensorArray', 'chassis',  4, 15, 'none',    'none',      'none'),
+  ];
+}
+
+function loadSwarmSegs() {
+  rows = [
+    mkSeg('core',    '',      10, 20, 'none',    'none',    'central'),
+    mkSeg('nodeA',   'core',  15, 16, 'primary', 'none',    'ganglionic'),
+    mkSeg('nodeB',   'core',  15, 16, 'primary', 'none',    'ganglionic'),
+    mkSeg('nodeC',   'core',  15, 16, 'primary', 'primary', 'ganglionic'),
+    mkSeg('nodeD',   'core',  15, 16, 'primary', 'primary', 'ganglionic'),
+    mkSeg('nodeE',   'core',  15, 16, 'primary', 'none',    'ganglionic'),
+    mkSeg('reserve', 'core',  15,  0, 'none',    'none',    'none'),
+  ];
+}
+
+function loadTemplate(val) {
+  const nameEl = document.getElementById('speciesName');
+  const idEl   = document.getElementById('speciesId');
+  const locoEl = document.getElementById('locomotionType');
+  const cnsEl  = document.getElementById('cnsLayout');
+  const massEl = document.getElementById('totalMass');
+
+  if (val === 'humanoid') {
+    nameEl.value = 'Humanoid'; idEl.value = 'humanoid';
+    locoEl.value = 'biped'; cnsEl.value = 'centralized'; massEl.value = 70;
+    loadHumanoidSegs();
+    arch.stature=1.75; arch.mass=75; arch.peakForce=1840; arch.peakPower=1200;
+    arch.continuousPower=200; arch.reserveEnergy=20; arch.reactionTime=200;
+    syncSliders();
+    loadBiasPreset('none');
+  } else if (val === 'beast') {
+    nameEl.value = 'GreatBear'; idEl.value = 'great_bear';
+    locoEl.value = 'quadruped'; cnsEl.value = 'centralized'; massEl.value = 300;
+    loadBeastSegs();
+    arch.stature=1.2; arch.mass=300; arch.peakForce=8000; arch.peakPower=5000;
+    arch.continuousPower=800; arch.reserveEnergy=80; arch.reactionTime=280;
+    arch.distressTolerance=70; arch.shockTolerance=65; arch.heatTolerance=40; arch.coldTolerance=75;
+    syncSliders();
+    loadBiasPreset('beast');
+  } else if (val === 'construct') {
+    nameEl.value = 'WarMachine'; idEl.value = 'war_machine';
+    locoEl.value = 'distributed'; cnsEl.value = 'centralized'; massEl.value = 800;
+    loadConstructSegs();
+    arch.stature=2.1; arch.mass=800; arch.peakForce=30000; arch.peakPower=15000;
+    arch.continuousPower=3000; arch.reserveEnergy=200; arch.reactionTime=100;
+    arch.distressTolerance=90; arch.shockTolerance=85; arch.heatTolerance=80; arch.coldTolerance=80;
+    arch.controlQuality=90; arch.stability=90; arch.fineControl=60;
+    syncSliders();
+    loadBiasPreset('tank');
+  } else if (val === 'swarm') {
+    nameEl.value = 'MindSwarm'; idEl.value = 'mind_swarm';
+    locoEl.value = 'distributed'; cnsEl.value = 'distributed'; massEl.value = 50;
+    loadSwarmSegs();
+    arch.stature=0.3; arch.mass=50; arch.peakForce=500; arch.peakPower=300;
+    arch.continuousPower=60; arch.reserveEnergy=5; arch.reactionTime=80;
+    arch.attentionDepth=16; arch.controlQuality=95; arch.stability=50;
+    syncSliders();
+    loadBiasPreset('none');
+  }
+  document.getElementById('template').value = '';
+  renderSegTable();
+  regen();
+}
+
+function syncSliders() {
+  const set = (k, v) => {
+    const el = document.getElementById('sl-' + k);
+    if (el) { el.value = v; slUpdate(k, v); }
+  };
+  set('stature', arch.stature);
+  set('mass', arch.mass);
+  set('statureVar', arch.statureVar);
+  set('massVar', arch.massVar);
+  set('peakForce', arch.peakForce);
+  set('peakPower', arch.peakPower);
+  set('continuousPower', arch.continuousPower);
+  set('peakForceVar', arch.peakForceVar);
+  set('peakPowerVar', arch.peakPowerVar);
+  set('reserveEnergy', arch.reserveEnergy);
+  set('reactionTime', arch.reactionTime);
+  set('controlQuality', arch.controlQuality);
+  set('stability', arch.stability);
+  set('fineControl', arch.fineControl);
+  set('decisionLatency', arch.decisionLatency);
+  set('attentionDepth', arch.attentionDepth);
+  set('distressTolerance', arch.distressTolerance);
+  set('shockTolerance', arch.shockTolerance);
+  set('heatTolerance', arch.heatTolerance);
+  set('coldTolerance', arch.coldTolerance);
+  set('visionRange', arch.visionRange);
+  set('hearingRange', arch.hearingRange);
+  set('visionArc', arch.visionArc);
+  set('threatHorizon', arch.threatHorizon);
+}
+
+function addSeg() {
+  rows.push(mkSeg('newSegment','',0,5,'none','none','none'));
+  renderSegTable(); regen();
+}
+function delSeg(rid) { rows = rows.filter(r => r._id !== rid); renderSegTable(); regen(); }
+function updSeg(rid, key, val) {
+  const r = rows.find(r => r._id === rid);
+  if (r) { r[key] = val; regen(); }
+}
+
+function renderSegTable() {
+  const roleOpts = o => ['none','primary','secondary'].map(v => `<option${v===o?' selected':''}>${v}</option>`).join('');
+  const cnsOpts  = o => ['none','central','ganglionic'].map(v => `<option${v===o?' selected':''}>${v}</option>`).join('');
+  document.getElementById('segBody').innerHTML = rows.map(r => `
+    <tr data-rid="${r._id}">
+      <td><input value="${r.id}" onchange="updSeg(${r._id},'id',this.value)" style="width:100px"></td>
+      <td><input value="${r.parent}" onchange="updSeg(${r._id},'parent',this.value)" style="width:100px" placeholder="(root)"></td>
+      <td><input type="number" value="${r.massShare}" min="0" max="100" step="0.1" onchange="updSeg(${r._id},'massShare',+this.value)" style="width:60px"></td>
+      <td><input type="number" value="${r.exposure}" min="0" max="100" step="0.5" onchange="updSeg(${r._id},'exposure',+this.value)" style="width:60px"></td>
+      <td><select onchange="updSeg(${r._id},'locomotion',this.value)">${roleOpts(r.locomotion)}</select></td>
+      <td><select onchange="updSeg(${r._id},'manipulation',this.value)">${roleOpts(r.manipulation)}</select></td>
+      <td><select onchange="updSeg(${r._id},'cns',this.value)">${cnsOpts(r.cns)}</select></td>
+      <td><button class="btn sm danger" onclick="delSeg(${r._id})">✕</button></td>
+    </tr>`).join('');
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['body','arch','bias','output'][i]===name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ── Code generation ────────────────────────────────────────────────────────
+function q(v)   { return Math.round(v * SCALE_Q); }
+function pct(v) { return q(v / 100); }
+function toM(v) { return Math.round(v * SCALE_M); }
+function toKg(v){ return Math.round(v * SCALE_KG); }
+
+function regen() {
+  const speciesName = document.getElementById('speciesName').value.trim() || 'MySpecies';
+  const speciesId   = document.getElementById('speciesId').value.trim() || 'my_species';
+  const locoType    = document.getElementById('locomotionType').value;
+  const cnsType     = document.getElementById('cnsLayout').value;
+  const totalMass   = parseFloat(document.getElementById('totalMass').value) || 70;
+  const CONST       = speciesName.replace(/\W+/g,'_').toUpperCase();
+
+  // ── Body plan validation ──
+  const errors = [];
+  const totalShare   = rows.reduce((s,r) => s + +r.massShare, 0);
+  const totalExp     = rows.reduce((s,r) => s + +r.exposure, 0);
+  const hasCentral   = rows.some(r => r.cns === 'central');
+  const hasLoco      = rows.some(r => r.locomotion !== 'none');
+  if (Math.abs(totalShare - 100) > 0.5) errors.push(`Mass shares sum to ${totalShare.toFixed(1)}% — must be 100%.`);
+  if (!hasCentral) errors.push('At least one segment must have cnsRole = "central".');
+  if (!hasLoco && locoType !== 'distributed') errors.push('At least one segment should have locomotionRole = "primary".');
+  if (totalExp === 0) errors.push('Total exposure weight is 0.');
+
+  const errEl = document.getElementById('bodyErrors');
+  if (errors.length) {
+    errEl.style.display = 'block';
+    errEl.innerHTML = '<ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+  } else { errEl.style.display = 'none'; }
+
+  document.getElementById('bodyStats').innerHTML = `
+    <div class="stat"><div class="stat-val ${Math.abs(totalShare-100)<0.5?'ok':'err'}">${totalShare.toFixed(1)}%</div><div class="stat-label">Mass share (needs 100%)</div></div>
+    <div class="stat"><div class="stat-val ok">${totalExp.toFixed(1)}%</div><div class="stat-label">Exposure (auto-norm)</div></div>
+    <div class="stat"><div class="stat-val ${hasCentral?'ok':'err'}">${rows.filter(r=>r.cns==='central').length}</div><div class="stat-label">CNS central segs</div></div>
+    <div class="stat"><div class="stat-val ok">${rows.length}</div><div class="stat-label">Segments</div></div>
+  `;
+
+  // ── Segment code ──
+  const segsCode = rows.map(r => {
+    const massKg  = Math.round(totalMass * r.massShare / 100 * SCALE_KG);
+    const normExp = totalExp > 0 ? r.exposure / totalExp : 0;
+    const expQ    = Math.round(normExp * SCALE_Q);
+    const parts   = [`id: "${r.id}"`, `parent: ${r.parent.trim()?`"${r.parent.trim()}"`:null}`, `mass_kg: ${massKg}`, `exposureWeight: { kinetic: ${expQ} }`];
+    if (r.locomotion !== 'none') parts.push(`locomotionRole: "${r.locomotion}"`);
+    if (r.manipulation !== 'none') parts.push(`manipulationRole: "${r.manipulation}"`);
+    if (r.cns !== 'none') parts.push(`cnsRole: "${r.cns}"`);
+    return `    { ${parts.join(', ')} }`;
+  }).join(',\n');
+
+  // ── Bias code ──
+  const biasEntries = BIAS_KEYS.filter(k => bias[k] !== 0)
+    .map(k => `  ${k}: ${bias[k].toFixed(2)}`);
+  const biasCode = biasEntries.length
+    ? `{\n${biasEntries.join(',\n')},\n}`
+    : '{}  // no bias — uniform draw from archetype distribution';
+
+  // ── Archetype code ──
+  const reserveJ = arch.reserveEnergy * 1000;  // kJ → J
+  const archCode = `{
+  stature_m: ${toM(arch.stature)},
+  mass_kg: ${toKg(arch.mass)},
+
+  visionRange_m: ${toM(arch.visionRange)},
+  visionArcDeg: ${arch.visionArc},
+  hearingRange_m: ${toM(arch.hearingRange)},
+  decisionLatency_s: ${Math.round(arch.decisionLatency)},
+  attentionDepth: ${arch.attentionDepth},
+  threatHorizon_m: ${toM(arch.threatHorizon)},
+
+  statureVar: ${pct(arch.statureVar)},
+  massVar: ${pct(arch.massVar)},
+
+  reachVar: ${pct(10)},
+  actuatorScaleVar: ${pct(0.5)},
+  structureScaleVar: ${pct(14)},
+
+  actuatorMassFrac: ${pct(40)},
+  actuatorMassVar: ${pct(2.5)},
+
+  peakForce_N: ${arch.peakForce},
+  peakForceVar: ${pct(arch.peakForceVar)},
+
+  peakPower_W: ${arch.peakPower},
+  peakPowerVar: ${pct(arch.peakPowerVar)},
+
+  continuousPower_W: ${arch.continuousPower},
+  continuousPowerVar: ${pct(25)},
+
+  reserveEnergy_J: ${reserveJ},
+  reserveEnergyVar: ${pct(35)},
+
+  conversionEfficiency: ${pct(85)},
+  efficiencyVar: ${pct(10)},
+
+  reactionTime_s: ${Math.round(arch.reactionTime)},
+  reactionTimeVar: ${pct(25)},
+  controlQuality: ${pct(arch.controlQuality)},
+  controlVar: ${pct(20)},
+
+  stability: ${pct(arch.stability)},
+  stabilityVar: ${pct(22)},
+  fineControl: ${pct(arch.fineControl)},
+  fineControlVar: ${pct(25)},
+
+  surfaceIntegrity: ${SCALE_Q}, surfaceVar: ${pct(18)},
+  bulkIntegrity: ${SCALE_Q}, bulkVar: ${pct(18)},
+  structureIntegrity: ${SCALE_Q}, structVar: ${pct(18)},
+
+  distressTolerance: ${pct(arch.distressTolerance)}, distressVar: ${pct(30)},
+  shockTolerance: ${pct(arch.shockTolerance)}, shockVar: ${pct(30)},
+  concussionTolerance: ${pct(50)}, concVar: ${pct(30)},
+
+  heatTolerance: ${pct(arch.heatTolerance)}, heatVar: ${pct(30)},
+  coldTolerance: ${pct(arch.coldTolerance)}, coldVar: ${pct(30)},
+
+  fatigueRate: ${SCALE_Q}, fatigueVar: ${pct(25)},
+  recoveryRate: ${SCALE_Q}, recoveryVar: ${pct(25)},
+  cognition: {
+    linguistic: ${pct(65)}, logicalMathematical: ${pct(60)}, spatial: ${pct(60)},
+    bodilyKinesthetic: ${pct(60)}, musical: ${pct(50)},
+    interpersonal: ${pct(60)}, intrapersonal: ${pct(55)},
+    naturalist: ${pct(50)}, interSpecies: ${pct(35)},
+  },
+}`;
+
+  const code = `// Generated by Ananke Species Forge
+// Species: ${speciesName}  |  Mass: ${totalMass} kg  |  ${rows.length} segments
+import type { BodyPlan } from "../src/sim/bodyplan.js";
+import type { Archetype } from "../src/archetypes.js";
+import type { NarrativeBias } from "../src/generate.js";
+import { generateIndividual } from "../src/generate.js";
+
+// ── Body Plan ──────────────────────────────────────────────────────────────
+export const ${CONST}_BODY_PLAN: BodyPlan = {
+  id: "${speciesId}",
+  locomotion: { type: "${locoType}" },
+  cnsLayout: { type: "${cnsType}" },
+  segments: [
+${segsCode}
+  ],
+};
+
+// ── Archetype ──────────────────────────────────────────────────────────────
+// Pass to generateIndividual() to create a randomised individual.
+export const ${CONST}_ARCHETYPE: Archetype = ${archCode};
+
+// ── Narrative Bias ─────────────────────────────────────────────────────────
+// Optional: apply to shift the population draw toward a narrative archetype.
+export const ${CONST}_BIAS: NarrativeBias = ${biasCode};
+
+// ── Usage ──────────────────────────────────────────────────────────────────
+// const individual = generateIndividual(seed, ${CONST}_ARCHETYPE, ${CONST}_BIAS);
+// entity.bodyPlan  = ${CONST}_BODY_PLAN;
+`;
+
+  document.getElementById('output').value = code;
+}
+
+function copyCode() {
+  const ta = document.getElementById('output');
+  navigator.clipboard?.writeText(ta.value).catch(() => { ta.select(); document.execCommand('copy'); });
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+buildBiasGrid();
+loadHumanoidSegs();
+document.getElementById('speciesName').value = 'Humanoid';
+document.getElementById('speciesId').value   = 'humanoid';
+renderSegTable();
+regen();
+</script>
+</body>
+</html>

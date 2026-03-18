@@ -402,6 +402,14 @@ major phase simultaneously (disease, polity economics, war, sleep debt, skill pr
 Validates 4 emergent-behaviour claims: social hierarchy, disease mortality spikes, morale–economy
 correlation, and skill accumulation hierarchy. All 4/4 claims pass on seed 1.
 
+**Species Forge** (`docs/editors/species-forge.html`) — four-tab standalone HTML/JS species designer
+extending the Body Plan Editor. Tab 1: segment body plan with live validation. Tab 2: 24 archetype
+sliders (stature, mass, peak force/power, reaction time, control quality, resilience, perception).
+Tab 3: five Narrative Bias sliders (strength/speed/resilience/agility/size, −1 to +1) with six
+preset profiles (Warrior/Scholar/Rogue/Tank/Feral Beast/Clear). Tab 4: live-generated TypeScript
+trio (`BodyPlan` + `Archetype` + `NarrativeBias`). Four templates: Humanoid, Large Beast, War
+Machine, Mind Swarm. Linked from `docs/editors/index.html`.
+
 **Phase 66 — Generative Mythology** (`src/mythology.ts`) — narrative compression of the Legend/
 Chronicle log into in-world cultural beliefs.  `compressMythsFromHistory(legendRegistry, entries,
 factionIds)` detects six archetypal patterns (hero, monster, great_plague, divine_wrath, golden_age,

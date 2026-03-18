@@ -5764,19 +5764,32 @@ demonstration of the system's depth.
 
 ---
 
-### Visual Tooling — Species Forge
+### Visual Tooling — Species Forge *(COMPLETE)*
 
 *Extends ROADMAP item 8 (Visual Editors for Non-Developers)*
 
-The Body Plan Editor described in item 8 should be extended into a full **Species Forge**:
-a visual tool for mixing body plans, adjusting archetype variance distributions, and applying
-`NarrativeBias` presets (Phase 62).  The output is a `BodyPlan` + `Archetype` pair in the
-kernel's JSON format, ready to load without writing TypeScript.
+**Delivered:** `docs/editors/species-forge.html` — standalone HTML/JS, no build step.
+Landing page (`docs/editors/index.html`) updated; Species Forge replaces the Body Plan
+Editor as the recommended entry point for species design.
 
-Species Forge would allow a biologist to model a real animal, a game designer to create a
-fantasy species, or a writer to design an alien — all without touching the kernel.  This
-directly addresses the tooling gap for non-developers and makes the species-building
-capability accessible to domain experts.
+The Species Forge is a four-tab editor:
+
+1. **Body Plan** — segment table (ID, parent, mass%, exposure%, locomotion/manipulation/CNS roles)
+   with live validation identical to the original Body Plan Editor; total-mass field.
+2. **Archetype Stats** — 24 sliders covering physical dimensions (stature, mass, variance),
+   muscular performance (peak force/power/continuous power/reserve energy), motor control
+   (reaction time, control quality, stability, fine control, decision latency, attention depth),
+   resilience (distress/shock/heat/cold tolerance), and perception (vision/hearing range, arc, horizon).
+3. **Narrative Bias** — five sliders (strength, speed, resilience, agility, size) in [−1, 1]
+   + six preset profiles: Warrior, Scholar, Rogue, Tank, Feral Beast, Clear.
+4. **Generated Code** — exports three TypeScript constants:
+   `MY_ARCHETYPE: Archetype`, `MY_BODY_PLAN: BodyPlan`, `MY_BIAS: NarrativeBias`.
+
+Four built-in templates loaded from the template dropdown:
+- **Humanoid** — 1.75 m / 70 kg / 7 segments / biped / no bias
+- **Large Beast** — 1.2 m / 300 kg / 8 segments / quadruped / Feral Beast bias
+- **War Machine** — 2.1 m / 800 kg / 6 segments / distributed / Tank bias
+- **Mind Swarm** — 0.3 m / 50 kg / 7 distributed nodes / distributed CNS
 
 ---
 
