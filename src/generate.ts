@@ -22,7 +22,40 @@ import type { IndividualAttributes } from "./types.js";
 import type { Archetype } from "./archetypes.js";
 import { makeRng } from "./rng.js";
 import { Q, SCALE, clampQ, q, qMul, mulDiv } from "./units.js";
-import { triSym, mulFromVariation, skewUp } from "./dist.js";
+import { triSym, biasedTriSym, mulFromVariation, skewUp } from "./dist.js";
+
+/**
+ * Signed bias applied to a character-generation axis, range [−1, 1].
+ *
+ * `+1` strongly skews toward the high end of the archetype's natural spread;
+ * `−1` toward the low end.  Values outside [−1, 1] are clamped internally.
+ * A biased character is still drawn from the population — just from a
+ * different part of the tail — so physical plausibility is preserved.
+ *
+ * Fields map to these generation axes:
+ *   `strength`   peakForce_N, peakPower_W, continuousPower_W, actuatorScale
+ *   `speed`      reactionTime_s  (positive bias → faster; i.e. lower time)
+ *   `resilience` distressTolerance, shockTolerance, concussionTolerance,
+ *                surface/bulk/structureIntegrity, recoveryRate
+ *                (positive bias also reduces fatigueRate)
+ *   `agility`    controlQuality, fineControl, stability
+ *   `size`       stature_m, mass_kg  (also influences reach)
+ *
+ * Note: per-individual cognitive variance (`intellect` bias) is reserved for
+ * a future phase once `Archetype.cognition` gains per-individual draws.
+ */
+export interface NarrativeBias {
+  /** Biases physical force and power output. */
+  strength?: number;
+  /** Biases reaction speed. Positive = faster (lower reactionTime_s). */
+  speed?: number;
+  /** Biases damage tolerance and recovery. Positive = tougher. */
+  resilience?: number;
+  /** Biases motor control precision and stability. */
+  agility?: number;
+  /** Biases body size (stature and mass). */
+  size?: number;
+}
 
 // Math.cos is allowed here: generation path, not simulation path.
 function halfArcCosQ(arcDeg: number): Q {
@@ -42,15 +75,27 @@ function sqrtNear1Q(mult: Q): Q {
   return (mult + SCALE.Q) >>> 1;
 }
 
-export function generateIndividual(seedU32: number, arch: Archetype): IndividualAttributes {
+export function generateIndividual(
+  seedU32: number,
+  arch: Archetype,
+  bias?: NarrativeBias,
+): IndividualAttributes {
   const rng = makeRng(seedU32 >>> 0, SCALE.Q);
 
-  const statureMult = mulFromVariation(triSym(rng), arch.statureVar);
-  const massMult = mulFromVariation(triSym(rng), arch.massVar);
+  // Convenience: biasedTriSym(rng, 0) === triSym(rng), so unbiased calls
+  // are identical to the previous behaviour when bias is undefined.
+  const sz  = bias?.size       ?? 0;
+  const str = bias?.strength   ?? 0;
+  const spd = bias?.speed      ?? 0;
+  const res = bias?.resilience ?? 0;
+  const agi = bias?.agility    ?? 0;
 
-  const reachMult = mulFromVariation(triSym(rng), arch.reachVar);
+  const statureMult       = mulFromVariation(biasedTriSym(rng, sz),  arch.statureVar);
+  const massMult          = mulFromVariation(biasedTriSym(rng, sz),  arch.massVar);
 
-  const actuatorScaleBase = mulFromVariation(triSym(rng), arch.actuatorScaleVar);
+  const reachMult         = mulFromVariation(biasedTriSym(rng, sz),  arch.reachVar);
+
+  const actuatorScaleBase = mulFromVariation(biasedTriSym(rng, str), arch.actuatorScaleVar);
   
   // Combine stature + mass into a single “size composite”.
 // We use sqrt scaling to avoid extreme linear growth:
@@ -87,13 +132,13 @@ const actuatorScale = clampQ(
   q(1.8)   // upper bound: avoid runaway strength
 );
 
-  const structureScaleBase = mulFromVariation(triSym(rng), arch.structureScaleVar);
+  const structureScaleBase = mulFromVariation(biasedTriSym(rng, res), arch.structureScaleVar);
   const structureScale = clampQ(qMul(structureScaleBase, (SCALE.Q + ((sizeComposite - SCALE.Q) >>> 3)) as Q), q(0.7), q(2.0));
 
   const stature_m = applyMultI32(arch.stature_m, statureMult);
   const mass_kg = applyMultI32(arch.mass_kg, massMult);
 
-  const actuatorFracVar = mulFromVariation(triSym(rng), arch.actuatorMassVar);
+  const actuatorFracVar = mulFromVariation(biasedTriSym(rng, str), arch.actuatorMassVar);
   const actuatorFrac = clampQ(qMul(arch.actuatorMassFrac, actuatorFracVar), q(0.15), q(0.70));
 
   const actuatorMass_kg_raw = mulDiv(mass_kg, actuatorFrac, SCALE.Q);
@@ -103,20 +148,20 @@ const actuatorScale = clampQ(
     mulDiv(mass_kg, q(0.70), SCALE.Q),
   );
 
-  const forceRand = mulFromVariation(triSym(rng), arch.peakForceVar);
+  const forceRand = mulFromVariation(biasedTriSym(rng, str), arch.peakForceVar);
   const forceCouple = clampQ(qMul(actuatorScale, (SCALE.Q + ((actuatorFrac - arch.actuatorMassFrac) >> 1)) as Q), q(0.6), q(2.2));
   const peakForceMult = clampQ(qMul(forceRand, forceCouple), q(0.5), q(2.5));
 
-  const powerRand = mulFromVariation(triSym(rng), arch.peakPowerVar);
+  const powerRand = mulFromVariation(biasedTriSym(rng, str), arch.peakPowerVar);
   const powerMult = clampQ(skewUp(qMul(powerRand, actuatorScale), 1), q(0.5), q(3.0));
 
-  const contRand = mulFromVariation(triSym(rng), arch.continuousPowerVar);
+  const contRand = mulFromVariation(biasedTriSym(rng, str), arch.continuousPowerVar);
   const contMult = clampQ(qMul(contRand, sqrtNear1Q(actuatorFrac)), q(0.4), q(3.0));
 
-  const reserveRand = mulFromVariation(triSym(rng), arch.reserveEnergyVar);
+  const reserveRand = mulFromVariation(biasedTriSym(rng, res), arch.reserveEnergyVar);
   const reserveMult = clampQ(qMul(reserveRand, sqrtNear1Q(actuatorFrac)), q(0.3), q(4.0));
 
-  const effMult = mulFromVariation(triSym(rng), arch.efficiencyVar);
+  const effMult = mulFromVariation(biasedTriSym(rng, str), arch.efficiencyVar);
   const conversionEfficiency = clampQ(qMul(arch.conversionEfficiency, effMult), q(0.45), q(0.98));
 
   const peakForce_N = applyMultI32(arch.peakForce_N, peakForceMult);
@@ -124,32 +169,34 @@ const actuatorScale = clampQ(
   const continuousPower_W = applyMultI32(arch.continuousPower_W, contMult);
   const reserveEnergy_J = applyMultI32(arch.reserveEnergy_J, reserveMult);
 
-  const controlMult = mulFromVariation(triSym(rng), arch.controlVar);
+  const controlMult = mulFromVariation(biasedTriSym(rng, agi), arch.controlVar);
   const controlQuality = clampQ(qMul(arch.controlQuality, controlMult), q(0.15), q(0.98));
 
-  const reactMult = mulFromVariation(triSym(rng), arch.reactionTimeVar);
+  // speed bias is negated: +speed → shorter (faster) reactionTime
+  const reactMult = mulFromVariation(biasedTriSym(rng, -spd), arch.reactionTimeVar);
   const reactCouple = clampQ((SCALE.Q + ((SCALE.Q - controlQuality) >>> 2)) as Q, q(0.75), q(1.30));
   const reactionTime_s = applyMultI32(arch.reactionTime_s, qMul(reactMult, reactCouple));
 
-  const stability = clampQ(qMul(arch.stability, mulFromVariation(triSym(rng), arch.stabilityVar)), q(0.05), q(0.99));
-  const rawFineControl = clampQ(qMul(arch.fineControl, mulFromVariation(triSym(rng), arch.fineControlVar)), q(0.05), q(0.99));
+  const stability = clampQ(qMul(arch.stability, mulFromVariation(biasedTriSym(rng, agi), arch.stabilityVar)), q(0.05), q(0.99));
+  const rawFineControl = clampQ(qMul(arch.fineControl, mulFromVariation(biasedTriSym(rng, agi), arch.fineControlVar)), q(0.05), q(0.99));
   // Phase 33: bodilyKinesthetic sets a floor on fine motor precision
   const bkFloor: Q = arch.cognition ? qMul(arch.cognition.bodilyKinesthetic, q(0.80)) : q(0) as Q;
   const fineControl = clampQ(Math.max(rawFineControl, bkFloor) as Q, q(0.05), q(0.99));
 
-  const surfaceIntegrity = clampQ(qMul(arch.surfaceIntegrity, mulFromVariation(triSym(rng), arch.surfaceVar)), q(0.4), q(3.0));
-  const bulkIntegrity = clampQ(qMul(arch.bulkIntegrity, mulFromVariation(triSym(rng), arch.bulkVar)), q(0.4), q(3.0));
-  const structureIntegrity = clampQ(qMul(arch.structureIntegrity, mulFromVariation(triSym(rng), arch.structVar)), q(0.4), q(3.0));
+  const surfaceIntegrity = clampQ(qMul(arch.surfaceIntegrity, mulFromVariation(biasedTriSym(rng, res), arch.surfaceVar)), q(0.4), q(3.0));
+  const bulkIntegrity = clampQ(qMul(arch.bulkIntegrity, mulFromVariation(biasedTriSym(rng, res), arch.bulkVar)), q(0.4), q(3.0));
+  const structureIntegrity = clampQ(qMul(arch.structureIntegrity, mulFromVariation(biasedTriSym(rng, res), arch.structVar)), q(0.4), q(3.0));
 
-  const distressTolerance = clampQ(qMul(arch.distressTolerance, mulFromVariation(triSym(rng), arch.distressVar)), q(0.01), q(0.98));
-  const shockTolerance = clampQ(qMul(arch.shockTolerance, mulFromVariation(triSym(rng), arch.shockVar)), q(0.01), q(0.98));
-  const concussionTolerance = clampQ(qMul(arch.concussionTolerance, mulFromVariation(triSym(rng), arch.concVar)), q(0.01), q(0.98));
+  const distressTolerance = clampQ(qMul(arch.distressTolerance, mulFromVariation(biasedTriSym(rng, res), arch.distressVar)), q(0.01), q(0.98));
+  const shockTolerance = clampQ(qMul(arch.shockTolerance, mulFromVariation(biasedTriSym(rng, res), arch.shockVar)), q(0.01), q(0.98));
+  const concussionTolerance = clampQ(qMul(arch.concussionTolerance, mulFromVariation(biasedTriSym(rng, res), arch.concVar)), q(0.01), q(0.98));
 
   const heatTolerance = clampQ(qMul(arch.heatTolerance, mulFromVariation(triSym(rng), arch.heatVar)), q(0.01), q(0.98));
   const coldTolerance = clampQ(qMul(arch.coldTolerance, mulFromVariation(triSym(rng), arch.coldVar)), q(0.01), q(0.98));
 
-  const fatigueRate = clampQ(qMul(arch.fatigueRate, mulFromVariation(triSym(rng), arch.fatigueVar)), q(0.4), q(2.5));
-  const recoveryRate = clampQ(qMul(arch.recoveryRate, mulFromVariation(triSym(rng), arch.recoveryVar)), q(0.4), q(2.5));
+  // positive resilience bias → lower fatigue rate (better endurance), so bias is negated
+  const fatigueRate = clampQ(qMul(arch.fatigueRate, mulFromVariation(biasedTriSym(rng, -res), arch.fatigueVar)), q(0.4), q(2.5));
+  const recoveryRate = clampQ(qMul(arch.recoveryRate, mulFromVariation(biasedTriSym(rng, res), arch.recoveryVar)), q(0.4), q(2.5));
 
   return {
     morphology: {

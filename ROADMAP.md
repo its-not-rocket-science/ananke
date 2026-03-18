@@ -5479,7 +5479,7 @@ The host decides how many individual ticks to run between each polity tick.
 
 ---
 
-### Phase 62 — Narrative Bias Parameter for `generateIndividual`
+### Phase 62 — Narrative Bias Parameter for `generateIndividual` *(COMPLETE)*
 
 **Concept:** Add an optional `NarrativeBias` parameter to `generateIndividual` that skews
 the RNG sampling toward a requested profile while preserving physical plausibility.  A designer
