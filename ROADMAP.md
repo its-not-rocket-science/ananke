@@ -5991,16 +5991,23 @@ pattern as Species Forge.
 
 ---
 
-### Generative Cartography
+### Generative Cartography — COMPLETE
 
-**Concept:** Based on terrain, polity borders, and historical trade and migration patterns
-from the world simulation (Phases 61, 64, 67), procedurally generate plausible maps.  The
-engine would not just simulate on a given map — it would generate the map itself from the
-simulated history of its inhabitants.  Mountain passes appear where trade routes cluster;
-cities grow at route intersections; borders follow defensible terrain.
+**Delivered:** `tools/generate-map.ts` + `docs/map/index.html` — self-contained interactive SVG map viewer driven by a 180-day world simulation.
 
-**Ananke hooks:** Terrain system (Phase 6), Campaign layer (Phase 22), "What If?" engine
-(Phase 64), Tech Diffusion (Phase 67).
+**What it shows:**
+- 5 polities (Iron Clans, Merchant League, Sun Theocracy, Plains Nomads, Ancient Library) on a hand-placed geography
+- Territory polygons (convex hull of each polity's owned locations, padded 28px), coloured per polity
+- Trade routes (cyan lines between polity pairs when not at war)
+- War lines (red dashed lines between warring polities' capitals)
+- Timeline slider scrubs through 37 snapshots (every 5 days over 180 days)
+- Right-panel polity stats: treasury, military strength, morale, stability, tech era, locations held
+- Historical events log: tech advances, war declarations, peace treaties
+- Scheduled wars: Iron Clans vs Merchant League (days 20–65), Sun Theocracy vs Plains Nomads (days 75–130)
+
+**Emergent outcomes observed:** Merchant League and Ancient Library grow rich via trade; tech diffuses from Ancient Library (EarlyModern start) to Merchant League and Sun Theocracy by day ~100; war severs trade routes and disrupts diffusion; Plains Nomads remain Prehistoric throughout (isolated by war and poor connectivity).
+
+**Ananke hooks:** `stepPolityDay`, `stepTechDiffusion`, `declareWar`, `makePeace`, `createPolityRegistry`. Regenerate with `npm run generate-map`.
 
 ---
 

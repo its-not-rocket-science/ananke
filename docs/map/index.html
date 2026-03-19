@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Generative Cartography</title>
+<style>
+  :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3245;--text:#e0e4f0;
+    --muted:#7a81a0;--accent:#6366f1;--warn:#f59e0b;--cyan:#22d3ee;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:ui-monospace,"Cascadia Code",Menlo,monospace;font-size:13px;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+  header{padding:.6rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:1rem;flex-shrink:0}
+  header h1{font-size:1.05rem}
+  .sub{color:var(--muted);font-size:.78rem}
+  .gen-date{color:var(--muted);font-size:.72rem;margin-left:auto}
+  /* Layout */
+  .body{display:flex;flex:1;overflow:hidden;gap:0}
+  .map-col{flex:1;display:flex;flex-direction:column;border-right:1px solid var(--border);min-width:0}
+  .controls{padding:.6rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;flex-shrink:0;flex-wrap:wrap}
+  .day-label{color:var(--warn);font-weight:700;font-size:.85rem;min-width:80px}
+  input[type=range]{flex:1;-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;height:4px;outline:none;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer}
+  .map-wrap{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:.5rem}
+  svg#map{width:100%;height:100%;max-width:820px;max-height:640px}
+  /* Right panel */
+  .stats-col{width:280px;overflow-y:auto;flex-shrink:0;padding:.75rem}
+  .sec-head{color:var(--warn);font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:.75rem 0 .35rem}
+  .sec-head:first-child{margin-top:0}
+  .polity-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.6rem .75rem;margin-bottom:.4rem;border-left-width:3px}
+  .pc-header{display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem}
+  .pc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .pc-name{font-weight:700;font-size:.8rem}
+  .pc-era{color:var(--cyan);font-size:.7rem;margin-left:auto}
+  .pc-grid{display:grid;grid-template-columns:1fr 1fr;gap:.2rem .75rem;font-size:.72rem}
+  .pc-key{color:var(--muted)}
+  .pc-val{font-weight:600;color:var(--text)}
+  .pc-locs{font-size:.7rem;color:var(--muted);margin-top:.3rem;border-top:1px solid var(--border);padding-top:.3rem}
+  .war-badge{background:#450a0a;color:#fca5a5;border-radius:3px;font-size:.65rem;font-weight:700;padding:.1rem .3rem}
+  /* Events */
+  .events{max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:4px}
+  .ev{padding:.25rem .5rem;border-bottom:1px solid var(--border);font-size:.72rem}
+  .ev:last-child{border-bottom:none}
+  .ev-day{color:var(--muted);min-width:45px;display:inline-block}
+  .ev-war{color:#fca5a5}.ev-peace{color:#86efac}.ev-tech{color:var(--cyan)}
+  /* Legend */
+  .legend{display:flex;gap:.5rem;flex-wrap:wrap;padding:.5rem .75rem;border-top:1px solid var(--border);font-size:.7rem;flex-shrink:0}
+  .leg{display:flex;align-items:center;gap:.3rem}
+  .leg-dot{width:9px;height:9px;border-radius:50%}
+  .leg-war{width:18px;height:2px;background:#ef4444;border:1px dashed #ef4444}
+  .leg-trade{width:18px;height:2px;background:#22d3ee;opacity:.6}
+</style>
+</head>
+<body>
+<header>
+  <h1>Ananke — Generative Cartography</h1>
+  <span class="sub">180-day world simulation · 5 polities · trade, war &amp; tech diffusion</span>
+  <span class="gen-date">Generated 2026-03-19</span>
+</header>
+<div class="body">
+  <div class="map-col">
+    <div class="controls">
+      <span class="day-label" id="day-label">Day 0</span>
+      <input type="range" id="timeline" min="0" max="36" value="0" oninput="seek(+this.value)">
+      <span style="color:var(--muted);font-size:.72rem">Day 180</span>
+    </div>
+    <div class="map-wrap">
+      <svg id="map" viewBox="0 0 800 620" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background -->
+        <rect width="800" height="620" fill="#0d1117"/>
+        <radialGradient id="rg1" cx="30%" cy="20%" r="45%"><stop offset="0%" stop-color="#1a2435"/><stop offset="100%" stop-color="#0d1117"/></radialGradient>
+        <radialGradient id="rg2" cx="70%" cy="75%" r="45%"><stop offset="0%" stop-color="#1a2520"/><stop offset="100%" stop-color="#0d1117"/></radialGradient>
+        <rect width="800" height="620" fill="url(#rg1)"/>
+        <rect width="800" height="620" fill="url(#rg2)" opacity="0.6"/>
+        <!-- Dynamic SVG layers populated by JS -->
+        <g id="territories"></g>
+        <g id="routes"></g>
+        <g id="war-lines"></g>
+        <g id="nodes"></g>
+        <g id="labels"></g>
+      </svg>
+    </div>
+    <div class="legend">
+      <div class="leg"><div class="leg-trade"></div>Trade route</div>
+      <div class="leg"><div class="leg-war"></div>Active war</div>
+      <div class="leg"><div class="leg-dot" style="background:#ef4444"></div>Iron Clans</div><div class="leg"><div class="leg-dot" style="background:#f59e0b"></div>Merchant League</div><div class="leg"><div class="leg-dot" style="background:#a855f7"></div>Sun Theocracy</div><div class="leg"><div class="leg-dot" style="background:#22c55e"></div>Plains Nomads</div><div class="leg"><div class="leg-dot" style="background:#22d3ee"></div>Ancient Library</div>
+    </div>
+  </div>
+  <div class="stats-col">
+    <div class="sec-head">Polity Status</div>
+    <div id="polity-cards"></div>
+    <div class="sec-head">Historical Events</div>
+    <div class="events" id="events-log"></div>
+  </div>
+</div>
+
+<script>
+const SNAPS = [{"day":0,"polities":[{"id":"iron_clans","treasury":1200,"morale":0.72,"stability":0.65,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.396},{"id":"merchant_league","treasury":4500,"morale":0.8,"stability":0.75,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.52},{"id":"sun_theocracy","treasury":2800,"morale":0.78,"stability":0.85,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.507},{"id":"plains_nomads","treasury":900,"morale":0.68,"stability":0.6,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.272},{"id":"ancient_library","treasury":6000,"morale":0.85,"stability":0.9,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.6056}],"wars":[],"tradeIncome":[],"techAdvances":[]},{"day":5,"polities":[{"id":"iron_clans","treasury":1210,"morale":0.735,"stability":0.66,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.4042},{"id":"merchant_league","treasury":4645,"morale":0.815,"stability":0.76,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.5297},{"id":"sun_theocracy","treasury":2880,"morale":0.795,"stability":0.86,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.5167},{"id":"plains_nomads","treasury":910,"morale":0.695,"stability":0.61,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.278},{"id":"ancient_library","treasury":6125,"morale":0.865,"stability":0.91,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.6162}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":9},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":17},{"a":"sun_theocracy","b":"ancient_library","income":7},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":10,"polities":[{"id":"iron_clans","treasury":1220,"morale":0.75,"stability":0.67,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.4125},{"id":"merchant_league","treasury":4790,"morale":0.83,"stability":0.77,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.5395},{"id":"sun_theocracy","treasury":2960,"morale":0.81,"stability":0.87,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.5265},{"id":"plains_nomads","treasury":920,"morale":0.71,"stability":0.62,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.284},{"id":"ancient_library","treasury":6250,"morale":0.88,"stability":0.92,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.627}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":9},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":17},{"a":"sun_theocracy","b":"ancient_library","income":7},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":15,"polities":[{"id":"iron_clans","treasury":1230,"morale":0.765,"stability":0.68,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.4207},{"id":"merchant_league","treasury":4942,"morale":0.845,"stability":0.78,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.5492},{"id":"sun_theocracy","treasury":3042,"morale":0.825,"stability":0.88,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.5362},{"id":"plains_nomads","treasury":930,"morale":0.725,"stability":0.63,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.29},{"id":"ancient_library","treasury":6380,"morale":0.895,"stability":0.93,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.6376}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":10},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":18},{"a":"sun_theocracy","b":"ancient_library","income":7},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":20,"polities":[{"id":"iron_clans","treasury":1238,"morale":0.78,"stability":0.64,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.429},{"id":"merchant_league","treasury":5099,"morale":0.86,"stability":0.81,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.559},{"id":"sun_theocracy","treasury":3130,"morale":0.84,"stability":0.89,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.546},{"id":"plains_nomads","treasury":940,"morale":0.74,"stability":0.64,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.296},{"id":"ancient_library","treasury":6515,"morale":0.91,"stability":0.94,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.6483}],"wars":["iron_clans:merchant_league"],"tradeIncome":[{"a":"merchant_league","b":"sun_theocracy","income":11},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":19},{"a":"sun_theocracy","b":"ancient_library","income":8},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":25,"polities":[{"id":"iron_clans","treasury":1238,"morale":0.795,"stability":0.4,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.4372},{"id":"merchant_league","treasury":5254,"morale":0.875,"stability":0.92,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.5687},{"id":"sun_theocracy","treasury":3225,"morale":0.855,"stability":0.9,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.5557},{"id":"plains_nomads","treasury":950,"morale":0.755,"stability":0.65,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.302},{"id":"ancient_library","treasury":6655,"morale":0.925,"stability":0.95,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.659}],"wars":["iron_clans:merchant_league"],"tradeIncome":[{"a":"merchant_league","b":"sun_theocracy","income":11},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":19},{"a":"sun_theocracy","b":"ancient_library","income":8},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":30,"polities":[{"id":"iron_clans","treasury":1238,"morale":0.777,"stability":0.16,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.4273},{"id":"merchant_league","treasury":5412,"morale":0.89,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.5785},{"id":"sun_theocracy","treasury":3320,"morale":0.87,"stability":0.91,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.5655},{"id":"plains_nomads","treasury":960,"morale":0.77,"stability":0.66,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.308},{"id":"ancient_library","treasury":6798,"morale":0.94,"stability":0.96,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.6697}],"wars":["iron_clans:merchant_league"],"tradeIncome":[{"a":"merchant_league","b":"sun_theocracy","income":11},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":20},{"a":"sun_theocracy","b":"ancient_library","income":8},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":35,"polities":[{"id":"iron_clans","treasury":1238,"morale":0.737,"stability":0.002,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.4053},{"id":"merchant_league","treasury":5577,"morale":0.905,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.5882},{"id":"sun_theocracy","treasury":3416,"morale":0.885,"stability":0.92,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.5752},{"id":"plains_nomads","treasury":970,"morale":0.785,"stability":0.67,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.314},{"id":"ancient_library","treasury":6949,"morale":0.955,"stability":0.97,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.6804}],"wars":["iron_clans:merchant_league"],"tradeIncome":[{"a":"merchant_league","b":"sun_theocracy","income":11},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":21},{"a":"sun_theocracy","b":"ancient_library","income":9},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":40,"polities":[{"id":"iron_clans","treasury":1238,"morale":0.697,"stability":0.002,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.3833},{"id":"merchant_league","treasury":5742,"morale":0.92,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.598},{"id":"sun_theocracy","treasury":3516,"morale":0.9,"stability":0.93,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.585},{"id":"plains_nomads","treasury":980,"morale":0.8,"stability":0.68,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.32},{"id":"ancient_library","treasury":7104,"morale":0.97,"stability":0.98,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.6911}],"wars":["iron_clans:merchant_league"],"tradeIncome":[{"a":"merchant_league","b":"sun_theocracy","income":11},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":21},{"a":"sun_theocracy","b":"ancient_library","income":9},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":45,"polities":[{"id":"iron_clans","treasury":1238,"morale":0.657,"stability":0.002,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.3613},{"id":"merchant_league","treasury":5915,"morale":0.935,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.6077},{"id":"sun_theocracy","treasury":3621,"morale":0.915,"stability":0.94,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.5947},{"id":"plains_nomads","treasury":990,"morale":0.815,"stability":0.69,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.326},{"id":"ancient_library","treasury":7262,"morale":0.985,"stability":0.99,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7017}],"wars":["iron_clans:merchant_league"],"tradeIncome":[{"a":"merchant_league","b":"sun_theocracy","income":12},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":22},{"a":"sun_theocracy","b":"ancient_library","income":9},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":50,"polities":[{"id":"iron_clans","treasury":1238,"morale":0.617,"stability":0.002,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.3393},{"id":"merchant_league","treasury":6092,"morale":0.95,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.6175},{"id":"sun_theocracy","treasury":3726,"morale":0.93,"stability":0.95,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.6045},{"id":"plains_nomads","treasury":1000,"morale":0.83,"stability":0.7,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.332},{"id":"ancient_library","treasury":7424,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["iron_clans:merchant_league"],"tradeIncome":[{"a":"merchant_league","b":"sun_theocracy","income":12},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":23},{"a":"sun_theocracy","b":"ancient_library","income":9},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":55,"polities":[{"id":"iron_clans","treasury":1238,"morale":0.577,"stability":0.002,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.3173},{"id":"merchant_league","treasury":6273,"morale":0.965,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.6272},{"id":"sun_theocracy","treasury":3832,"morale":0.945,"stability":0.96,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.6142},{"id":"plains_nomads","treasury":1010,"morale":0.845,"stability":0.71,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.338},{"id":"ancient_library","treasury":7589,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["iron_clans:merchant_league"],"tradeIncome":[{"a":"merchant_league","b":"sun_theocracy","income":13},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":23},{"a":"sun_theocracy","b":"ancient_library","income":9},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":60,"polities":[{"id":"iron_clans","treasury":1238,"morale":0.537,"stability":0.002,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.2953},{"id":"merchant_league","treasury":6463,"morale":0.98,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.637},{"id":"sun_theocracy","treasury":3945,"morale":0.96,"stability":0.97,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.624},{"id":"plains_nomads","treasury":1020,"morale":0.86,"stability":0.72,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.344},{"id":"ancient_library","treasury":7760,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["iron_clans:merchant_league"],"tradeIncome":[{"a":"merchant_league","b":"sun_theocracy","income":14},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":24},{"a":"sun_theocracy","b":"ancient_library","income":10},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":65,"polities":[{"id":"iron_clans","treasury":1240,"morale":0.497,"stability":0.004,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.2733},{"id":"merchant_league","treasury":6664,"morale":0.995,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.6467},{"id":"sun_theocracy","treasury":4065,"morale":0.975,"stability":0.98,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.6337},{"id":"plains_nomads","treasury":1030,"morale":0.875,"stability":0.73,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.35},{"id":"ancient_library","treasury":7939,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":14},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":25},{"a":"sun_theocracy","b":"ancient_library","income":10},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":70,"polities":[{"id":"iron_clans","treasury":1250,"morale":0.457,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.2513},{"id":"merchant_league","treasury":6874,"morale":1,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.65},{"id":"sun_theocracy","treasury":4185,"morale":0.99,"stability":0.99,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.6435},{"id":"plains_nomads","treasury":1040,"morale":0.89,"stability":0.74,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.356},{"id":"ancient_library","treasury":8119,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":14},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":25},{"a":"sun_theocracy","b":"ancient_library","income":10},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":75,"polities":[{"id":"iron_clans","treasury":1260,"morale":0.417,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.2293},{"id":"merchant_league","treasury":7090,"morale":1,"stability":1,"techEra":2,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.65},{"id":"sun_theocracy","treasury":4305,"morale":1,"stability":1,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.65},{"id":"plains_nomads","treasury":1050,"morale":0.905,"stability":0.7,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.362},{"id":"ancient_library","treasury":8305,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":14},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":27},{"a":"sun_theocracy","b":"ancient_library","income":10},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":80,"polities":[{"id":"iron_clans","treasury":1270,"morale":0.377,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.2073},{"id":"merchant_league","treasury":7327,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":4432,"morale":1,"stability":1,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.65},{"id":"plains_nomads","treasury":1060,"morale":0.92,"stability":0.46,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.368},{"id":"ancient_library","treasury":8507,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":16},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":31},{"a":"sun_theocracy","b":"ancient_library","income":11},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":85,"polities":[{"id":"iron_clans","treasury":1280,"morale":0.337,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.1853},{"id":"merchant_league","treasury":7583,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":4570,"morale":1,"stability":1,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.65},{"id":"plains_nomads","treasury":1070,"morale":0.913,"stability":0.22,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.3652},{"id":"ancient_library","treasury":8731,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":16},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":33},{"a":"sun_theocracy","b":"ancient_library","income":12},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":90,"polities":[{"id":"iron_clans","treasury":1290,"morale":0.297,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.1633},{"id":"merchant_league","treasury":7844,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":4710,"morale":1,"stability":1,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.65},{"id":"plains_nomads","treasury":1080,"morale":0.873,"stability":0.002,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.3492},{"id":"ancient_library","treasury":8962,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":16},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":34},{"a":"sun_theocracy","b":"ancient_library","income":12},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":95,"polities":[{"id":"iron_clans","treasury":1300,"morale":0.257,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.1413},{"id":"merchant_league","treasury":8114,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":4851,"morale":1,"stability":1,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.65},{"id":"plains_nomads","treasury":1090,"morale":0.833,"stability":0.002,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.3332},{"id":"ancient_library","treasury":9201,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":17},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":35},{"a":"sun_theocracy","b":"ancient_library","income":12},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":100,"polities":[{"id":"iron_clans","treasury":1310,"morale":0.217,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.1193},{"id":"merchant_league","treasury":8392,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":4996,"morale":1,"stability":1,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.65},{"id":"plains_nomads","treasury":1100,"morale":0.793,"stability":0.002,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.3172},{"id":"ancient_library","treasury":9444,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":17},{"a":"merchant_league","b":"plains_nomads","income":1},{"a":"merchant_league","b":"ancient_library","income":36},{"a":"sun_theocracy","b":"ancient_library","income":12},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":105,"polities":[{"id":"iron_clans","treasury":1320,"morale":0.177,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.0973},{"id":"merchant_league","treasury":8683,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":5147,"morale":1,"stability":1,"techEra":2,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.65},{"id":"plains_nomads","treasury":1115,"morale":0.753,"stability":0.002,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.3012},{"id":"ancient_library","treasury":9699,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":18},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":37},{"a":"sun_theocracy","b":"ancient_library","income":13},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":110,"polities":[{"id":"iron_clans","treasury":1330,"morale":0.137,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.0753},{"id":"merchant_league","treasury":8986,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":5302,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1130,"morale":0.713,"stability":0.002,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.2852},{"id":"ancient_library","treasury":9962,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":18},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":39},{"a":"sun_theocracy","b":"ancient_library","income":13},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[{"polityId":"sun_theocracy","newEra":3}]},{"day":115,"polities":[{"id":"iron_clans","treasury":1340,"morale":0.097,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.0533},{"id":"merchant_league","treasury":9310,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":5489,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1145,"morale":0.673,"stability":0.002,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.2692},{"id":"ancient_library","treasury":10244,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":22},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":40},{"a":"sun_theocracy","b":"ancient_library","income":16},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":120,"polities":[{"id":"iron_clans","treasury":1350,"morale":0.057,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.0313},{"id":"merchant_league","treasury":9651,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":5681,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1160,"morale":0.633,"stability":0.002,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.2532},{"id":"ancient_library","treasury":10538,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":23},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":42},{"a":"sun_theocracy","b":"ancient_library","income":16},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":125,"polities":[{"id":"iron_clans","treasury":1360,"morale":0.017,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0.0093},{"id":"merchant_league","treasury":10000,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":5881,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1175,"morale":0.593,"stability":0.002,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.2372},{"id":"ancient_library","treasury":10842,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":["plains_nomads:sun_theocracy"],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":23},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":44},{"a":"sun_theocracy","b":"ancient_library","income":17},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":130,"polities":[{"id":"iron_clans","treasury":1370,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":10362,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":6092,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1190,"morale":0.553,"stability":0.004,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.2212},{"id":"ancient_library","treasury":11158,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":25},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":45},{"a":"sun_theocracy","b":"ancient_library","income":18},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":135,"polities":[{"id":"iron_clans","treasury":1380,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":10736,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":6310,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1205,"morale":0.513,"stability":0.014,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.2052},{"id":"ancient_library","treasury":11485,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":25},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":46},{"a":"sun_theocracy","b":"ancient_library","income":19},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":140,"polities":[{"id":"iron_clans","treasury":1390,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":11122,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":6532,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1220,"morale":0.473,"stability":0.012,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.1892},{"id":"ancient_library","treasury":11824,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":26},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":49},{"a":"sun_theocracy","b":"ancient_library","income":19},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":145,"polities":[{"id":"iron_clans","treasury":1400,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":11524,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":6762,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1235,"morale":0.433,"stability":0.002,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.1732},{"id":"ancient_library","treasury":12173,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":28},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":50},{"a":"sun_theocracy","b":"ancient_library","income":20},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":150,"polities":[{"id":"iron_clans","treasury":1410,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":11941,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":7006,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1250,"morale":0.393,"stability":0,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.1572},{"id":"ancient_library","treasury":12539,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":28},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":52},{"a":"sun_theocracy","b":"ancient_library","income":21},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":155,"polities":[{"id":"iron_clans","treasury":1420,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":12371,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":7255,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1265,"morale":0.353,"stability":0,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.1412},{"id":"ancient_library","treasury":12915,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":30},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":54},{"a":"sun_theocracy","b":"ancient_library","income":21},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":160,"polities":[{"id":"iron_clans","treasury":1430,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":12819,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":7514,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1280,"morale":0.313,"stability":0,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.1252},{"id":"ancient_library","treasury":13307,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":30},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":56},{"a":"sun_theocracy","b":"ancient_library","income":22},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":165,"polities":[{"id":"iron_clans","treasury":1440,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":13279,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":7782,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1295,"morale":0.273,"stability":0,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.1092},{"id":"ancient_library","treasury":13714,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":31},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":58},{"a":"sun_theocracy","b":"ancient_library","income":24},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":170,"polities":[{"id":"iron_clans","treasury":1450,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":13756,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":8062,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1310,"morale":0.233,"stability":0,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.0932},{"id":"ancient_library","treasury":14136,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":33},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":60},{"a":"sun_theocracy","b":"ancient_library","income":24},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":175,"polities":[{"id":"iron_clans","treasury":1460,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":14247,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":8350,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1325,"morale":0.193,"stability":0,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.0772},{"id":"ancient_library","treasury":14570,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":33},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":62},{"a":"sun_theocracy","b":"ancient_library","income":25},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]},{"day":180,"polities":[{"id":"iron_clans","treasury":1470,"morale":0,"stability":0,"techEra":1,"locationIds":["ironholt","forge_peak","ashfield"],"militaryStrength":0},{"id":"merchant_league","treasury":14759,"morale":1,"stability":1,"techEra":3,"locationIds":["crossroads","harbor_town","silver_gate"],"militaryStrength":0.75},{"id":"sun_theocracy","treasury":8652,"morale":1,"stability":1,"techEra":3,"locationIds":["dawn_citadel","sun_temple","radiant_port"],"militaryStrength":0.75},{"id":"plains_nomads","treasury":1340,"morale":0.153,"stability":0,"techEra":0,"locationIds":["dustwatch","grasshaven","windsteppe"],"militaryStrength":0.0612},{"id":"ancient_library","treasury":15021,"morale":1,"stability":1,"techEra":3,"locationIds":["great_archive","scholars_rest","ember_keep"],"militaryStrength":0.7125}],"wars":[],"tradeIncome":[{"a":"iron_clans","b":"merchant_league","income":2},{"a":"merchant_league","b":"sun_theocracy","income":35},{"a":"merchant_league","b":"plains_nomads","income":2},{"a":"merchant_league","b":"ancient_library","income":64},{"a":"sun_theocracy","b":"ancient_library","income":26},{"a":"plains_nomads","b":"ancient_library","income":1}],"techAdvances":[]}];
+const LOCS  = [{"id":"ironholt","name":"Ironholt","polityId":"iron_clans","x":115,"y":95},{"id":"forge_peak","name":"Forge Peak","polityId":"iron_clans","x":185,"y":125},{"id":"ashfield","name":"Ashfield","polityId":"iron_clans","x":140,"y":185},{"id":"crossroads","name":"Crossroads","polityId":"merchant_league","x":380,"y":285},{"id":"harbor_town","name":"Harbor Town","polityId":"merchant_league","x":315,"y":330},{"id":"silver_gate","name":"Silver Gate","polityId":"merchant_league","x":445,"y":305},{"id":"dawn_citadel","name":"Dawn Citadel","polityId":"sun_theocracy","x":625,"y":135},{"id":"sun_temple","name":"Sun Temple","polityId":"sun_theocracy","x":675,"y":205},{"id":"radiant_port","name":"Radiant Port","polityId":"sun_theocracy","x":645,"y":275},{"id":"dustwatch","name":"Dustwatch","polityId":"plains_nomads","x":165,"y":375},{"id":"grasshaven","name":"Grasshaven","polityId":"plains_nomads","x":225,"y":425},{"id":"windsteppe","name":"Windsteppe","polityId":"plains_nomads","x":170,"y":480},{"id":"great_archive","name":"Great Archive","polityId":"ancient_library","x":415,"y":510},{"id":"scholars_rest","name":"Scholar's Rest","polityId":"ancient_library","x":475,"y":485},{"id":"ember_keep","name":"Ember Keep","polityId":"ancient_library","x":385,"y":565}];
+const POLITY_DEFS = [{"id":"iron_clans","name":"Iron Clans","pop":180000,"treasury":1200,"era":1,"stability":6500,"morale":7200,"color":"#ef4444"},{"id":"merchant_league","name":"Merchant League","pop":220000,"treasury":4500,"era":2,"stability":7500,"morale":8000,"color":"#f59e0b"},{"id":"sun_theocracy","name":"Sun Theocracy","pop":160000,"treasury":2800,"era":2,"stability":8500,"morale":7800,"color":"#a855f7"},{"id":"plains_nomads","name":"Plains Nomads","pop":120000,"treasury":900,"era":0,"stability":6000,"morale":6800,"color":"#22c55e"},{"id":"ancient_library","name":"Ancient Library","pop":95000,"treasury":6000,"era":3,"stability":9000,"morale":8500,"color":"#22d3ee"}];
+const PAIRS = [{"a":"iron_clans","b":"merchant_league"},{"a":"merchant_league","b":"sun_theocracy"},{"a":"merchant_league","b":"plains_nomads"},{"a":"merchant_league","b":"ancient_library"},{"a":"sun_theocracy","b":"ancient_library"},{"a":"plains_nomads","b":"ancient_library"}];
+const ERA_NAMES = ["Prehistoric","Ancient","Medieval","EarlyModern","Industrial","Modern","NearFuture","FarFuture","DeepSpace"];
+
+// Build location lookup
+const locMap = new Map(LOCS.map(l => [l.id, l]));
+const polityColor = new Map(POLITY_DEFS.map(p => [p.id, p.color]));
+const polityName  = new Map(POLITY_DEFS.map(p => [p.id, p.name]));
+
+function cross(O, A, B) {
+  return (A.x - O.x) * (B.y - O.y) - (A.y - O.y) * (B.x - O.x);
+}
+function convexHull(pts) {
+  if (pts.length <= 2) return pts;
+  const sorted = [...pts].sort((a,b) => a.x !== b.x ? a.x - b.x : a.y - b.y);
+  const lo = [], hi = [];
+  for (const p of sorted) {
+    while (lo.length >= 2 && cross(lo.at(-2), lo.at(-1), p) <= 0) lo.pop();
+    lo.push(p);
+  }
+  for (const p of [...sorted].reverse()) {
+    while (hi.length >= 2 && cross(hi.at(-2), hi.at(-1), p) <= 0) hi.pop();
+    hi.push(p);
+  }
+  return [...lo.slice(0,-1), ...hi.slice(0,-1)];
+}
+function expandHull(hull, cx, cy, pad) {
+  return hull.map(p => {
+    const dx = p.x - cx, dy = p.y - cy;
+    const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+    return { x: p.x + dx/d*pad, y: p.y + dy/d*pad };
+  });
+}
+function pointsStr(pts) { return pts.map(p => p.x+','+p.y).join(' '); }
+
+function svgEl(tag, attrs, inner) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  if (inner !== undefined) el.innerHTML = inner;
+  return el;
+}
+
+function renderMap(snapIdx) {
+  const snap = SNAPS[snapIdx];
+  if (!snap) return;
+
+  // Build ownership map: locationId → polityId
+  const ownership = new Map();
+  for (const ps of snap.polities)
+    for (const lid of ps.locationIds)
+      ownership.set(lid, ps.id);
+
+  // Clear layers
+  ["territories","routes","war-lines","nodes","labels"].forEach(id => {
+    document.getElementById(id).innerHTML = '';
+  });
+
+  const territories = document.getElementById('territories');
+  const routes      = document.getElementById('routes');
+  const warLines    = document.getElementById('war-lines');
+  const nodes       = document.getElementById('nodes');
+  const labels      = document.getElementById('labels');
+
+  // Territories (convex hulls of owned locations, padded 28px)
+  for (const ps of snap.polities) {
+    if (!ps.locationIds.length) continue;
+    const pts = ps.locationIds.map(lid => locMap.get(lid)).filter(Boolean);
+    if (pts.length < 2) {
+      const p = pts[0];
+      if (!p) continue;
+      territories.appendChild(svgEl('circle', {
+        cx: p.x, cy: p.y, r: 35,
+        fill: polityColor.get(ps.id) + '22',
+        stroke: polityColor.get(ps.id), 'stroke-width': '1',
+        'stroke-dasharray': '3,3',
+      }));
+      continue;
+    }
+    const hull = convexHull(pts);
+    const cx = pts.reduce((s,p)=>s+p.x,0)/pts.length;
+    const cy = pts.reduce((s,p)=>s+p.y,0)/pts.length;
+    const expanded = expandHull(hull, cx, cy, 28);
+    territories.appendChild(svgEl('polygon', {
+      points: pointsStr(expanded),
+      fill: polityColor.get(ps.id) + '18',
+      stroke: polityColor.get(ps.id),
+      'stroke-width': '1.5',
+      'stroke-dasharray': '4,3',
+      rx: '8',
+    }));
+    // Polity label at centroid
+    labels.appendChild(svgEl('text', {
+      x: cx, y: cy - 5,
+      'text-anchor': 'middle',
+      fill: polityColor.get(ps.id),
+      'font-size': '10',
+      'font-weight': '700',
+      'font-family': 'ui-monospace, monospace',
+      opacity: '0.8',
+    }, polityName.get(ps.id)));
+    labels.appendChild(svgEl('text', {
+      x: cx, y: cy + 8,
+      'text-anchor': 'middle',
+      fill: polityColor.get(ps.id),
+      'font-size': '8.5',
+      'font-family': 'ui-monospace, monospace',
+      opacity: '0.6',
+    }, 'Era: ' + ERA_NAMES[ps.techEra]));
+  }
+
+  // Trade routes (draw between polity pair capitals if no war)
+  const wars = new Set(snap.wars);
+  for (const pair of PAIRS) {
+    const warKey1 = pair.a + ':' + pair.b;
+    const warKey2 = pair.b + ':' + pair.a;
+    const atWar = wars.has(warKey1) || wars.has(warKey2);
+
+    // Find capital (first owned location) for each polity
+    const psA = snap.polities.find(p => p.id === pair.a);
+    const psB = snap.polities.find(p => p.id === pair.b);
+    if (!psA || !psB) continue;
+    const capA = locMap.get(psA.locationIds[0]);
+    const capB = locMap.get(psB.locationIds[0]);
+    if (!capA || !capB) continue;
+
+    if (atWar) {
+      warLines.appendChild(svgEl('line', {
+        x1: capA.x, y1: capA.y, x2: capB.x, y2: capB.y,
+        stroke: '#ef4444', 'stroke-width': '2',
+        'stroke-dasharray': '6,4', opacity: '0.7',
+      }));
+    } else {
+      routes.appendChild(svgEl('line', {
+        x1: capA.x, y1: capA.y, x2: capB.x, y2: capB.y,
+        stroke: '#22d3ee', 'stroke-width': '1',
+        opacity: '0.25',
+      }));
+    }
+  }
+
+  // Location nodes
+  for (const loc of LOCS) {
+    const ownerPolityId = ownership.get(loc.id);
+    const color = ownerPolityId ? polityColor.get(ownerPolityId) : '#374151';
+    const isCapital = snap.polities.find(p => p.id === ownerPolityId)?.locationIds[0] === loc.id;
+    const r = isCapital ? 9 : 6;
+
+    nodes.appendChild(svgEl('circle', {
+      cx: loc.x, cy: loc.y, r: r + 3,
+      fill: color + '22',
+    }));
+    nodes.appendChild(svgEl('circle', {
+      cx: loc.x, cy: loc.y, r,
+      fill: ownerPolityId ? color : '#1f2937',
+      stroke: color, 'stroke-width': isCapital ? '2' : '1',
+    }));
+    if (isCapital) {
+      nodes.appendChild(svgEl('circle', {
+        cx: loc.x, cy: loc.y, r: '3',
+        fill: '#fff', opacity: '0.8',
+      }));
+    }
+    labels.appendChild(svgEl('text', {
+      x: loc.x, y: loc.y + r + 10,
+      'text-anchor': 'middle', fill: '#94a3b8',
+      'font-size': '8', 'font-family': 'ui-monospace, monospace',
+    }, loc.name));
+  }
+}
+
+function renderStats(snapIdx) {
+  const snap = SNAPS[snapIdx];
+  if (!snap) return;
+
+  const wars = new Set(snap.wars);
+
+  // Polity cards
+  const cardsEl = document.getElementById('polity-cards');
+  cardsEl.innerHTML = snap.polities.map(ps => {
+    const def = POLITY_DEFS.find(d => d.id === ps.id);
+    if (!def) return '';
+    const atWar = [...wars].some(w => w.includes(ps.id));
+    const warStr = atWar ? ' <span class="war-badge">⚔ AT WAR</span>' : '';
+    const locNames = ps.locationIds.map(lid => locMap.get(lid)?.name ?? lid).join(', ');
+    return '<div class="polity-card" style="border-left-color:' + def.color + '">' +
+      '<div class="pc-header">' +
+        '<div class="pc-dot" style="background:' + def.color + '"></div>' +
+        '<span class="pc-name">' + def.name + warStr + '</span>' +
+        '<span class="pc-era">' + ERA_NAMES[ps.techEra] + '</span>' +
+      '</div>' +
+      '<div class="pc-grid">' +
+        '<span class="pc-key">Treasury</span><span class="pc-val">' + ps.treasury.toLocaleString() + ' cu</span>' +
+        '<span class="pc-key">Military</span><span class="pc-val">' + Math.round(ps.militaryStrength * 100) + '%</span>' +
+        '<span class="pc-key">Morale</span><span class="pc-val">' + Math.round(ps.morale * 100) + '%</span>' +
+        '<span class="pc-key">Stability</span><span class="pc-val">' + Math.round(ps.stability * 100) + '%</span>' +
+        '<span class="pc-key">Locations</span><span class="pc-val">' + ps.locationIds.length + '</span>' +
+      '</div>' +
+      '<div class="pc-locs">' + locNames + '</div>' +
+    '</div>';
+  }).join('');
+
+  // Events up to this day
+  const day = snap.day;
+  const events = [];
+  for (const s of SNAPS) {
+    if (s.day > day) break;
+    for (const t of s.techAdvances)
+      events.push({ day: s.day, cls: 'ev-tech',
+        text: (polityName.get(t.polityId) ?? t.polityId) + ' advances to ' + ERA_NAMES[t.newEra] });
+  }
+  // Hard-coded scheduled events (must match generate-map.ts)
+  const SCHEDULED = [
+    { day: 20, cls: 'ev-war',   text: 'Iron Clans declares war on Merchant League' },
+    { day: 65, cls: 'ev-peace', text: 'Iron Clans and Merchant League make peace' },
+    { day: 75, cls: 'ev-war',   text: 'Sun Theocracy declares war on Plains Nomads' },
+    { day: 130,cls: 'ev-peace', text: 'Sun Theocracy and Plains Nomads make peace' },
+  ];
+  for (const e of SCHEDULED)
+    if (e.day <= day) events.push(e);
+  events.sort((a,b) => a.day - b.day);
+
+  const evEl = document.getElementById('events-log');
+  evEl.innerHTML = events.length === 0
+    ? '<div style="padding:.5rem;color:#7a81a0;font-size:.75rem">No events yet.</div>'
+    : events.map(e =>
+        '<div class="ev"><span class="ev-day">Day ' + e.day + '</span>' +
+        '<span class="' + e.cls + '">' + e.text + '</span></div>'
+      ).join('');
+  evEl.scrollTop = evEl.scrollHeight;
+}
+
+function seek(idx) {
+  const snap = SNAPS[idx];
+  if (!snap) return;
+  document.getElementById('day-label').textContent = 'Day ' + snap.day;
+  renderMap(idx);
+  renderStats(idx);
+}
+
+seek(0);
+</script>
+</body>
+</html>
