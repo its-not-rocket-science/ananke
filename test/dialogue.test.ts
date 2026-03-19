@@ -356,3 +356,285 @@ describe("applyDialogueOutcome", () => {
     expect(target.condition.fearQ).toBe(before);
   });
 });
+
+// ── Group: negotiate (lines 189-192, 225-228) ─────────────────────────────────
+
+describe("negotiate", () => {
+  it("favourable offer (giving > receiving) returns SCALE.Q probability", () => {
+    const ctx = makeContext();
+    const action: DialogueAction = {
+      kind: "negotiate",
+      offer: {
+        giving:    [{ id: "gold", value: 100 }],
+        receiving: [{ id: "sword", value: 40 }],
+      },
+    };
+    const P = dialogueProbability(action, ctx);
+    expect(P).toBe(SCALE.Q);
+  });
+
+  it("unfavourable offer (giving < receiving) returns 0 probability", () => {
+    const ctx = makeContext();
+    const action: DialogueAction = {
+      kind: "negotiate",
+      offer: {
+        giving:    [{ id: "copper", value: 10 }],
+        receiving: [{ id: "sword", value: 50 }],
+      },
+    };
+    const P = dialogueProbability(action, ctx);
+    expect(P).toBe(0);
+  });
+
+  it("equal offer (giving === receiving) returns 0 — no gain for target", () => {
+    const ctx = makeContext();
+    const action: DialogueAction = {
+      kind: "negotiate",
+      offer: {
+        giving:    [{ id: "gem", value: 30 }],
+        receiving: [{ id: "gem2", value: 30 }],
+      },
+    };
+    const P = dialogueProbability(action, ctx);
+    expect(P).toBe(0);
+  });
+
+  it("favourable offer resolves as success (deterministic — no RNG, line 225-228)", () => {
+    const ctx = makeContext();
+    const action: DialogueAction = {
+      kind: "negotiate",
+      offer: {
+        giving:    [{ id: "gold", value: 200 }],
+        receiving: [{ id: "info", value: 10 }],
+      },
+    };
+    const outcome = resolveDialogue(action, ctx);
+    expect(outcome.result).toBe("success");
+  });
+
+  it("unfavourable offer resolves as failure (deterministic, line 225-228)", () => {
+    const ctx = makeContext();
+    const action: DialogueAction = {
+      kind: "negotiate",
+      offer: {
+        giving:    [{ id: "pebble", value: 1 }],
+        receiving: [{ id: "castle", value: 9999 }],
+      },
+    };
+    const outcome = resolveDialogue(action, ctx);
+    expect(outcome.result).toBe("failure");
+    if (outcome.result === "failure") {
+      expect(outcome.cooldown_s).toBe(0);
+    }
+  });
+
+  it("negotiate never escalates", () => {
+    for (let seed = 0; seed < 10; seed++) {
+      const ctx = makeContext({ worldSeed: seed });
+      const action: DialogueAction = {
+        kind: "negotiate",
+        offer: { giving: [{ id: "gold", value: 5 }], receiving: [{ id: "food", value: 50 }] },
+      };
+      expect(resolveDialogue(action, ctx).result).not.toBe("escalate");
+    }
+  });
+
+  it("empty offer (both sides empty) treats 0 giving and 0 receiving as not favourable → 0", () => {
+    const ctx = makeContext();
+    const action: DialogueAction = {
+      kind: "negotiate",
+      offer: { giving: [], receiving: [] },
+    };
+    const P = dialogueProbability(action, ctx);
+    expect(P).toBe(0);
+  });
+});
+
+// ── Group: intimidation failure without escalation (line 266-267) ─────────────
+
+describe("intimidation failure — non-escalate branch (line 266-267)", () => {
+  it("failure when target fearQ is at/above ESCALATE_THRESHOLD returns 'failure', not 'escalate'", () => {
+    // Guarantee failure by making initiator very weak
+    const initiator = makeEntity(1);
+    initiator.attributes.performance.peakForce_N = to.N(200);
+    const target = makeEntity(2);
+    // fearQ above ESCALATE_THRESHOLD so escalation is NOT triggered
+    target.condition.fearQ = q(0.50);
+    target.attributes.resilience.distressTolerance = q(0.95);
+
+    let foundFailure = false;
+    for (let seed = 0; seed < 100; seed++) {
+      const o = resolveDialogue(
+        { kind: "intimidate", intensity_Q: q(0.10) },
+        { initiator, target, worldSeed: seed, tick: 0 },
+      );
+      if (o.result === "failure") {
+        foundFailure = true;
+        // Confirm cooldown_s is 30 (not 0)
+        if (o.result === "failure") {
+          expect(o.cooldown_s).toBe(30);
+        }
+        break;
+      }
+      expect(o.result).not.toBe("escalate");
+    }
+    expect(foundFailure).toBe(true);
+  });
+
+  it("failure outcome has cooldown_s=30 for intimidate (not escalate path)", () => {
+    const initiator = makeEntity(1);
+    initiator.attributes.performance.peakForce_N = to.N(100); // very weak
+    const target = makeEntity(2);
+    target.condition.fearQ = q(0.60); // above ESCALATE_THRESHOLD
+    target.attributes.resilience.distressTolerance = q(0.99);
+
+    // Find any seed that produces failure
+    for (let seed = 0; seed < 200; seed++) {
+      const o = resolveDialogue(
+        { kind: "intimidate", intensity_Q: q(0.01) },
+        { initiator, target, worldSeed: seed, tick: 0 },
+      );
+      if (o.result === "failure") {
+        expect(o.cooldown_s).toBe(30);
+        return;
+      }
+    }
+  });
+});
+
+// ── Group: verboseDetail all branches (lines 327-344) ─────────────────────────
+
+describe("verboseDetail via narrateDialogue verbose (lines 327-344)", () => {
+  const verboseCfg = { verbosity: "verbose" as const };
+
+  it("intimidate success — 'cowed by the show of force'", () => {
+    const text = narrateDialogue(
+      { kind: "intimidate", intensity_Q: q(0.80) },
+      { result: "success", fearDelta: INTIMIDATE_FEAR_DELTA },
+      verboseCfg,
+    );
+    expect(text).toContain("cowed by the show of force");
+  });
+
+  it("intimidate escalate — 'fearless target took it as an insult'", () => {
+    const text = narrateDialogue(
+      { kind: "intimidate", intensity_Q: q(0.80) },
+      { result: "escalate" },
+      verboseCfg,
+    );
+    expect(text).toContain("fearless target");
+    expect(text).toContain("insult");
+  });
+
+  it("intimidate failure — 'target stood firm'", () => {
+    const text = narrateDialogue(
+      { kind: "intimidate", intensity_Q: q(0.80) },
+      { result: "failure", cooldown_s: 30 },
+      verboseCfg,
+    );
+    expect(text).toContain("stood firm");
+  });
+
+  it("persuade success — 'argument was accepted'", () => {
+    const text = narrateDialogue(
+      { kind: "persuade" },
+      { result: "success" },
+      verboseCfg,
+    );
+    expect(text).toContain("argument was accepted");
+  });
+
+  it("persuade failure — 'remained unconvinced'", () => {
+    const text = narrateDialogue(
+      { kind: "persuade" },
+      { result: "failure", cooldown_s: 60 },
+      verboseCfg,
+    );
+    expect(text).toContain("remained unconvinced");
+  });
+
+  it("deceive success — 'false claim was believed'", () => {
+    const text = narrateDialogue(
+      { kind: "deceive", plausibility_Q: q(0.80) },
+      { result: "success" },
+      verboseCfg,
+    );
+    expect(text).toContain("false claim was believed");
+  });
+
+  it("deceive failure — 'detected the deception'", () => {
+    const text = narrateDialogue(
+      { kind: "deceive", plausibility_Q: q(0.30) },
+      { result: "failure", cooldown_s: 120 },
+      verboseCfg,
+    );
+    expect(text).toContain("detected the deception");
+  });
+
+  it("surrender success — 'laid down arms'", () => {
+    const text = narrateDialogue(
+      { kind: "surrender" },
+      { result: "success", setSurrendered: true },
+      verboseCfg,
+    );
+    expect(text).toContain("laid down arms");
+  });
+
+  it("surrender failure — 'refused to surrender'", () => {
+    const text = narrateDialogue(
+      { kind: "surrender" },
+      { result: "failure", cooldown_s: 0 },
+      verboseCfg,
+    );
+    expect(text).toContain("refused to surrender");
+  });
+
+  it("negotiate success — 'agreed to the exchange'", () => {
+    const text = narrateDialogue(
+      { kind: "negotiate", offer: { giving: [{ id: "g", value: 10 }], receiving: [] } },
+      { result: "success" },
+      verboseCfg,
+    );
+    expect(text).toContain("agreed to the exchange");
+  });
+
+  it("negotiate failure — 'offer was rejected'", () => {
+    const text = narrateDialogue(
+      { kind: "negotiate", offer: { giving: [], receiving: [{ id: "r", value: 10 }] } },
+      { result: "failure", cooldown_s: 0 },
+      verboseCfg,
+    );
+    expect(text).toContain("offer was rejected");
+  });
+
+  it("signal success — describes species and intent (line 342)", () => {
+    const text = narrateDialogue(
+      { kind: "signal", targetSpecies: "wolf", intent: "calm" },
+      { result: "success", comprehension_Q: q(0.80) },
+      verboseCfg,
+    );
+    expect(text).toContain("wolf");
+    expect(text).toContain("calm");
+    expect(text).toContain("understood");
+  });
+
+  it("signal failure aggravated — 'aggravated by the signal' (line 343)", () => {
+    const text = narrateDialogue(
+      { kind: "signal", targetSpecies: "bear", intent: "territory" },
+      { result: "failure", cooldown_s: 45, aggravated: true },
+      verboseCfg,
+    );
+    expect(text).toContain("bear");
+    expect(text).toContain("aggravated");
+  });
+
+  it("signal failure non-aggravated — 'did not comprehend' (line 344)", () => {
+    const text = narrateDialogue(
+      { kind: "signal", targetSpecies: "deer", intent: "submit" },
+      { result: "failure", cooldown_s: 45, aggravated: false },
+      verboseCfg,
+    );
+    expect(text).toContain("deer");
+    expect(text).toContain("did not comprehend");
+  });
+});

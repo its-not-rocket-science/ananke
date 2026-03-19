@@ -7,9 +7,11 @@ import {
   summariseArena,
   formatArenaReport,
   expectWinRate,
+  expectSurvivalRate,
   expectMeanDuration,
   expectRecovery,
   expectResourceCost,
+  narrateRepresentativeTrial,
   CALIBRATION_ARMED_VS_UNARMED,
   CALIBRATION_UNTREATED_KNIFE_WOUND,
   CALIBRATION_FIRST_AID_SAVES_LIVES,
@@ -478,5 +480,252 @@ describe("edge cases", () => {
     };
     const result = runArena(scenario, 3);
     expect(result.expectationResults).toHaveLength(0);
+  });
+});
+
+// ── expectWinRate with max bound ───────────────────────────────────────────────
+
+describe("expectWinRate with max bound", () => {
+  // Needed for the fakeResult helper return type
+  type ArenaResult = import("../src/arena.js").ArenaResult;
+
+  function fakeResult2(winRates: Record<number, number>): ArenaResult {
+    return {
+      scenario:    duelScenario(),
+      trials:      10,
+      trialResults: [],
+      winRateByTeam: new Map(Object.entries(winRates).map(([k, v]) => [Number(k), v])),
+      drawRate:             0,
+      timeoutRate:          0,
+      meanCombatDuration_s: 10,
+      p50CombatDuration_s:  10,
+      survivalRateByEntity: new Map([[1, 1], [2, 0]]),
+      meanTTI_s:            new Map(),
+      injuryDistribution:   [],
+      recoveryStats:        [],
+      expectationResults:   [],
+    };
+  }
+
+  it("passes when win rate is within [min, max] range", () => {
+    const exp = expectWinRate(1, 0.50, 0.90);
+    expect(exp.check(fakeResult2({ 1: 0.70 }))).toBe(true);
+  });
+
+  it("fails when win rate is below min (with max bound)", () => {
+    const exp = expectWinRate(1, 0.50, 0.90);
+    expect(exp.check(fakeResult2({ 1: 0.40 }))).toBe(false);
+  });
+
+  it("fails when win rate exceeds max bound", () => {
+    const exp = expectWinRate(1, 0.50, 0.90);
+    expect(exp.check(fakeResult2({ 1: 0.95 }))).toBe(false);
+  });
+
+  it("description includes both bounds when max is specified", () => {
+    const exp = expectWinRate(1, 0.50, 0.90);
+    expect(exp.description).toContain("50");
+    expect(exp.description).toContain("90");
+    expect(exp.description).toContain("–");
+  });
+
+  it("description uses ≥ form when max is omitted", () => {
+    const exp = expectWinRate(1, 0.50);
+    expect(exp.description).toContain("≥");
+    expect(exp.description).not.toContain("–");
+  });
+});
+
+// ── expectSurvivalRate ─────────────────────────────────────────────────────────
+
+describe("expectSurvivalRate", () => {
+  type ArenaResult = import("../src/arena.js").ArenaResult;
+
+  function fakeWithSurvival(entityId: number, rate: number): ArenaResult {
+    return {
+      scenario:    duelScenario(),
+      trials:      10,
+      trialResults: [],
+      winRateByTeam:        new Map([[1, 0.6]]),
+      drawRate:             0,
+      timeoutRate:          0,
+      meanCombatDuration_s: 10,
+      p50CombatDuration_s:  10,
+      survivalRateByEntity: new Map([[entityId, rate]]),
+      meanTTI_s:            new Map(),
+      injuryDistribution:   [],
+      expectationResults:   [],
+    };
+  }
+
+  it("passes when entity survival rate meets minimum", () => {
+    const exp = expectSurvivalRate(1, 0.70);
+    expect(exp.check(fakeWithSurvival(1, 0.80))).toBe(true);
+  });
+
+  it("passes at exactly the minimum survival rate", () => {
+    const exp = expectSurvivalRate(1, 0.70);
+    expect(exp.check(fakeWithSurvival(1, 0.70))).toBe(true);
+  });
+
+  it("fails when entity survival rate is below minimum", () => {
+    const exp = expectSurvivalRate(1, 0.70);
+    expect(exp.check(fakeWithSurvival(1, 0.50))).toBe(false);
+  });
+
+  it("description contains entity id and percentage", () => {
+    const exp = expectSurvivalRate(42, 0.80);
+    expect(exp.description).toContain("42");
+    expect(exp.description).toContain("80");
+  });
+
+  it("returns 0 survival for unknown entity (missing from map)", () => {
+    const exp = expectSurvivalRate(999, 0.10);
+    // survival map does not contain 999 → defaults to 0 < 0.10
+    expect(exp.check(fakeWithSurvival(1, 1.0))).toBe(false);
+  });
+});
+
+// ── runArena with 0 trials (aggregateResults n===0 path) ──────────────────────
+
+describe("runArena with 0 trials", () => {
+  it("returns empty result with zero trial count", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 0);
+    expect(result.trials).toBe(0);
+    expect(result.trialResults).toHaveLength(0);
+  });
+
+  it("winRateByTeam is empty map for 0 trials", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 0);
+    expect(result.winRateByTeam.size).toBe(0);
+  });
+
+  it("drawRate is 0 for 0 trials", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 0);
+    expect(result.drawRate).toBe(0);
+  });
+
+  it("meanCombatDuration_s is 0 for 0 trials", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 0);
+    expect(result.meanCombatDuration_s).toBe(0);
+  });
+
+  it("survivalRateByEntity is empty for 0 trials", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 0);
+    expect(result.survivalRateByEntity.size).toBe(0);
+  });
+
+  it("expectationResults is empty for 0 trials", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 0);
+    expect(result.expectationResults).toHaveLength(0);
+  });
+});
+
+// ── narrateRepresentativeTrial ─────────────────────────────────────────────────
+
+describe("narrateRepresentativeTrial", () => {
+  it("returns (no trials) string when result has zero trials", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 0);
+    expect(narrateRepresentativeTrial(result)).toBe("(no trials)");
+  });
+
+  it("returns combat log lines when narrativeCfg was supplied", () => {
+    const result = runArena(
+      duelScenario("wpn_longsword"),
+      5,
+      { narrativeCfg: { verbosity: "normal" } },
+    );
+    // At least one trial should have a combat log
+    const narrative = narrateRepresentativeTrial(result);
+    // With a combatLog present the output uses [tN] prefix format
+    expect(narrative).toMatch(/\[t\d+\]/);
+  });
+
+  it("falls back to summary text when no narrativeCfg (no combatLog)", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 3);
+    const narrative = narrateRepresentativeTrial(result);
+    // Fallback format: "Trial N (seed S) — T ticks — outcome"
+    expect(narrative).toMatch(/Trial \d+/);
+    expect(narrative).toMatch(/seed \d+/);
+  });
+
+  it("fallback narrative lists survivor info", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 3);
+    const narrative = narrateRepresentativeTrial(result);
+    expect(narrative).toContain("Survivors");
+  });
+
+  it("fallback narrative lists entity injury lines", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 5);
+    const narrative = narrateRepresentativeTrial(result);
+    expect(narrative).toContain("Entity");
+  });
+});
+
+// ── formatArenaReport with recovery stats ─────────────────────────────────────
+
+describe("formatArenaReport with recovery stats", () => {
+  it("includes Recovery stats section when recoveryStats are present", () => {
+    const result = runArena(CALIBRATION_FIRST_AID_SAVES_LIVES, 10);
+    const report = formatArenaReport(result);
+    expect(report).toContain("Recovery stats");
+  });
+
+  it("includes combat-ready days in recovery section", () => {
+    const result = runArena(CALIBRATION_FIRST_AID_SAVES_LIVES, 10);
+    const report = formatArenaReport(result);
+    expect(report).toContain("combat-ready");
+  });
+
+  it("includes full recovery days in recovery section", () => {
+    const result = runArena(CALIBRATION_FRACTURE_RECOVERY, 10);
+    const report = formatArenaReport(result);
+    expect(report).toContain("full recovery");
+  });
+
+  it("includes cost field in recovery section", () => {
+    const result = runArena(CALIBRATION_FIRST_AID_SAVES_LIVES, 10);
+    const report = formatArenaReport(result);
+    expect(report).toContain("cost");
+  });
+
+  it("does not include Recovery stats section when no recovery scenario", () => {
+    const result = runArena(duelScenario("wpn_longsword"), 5);
+    const report = formatArenaReport(result);
+    expect(report).not.toContain("Recovery stats");
+  });
+});
+
+// ── Three-team scenario (teamId > 2 winning → draw outcome) ───────────────────
+
+describe("three-team scenario", () => {
+  it("team with id > 2 winning produces draw outcome in aggregation", () => {
+    const scenario: ArenaScenario = {
+      name: "three-team",
+      combatants: [
+        {
+          id: 1, teamId: 3,
+          archetype: HUMAN_BASE,
+          loadout:   { items: [STARTER_WEAPONS.find(w => w.id === "wpn_longsword")!] },
+          position_m: v3(0, 0, 0),
+        },
+        {
+          id: 2, teamId: 4,
+          archetype: HUMAN_BASE,
+          loadout:   { items: [] },
+          position_m: v3(Math.trunc(0.85 * SCALE.m), 0, 0),
+        },
+      ],
+      maxTicks: 600,
+    };
+    const result = runArena(scenario, 20);
+    // Team IDs 3 and 4 are neither 1 nor 2 — any team victory maps to "draw"
+    // So winRateByTeam for teams 1 and 2 should be 0, and draw+timeout should cover everything
+    const t1Rate = result.winRateByTeam.get(1) ?? 0;
+    const t2Rate = result.winRateByTeam.get(2) ?? 0;
+    expect(t1Rate).toBe(0);
+    expect(t2Rate).toBe(0);
+    // All non-timeout outcomes should count as draws
+    expect(result.drawRate + result.timeoutRate).toBeCloseTo(1.0, 5);
   });
 });

@@ -16,7 +16,11 @@ export default defineConfig({
         "src/sim/world.ts",
         "src/sim/tick.ts",
         "src/sim/ai/types.ts",
-        "src/anatomy/anatomy-contracts.ts"
+        "src/anatomy/anatomy-contracts.ts",
+        // Type-definition-only modules — no runtime code to cover
+        "src/bridge/types.ts",
+        "src/sim/capability.ts",
+        "src/sim/context.ts",
       ],
       thresholds: {
         statements: 90,

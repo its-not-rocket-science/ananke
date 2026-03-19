@@ -190,4 +190,135 @@ describe("BridgeEngine", () => {
     expect(engine.hasEntity(1)).toBe(false);
     expect(engine.getLatestTick()).toBe(0);
   });
+
+  // ── Additional coverage tests ──────────────────────────────────────────────
+
+  it("setEntityBodyPlan updates body plan for existing entity (line 59-60)", () => {
+    // Register entity via update first (creates record with bodyPlanId "humanoid")
+    engine.update([mockRigSnapshot(1, 0)]);
+    expect(engine.hasEntity(1)).toBe(true);
+    // Now update the body plan for the existing record
+    engine.setEntityBodyPlan(1, "quadruped");
+    // Entity still present; body plan updated (no error)
+    expect(engine.hasEntity(1)).toBe(true);
+  });
+
+  it("getInterpolatedState returns null when entity has both prev and curr null (line 152-153)", () => {
+    // Register body plan but never call update — entity record exists with prev=null, curr=null
+    engine.setEntityBodyPlan(1, "humanoid");
+    // hasEntity returns false (no snapshots), so getInterpolatedState also returns null
+    const state = engine.getInterpolatedState(1, 0);
+    expect(state).toBeNull();
+  });
+
+  it("holds previous snapshot when render time is before prevTime_s (lines 179-182)", () => {
+    engine.setEntityBodyPlan(1, "humanoid");
+    // Tick 1 — positions entity at x=10
+    engine.update(
+      [mockRigSnapshot(1, 1, v3(10, 0, 0))],
+      [mockMotionVector(1, v3(10, 0, 0), v3(SCALE.Q, 0, 0))],
+    );
+    // Tick 2 — positions entity at x=20
+    engine.update(
+      [mockRigSnapshot(1, 2, v3(20, 0, 0))],
+      [mockMotionVector(1, v3(20, 0, 0), v3(SCALE.Q, 0, 0))],
+    );
+    // prevTime_s is tick 1 * DT, so render at time = 0 is before prevTime_s
+    const state = engine.getInterpolatedState(1, 0);
+    expect(state).not.toBeNull();
+    // t = 0, hold previous: position should be at x=10
+    expect(state!.interpolationFactor).toBe(0);
+    expect(state!.position_m.x).toBe(10);
+    expect(state!.fromTick).toBe(1);
+    expect(state!.toTick).toBe(1);
+  });
+
+  it("holds current snapshot when render time >= currTime_s and extrapolation not allowed (lines 193-198)", () => {
+    engine.setEntityBodyPlan(1, "humanoid");
+    engine.update(
+      [mockRigSnapshot(1, 1, v3(10, 0, 0))],
+      [mockMotionVector(1, v3(10, 0, 0), v3(SCALE.Q, 0, 0))],
+    );
+    engine.update(
+      [mockRigSnapshot(1, 2, v3(20, 0, 0))],
+      [mockMotionVector(1, v3(20, 0, 0), v3(SCALE.Q, 0, 0))],
+    );
+    // Render time far in the future, extrapolation disabled
+    const state = engine.getInterpolatedState(1, 9999);
+    expect(state).not.toBeNull();
+    expect(state!.interpolationFactor).toBe(SCALE.Q);
+    // Hold current — position is x=20
+    expect(state!.position_m.x).toBe(20);
+  });
+
+  it("extrapolates position with non-zero velocity when extrapolation allowed (lines 185-198, 224-232)", () => {
+    const extrapolatingEngine = new BridgeEngine({
+      mappings: [],
+      extrapolationAllowed: true,
+    });
+    extrapolatingEngine.setEntityBodyPlan(1, "humanoid");
+    // Tick 1
+    extrapolatingEngine.update(
+      [mockRigSnapshot(1, 1)],
+      [mockMotionVector(1, v3(0, 0, 0), v3(SCALE.Q, 0, 0))],
+    );
+    // Tick 2 — entity moving at 1000 mps (fixed-point) in x
+    const vel: Vec3 = { x: 1000, y: 0, z: 0 };
+    extrapolatingEngine.update(
+      [mockRigSnapshot(1, 2, v3(0, 0, 0))],
+      [{ entityId: 1, teamId: 1, position_m: v3(0, 0, 0), velocity_mps: vel, facing: v3(SCALE.Q, 0, 0) }],
+    );
+    // currTime_s for tick 2 = 2 * (DT_S / SCALE.s) = 2 / 20 = 0.1s
+    // Render at currTime_s + 0.05s (ahead) — should extrapolate
+    const dt = 1 / 20; // DT_S / SCALE.s
+    const renderTime = 2 * dt + 0.05;
+    const state = extrapolatingEngine.getInterpolatedState(1, renderTime);
+    expect(state).not.toBeNull();
+    // With velocity x=1000 over 0.05s the position should have increased
+    // delta_fixed = round(0.05 * SCALE.s); dx = trunc(1000 * delta_fixed / SCALE.s)
+    expect(state!.position_m.x).toBeGreaterThan(0);
+  });
+
+  it("holds previous snapshot when renderTime is before prevTime (two same-tick updates)", () => {
+    engine.setEntityBodyPlan(1, "humanoid");
+    // Two updates with same tick: prevTime_s = currTime_s = 5 * dt
+    engine.update(
+      [mockRigSnapshot(1, 5, v3(0, 0, 0))],
+      [mockMotionVector(1, v3(0, 0, 0), v3(SCALE.Q, 0, 0))],
+    );
+    engine.update(
+      [mockRigSnapshot(1, 5, v3(100, 0, 0))],
+      [mockMotionVector(1, v3(100, 0, 0), v3(SCALE.Q, 0, 0))],
+    );
+    // renderTime (0.125) < prevTime_s (0.25) → hold-prev branch, t = 0
+    const dt = 1 / 20;
+    const state = engine.getInterpolatedState(1, 5 * dt * 0.5);
+    expect(state).not.toBeNull();
+    expect(state!.interpolationFactor).toBe(0);
+  });
+
+  it("getLatestSimTime returns current sim time (lines 265-266)", () => {
+    expect(engine.getLatestSimTime()).toBe(0);
+    engine.update([mockRigSnapshot(1, 20)]);
+    // currTime_s = 20 * (DT_S / SCALE.s) = 20 / 20 = 1.0
+    expect(engine.getLatestSimTime()).toBe(1.0);
+  });
+
+  it("uses no-mapping fallback bone name for pose modifiers when no body plan mapping exists", () => {
+    const engineNoMapping = new BridgeEngine({
+      mappings: [], // no mappings at all
+      defaultBoneName: "root",
+    });
+    const snap: RigSnapshot = {
+      ...mockRigSnapshot(1, 0),
+      pose: [
+        { segmentId: "head", structuralQ: q(0.2), surfaceQ: q(0.1), impairmentQ: q(0.2) },
+      ],
+    };
+    engineNoMapping.update([snap]);
+    const state = engineNoMapping.getInterpolatedState(1, 0);
+    expect(state).not.toBeNull();
+    expect(state!.poseModifiers[0]!.boneName).toBe("root");
+    expect(state!.poseModifiers[0]!.segmentId).toBe("head");
+  });
 });

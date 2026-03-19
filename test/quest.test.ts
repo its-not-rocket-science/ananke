@@ -1019,3 +1019,204 @@ describe("Quest System Integration", () => {
     expect(registry.history[0].questId).toBe("history_test");
   });
 });
+
+// ── Quest Generator Coverage Gaps ─────────────────────────────────────────────
+
+import {
+  QUEST_TEMPLATES,
+  selectTemplate,
+  generateQuest,
+  generateQuests,
+  addBonusObjective,
+  buildQuestContext,
+  generateQuestChain,
+  type QuestContext,
+  type QuestTemplate,
+} from "../src/quest-generators.js";
+
+function mkCtx(overrides: Partial<QuestContext> = {}): QuestContext {
+  return {
+    settlementTier: 2,
+    factionStanding: 50,
+    availableCompetences: ["bodilyKinesthetic", "spatial"],
+    seed: 42,
+    ...overrides,
+  };
+}
+
+describe("quest-generators: template objective branches", () => {
+  it("escort template uses ctx.targetEntityId and ctx.targetLocation when present", () => {
+    const escortTemplate = QUEST_TEMPLATES.find(t => t.templateId === "escort")!;
+    const ctx = mkCtx({ targetEntityId: 7, targetLocation: { x: 300, y: 400 }, settlementTier: 2, factionStanding: 20 });
+    const quest = generateQuest(ctx, escortTemplate, 0);
+    // Objective target should incorporate the entityId spread
+    const obj = quest.objectives[0]!;
+    expect(obj.type).toBe("escort_entity");
+    expect(obj.target?.location?.x).toBe(300);
+  });
+
+  it("escort template uses default location when ctx has no targetLocation", () => {
+    const escortTemplate = QUEST_TEMPLATES.find(t => t.templateId === "escort")!;
+    const ctx = mkCtx({ settlementTier: 2, factionStanding: 20 });
+    const quest = generateQuest(ctx, escortTemplate, 0);
+    const obj = quest.objectives[0]!;
+    expect(obj.target?.location?.x).toBe(200);
+  });
+
+  it("collection template generates collect_item objective", () => {
+    const collectionTemplate = QUEST_TEMPLATES.find(t => t.templateId === "collection")!;
+    const ctx = mkCtx({ settlementTier: 1, factionStanding: 10 });
+    const quest = generateQuest(ctx, collectionTemplate, 0);
+    expect(quest.objectives[0]?.type).toBe("collect_item");
+    expect(quest.objectives[0]?.target?.itemId).toBe("herb_rare");
+  });
+
+  it("wait template uses ctx.targetLocation when present", () => {
+    const waitTemplate = QUEST_TEMPLATES.find(t => t.templateId === "wait")!;
+    const ctx = mkCtx({ targetLocation: { x: 55, y: 77 }, settlementTier: 1, factionStanding: 0 });
+    const quest = generateQuest(ctx, waitTemplate, 0);
+    const reachObj = quest.objectives.find(o => o.type === "reach_location")!;
+    expect(reachObj.target?.location?.x).toBe(55);
+  });
+
+  it("multistage template uses availableCompetences and targetEntityId", () => {
+    const multistageTemplate = QUEST_TEMPLATES.find(t => t.templateId === "multistage")!;
+    const ctx = mkCtx({ settlementTier: 4, factionStanding: 35, targetEntityId: 99 });
+    const quest = generateQuest(ctx, multistageTemplate, 0);
+    // Should have 3 stages
+    expect(quest.objectives.length).toBe(3);
+    const stage2 = quest.objectives.find(o => o.objectiveId === "stage2_prepare")!;
+    expect(stage2.type).toBe("use_competence");
+    expect(stage2.target?.competence?.domain).toBe("bodilyKinesthetic");
+    const stage3 = quest.objectives.find(o => o.objectiveId === "stage3_execute")!;
+    expect(stage3.target?.entityId).toBe(99);
+  });
+});
+
+describe("quest-generators: selectTemplate edge cases", () => {
+  it("returns null when no templates eligible", () => {
+    const ctx = mkCtx({ settlementTier: 1, factionStanding: -100 });
+    // All templates with factionRange [30, 100] excluded; most still match — use impossibly high tier
+    const ctx2 = mkCtx({ settlementTier: 99, factionStanding: 50 });
+    // Filter to a template that can't match
+    const noMatch = selectTemplate(ctx2, [
+      { templateId: "t", titlePattern: "", descriptionPattern: "", minTier: 1, maxTier: 1,
+        baseReward: {}, objectiveGenerators: [], weight: 1 },
+    ]);
+    expect(noMatch).toBeNull();
+  });
+
+  it("falls back to last eligible template when seed exhausts weights", () => {
+    // Use a seed of 0 and a template with weight 100 — roll = 0 % 100 = 0, subtract 100 → negative
+    const template: QuestTemplate = {
+      templateId: "single",
+      titlePattern: "T",
+      descriptionPattern: "D",
+      minTier: 1, maxTier: 5,
+      baseReward: {},
+      objectiveGenerators: [],
+      weight: 100,
+    };
+    const ctx = mkCtx({ seed: 0, settlementTier: 3, factionStanding: 50 });
+    const selected = selectTemplate(ctx, [template]);
+    expect(selected?.templateId).toBe("single");
+  });
+});
+
+describe("quest-generators: scaleRewards items branch", () => {
+  it("preserves items array in scaleRewards", () => {
+    const templateWithItems: QuestTemplate = {
+      templateId: "items_test",
+      titlePattern: "T",
+      descriptionPattern: "D",
+      minTier: 1, maxTier: 3,
+      baseReward: {
+        xp: 10,
+        currency: 20,
+        reputation: { guild: 5 },
+        items: [{ itemId: "sword", quantity: 1 }],
+      },
+      objectiveGenerators: [],
+      weight: 1,
+    };
+    const ctx = mkCtx({ settlementTier: 2, factionStanding: 50 });
+    const quest = generateQuest(ctx, templateWithItems, 0);
+    expect(quest.rewards?.items).toEqual([{ itemId: "sword", quantity: 1 }]);
+  });
+});
+
+describe("quest-generators: addBonusObjective", () => {
+  it("adds time_limit bonus with xp reward", () => {
+    const quest = { questId: "q1", title: "T", description: "D", objectives: [], state: "inactive" as const, priority: 10 };
+    addBonusObjective(quest, "time_limit", { xp: 50 });
+    expect(quest.objectives.length).toBe(1);
+    expect(quest.objectives[0]?.type).toBe("wait_duration");
+    expect(quest.rewards?.xp).toBe(50);
+  });
+
+  it("adds stealth bonus and merges existing rewards", () => {
+    const quest = { questId: "q2", title: "T", description: "D", objectives: [],
+      state: "inactive" as const, priority: 10, rewards: { xp: 100, currency: 200 } };
+    addBonusObjective(quest, "stealth", { currency: 75 });
+    expect(quest.objectives[0]?.type).toBe("dialogue_choice");
+    expect(quest.objectives[0]?.target?.dialogueChoice).toBe("stealth_success");
+    expect(quest.rewards!.currency).toBe(275);
+  });
+
+  it("adds no_harm bonus", () => {
+    const quest = { questId: "q3", title: "T", description: "D", objectives: [], state: "inactive" as const, priority: 10 };
+    addBonusObjective(quest, "no_harm", {});
+    expect(quest.objectives[0]?.target?.dialogueChoice).toBe("pacifist_success");
+  });
+});
+
+describe("quest-generators: buildQuestContext", () => {
+  it("uses nearbyEntities and pointsOfInterest from worldCtx", () => {
+    const ctx = buildQuestContext({
+      giverId: 5,
+      settlementTier: 2,
+      factionId: "guild",
+      factionStanding: 30,
+      nearbyEntities: [10, 20, 30],
+      pointsOfInterest: [{ x: 11, y: 22, type: "dungeon" }],
+      seed: 42,
+    });
+    expect(ctx.targetEntityId).toBeDefined();
+    expect(ctx.targetLocation?.x).toBe(11);
+    expect(ctx.giverId).toBe(5);
+  });
+
+  it("handles empty nearbyEntities and pointsOfInterest", () => {
+    const ctx = buildQuestContext({
+      settlementTier: 1,
+      factionStanding: 0,
+      nearbyEntities: [],
+      pointsOfInterest: [],
+      seed: 1,
+    });
+    expect(ctx.targetEntityId).toBeUndefined();
+    expect(ctx.targetLocation).toBeUndefined();
+  });
+});
+
+describe("quest-generators: generateQuestChain", () => {
+  it("generates a chain of quests linked together", () => {
+    const bountyTemplate = QUEST_TEMPLATES.find(t => t.templateId === "bounty")!;
+    const deliveryTemplate = QUEST_TEMPLATES.find(t => t.templateId === "delivery")!;
+    const ctx = mkCtx({ settlementTier: 2, factionStanding: 50 });
+    const chain = generateQuestChain(ctx, [
+      { template: bountyTemplate, requiresPrevious: false },
+      { template: deliveryTemplate, requiresPrevious: true },
+    ]);
+    expect(chain).toHaveLength(2);
+    // Second quest description should mention previous requirement
+    expect(chain[1]?.description).toContain("Requires completion");
+  });
+
+  it("generates single-entry chain without previous requirement", () => {
+    const bountyTemplate = QUEST_TEMPLATES.find(t => t.templateId === "bounty")!;
+    const ctx = mkCtx();
+    const chain = generateQuestChain(ctx, [{ template: bountyTemplate, requiresPrevious: false }]);
+    expect(chain).toHaveLength(1);
+  });
+});

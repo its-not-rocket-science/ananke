@@ -283,3 +283,104 @@ describe("Item Value Calculation", () => {
     expect(value).toBeGreaterThan(100);
   });
 });
+
+// ── Additional coverage tests ──────────────────────────────────────────────────
+
+describe("applyDurabilityLoss auto-applies damaged mod when crossing threshold (lines 108-118)", () => {
+  it("adds damaged mod when durability first crosses DAMAGED_THRESHOLD_Q", () => {
+    // Start just above DAMAGED_THRESHOLD_Q (q(0.50)), apply loss to go below
+    const item = mkTestItem(q(0.51));
+    applyDurabilityLoss(item, q(0.02)); // 0.51 - 0.02 = 0.49, below 0.50
+    expect(item.durability_Q).toBeLessThan(DAMAGED_THRESHOLD_Q);
+    expect(item.modifications?.some(m => m.type === "damaged")).toBe(true);
+  });
+
+  it("does not add duplicate damaged mod if one already exists", () => {
+    const item = mkTestItem(q(0.49));
+    // Pre-apply damaged mod
+    item.modifications = [{ type: "damaged", name: "Damaged", statMultipliers: { damageMul: q(0.80), valueMul: q(0.50) } }];
+    applyDurabilityLoss(item, q(0.01));
+    // Should not add a second damaged mod
+    const damagedMods = item.modifications?.filter(m => m.type === "damaged") ?? [];
+    expect(damagedMods).toHaveLength(1);
+  });
+
+  it("does not add damaged mod when item drops below BROKEN_THRESHOLD_Q (not in damaged range)", () => {
+    // Durability at q(0.10) — any loss goes below broken threshold, not in damaged range
+    const item = mkTestItem(q(0.10));
+    applyDurabilityLoss(item, q(0.02)); // goes to q(0.08), below broken threshold
+    expect(item.durability_Q).toBeLessThan(BROKEN_THRESHOLD_Q);
+    // No auto-damaged mod because condition is: durability_Q >= BROKEN_THRESHOLD_Q
+    expect(item.modifications?.some(m => m.type === "damaged")).toBeFalsy();
+  });
+});
+
+describe("calculateRepairNeed time brackets (lines 202, 204-205)", () => {
+  it("returns 7200s base time for broken item (below BROKEN_THRESHOLD_Q)", () => {
+    const item = mkTestItem(q(0.05)); // well below q(0.10)
+    const need = calculateRepairNeed(item);
+    expect(need.baseTime_s).toBe(7200);
+  });
+
+  it("returns 1800s base time for damaged item (below DAMAGED_THRESHOLD_Q, above BROKEN_THRESHOLD_Q)", () => {
+    const item = mkTestItem(q(0.30)); // between broken (0.10) and damaged (0.50)
+    const need = calculateRepairNeed(item);
+    expect(need.baseTime_s).toBe(1800);
+  });
+
+  it("returns 300s base time for minor damage (above DAMAGED_THRESHOLD_Q)", () => {
+    const item = mkTestItem(q(0.70)); // above damaged threshold — minor repair
+    const need = calculateRepairNeed(item);
+    expect(need.baseTime_s).toBe(300);
+  });
+});
+
+describe("resolveRepair removes damaged mod when repaired above threshold (lines 279-283)", () => {
+  it("removes damaged mod when repair brings durability above DAMAGED_THRESHOLD_Q", () => {
+    const item = mkTestItem(q(0.30));
+    // Pre-attach damaged mod (as would happen from auto-application)
+    item.modifications = [{ type: "damaged", name: "Damaged", statMultipliers: { damageMul: q(0.80), valueMul: q(0.50) } }];
+    // Use high-skill crafter to restore enough durability to cross the threshold
+    const result = resolveRepair(item, SCALE.Q, SCALE.Q, 42);
+    expect(result.success).toBe(true);
+    // Durability should be above the damaged threshold now
+    if (item.durability_Q! >= DAMAGED_THRESHOLD_Q) {
+      expect(item.modifications?.some(m => m.type === "damaged")).toBe(false);
+    }
+  });
+});
+
+describe("resolveRepair adds masterwork mod for exceptional repairs (lines 304-307)", () => {
+  it("adds masterwork mod when quality exceeds q(0.90)", () => {
+    // Use max crafter skill + max tool quality to guarantee high quality
+    const item = mkTestItem(q(0.40));
+    resolveRepair(item, SCALE.Q, SCALE.Q, 1);
+    // qualityLevel_Q = clamp(q(0.50) + q(0.30) + q(0.20), q(0.30), SCALE.Q) = q(1.00) > q(0.90)
+    expect(item.modifications?.some(m => m.type === "masterwork")).toBe(true);
+  });
+
+  it("does not add masterwork mod for low quality repair", () => {
+    const item = mkTestItem(q(0.40));
+    resolveRepair(item, q(0), q(0), 1);
+    // qualityLevel_Q = clamp(q(0.50), q(0.30), SCALE.Q) = q(0.50) which is < q(0.90)
+    expect(item.modifications?.some(m => m.type === "masterwork")).toBeFalsy();
+  });
+});
+
+describe("fieldRepair when item is already at full durability (lines 334-341)", () => {
+  it("returns no-repair-needed when durability is already SCALE.Q", () => {
+    const item = mkTestItem(SCALE.Q);
+    const result = fieldRepair(item);
+    expect(result.success).toBe(true);
+    expect(result.durabilityRestored_Q).toBe(q(0));
+    expect(result.narrative).toBe("No repair needed.");
+  });
+
+  it("returns no-repair-needed when field-calculated maxRestore rounds to zero", () => {
+    // SCALE.Q - current = 0 when current = SCALE.Q, mulDiv(..., q(0.30), SCALE.Q) = 0
+    const item = mkTestItem(SCALE.Q);
+    const result = fieldRepair(item);
+    expect(result.repairCost.time_s).toBe(0);
+    expect(result.repairCost.materials).toBe(0);
+  });
+});

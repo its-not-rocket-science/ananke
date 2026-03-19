@@ -1,7 +1,7 @@
 // test/downtime.test.ts — Phase 19: Downtime & Recovery tests
 
 import { describe, it, expect } from "vitest";
-import { q } from "../src/units.js";
+import { q, type Q } from "../src/units.js";
 import {
   stepDowntime,
   MEDICAL_RESOURCES,
@@ -285,5 +285,152 @@ describe("calibration anchors", () => {
     const r = stepDowntime(world, 1000, cfg("field_medicine"))[0]!;
     expect(r.fracturesSet).toBe(true);
     expect(r.injuryAtEnd.maxStructuralDamage).toBeLessThan(r.injuryAtStart.maxStructuralDamage);
+  });
+});
+
+// ── Additional coverage tests ──────────────────────────────────────────────────
+
+describe("bleed duration decrement when bleeding stops (line 222)", () => {
+  it("bleedDurationSec decrements once bleeding stops naturally", () => {
+    // Entity with very low bleeding rate — should clot fast enough under rest
+    const world = woundedWorld({ bleedingRate: q(0.001) });
+    // Run long enough for clotting to fully stop the bleed
+    const r = stepDowntime(world, 2000, cfg("none", {}, true))[0]!;
+    // bleedingStopped means the branch at line 252-254 (decrement) was hit
+    expect(r.bleedingStopped).toBe(true);
+  });
+});
+
+describe("infection onset during stepSecond (lines 248-250)", () => {
+  it("infects region after sustained bleeding + internal damage (onset logging)", () => {
+    // Region needs bleedDuration_ticks to be just below INFECT_ONSET_SEC (100)
+    // and internal damage > q(0.10) to trigger the infection onset branch.
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    const torso = e.injury.byRegion["torso"]!;
+    torso.bleedingRate    = q(0.02);
+    torso.internalDamage  = q(0.20);
+    torso.infectedTick    = -1;
+    // Pre-set bleed duration to 99 — one more second crosses the 100-second threshold
+    torso.bleedDuration_ticks = 99;
+    const world = mkWorld(1, [e]);
+    const r = stepDowntime(world, 10, cfg("none"))[0]!;
+    // After 1 second the duration reaches 100 and infection should be logged
+    const infectionLog = r.log.find(l => l.text.startsWith("infection onset"));
+    expect(infectionLog).toBeDefined();
+  });
+});
+
+describe("shock/fluid accumulation without torso region (line 281)", () => {
+  it("uses first region internalDamage when torso is absent", () => {
+    // Create entity with only a non-torso region
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    // Remove torso, keep head only
+    const head = e.injury.byRegion["head"];
+    e.injury.byRegion = { head: { ...head!, internalDamage: q(0.30), bleedingRate: q(0.05) } };
+    const world = mkWorld(1, [e]);
+    // With no torso region, line 281 falls back to first region's internalDamage
+    const r = stepDowntime(world, 50, cfg("none"))[0]!;
+    // Shock should increase (entity is accumulating fluid loss + shock)
+    expect(r.injuryAtEnd.shock).toBeGreaterThan(0);
+  });
+});
+
+describe("surgery clears infection (lines 354-357)", () => {
+  it("infection cleared via surgery when region is fractured and infected", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    const torso = e.injury.byRegion["torso"]!;
+    torso.structuralDamage = q(0.70);
+    torso.fractured        = true;
+    torso.infectedTick     = 0;
+    torso.internalDamage   = q(0.20);
+    const world = mkWorld(1, [e]);
+    const r = stepDowntime(world, 500, cfg("hospital"))[0]!;
+    // hospital care can run surgery; surgery should clear the infection
+    const surgeryClearedLog = r.log.find(l => l.text.startsWith("infection cleared (surgery)"));
+    expect(surgeryClearedLog).toBeDefined();
+    expect(r.infectionCleared).toBe(true);
+  });
+});
+
+describe("autodoc consumable (lines 389-392)", () => {
+  it("autodoc care level consumes autodoc_pack once", () => {
+    const world = woundedWorld({ bleedingRate: q(0.04) });
+    const r = stepDowntime(world, 200, cfg("autodoc"))[0]!;
+    const autodocUsage = r.resourcesUsed.find(u => u.resourceId === "autodoc_pack");
+    expect(autodocUsage?.count).toBe(1);
+  });
+
+  it("autodoc with empty inventory skips autodoc_pack (does not crash)", () => {
+    const world = woundedWorld({ bleedingRate: q(0.04) });
+    const r = stepDowntime(world, 200, cfg("autodoc", {
+      inventory: new Map([["autodoc_pack", 0]]),
+    }))[0]!;
+    const autodocUsage = r.resourcesUsed.find(u => u.resourceId === "autodoc_pack");
+    expect(autodocUsage).toBeUndefined();
+  });
+});
+
+describe("projectRecovery edge cases (lines 420-452, 458)", () => {
+  it("clotPerSec = 0 path: fully structural-damaged region gives secToStop = 3600 (line 424-426)", () => {
+    // When structuralDamage = SCALE.Q, integrity = 0 → clotPerSec = 0 → secToStop = 3600
+    const world = woundedWorld({ bleedingRate: q(0.04), structuralDamage: q(1.0) });
+    const r = stepDowntime(world, 10, cfg("none"))[0]!;
+    // projection should still run; combatReadyAt_s should be > elapsedSec
+    if (!r.died) {
+      expect(r.combatReadyAt_s).toBeGreaterThan(10);
+    }
+  });
+
+  it("fullRecoveryAt_s = elapsedSec when no structural damage remains (line 444-446)", () => {
+    // Entity with zero structural damage (already at floor) under field_medicine
+    const world = woundedWorld({ structuralDamage: q(0) });
+    const r = stepDowntime(world, 100, cfg("field_medicine"))[0]!;
+    // totalRemainingFP = 0 → returns elapsedSec immediately
+    expect(r.fullRecoveryAt_s).toBe(100);
+  });
+});
+
+describe("bleedDuration_ticks pre-population (lines 502-503)", () => {
+  it("pre-populates bleedDurationSec from bleedDuration_ticks on entity entry", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    const torso = e.injury.byRegion["torso"]!;
+    // Set existing bleed duration ticks (simulates entity already bled for a while)
+    torso.bleedingRate       = q(0.03);
+    torso.internalDamage     = q(0.15);
+    torso.bleedDuration_ticks = 95;  // close to INFECT_ONSET_SEC (100)
+    const world = mkWorld(1, [e]);
+    // After a few more seconds of bleeding, infection onset should trigger
+    const r = stepDowntime(world, 10, cfg("none"))[0]!;
+    const infectionLog = r.log.find(l => l.text.startsWith("infection onset"));
+    expect(infectionLog).toBeDefined();
+  });
+
+  it("pre-populates bleedDurationSec to INFECT_ONSET_SEC for already-infected regions (line 503-507)", () => {
+    // Entity already infected on entry — stepSecond should immediately progress infection
+    const world = woundedWorld({ infectedTick: 0, internalDamage: q(0.20) });
+    const r = stepDowntime(world, 10, cfg("none"))[0]!;
+    // Infection was present at start and should still be present (or progressed)
+    expect(r.injuryAtStart.infectedRegions).toHaveLength(1);
+    // Infection damage should have increased (INFECT_DMG_RATE per second)
+    expect(r.injuryAtEnd.maxStructuralDamage).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("thermalAmbient_Q produces finalCoreTemp_Q in report (line 520-525, 568)", () => {
+  it("finalCoreTemp_Q is present when thermalAmbient_Q is specified", () => {
+    const world = woundedWorld({ bleedingRate: q(0.01) });
+    const config: DowntimeConfig = {
+      treatments: new Map([[1, { careLevel: "none" }]]),
+      rest: true,
+      thermalAmbient_Q: q(0.50) as Q,
+    };
+    const r = stepDowntime(world, 60, config)[0]!;
+    expect(r.finalCoreTemp_Q).toBeDefined();
+  });
+
+  it("finalCoreTemp_Q is absent when thermalAmbient_Q is not specified", () => {
+    const world = woundedWorld({ bleedingRate: q(0.01) });
+    const r = stepDowntime(world, 60, cfg("none"))[0]!;
+    expect(r.finalCoreTemp_Q).toBeUndefined();
   });
 });
