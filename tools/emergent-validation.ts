@@ -441,7 +441,7 @@ function pad(s: string | number, w: number): string {
 
   // Pass criteria (Lanchester): outnumbered side suffers casualty rate ≥ 2× superior side
   const sc3A    = casRatio >= 2.0;
-  const sc3B    = largeWins >= 80;   // large force wins ≥ 80% of runs
+  const sc3B    = largeWins >= Math.floor(N_SEEDS * 0.80);   // large force wins ≥ 80% of runs
   const sc3Pass = sc3A && sc3B;
 
   console.log();

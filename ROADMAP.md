@@ -6273,7 +6273,7 @@ The following starter READMEs for companion GitHub projects live in `docs/compan
 
 ---
 
-## Platform Hardening
+## Platform Hardening — **ALL COMPLETE** (2026-03-19)
 
 > **Context:** External review of the v0.1 architecture identified that Ananke's core technology
 > is mature and validated, but the project is "mid-transition from powerful codebase to adoptable
@@ -6287,7 +6287,7 @@ items sharpen and extend them based on concrete external critique.
 
 ---
 
-### PH-1 · API Tiering — Stable / Advanced / Internal
+### PH-1 · API Tiering — Stable / Advanced / Internal — **COMPLETE** (2026-03-19)
 
 **Problem (external review):** `src/index.ts` exports a very large surface.  Adopters cannot
 tell what is truly stable, what is experimental, and what they rely on at their own risk.
@@ -6311,7 +6311,7 @@ without reading implementation source.
 
 ---
 
-### PH-2 · Versioning Policy Unification
+### PH-2 · Versioning Policy Unification — **COMPLETE** (2026-03-19)
 
 **Problem (external review):** `docs/versioning.md` says the authoritative version is a commit
 hash and there is no semver automation, while `CHANGELOG.md` presents `0.1.0` and says the
@@ -6333,7 +6333,7 @@ my package.json?" in under 60 seconds.
 
 ---
 
-### PH-3 · Minimal Host Integration Contract
+### PH-3 · Minimal Host Integration Contract — **COMPLETE** (2026-03-19)
 
 **Problem (external review):** The onboarding guide is good, but it still points engineers at
 internal source files (`src/units.ts`, `src/types.ts`, specific sim modules) rather than a
@@ -6356,7 +6356,7 @@ your own risk is still blurry."
 
 ---
 
-### PH-4 · Save / Replay / Bridge Contract Tests
+### PH-4 · Save / Replay / Bridge Contract Tests — **COMPLETE** (2026-03-19)
 
 **Problem (external review):** "Given how central determinism and replay are, I'd add golden
 compatibility tests for serialized world state, serialized replay, and representative
@@ -6378,7 +6378,7 @@ update in the same PR — making breakage visible and intentional.
 
 ---
 
-### PH-5 · Bridge as First-Class Supported Surface
+### PH-5 · Bridge as First-Class Supported Surface — **COMPLETE** (2026-03-19)
 
 **Problem (external review):** The bridge engine has interpolation, extrapolation, body-plan
 mapping, and condition blending — "substantial enough that it deserves explicit compatibility
@@ -6402,7 +6402,7 @@ as auxiliary glue rather than a first-class supported surface.
 
 ---
 
-### PH-6 · Entity / WorldState Core vs. Extensions Split
+### PH-6 · Entity / WorldState Core vs. Extensions Split — **COMPLETE** (2026-03-19)
 
 **Problem (external review):** "`Entity` and `WorldState` are already central gravity wells.
 Adding one field changes behaviour in unexpected places."  The versioning doc correctly treats
@@ -6426,7 +6426,7 @@ requires at every tick vs. which are opt-in subsystem state.
 
 ---
 
-### PH-7 · Benchmark Operational Guide
+### PH-7 · Benchmark Operational Guide — **COMPLETE** (2026-03-19)
 
 **Problem (external review):** The performance report is honest about the 500 vs. 1 000 entity
 cliff and dense-scenario spatial-index tradeoffs, but it stops short of giving adopters
@@ -6448,7 +6448,7 @@ entity caps, feature toggles, supported real-time envelope."
 
 ---
 
-### PH-8 · Emergent Validation as Flagship Trust Artifact
+### PH-8 · Emergent Validation as Flagship Trust Artifact — **COMPLETE** (2026-03-19)
 
 **Problem (external review):** "The emergent validation suite is one of the most persuasive
 parts of the repo because it tests distributions and multi-system behaviour rather than isolated

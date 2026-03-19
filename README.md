@@ -527,6 +527,11 @@ See `ROADMAP.md` for the full development plan.
 
 ## Validation against real-world data
 
+> **Emergent validation report:** [`docs/emergent-validation-report.md`](docs/emergent-validation-report.md)
+> — four historical combat scenarios, 100 seeds each, all passing.  This is the flagship trust
+> artifact: it validates *distributions of outcomes* across multi-system interactions, not just
+> individual formula outputs.  CI runs a 20-seed fast subset on every push.
+
 Ananke's physics-based approach is systematically validated against external real-world datasets and literature sources. The validation framework (`tools/validation.ts`) compares simulation outputs with empirical measurements across multiple sub‑systems, ensuring the simulation's predictions remain grounded in reality.
 
 **Key validated sub‑systems:**
