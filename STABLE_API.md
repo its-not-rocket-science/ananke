@@ -86,7 +86,10 @@ version bump and a migration guide in `CHANGELOG.md`.
 | `deserializeReplay(json)` | Restore a replay from JSON |
 | `Replay`, `ReplayFrame` | Replay types |
 
-### 3D integration (`src/model3d.ts`)
+### 3D integration and renderer bridge (`src/model3d.ts`, `src/bridge/`)
+
+See [`docs/bridge-contract.md`](docs/bridge-contract.md) for the field-by-field contract
+including `AnimationHints`, `GrapplePoseConstraint`, and `InterpolatedState`.
 
 | Export | Description |
 |--------|-------------|
@@ -97,6 +100,8 @@ version bump and a migration guide in `CHANGELOG.md`.
 | `deriveMassDistribution(entity)` | Mass distribution for physics rigs |
 | `deriveInertiaTensor(entity)` | Inertia tensor for physics rigs |
 | `AnimationHints`, `PoseModifier`, `GrapplePoseConstraint`, `MassDistribution`, `InertiaTensor` | Types |
+| `BridgeEngine` | Double-buffered renderer bridge engine |
+| `BridgeConfig`, `BodyPlanMapping`, `InterpolatedState` | Bridge configuration and output types |
 
 ### Description layer (`src/describe.ts`)
 

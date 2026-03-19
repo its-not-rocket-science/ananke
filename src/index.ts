@@ -18,6 +18,10 @@ export * from "./sim/kernel.js";     // stepWorld(), applyImpactToInjury(), appl
 export * from "./sim/body.js";       // BodyPlan, BodySegment, humanoid / quadruped plans
 export * from "./sim/world.js";      // WorldState, KernelContext, createWorld()
 
+export * from "./model3d.js";        // extractRigSnapshots(), deriveAnimationHints(), RigSnapshot, AnimationHints, GrapplePoseConstraint
+export * from "./replay.js";         // ReplayRecorder, replayTo(), serializeReplay(), deserializeReplay()
+export * from "./bridge/index.js";   // BridgeEngine, InterpolatedState, BridgeConfig — 3D renderer bridge
+
 // ── Tier 2 — Advanced / experimental API ─────────────────────────────────────
 // Tested and usable subsystems under active development.  May change between
 // minor versions (0.x.0); CHANGELOG.md will document any breaking change.
@@ -42,7 +46,6 @@ export * from "./chronicle.js";           // ChronicleEntry, addChronicleEntry()
 export * from "./story-arcs.js";          // StoryArc, detectArcs()
 export * from "./narrative-render.js";    // renderEntry(), renderChronicle(), generateNarrative()
 export * from "./world-generation.js";    // WorldTemplate, generateWorld()
-export * from "./bridge/index.js";        // BridgeEngine, extractRigSnapshots(), MotionVector
 
 export * from "./sim/trace.js";           // SimTrace, traceStep() — debugging / profiling
 

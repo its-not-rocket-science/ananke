@@ -218,14 +218,19 @@ Never divide by a hardcoded `10000`. Always import and use `SCALE.m` and `SCALE.
 
 ## Ananke API surface used
 
+All imports are from Ananke's **Tier 1 (Stable)** surface. The complete field-by-field
+contract for `AnimationHints`, `GrapplePoseConstraint`, and `InterpolatedState` is
+documented in
+[`docs/bridge-contract.md`](https://github.com/your-org/ananke/blob/master/docs/bridge-contract.md).
+
 | Ananke export | Used in | Tier |
 |--------------|---------|------|
 | `stepWorld(world, cmds, ctx)` | `src/simulation/SimLoop.ts` | Tier 1 |
 | `generateIndividual(seed, archetype)` | `src/scenario.ts` | Tier 1 |
-| `extractRigSnapshots(world)` | `src/simulation/SimLoop.ts` | Tier 2 |
-| `deriveAnimationHints(entity)` | `src/simulation/SimLoop.ts` | Tier 2 |
-| `derivePoseModifiers(entity)` | `src/simulation/SimLoop.ts` | Tier 2 |
-| `deriveGrappleConstraint(entity, world)` | `src/simulation/SimLoop.ts` | Tier 2 |
+| `extractRigSnapshots(world)` | `src/simulation/SimLoop.ts` | Tier 1 |
+| `deriveAnimationHints(entity)` | `src/simulation/SimLoop.ts` | Tier 1 |
+| `derivePoseModifiers(entity)` | `src/simulation/SimLoop.ts` | Tier 1 |
+| `deriveGrappleConstraint(entity, world)` | `src/simulation/SimLoop.ts` | Tier 1 |
 | `serializeReplay(replay)` | `src/ui/Controls.ts` | Tier 1 |
 | `ReplayRecorder` | `src/simulation/SimLoop.ts` | Tier 1 |
 | `SCALE` | `src/renderer/SegmentBoneMapper.ts` | Tier 1 |

@@ -219,18 +219,24 @@ ananke-unity-reference/
 
 ## Ananke API surface used
 
-All imports are from Ananke's **Tier 1 (Stable)** or **Tier 2 (Experimental)** surface as documented in `STABLE_API.md`.
+All imports are from Ananke's **Tier 1 (Stable)** surface as documented in
+[`docs/bridge-contract.md`](https://github.com/your-org/ananke/blob/master/docs/bridge-contract.md)
+and [`STABLE_API.md`](https://github.com/your-org/ananke/blob/master/STABLE_API.md).
 
 | Ananke export | Used in | Tier |
 |--------------|---------|------|
 | `stepWorld(world, cmds, ctx)` | `sidecar/src/main.ts` | Tier 1 |
 | `generateIndividual(seed, archetype)` | `sidecar/src/scenario.ts` | Tier 1 |
-| `extractRigSnapshots(world)` | `sidecar/src/main.ts` | Tier 2 |
-| `deriveAnimationHints(entity)` | `sidecar/src/serialiser.ts` | Tier 2 |
-| `derivePoseModifiers(entity)` | `sidecar/src/serialiser.ts` | Tier 2 |
-| `deriveGrappleConstraint(entity, world)` | `sidecar/src/serialiser.ts` | Tier 2 |
+| `extractRigSnapshots(world)` | `sidecar/src/main.ts` | Tier 1 |
+| `deriveAnimationHints(entity)` | `sidecar/src/serialiser.ts` | Tier 1 |
+| `derivePoseModifiers(entity)` | `sidecar/src/serialiser.ts` | Tier 1 |
+| `deriveGrappleConstraint(entity, world)` | `sidecar/src/serialiser.ts` | Tier 1 |
 | `serializeReplay(replay)` | `sidecar/src/replay.ts` | Tier 1 |
 | `SCALE` | `sidecar/src/serialiser.ts` | Tier 1 |
+
+The complete field-by-field contract for `AnimationHints`, `GrapplePoseConstraint`, and
+`InterpolatedState` is documented in
+[`docs/bridge-contract.md`](https://github.com/your-org/ananke/blob/master/docs/bridge-contract.md).
 
 ---
 

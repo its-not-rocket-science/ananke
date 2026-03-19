@@ -8,7 +8,9 @@
 
 The bridge module (`src/bridge/`) provides a **double‑buffered, tick‑rate‑independent interpolation layer** that connects the deterministic 20 Hz simulation kernel to a real‑time renderer running at 60 Hz or higher. It translates simulation‑side segment‑based injury and pose data into renderer‑side bone names, interpolates all visual state between simulation ticks, and guarantees deterministic output across runs.
 
-This document is the authoritative reference for integrating the bridge into a host renderer. It assumes familiarity with the core simulation concepts described in the [Integration Primer](./integration-primer.md).
+This document is the tutorial-oriented integration guide. It assumes familiarity with the core simulation concepts described in the [Integration Primer](./integration-primer.md).
+
+> **Stability contract and field-by-field type reference:** see [`docs/bridge-contract.md`](bridge-contract.md).
 
 ---
 
