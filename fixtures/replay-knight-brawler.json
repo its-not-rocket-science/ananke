@@ -1,0 +1,6308 @@
+{
+  "version": "0.1.0",
+  "scenario": "knight-vs-brawler",
+  "seed": 1,
+  "expected": {
+    "finalTick": 400,
+    "knightDead": false,
+    "knightShock": 4,
+    "knightConsciousness": 7088,
+    "brawlerDead": true,
+    "brawlerShock": 1144,
+    "brawlerConsciousness": 0
+  },
+  "replay": {
+    "initialState": {
+      "tick": 0,
+      "seed": 1,
+      "entities": [
+        {
+          "id": 1,
+          "teamId": 1,
+          "attributes": {
+            "morphology": {
+              "stature_m": 17323,
+              "mass_kg": 79968,
+              "actuatorMass_kg": 35425,
+              "actuatorScale": 9486,
+              "structureScale": 20000,
+              "reachScale": 10233
+            },
+            "performance": {
+              "peakForce_N": 204644,
+              "peakPower_W": 3900,
+              "continuousPower_W": 146,
+              "reserveEnergy_J": 17485,
+              "conversionEfficiency": 8839
+            },
+            "control": {
+              "controlQuality": 7190,
+              "reactionTime_s": 2519,
+              "stability": 7457,
+              "fineControl": 8034
+            },
+            "resilience": {
+              "surfaceIntegrity": 9520,
+              "bulkIntegrity": 9499,
+              "structureIntegrity": 10145,
+              "distressTolerance": 6809,
+              "shockTolerance": 7173,
+              "concussionTolerance": 5982,
+              "heatTolerance": 5251,
+              "coldTolerance": 4991,
+              "fatigueRate": 8737,
+              "recoveryRate": 10679
+            },
+            "perception": {
+              "visionRange_m": 2000000,
+              "visionArcDeg": 120,
+              "halfArcCosQ": 5000,
+              "hearingRange_m": 500000,
+              "decisionLatency_s": 5000,
+              "attentionDepth": 4,
+              "threatHorizon_m": 400000
+            },
+            "cognition": {
+              "linguistic": 5800,
+              "logicalMathematical": 5500,
+              "spatial": 6200,
+              "bodilyKinesthetic": 7200,
+              "musical": 4800,
+              "interpersonal": 6000,
+              "intrapersonal": 6800,
+              "naturalist": 4500,
+              "interSpecies": 2500
+            }
+          },
+          "energy": {
+            "reserveEnergy_J": 17485,
+            "fatigue": 0
+          },
+          "loadout": {
+            "items": [
+              {
+                "id": "wpn_longsword",
+                "kind": "weapon",
+                "name": "Longsword",
+                "mass_kg": 1500,
+                "bulk": 15000,
+                "reach_m": 9000,
+                "handedness": "twoHand",
+                "momentArm_m": 5500,
+                "handlingMul": 10500,
+                "strikeEffectiveMassFrac": 1500,
+                "strikeSpeedMul": 10000,
+                "readyTime_s": 7500,
+                "damage": {
+                  "surfaceFrac": 3500,
+                  "internalFrac": 4500,
+                  "structuralFrac": 2000,
+                  "bleedFactor": 7000,
+                  "penetrationBias": 4000
+                }
+              },
+              {
+                "id": "arm_mail",
+                "kind": "armour",
+                "name": "Mail armour",
+                "mass_kg": 10000,
+                "bulk": 19000,
+                "requiredCapabilities": [
+                  "MetallicArmour"
+                ],
+                "protects": 1,
+                "coverageByRegion": {
+                  "head": 500,
+                  "torso": 7800,
+                  "leftArm": 5500,
+                  "rightArm": 5500,
+                  "leftLeg": 2000,
+                  "rightLeg": 2000
+                },
+                "resist_J": 350,
+                "protectedDamageMul": 7500,
+                "mobilityMul": 9000,
+                "fatigueMul": 11500
+              }
+            ]
+          },
+          "traits": [],
+          "position_m": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "velocity_mps": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "intent": {
+            "move": {
+              "dir": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "intensity": 0,
+              "mode": "walk"
+            },
+            "defence": {
+              "mode": "none",
+              "intensity": 0
+            },
+            "prone": false
+          },
+          "action": {
+            "attackCooldownTicks": 0,
+            "defenceCooldownTicks": 0,
+            "grappleCooldownTicks": 0,
+            "facingDirQ": {
+              "x": 10000,
+              "y": 0,
+              "z": 0
+            },
+            "weaponBindPartnerId": 0,
+            "weaponBindTicks": 0,
+            "swingMomentumQ": 0,
+            "shootCooldownTicks": 0,
+            "aimTicks": 0,
+            "aimTargetId": 0
+          },
+          "condition": {
+            "onFire": 0,
+            "corrosiveExposure": 0,
+            "radiation": 0,
+            "electricalOverload": 0,
+            "suffocation": 0,
+            "stunned": 0,
+            "prone": false,
+            "pinned": false,
+            "standBlockedTicks": 0,
+            "unconsciousTicks": 0,
+            "suppressedTicks": 0,
+            "blindTicks": 0,
+            "fearQ": 0,
+            "suppressionFearMul": 10000,
+            "recentAllyDeaths": 0,
+            "lastAllyDeathTick": -1,
+            "surrendered": false,
+            "rallyCooldownTicks": 0
+          },
+          "injury": {
+            "byRegion": {
+              "head": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "torso": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "leftArm": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "rightArm": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "leftLeg": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "rightLeg": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              }
+            },
+            "fluidLoss": 0,
+            "shock": 0,
+            "consciousness": 10000,
+            "dead": false,
+            "hemolymphLoss": 0
+          },
+          "grapple": {
+            "holdingTargetId": 0,
+            "heldByIds": [],
+            "gripQ": 0,
+            "position": "standing"
+          }
+        },
+        {
+          "id": 2,
+          "teamId": 2,
+          "attributes": {
+            "morphology": {
+              "stature_m": 17440,
+              "mass_kg": 74182,
+              "actuatorMass_kg": 29420,
+              "actuatorScale": 9904,
+              "structureScale": 20000,
+              "reachScale": 9895
+            },
+            "performance": {
+              "peakForce_N": 154468,
+              "peakPower_W": 3600,
+              "continuousPower_W": 129,
+              "reserveEnergy_J": 14502,
+              "conversionEfficiency": 8557
+            },
+            "control": {
+              "controlQuality": 7058,
+              "reactionTime_s": 2091,
+              "stability": 6517,
+              "fineControl": 7109
+            },
+            "resilience": {
+              "surfaceIntegrity": 9544,
+              "bulkIntegrity": 10338,
+              "structureIntegrity": 9742,
+              "distressTolerance": 5605,
+              "shockTolerance": 5235,
+              "concussionTolerance": 4836,
+              "heatTolerance": 5353,
+              "coldTolerance": 4988,
+              "fatigueRate": 9233,
+              "recoveryRate": 9064
+            },
+            "perception": {
+              "visionRange_m": 2000000,
+              "visionArcDeg": 120,
+              "halfArcCosQ": 5000,
+              "hearingRange_m": 500000,
+              "decisionLatency_s": 5000,
+              "attentionDepth": 4,
+              "threatHorizon_m": 400000
+            },
+            "cognition": {
+              "linguistic": 6500,
+              "logicalMathematical": 6000,
+              "spatial": 6000,
+              "bodilyKinesthetic": 6000,
+              "musical": 5000,
+              "interpersonal": 6000,
+              "intrapersonal": 5500,
+              "naturalist": 5000,
+              "interSpecies": 3500
+            }
+          },
+          "energy": {
+            "reserveEnergy_J": 14502,
+            "fatigue": 0
+          },
+          "loadout": {
+            "items": [
+              {
+                "id": "wpn_club",
+                "kind": "weapon",
+                "name": "Wooden club",
+                "mass_kg": 1200,
+                "bulk": 14000,
+                "reach_m": 7000,
+                "handedness": "oneHand",
+                "momentArm_m": 4500,
+                "handlingMul": 11000,
+                "strikeEffectiveMassFrac": 1800,
+                "strikeSpeedMul": 9500,
+                "damage": {
+                  "surfaceFrac": 3500,
+                  "internalFrac": 2000,
+                  "structuralFrac": 4500,
+                  "bleedFactor": 2500,
+                  "penetrationBias": 1000
+                }
+              }
+            ]
+          },
+          "traits": [],
+          "position_m": {
+            "x": 6000,
+            "y": 0,
+            "z": 0
+          },
+          "velocity_mps": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "intent": {
+            "move": {
+              "dir": {
+                "x": 0,
+                "y": 0,
+                "z": 0
+              },
+              "intensity": 0,
+              "mode": "walk"
+            },
+            "defence": {
+              "mode": "none",
+              "intensity": 0
+            },
+            "prone": false
+          },
+          "action": {
+            "attackCooldownTicks": 0,
+            "defenceCooldownTicks": 0,
+            "grappleCooldownTicks": 0,
+            "facingDirQ": {
+              "x": 10000,
+              "y": 0,
+              "z": 0
+            },
+            "weaponBindPartnerId": 0,
+            "weaponBindTicks": 0,
+            "swingMomentumQ": 0,
+            "shootCooldownTicks": 0,
+            "aimTicks": 0,
+            "aimTargetId": 0
+          },
+          "condition": {
+            "onFire": 0,
+            "corrosiveExposure": 0,
+            "radiation": 0,
+            "electricalOverload": 0,
+            "suffocation": 0,
+            "stunned": 0,
+            "prone": false,
+            "pinned": false,
+            "standBlockedTicks": 0,
+            "unconsciousTicks": 0,
+            "suppressedTicks": 0,
+            "blindTicks": 0,
+            "fearQ": 0,
+            "suppressionFearMul": 10000,
+            "recentAllyDeaths": 0,
+            "lastAllyDeathTick": -1,
+            "surrendered": false,
+            "rallyCooldownTicks": 0
+          },
+          "injury": {
+            "byRegion": {
+              "head": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "torso": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "leftArm": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "rightArm": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "leftLeg": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              },
+              "rightLeg": {
+                "surfaceDamage": 0,
+                "internalDamage": 0,
+                "structuralDamage": 0,
+                "bleedingRate": 0,
+                "fractured": false,
+                "infectedTick": -1,
+                "bleedDuration_ticks": 0,
+                "permanentDamage": 0
+              }
+            },
+            "fluidLoss": 0,
+            "shock": 0,
+            "consciousness": 10000,
+            "dead": false,
+            "hemolymphLoss": 0
+          },
+          "grapple": {
+            "holdingTargetId": 0,
+            "heldByIds": [],
+            "gripQ": 0,
+            "position": "standing"
+          }
+        }
+      ]
+    },
+    "frames": [
+      {
+        "tick": 0,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 1,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 2,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 3,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 4,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 5,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 6,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 7,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 8,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 9,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 10,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 11,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 12,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 13,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 14,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 15,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 16,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 17,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 18,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 19,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 20,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 21,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 22,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 23,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 24,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 25,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 26,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 27,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 28,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 29,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 30,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 31,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 32,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 33,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 34,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 35,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 36,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 37,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 38,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 39,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 40,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 41,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 42,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 43,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 44,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 45,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 46,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 47,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 48,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 49,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 50,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 51,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 52,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 53,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 54,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 55,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 56,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 57,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 58,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 59,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 60,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 61,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 62,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 63,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 64,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 65,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 66,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 67,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 68,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 69,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 70,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 71,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 72,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 73,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 74,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 75,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 76,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 77,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 78,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 79,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 80,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 81,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 82,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 83,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 84,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 85,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 86,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 87,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 88,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 89,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 90,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 91,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 92,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 93,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 94,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 95,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 96,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 97,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 98,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 99,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 100,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 101,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 102,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 103,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 104,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 105,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 106,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 107,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 108,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 109,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 110,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 111,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 112,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 113,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 114,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 115,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 116,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 117,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 118,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 119,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 120,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 121,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 122,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 123,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 124,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 125,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 126,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 127,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 128,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 129,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 130,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 131,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 132,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 133,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 134,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 135,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 136,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 137,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 138,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 139,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 140,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 141,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 142,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 143,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 144,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 145,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 146,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 147,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 148,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 149,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 150,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 151,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 152,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 153,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 154,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 155,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 156,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 157,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 158,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 159,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 160,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 161,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 162,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 163,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 164,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 165,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 166,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 167,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 168,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 169,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 170,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 171,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 172,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 173,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 174,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 175,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 176,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 177,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 178,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 179,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 180,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 181,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 182,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 183,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 184,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 185,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 186,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 187,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 188,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 189,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 190,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 191,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 192,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 193,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 194,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 195,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 196,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 197,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 198,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 2,
+                "weaponId": "wpn_longsword",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ],
+          [
+            2,
+            [
+              {
+                "kind": "defend",
+                "mode": "parry",
+                "intensity": 3500
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              {
+                "kind": "attack",
+                "targetId": 1,
+                "weaponId": "wpn_club",
+                "intensity": 10000,
+                "mode": "strike"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 199,
+        "commands": [
+          [
+            1,
+            []
+          ],
+          [
+            2,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 200,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 201,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 202,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 203,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 204,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 205,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 206,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 207,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 208,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 209,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 210,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 211,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 212,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 213,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 214,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 215,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 216,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 217,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 218,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 219,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 220,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 221,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 222,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 223,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 224,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 225,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 226,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 227,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 228,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 229,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 230,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 231,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 232,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 233,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 234,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 235,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 236,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 237,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 238,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 239,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 240,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 241,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 242,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 243,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 244,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 245,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 246,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 247,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 248,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 249,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 250,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 251,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 252,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 253,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 254,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 255,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 256,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 257,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 258,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 259,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 260,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 261,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 262,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 263,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 264,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 265,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 266,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 267,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 268,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 269,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 270,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 271,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 272,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 273,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 274,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 275,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 276,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 277,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 278,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 279,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 280,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 281,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 282,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 283,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 284,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 285,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 286,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 287,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 288,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 289,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 290,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 291,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 292,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 293,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 294,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 295,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 296,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 297,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 298,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 299,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 300,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 301,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 302,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 303,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 304,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 305,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 306,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 307,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 308,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 309,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 310,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 311,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 312,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 313,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 314,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 315,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 316,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 317,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 318,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 319,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 320,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 321,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 322,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 323,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 324,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 325,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 326,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 327,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 328,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 329,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 330,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 331,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 332,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 333,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 334,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 335,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 336,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 337,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 338,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 339,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 340,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 341,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 342,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 343,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 344,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 345,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 346,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 347,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 348,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 349,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 350,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 351,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 352,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 353,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 354,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 355,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 356,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 357,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 358,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 359,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 360,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 361,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 362,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 363,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 364,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 365,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 366,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 367,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 368,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 369,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 370,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 371,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 372,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 373,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 374,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 375,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 376,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 377,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 378,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 379,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 380,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 381,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 382,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 383,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 384,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 385,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 386,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 387,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 388,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 389,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 390,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 391,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 392,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 393,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 394,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 395,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 396,
+        "commands": [
+          [
+            1,
+            [
+              {
+                "kind": "defend",
+                "mode": "none",
+                "intensity": 0
+              },
+              {
+                "kind": "move",
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              }
+            ]
+          ]
+        ]
+      },
+      {
+        "tick": 397,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 398,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      },
+      {
+        "tick": 399,
+        "commands": [
+          [
+            1,
+            []
+          ]
+        ]
+      }
+    ]
+  }
+}

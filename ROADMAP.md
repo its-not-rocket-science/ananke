@@ -5403,38 +5403,55 @@ The guide covers:
 
 ---
 
-### 13 · Three Canonical Adoption Quickstarts
+### 13 · Three Canonical Adoption Quickstarts *(COMPLETE)*
 
-**The gap:** The README describes three adoption paths, but each path currently requires the
-reader to navigate Phase descriptions and piece together the minimal module set themselves.
+**Deliverable:** Three files in `examples/`, each ≤ 60 lines, self-contained, and runnable
+after `npm run build`.
 
-**What is needed:** Three self-contained, runnable examples — one per adoption path — each
-fitting in a single file:
+| Script | File | What it shows |
+|--------|------|---------------|
+| `npm run example:combat` | `examples/quickstart-combat.ts` | Knight vs Brawler — winner, shock, consciousness, fatigue at end-state; try seeds 1–20 to see outcome distribution |
+| `npm run example:campaign` | `examples/quickstart-campaign.ts` | Rome (Medieval) + Carthage (Ancient) trade for 90 days — treasury grows, morale rises, tech diffusion visible at longer runs |
+| `npm run example:species` | `examples/quickstart-species.ts` | Human at seed 42 — base attributes, 40-year aging applied, 24h sleep deprivation applied, full character sheet printed in plain English |
 
-| Quickstart | Entry point | What it demonstrates |
-|-----------|-------------|---------------------|
-| `examples/quickstart-combat.ts` | Path A (combat kernel) | Two entities, one fight, physics-grounded result |
-| `examples/quickstart-campaign.ts` | Path B (world sim) | One polity, 90-day run, population and morale output |
-| `examples/quickstart-species.ts` | Path C (physiology) | One species, aging + sleep applied, described in plain English |
+Sample outputs:
+```
+# combat (seed 1)
+Knight wins at tick 400
+  Knight:  shock= 0%  consciousness=71%  dead=false
+  Brawler: shock=11%  consciousness= 0%  dead=true
 
-Each file should be ≤ 60 lines, self-contained, and runnable via `npx ts-node examples/...`
+# campaign (day 90)
+Rome     treasury=5,500cu  morale=92%  stability=88%  era=Medieval
+Carthage treasury=2,500cu  morale=92%  stability=88%  era=Ancient
+
+# species (seed 42, 40 years + 24h awake)
+Peak force 1504 N (−10% from aging)  |  Reaction 251 ms (−14% slower from sleep)
+Cognition 90% of rested  |  Stability 97% of rested
+```
 
 ---
 
-### 14 · Golden Replay and Save Compatibility Fixtures
+### 14 · Golden Replay and Save Compatibility Fixtures *(COMPLETE)*
 
-**The gap:** Determinism, replay, and campaign round-tripping are core promises, but there
-are no golden fixture tests that catch regressions across versions.
+**Deliverable:** Two committed fixture files + 16 Vitest tests in `test/golden-fixtures.test.ts`.
 
-**What is needed:**
-- `fixtures/replay-knight-brawler.json` — serialised replay of the Knight vs. Brawler
-  vertical slice, checked in and compared against `replayTo()` output on every CI run
-- `fixtures/campaign-save-v1.json` — a minimal campaign save state, with a round-trip
-  test confirming it deserialises, advances one tick, and reserialises identically
-- A CI check: "same seed + same code version → same replay output"
+- **`fixtures/replay-knight-brawler.json`** — serialised `Replay` of the Knight vs. Brawler
+  fight (seed 1, 400 ticks) plus an `expected` block with exact fixed-point values for the
+  final state (tick, shock, consciousness, dead flags for both entities)
+- **`fixtures/campaign-save-v1.json`** — minimal `CampaignState` (1 entity, 2 locations with
+  `travelCost` Maps) serialised to JSON; tests verify round-trip fidelity
+- **`tools/generate-fixtures.ts`** — regenerate fixtures after an intentional physics change;
+  run with `npm run generate-fixtures`
 
-**Why this matters:** Without golden fixtures, regressions in determinism are invisible until
-a player reports "my replay from last week plays differently now."
+Tests verify:
+- `replayTo(deserializeReplay(fixture.replay), lastTick, ctx)` → exact fixed-point match on
+  all injury fields (shock, consciousness, dead) — any physics regression fails immediately
+- Campaign round-trip: `serialise(deserialise(serialise(campaign)))` produces byte-identical
+  JSON; `travelCost` Maps survive round-trip; entity and location counts preserved
+
+**Intentional update workflow:** change physics → run `npm run generate-fixtures` → review diff
+→ commit updated fixtures alongside the physics change.
 
 ---
 

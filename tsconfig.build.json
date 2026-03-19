@@ -18,7 +18,7 @@
     "skipLibCheck": true,
     "noEmitOnError": true
   },
-  "include": ["src/**/*", "tools/**/*"],
+  "include": ["src/**/*", "tools/**/*", "examples/**/*"],
   "exclude": [
     "node_modules",
     "dist",

@@ -1,0 +1,314 @@
+{
+  "version": "0.1.0",
+  "note": "Minimal campaign save: 1 entity, 2 locations, worldTime_s=0",
+  "save": {
+    "id": "test-campaign",
+    "epoch": "2000-01-01T00:00:00.000Z",
+    "worldTime_s": 0,
+    "entities": {
+      "__ananke_map__": true,
+      "entries": [
+        [
+          1,
+          {
+            "id": 1,
+            "teamId": 1,
+            "attributes": {
+              "morphology": {
+                "stature_m": 17323,
+                "mass_kg": 79968,
+                "actuatorMass_kg": 35425,
+                "actuatorScale": 9486,
+                "structureScale": 20000,
+                "reachScale": 10233
+              },
+              "performance": {
+                "peakForce_N": 204644,
+                "peakPower_W": 3900,
+                "continuousPower_W": 146,
+                "reserveEnergy_J": 17485,
+                "conversionEfficiency": 8839
+              },
+              "control": {
+                "controlQuality": 7190,
+                "reactionTime_s": 2519,
+                "stability": 7457,
+                "fineControl": 8034
+              },
+              "resilience": {
+                "surfaceIntegrity": 9520,
+                "bulkIntegrity": 9499,
+                "structureIntegrity": 10145,
+                "distressTolerance": 6809,
+                "shockTolerance": 7173,
+                "concussionTolerance": 5982,
+                "heatTolerance": 5251,
+                "coldTolerance": 4991,
+                "fatigueRate": 8737,
+                "recoveryRate": 10679
+              },
+              "perception": {
+                "visionRange_m": 2000000,
+                "visionArcDeg": 120,
+                "halfArcCosQ": 5000,
+                "hearingRange_m": 500000,
+                "decisionLatency_s": 5000,
+                "attentionDepth": 4,
+                "threatHorizon_m": 400000
+              },
+              "cognition": {
+                "linguistic": 5800,
+                "logicalMathematical": 5500,
+                "spatial": 6200,
+                "bodilyKinesthetic": 7200,
+                "musical": 4800,
+                "interpersonal": 6000,
+                "intrapersonal": 6800,
+                "naturalist": 4500,
+                "interSpecies": 2500
+              }
+            },
+            "energy": {
+              "reserveEnergy_J": 17485,
+              "fatigue": 0
+            },
+            "loadout": {
+              "items": [
+                {
+                  "id": "wpn_longsword",
+                  "kind": "weapon",
+                  "name": "Longsword",
+                  "mass_kg": 1500,
+                  "bulk": 15000,
+                  "reach_m": 9000,
+                  "handedness": "twoHand",
+                  "momentArm_m": 5500,
+                  "handlingMul": 10500,
+                  "strikeEffectiveMassFrac": 1500,
+                  "strikeSpeedMul": 10000,
+                  "readyTime_s": 7500,
+                  "damage": {
+                    "surfaceFrac": 3500,
+                    "internalFrac": 4500,
+                    "structuralFrac": 2000,
+                    "bleedFactor": 7000,
+                    "penetrationBias": 4000
+                  }
+                },
+                {
+                  "id": "arm_mail",
+                  "kind": "armour",
+                  "name": "Mail armour",
+                  "mass_kg": 10000,
+                  "bulk": 19000,
+                  "requiredCapabilities": [
+                    "MetallicArmour"
+                  ],
+                  "protects": 1,
+                  "coverageByRegion": {
+                    "head": 500,
+                    "torso": 7800,
+                    "leftArm": 5500,
+                    "rightArm": 5500,
+                    "leftLeg": 2000,
+                    "rightLeg": 2000
+                  },
+                  "resist_J": 350,
+                  "protectedDamageMul": 7500,
+                  "mobilityMul": 9000,
+                  "fatigueMul": 11500
+                }
+              ]
+            },
+            "traits": [],
+            "position_m": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "velocity_mps": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "intent": {
+              "move": {
+                "dir": {
+                  "x": 0,
+                  "y": 0,
+                  "z": 0
+                },
+                "intensity": 0,
+                "mode": "walk"
+              },
+              "defence": {
+                "mode": "none",
+                "intensity": 0
+              },
+              "prone": false
+            },
+            "action": {
+              "attackCooldownTicks": 0,
+              "defenceCooldownTicks": 0,
+              "grappleCooldownTicks": 0,
+              "facingDirQ": {
+                "x": 10000,
+                "y": 0,
+                "z": 0
+              },
+              "weaponBindPartnerId": 0,
+              "weaponBindTicks": 0,
+              "swingMomentumQ": 0,
+              "shootCooldownTicks": 0,
+              "aimTicks": 0,
+              "aimTargetId": 0
+            },
+            "condition": {
+              "onFire": 0,
+              "corrosiveExposure": 0,
+              "radiation": 0,
+              "electricalOverload": 0,
+              "suffocation": 0,
+              "stunned": 0,
+              "prone": false,
+              "pinned": false,
+              "standBlockedTicks": 0,
+              "unconsciousTicks": 0,
+              "suppressedTicks": 0,
+              "blindTicks": 0,
+              "fearQ": 0,
+              "suppressionFearMul": 10000,
+              "recentAllyDeaths": 0,
+              "lastAllyDeathTick": -1,
+              "surrendered": false,
+              "rallyCooldownTicks": 0
+            },
+            "injury": {
+              "byRegion": {
+                "head": {
+                  "surfaceDamage": 0,
+                  "internalDamage": 0,
+                  "structuralDamage": 0,
+                  "bleedingRate": 0,
+                  "fractured": false,
+                  "infectedTick": -1,
+                  "bleedDuration_ticks": 0,
+                  "permanentDamage": 0
+                },
+                "torso": {
+                  "surfaceDamage": 0,
+                  "internalDamage": 0,
+                  "structuralDamage": 0,
+                  "bleedingRate": 0,
+                  "fractured": false,
+                  "infectedTick": -1,
+                  "bleedDuration_ticks": 0,
+                  "permanentDamage": 0
+                },
+                "leftArm": {
+                  "surfaceDamage": 0,
+                  "internalDamage": 0,
+                  "structuralDamage": 0,
+                  "bleedingRate": 0,
+                  "fractured": false,
+                  "infectedTick": -1,
+                  "bleedDuration_ticks": 0,
+                  "permanentDamage": 0
+                },
+                "rightArm": {
+                  "surfaceDamage": 0,
+                  "internalDamage": 0,
+                  "structuralDamage": 0,
+                  "bleedingRate": 0,
+                  "fractured": false,
+                  "infectedTick": -1,
+                  "bleedDuration_ticks": 0,
+                  "permanentDamage": 0
+                },
+                "leftLeg": {
+                  "surfaceDamage": 0,
+                  "internalDamage": 0,
+                  "structuralDamage": 0,
+                  "bleedingRate": 0,
+                  "fractured": false,
+                  "infectedTick": -1,
+                  "bleedDuration_ticks": 0,
+                  "permanentDamage": 0
+                },
+                "rightLeg": {
+                  "surfaceDamage": 0,
+                  "internalDamage": 0,
+                  "structuralDamage": 0,
+                  "bleedingRate": 0,
+                  "fractured": false,
+                  "infectedTick": -1,
+                  "bleedDuration_ticks": 0,
+                  "permanentDamage": 0
+                }
+              },
+              "fluidLoss": 0,
+              "shock": 0,
+              "consciousness": 10000,
+              "dead": false,
+              "hemolymphLoss": 0
+            },
+            "grapple": {
+              "holdingTargetId": 0,
+              "heldByIds": [],
+              "gripQ": 0,
+              "position": "standing"
+            }
+          }
+        ]
+      ]
+    },
+    "locations": {
+      "__ananke_map__": true,
+      "entries": [
+        [
+          "loc_keep",
+          {
+            "id": "loc_keep",
+            "name": "The Keep",
+            "elevation_m": 100,
+            "travelCost": {
+              "__ananke_map__": true,
+              "entries": [
+                [
+                  "loc_village",
+                  3600
+                ]
+              ]
+            }
+          }
+        ],
+        [
+          "loc_village",
+          {
+            "id": "loc_village",
+            "name": "The Village",
+            "elevation_m": 50,
+            "travelCost": {
+              "__ananke_map__": true,
+              "entries": [
+                [
+                  "loc_keep",
+                  3600
+                ]
+              ]
+            }
+          }
+        ]
+      ]
+    },
+    "entityLocations": {
+      "__ananke_map__": true,
+      "entries": []
+    },
+    "entityInventories": {
+      "__ananke_map__": true,
+      "entries": []
+    },
+    "log": []
+  }
+}
