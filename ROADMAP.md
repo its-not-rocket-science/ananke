@@ -5386,21 +5386,20 @@ The guide covers:
 
 ---
 
-### 12 · Stable Host API + Versioning Policy
+### 12 · Stable Host API + Versioning Policy *(COMPLETE)*
 
-**The gap:** The `Entity` interface and `stepWorld()` contract are the surface that external
-adopters build against, but there is no declared versioning policy.  Adopters cannot safely
-pin a version or know what is safe to depend on.
+**Deliverable:** `STABLE_API.md` (three-tier API reference) + `CHANGELOG.md` (initial v0.1.0 entry).
 
-**What is needed:**
-- A documented `STABLE_API.md` listing the three tiers (stable / experimental / internal)
-  as defined in the README API stability contract section
-- Semver policy: patch for bug fixes; minor for additive changes; major for breaking stable-tier changes
-- A `CHANGELOG.md` with migration notes for every breaking change
-
-**Why this matters:** This is the single change with the highest impact on adoption confidence.
-A developer evaluating Ananke needs to know: "if I ship this in my game, what will break when
-you update the engine?"
+- **`STABLE_API.md`** — documents all three stability tiers:
+  - Tier 1 (Stable): `stepWorld`, `generateIndividual`, `q`/`qMul`/`clampQ`, `Entity` core fields,
+    `ReplayRecorder`/`replayTo`/`serializeReplay`, `extractRigSnapshots`, archetypes/weapons/presets
+  - Tier 2 (Experimental): polity, tech-diffusion, emotional-contagion, mythology, campaign,
+    arena DSL, aging/sleep/disease/mount/hazard, dialogue, faction, economy, progression
+  - Tier 3 (Internal): `rng.ts`, `push.ts`, kernel sub-phases, `seeds.ts`, AI sub-modules
+- **`CHANGELOG.md`** — initial v0.1.0 entry cataloguing all 67 phases, 3 023 tests, and
+  infrastructure; links to future releases
+- **Semver policy:** patch = bug fixes; minor = additive + experimental changes; major = stable-tier breaks
+- **README** updated with `STABLE_API.md` and `CHANGELOG.md` links in the API stability section
 
 ---
 

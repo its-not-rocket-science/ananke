@@ -1135,6 +1135,8 @@ lowering this integration barrier.
 
 ## API stability contract
 
+> Full reference: [`STABLE_API.md`](./STABLE_API.md) — Versioning policy: [`CHANGELOG.md`](./CHANGELOG.md)
+
 Ananke distinguishes three tiers of API stability so adopters know what to pin and what to
 expect to change.
 
