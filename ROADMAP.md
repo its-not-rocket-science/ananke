@@ -5485,19 +5485,26 @@ PR added 8 ms of overhead on formation combat."  Use 10% locally, 50% in CI.
 
 ---
 
-### 16 · Governance & Contribution Model
+### 16 · Governance & Contribution Model *(COMPLETE)*
 
-**The gap:** The project is currently a solo effort with no documented path for external
-contributors.
+**Deliverable:** Four documents + four GitHub issue templates.
 
-**What is needed:**
-- `CONTRIBUTING.md` — how to contribute code, datasets, and documentation; code style guide;
-  PR checklist referencing the three stability tiers; test and coverage requirements
-- `CODE_OF_CONDUCT.md` — standard community norms
-- A labelled issue template for: bug reports, dataset contributions, new phase proposals,
-  and renderer plugin requests
-- A documented decision process for accepting new simulation phases (must include: physics
-  source citation, test coverage ≥ 90%, benchmark impact assessment)
+- **`CONTRIBUTING.md`** — 10-section guide covering: quick start, code style, non-negotiable
+  rules, API stability tiers, test/coverage requirements, PR checklist (copy-paste ready),
+  dataset contribution, new phase proposal process, renderer plugin listing, and the full
+  decision process table for accepting phases and breaking stable exports
+- **`CODE_OF_CONDUCT.md`** — Contributor Covenant 2.1 adaptation with four-tier enforcement
+- **`.github/ISSUE_TEMPLATE/bug_report.yml`** — structured bug report with determinism
+  classification (logic bug vs. non-determinism bug)
+- **`.github/ISSUE_TEMPLATE/dataset_contribution.yml`** — dataset proposal with source,
+  sample size, unit, licence, and metric-to-attribute mapping fields
+- **`.github/ISSUE_TEMPLATE/new_phase_proposal.yml`** — phase proposal with physics citation,
+  API sketch, stability tier selection, dependency list, and performance impact estimate;
+  includes pre-coding checklist to enforce the requirements before any code is written
+- **`.github/ISSUE_TEMPLATE/renderer_plugin.yml`** — plugin listing request with API
+  compliance checklist (must use `extractRigSnapshots()`, must include demo scene)
+- **`.github/ISSUE_TEMPLATE/config.yml`** — disables blank issues; routes open questions to
+  Discussions
 
 ---
 

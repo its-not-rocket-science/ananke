@@ -1,0 +1,95 @@
+name: New simulation phase proposal
+description: Propose a new simulation phase extending the Ananke kernel
+labels: ["phase-proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read `CONTRIBUTING.md §8` before filling this out.
+        Get maintainer direction here before writing any code.
+
+  - type: input
+    id: phase_name
+    attributes:
+      label: Proposed phase name and number
+      placeholder: "Phase 68 — Acoustic Propagation"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Which architecture layer does this belong to?
+      options:
+        - "Layer 2 — The Simulation (physics/biology kernel)"
+        - "Layer 3 — The Individual (character generation/progression)"
+        - "Layer 4 — The Group (squad/army/emotional dynamics)"
+        - "Layer 5 — The Society (culture/myth/faction)"
+        - "Layer 6 — The World (polity/geopolitics/tech)"
+        - "Layer 7 — The Universe (cosmological)"
+        - "Layer 1 — The Interface (tooling/editors)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: concept
+    attributes:
+      label: Concept
+      description: What does this phase simulate? What real-world phenomenon does it model?
+    validations:
+      required: true
+
+  - type: textarea
+    id: physics_source
+    attributes:
+      label: Physics / scientific source
+      description: |
+        Cite at least one peer-reviewed or authoritative source for the model.
+        This is a non-negotiable requirement (see CONTRIBUTING.md §3).
+    validations:
+      required: true
+
+  - type: textarea
+    id: api
+    attributes:
+      label: Proposed public API (sketch)
+      description: |
+        List the functions and types you expect to export.
+        Assign each to a stability tier: Stable, Experimental, or Internal.
+      render: typescript
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Phase dependencies
+      description: Which existing phases does this build on?
+      placeholder: "Phase 22 (Campaign), Phase 56 (Disease)"
+
+  - type: dropdown
+    id: stability_tier
+    attributes:
+      label: Primary stability tier for new exports
+      options:
+        - "Experimental (recommended for new phases)"
+        - "Stable (requires maintainer sign-off before coding)"
+        - "Internal only"
+    validations:
+      required: true
+
+  - type: textarea
+    id: benchmark_impact
+    attributes:
+      label: Expected performance impact
+      description: |
+        Will this run on every tick? At polity-day rate? Only on demand?
+        Rough estimate of overhead per tick at 100 entities.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-coding checklist
+      options:
+        - label: I have read CONTRIBUTING.md §8 (Proposing a new simulation phase)
+        - label: I have a peer-reviewed source for the model
+        - label: I understand the fixed-point and determinism requirements
+        - label: I am prepared to write tests meeting the coverage thresholds

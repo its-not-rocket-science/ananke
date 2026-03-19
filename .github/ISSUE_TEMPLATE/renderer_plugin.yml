@@ -1,0 +1,86 @@
+name: Renderer plugin listing
+description: Request listing as an official Ananke companion renderer plugin
+labels: ["renderer-plugin"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read `CONTRIBUTING.md §9` before filling this out.
+        Plugins live in separate companion repositories and use only the Stable and
+        Experimental API tiers.  This issue is for listing, not for hosting code here.
+
+  - type: input
+    id: plugin_name
+    attributes:
+      label: Plugin / repository name
+      placeholder: "ananke-godot-reference"
+    validations:
+      required: true
+
+  - type: input
+    id: repo_url
+    attributes:
+      label: Repository URL
+    validations:
+      required: true
+
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Target game engine
+      options:
+        - "Godot 4"
+        - "Unity 6"
+        - "Unity 2022 LTS"
+        - "Unreal Engine 5"
+        - "Bevy (Rust)"
+        - "Custom / other"
+    validations:
+      required: true
+
+  - type: input
+    id: min_ananke
+    attributes:
+      label: Minimum Ananke version supported
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: interpolation
+    attributes:
+      label: Tick-rate interpolation strategy
+      description: How does the plugin handle 20 Hz sim → renderer frame rate?
+      options:
+        - "Linear interpolation between snapshots"
+        - "Extrapolation from velocity"
+        - "Snap (no interpolation)"
+        - "Custom (describe in notes)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: api_compliance
+    attributes:
+      label: API compliance
+      options:
+        - label: Plugin uses `extractRigSnapshots()` for all entity state extraction
+          required: true
+        - label: Plugin does not access `Entity` fields beyond Stable-tier fields directly
+          required: true
+        - label: Plugin README documents minimum Ananke version, engine version, interpolation strategy, and animation state machine wiring
+          required: true
+        - label: Plugin includes a self-contained demo scene (at minimum — two entities, one fight)
+          required: true
+
+  - type: textarea
+    id: animation_states
+    attributes:
+      label: Animation states supported
+      description: List the `AnimationHints` states the plugin handles (idle, walk, attack, prone, dead, …)
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
+      description: Known limitations, roadmap, or anything else

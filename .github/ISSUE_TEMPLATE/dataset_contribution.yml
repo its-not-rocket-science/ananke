@@ -1,0 +1,98 @@
+name: Dataset contribution
+description: Propose a new empirical dataset for the validation framework
+labels: ["dataset", "validation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Read `docs/dataset-contribution.md` before filling this out.
+        Datasets must have a peer-reviewed or reputable source, n ≥ 10 observations,
+        and SI-convertible units.
+
+  - type: input
+    id: dataset_name
+    attributes:
+      label: Dataset name
+      placeholder: "Human Peak Anaerobic Power (Wingate)"
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: Source (DOI or URL)
+      placeholder: "https://doi.org/10.xxxx/..."
+    validations:
+      required: true
+
+  - type: input
+    id: n
+    attributes:
+      label: Sample size (n)
+      placeholder: "42"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: population
+    attributes:
+      label: Population type
+      options:
+        - "General adult"
+        - "Elite / professional athlete"
+        - "Military"
+        - "Clinical / patient"
+        - "Animal"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: metric
+    attributes:
+      label: What metric does this measure?
+      description: |
+        Describe what physical quantity is measured and which Ananke attribute or
+        simulation output it maps to (e.g. "peak anaerobic power → peakPower_W").
+    validations:
+      required: true
+
+  - type: input
+    id: unit
+    attributes:
+      label: Unit (SI preferred)
+      placeholder: "W (watts)"
+    validations:
+      required: true
+
+  - type: input
+    id: mean
+    attributes:
+      label: Mean value
+      placeholder: "2135"
+
+  - type: input
+    id: ci
+    attributes:
+      label: 95% CI or SD (if available)
+      placeholder: "±320"
+
+  - type: dropdown
+    id: licence
+    attributes:
+      label: Data licence
+      options:
+        - "CC0 / public domain"
+        - "CC BY"
+        - "CC BY-SA"
+        - "Open access (journal)"
+        - "Summary statistics from paper (not raw data)"
+        - "Other (explain in notes)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
+      description: Conditions, exclusion criteria, or anything else relevant

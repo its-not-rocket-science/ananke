@@ -1,0 +1,63 @@
+name: Bug report
+description: Report incorrect or non-deterministic simulation output
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing a bug, confirm:
+        - You are using the latest release
+        - The same seed + same inputs produces the wrong result consistently
+        - The issue is in `src/` not in a `tools/` script or example
+
+  - type: input
+    id: version
+    attributes:
+      label: Ananke version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What went wrong? What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: |
+        A self-contained TypeScript snippet (< 30 lines) that reproduces the issue.
+        Include the seed and the unexpected output.
+      render: typescript
+    validations:
+      required: true
+
+  - type: input
+    id: seed
+    attributes:
+      label: Seed that triggers the bug
+      placeholder: "42"
+
+  - type: dropdown
+    id: determinism
+    attributes:
+      label: Is the output deterministic for the failing seed?
+      description: Same code + same seed → same wrong output every run?
+      options:
+        - "Yes — same wrong output every run (logic bug)"
+        - "No — output differs between runs (non-determinism bug)"
+        - "Not sure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node version, OS, relevant package versions
+      placeholder: "Node 22.x, Windows 11"
