@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Culture Forge</title>
+<style>
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3245;--text:#e0e4f0;
+    --muted:#7a81a0;--pass:#22c55e;--fail:#ef4444;--accent:#6366f1;--warn:#f59e0b;--cyan:#22d3ee;
+    --amber:#f59e0b;--rose:#f43f5e;--emerald:#10b981;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:ui-monospace,"Cascadia Code",Menlo,monospace;font-size:13px;padding:1.5rem}
+  h1{font-size:1.3rem;margin-bottom:.2rem}
+  .sub{color:var(--muted);font-size:.82rem;margin-bottom:1.5rem}
+  /* Tabs */
+  .tabs{display:flex;gap:.25rem;margin-bottom:1rem;border-bottom:1px solid var(--border);padding-bottom:0}
+  .tab{background:transparent;border:1px solid transparent;border-bottom:none;border-radius:4px 4px 0 0;color:var(--muted);cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:.4rem .9rem;transition:all .12s}
+  .tab.active{background:var(--surface);border-color:var(--border);color:var(--text)}
+  .tab:hover:not(.active){color:var(--text)}
+  .panel{display:none}.panel.active{display:block}
+  /* Fields */
+  label{display:block;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem}
+  input[type=text],input[type=number],select{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:13px;padding:.3rem .5rem;outline:none}
+  input:focus,select:focus{border-color:var(--accent)}
+  input[type=range]{-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;height:4px;outline:none;width:100%;cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer}
+  .field{display:flex;flex-direction:column;gap:.25rem}
+  .row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;align-items:flex-end}
+  .w80{width:80px}.w120{width:120px}.w160{width:160px}.w200{width:200px}.grow{flex:1}
+  /* Buttons */
+  .btn{background:var(--accent);border:none;border-radius:4px;color:#fff;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;padding:.35rem .75rem;transition:opacity .1s}
+  .btn:hover{opacity:.85}.btn.sm{font-size:11px;padding:.2rem .5rem}
+  .btn.sec{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+  /* Slider rows */
+  .slider-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem 1.5rem;margin-bottom:1rem}
+  .slider-row{display:flex;flex-direction:column;gap:.25rem}
+  .slider-header{display:flex;justify-content:space-between;align-items:center}
+  .slider-name{color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+  .slider-val{font-size:.78rem;font-weight:600;min-width:55px;text-align:right}
+  .slider-val.pos{color:var(--pass)}
+  .slider-val.neg{color:var(--rose)}
+  .slider-val.neu{color:var(--cyan)}
+  /* Taboo grid */
+  .taboo-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem}
+  .taboo-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.65rem .85rem}
+  .taboo-header{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem}
+  .taboo-toggle{cursor:pointer;width:16px;height:16px;accent-color:var(--accent)}
+  .taboo-name{font-size:.8rem;font-weight:600;color:var(--text)}
+  .taboo-desc{color:var(--muted);font-size:.72rem;margin-bottom:.5rem}
+  .taboo-severity{display:flex;flex-direction:column;gap:.2rem;opacity:.4;pointer-events:none;transition:opacity .15s}
+  .taboo-severity.active{opacity:1;pointer-events:auto}
+  /* Myth grid */
+  .myth-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1rem}
+  .myth-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.75rem}
+  .myth-icon{font-size:1.4rem;margin-bottom:.3rem;text-align:center}
+  .myth-name{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--warn);margin-bottom:.2rem;text-align:center}
+  .myth-desc{color:var(--muted);font-size:.7rem;margin-bottom:.5rem;text-align:center;min-height:2.5em}
+  .myth-bias-val{color:var(--accent);font-size:.85rem;font-weight:700;text-align:center;margin-top:.25rem}
+  /* Diplo matrix */
+  .compat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+  .compat-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.65rem .75rem}
+  .compat-name{color:var(--warn);font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem}
+  .compat-val{color:var(--accent);font-size:.9rem;font-weight:700;text-align:center}
+  /* Section headers */
+  .sec-head{color:var(--warn);font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:1rem 0 .5rem}
+  /* Stats bar */
+  .stats{background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;gap:1.5rem;margin-bottom:1rem;padding:.75rem 1rem;flex-wrap:wrap}
+  .stat{display:flex;flex-direction:column;gap:.1rem}
+  .stat-val{font-size:1.1rem;font-weight:700;color:var(--cyan)}
+  .stat-label{color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em}
+  /* Output */
+  textarea{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:#a5f3fc;font-family:inherit;font-size:12px;height:460px;line-height:1.5;padding:.5rem;resize:vertical;width:100%}
+  .copy-row{display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end}
+  hr{border:none;border-top:1px solid var(--border);margin:1.25rem 0}
+  .hint{color:var(--muted);font-size:.78rem;margin-top:.3rem;margin-bottom:.75rem}
+  .section-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:1rem 1.25rem;margin-bottom:1rem}
+  .preset-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+  .preset-label{color:var(--muted);font-size:.75rem;margin-right:.25rem}
+</style>
+</head>
+<body>
+
+<h1>Culture Forge</h1>
+<p class="sub">Design a culture's values, taboos, myth predispositions, and diplomacy modifiers.
+Generates a <code>CultureProfile</code> TypeScript constant ready to paste into <code>src/</code>.</p>
+
+<div class="row">
+  <div class="field w200"><label>Culture name</label><input id="cultureName" value="Iron Clans" oninput="regen()"></div>
+  <div class="field w160"><label>Identifier (camelCase)</label><input id="cultureId" value="ironClans" oninput="regen()"></div>
+  <div class="field" style="align-self:flex-end">
+    <select id="template" onchange="loadTemplate(this.value)" style="width:180px">
+      <option value="">— Load preset —</option>
+      <option value="warrior">Warrior Culture</option>
+      <option value="mercantile">Mercantile Republic</option>
+      <option value="theocracy">Theocracy</option>
+      <option value="nomadic">Nomadic Tribe</option>
+    </select>
+  </div>
+</div>
+
+<!-- Summary stats -->
+<div class="stats">
+  <div class="stat"><span class="stat-val" id="stat-cohesion">—</span><span class="stat-label">Cohesion</span></div>
+  <div class="stat"><span class="stat-val" id="stat-militarism">—</span><span class="stat-label">Militarism</span></div>
+  <div class="stat"><span class="stat-val" id="stat-openness">—</span><span class="stat-label">Openness</span></div>
+  <div class="stat"><span class="stat-val" id="stat-taboos">0</span><span class="stat-label">Active taboos</span></div>
+  <div class="stat"><span class="stat-val" id="stat-dominant-myth">—</span><span class="stat-label">Dominant myth</span></div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('values')">Cultural Values</button>
+  <button class="tab" onclick="showTab('taboos')">Taboos</button>
+  <button class="tab" onclick="showTab('myths')">Myth Predispositions</button>
+  <button class="tab" onclick="showTab('diplo')">Diplomacy Modifiers</button>
+  <button class="tab" onclick="showTab('output')">Generated Code</button>
+</div>
+
+<!-- ── Tab 1: Cultural Values ────────────────────────────────────────────── -->
+<div id="tab-values" class="panel active">
+  <p class="hint">Each dimension runs −1.0 (strongly opposed) to +1.0 (strongly emphasised).
+  0 = culturally neutral. Values influence myth generation, faction standing, and AI decision weighting.</p>
+
+  <div class="sec-head">Martial & Social Order</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Martial Honour</span><span class="slider-val neu" id="sv-martialHonour">0.0</span></div>
+      <input type="range" id="sl-martialHonour" min="-100" max="100" step="5" value="0" oninput="valUpdate('martialHonour',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Hierarchy &amp; Rank</span><span class="slider-val neu" id="sv-hierarchyRank">0.0</span></div>
+      <input type="range" id="sl-hierarchyRank" min="-100" max="100" step="5" value="0" oninput="valUpdate('hierarchyRank',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Communal Loyalty</span><span class="slider-val neu" id="sv-communalLoyalty">0.0</span></div>
+      <input type="range" id="sl-communalLoyalty" min="-100" max="100" step="5" value="0" oninput="valUpdate('communalLoyalty',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Individual Glory</span><span class="slider-val neu" id="sv-individualGlory">0.0</span></div>
+      <input type="range" id="sl-individualGlory" min="-100" max="100" step="5" value="0" oninput="valUpdate('individualGlory',this.value)">
+    </div>
+  </div>
+
+  <div class="sec-head">Knowledge & Craft</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Scholarly Pursuit</span><span class="slider-val neu" id="sv-scholarlyPursuit">0.0</span></div>
+      <input type="range" id="sl-scholarlyPursuit" min="-100" max="100" step="5" value="0" oninput="valUpdate('scholarlyPursuit',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Craft Mastery</span><span class="slider-val neu" id="sv-craftMastery">0.0</span></div>
+      <input type="range" id="sl-craftMastery" min="-100" max="100" step="5" value="0" oninput="valUpdate('craftMastery',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Ancestor Veneration</span><span class="slider-val neu" id="sv-ancestorVeneration">0.0</span></div>
+      <input type="range" id="sl-ancestorVeneration" min="-100" max="100" step="5" value="0" oninput="valUpdate('ancestorVeneration',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Innovation Embrace</span><span class="slider-val neu" id="sv-innovationEmbrace">0.0</span></div>
+      <input type="range" id="sl-innovationEmbrace" min="-100" max="100" step="5" value="0" oninput="valUpdate('innovationEmbrace',this.value)">
+    </div>
+  </div>
+
+  <div class="sec-head">Economy & Religion</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Commercial Trade</span><span class="slider-val neu" id="sv-commercialTrade">0.0</span></div>
+      <input type="range" id="sl-commercialTrade" min="-100" max="100" step="5" value="0" oninput="valUpdate('commercialTrade',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Piety &amp; Ritual</span><span class="slider-val neu" id="sv-pietyRitual">0.0</span></div>
+      <input type="range" id="sl-pietyRitual" min="-100" max="100" step="5" value="0" oninput="valUpdate('pietyRitual',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Land &amp; Territory</span><span class="slider-val neu" id="sv-landTerritory">0.0</span></div>
+      <input type="range" id="sl-landTerritory" min="-100" max="100" step="5" value="0" oninput="valUpdate('landTerritory',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Egalitarianism</span><span class="slider-val neu" id="sv-egalitarianism">0.0</span></div>
+      <input type="range" id="sl-egalitarianism" min="-100" max="100" step="5" value="0" oninput="valUpdate('egalitarianism',this.value)">
+    </div>
+  </div>
+</div>
+
+<!-- ── Tab 2: Taboos ──────────────────────────────────────────────────────── -->
+<div id="tab-taboos" class="panel">
+  <p class="hint">Active taboos add penalties to faction standing and AI negotiation success when violated.
+  Severity (1–5): 1 = minor social stigma, 3 = serious offence, 5 = blood feud / exile.</p>
+  <div class="taboo-grid" id="tabooGrid">
+    <!-- Populated by JS -->
+  </div>
+</div>
+
+<!-- ── Tab 3: Myth Predispositions ───────────────────────────────────────── -->
+<div id="tab-myths" class="panel">
+  <p class="hint">Bias (0 to +1.0) sets how likely this culture is to generate or believe each myth archetype.
+  0 = neutral probability. 1.0 = strongly predisposed. Connects to Phase 66 (Mythology &amp; Oral Tradition).</p>
+  <div class="myth-grid" id="mythGrid">
+    <!-- Populated by JS -->
+  </div>
+  <div class="section-card">
+    <div class="sec-head" style="margin-top:0">Myth generation parameters</div>
+    <div class="slider-grid">
+      <div class="slider-row">
+        <div class="slider-header"><span class="slider-name">Myth frequency (per generation)</span><span class="slider-val neu" id="sv-mythFrequency">3</span></div>
+        <input type="range" id="sl-mythFrequency" min="0" max="10" step="1" value="3" oninput="paramUpdate('mythFrequency',this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header"><span class="slider-name">Belief persistence (generations)</span><span class="slider-val neu" id="sv-beliefPersistence">4</span></div>
+        <input type="range" id="sl-beliefPersistence" min="1" max="20" step="1" value="4" oninput="paramUpdate('beliefPersistence',this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header"><span class="slider-name">Cross-cultural adoption rate (%)</span><span class="slider-val neu" id="sv-crossCulturalAdoption">20</span></div>
+        <input type="range" id="sl-crossCulturalAdoption" min="0" max="100" step="5" value="20" oninput="paramUpdate('crossCulturalAdoption',this.value)">
+      </div>
+      <div class="slider-row">
+        <div class="slider-header"><span class="slider-name">Distortion per retelling (%)</span><span class="slider-val neu" id="sv-distortionRate">15</span></div>
+        <input type="range" id="sl-distortionRate" min="0" max="100" step="5" value="15" oninput="paramUpdate('distortionRate',this.value)">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tab 4: Diplomacy Modifiers ────────────────────────────────────────── -->
+<div id="tab-diplo" class="panel">
+  <p class="hint">Cultural alignment modifiers applied to faction standing and negotiation checks when two cultures interact.
+  Computed from value-dimension overlap. Positive = cultural affinity bonus; negative = friction penalty.</p>
+
+  <div class="sec-head">Compatibility with preset culture types</div>
+  <div class="compat-grid" id="compatGrid">
+    <!-- Populated by JS -->
+  </div>
+
+  <hr>
+  <div class="sec-head">Negotiation modifiers (applied per interaction type)</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Alliance formation bias</span><span class="slider-val neu" id="sv-allianceBias">0.0</span></div>
+      <input type="range" id="sl-allianceBias" min="-100" max="100" step="5" value="0" oninput="diploUpdate('allianceBias',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Trade agreement bias</span><span class="slider-val neu" id="sv-tradeBias">0.0</span></div>
+      <input type="range" id="sl-tradeBias" min="-100" max="100" step="5" value="0" oninput="diploUpdate('tradeBias',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Subjugation resistance</span><span class="slider-val neu" id="sv-subjugationResistance">0.0</span></div>
+      <input type="range" id="sl-subjugationResistance" min="-100" max="100" step="5" value="0" oninput="diploUpdate('subjugationResistance',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Tribute acceptance threshold</span><span class="slider-val neu" id="sv-tributeThreshold">0.0</span></div>
+      <input type="range" id="sl-tributeThreshold" min="-100" max="100" step="5" value="0" oninput="diploUpdate('tributeThreshold',this.value)">
+    </div>
+  </div>
+
+  <div class="sec-head">Warfare disposition</div>
+  <div class="slider-grid">
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Declaration threshold (lower = trigger-happy)</span><span class="slider-val neu" id="sv-warThreshold">0.0</span></div>
+      <input type="range" id="sl-warThreshold" min="-100" max="100" step="5" value="0" oninput="diploUpdate('warThreshold',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Surrender acceptance</span><span class="slider-val neu" id="sv-surrenderAcceptance">0.0</span></div>
+      <input type="range" id="sl-surrenderAcceptance" min="-100" max="100" step="5" value="0" oninput="diploUpdate('surrenderAcceptance',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Hostage / ransom culture</span><span class="slider-val neu" id="sv-ransomCulture">0.0</span></div>
+      <input type="range" id="sl-ransomCulture" min="-100" max="100" step="5" value="0" oninput="diploUpdate('ransomCulture',this.value)">
+    </div>
+    <div class="slider-row">
+      <div class="slider-header"><span class="slider-name">Ethnic/clan exclusivity</span><span class="slider-val neu" id="sv-exclusivity">0.0</span></div>
+      <input type="range" id="sl-exclusivity" min="-100" max="100" step="5" value="0" oninput="diploUpdate('exclusivity',this.value)">
+    </div>
+  </div>
+</div>
+
+<!-- ── Tab 5: Generated Code ─────────────────────────────────────────────── -->
+<div id="tab-output" class="panel">
+  <p class="hint" style="margin-bottom:.5rem">
+    Copy this block and paste into <code>src/culture-profiles.ts</code> (or a new file).
+    Pass <code>cultureProfile</code> to <code>generateMythForCulture()</code>,
+    <code>deriveFactionStandingMod()</code>, or the Polity constructor.
+  </p>
+  <textarea id="output" readonly spellcheck="false"></textarea>
+  <div class="copy-row">
+    <button class="btn sec sm" onclick="copyCode()">Copy to clipboard</button>
+  </div>
+</div>
+
+<script>
+// ── State ───────────────────────────────────────────────────────────────────
+
+const VALUES_KEYS = [
+  'martialHonour','hierarchyRank','communalLoyalty','individualGlory',
+  'scholarlyPursuit','craftMastery','ancestorVeneration','innovationEmbrace',
+  'commercialTrade','pietyRitual','landTerritory','egalitarianism',
+];
+
+const vals = {};
+VALUES_KEYS.forEach(k => { vals[k] = 0; });
+
+const TABOO_DEFS = [
+  { id:'betrayal',         name:'Betrayal',          desc:'Betraying allies, breaking sworn oaths' },
+  { id:'kinslaying',       name:'Kinslaying',         desc:'Killing members of own clan or family' },
+  { id:'cowardice',        name:'Cowardice',          desc:'Fleeing battle, refusing an honourable duel' },
+  { id:'defilingDead',     name:'Defiling the Dead',  desc:'Desecrating enemy or ancestor remains' },
+  { id:'tradingEnemies',   name:'Trading with Enemies',desc:'Commerce with declared foes or outcasts' },
+  { id:'blasphemy',        name:'Blasphemy',          desc:'Insulting sacred figures, breaking ritual prohibitions' },
+  { id:'cannibalism',      name:'Cannibalism',        desc:'Consuming human flesh (outside ritual context)' },
+  { id:'enslavingKin',     name:'Enslaving Kin',      desc:'Reducing own people to thralldom' },
+  { id:'oathbreaking',     name:'Oath-breaking',      desc:'Violating a sworn public promise' },
+  { id:'poisoning',        name:'Poisoning',          desc:'Use of toxins in combat or assassination' },
+];
+const taboos = {};
+TABOO_DEFS.forEach(t => { taboos[t.id] = { active: false, severity: 3 }; });
+
+const MYTH_DEFS = [
+  { id:'hero',        name:'Hero',        icon:'⚔️',  desc:'Champion rises to save people from existential threat' },
+  { id:'monster',     name:'Monster',     icon:'🐉',  desc:'Terrible creature that must be appeased or slain' },
+  { id:'great_plague',name:'Great Plague',icon:'💀',  desc:'Divine punishment or natural catastrophe, mass suffering' },
+  { id:'divine_wrath',name:'Divine Wrath',icon:'⚡',  desc:'Gods punish hubris or impiety with calamity' },
+  { id:'golden_age',  name:'Golden Age',  icon:'🌅',  desc:'Remembered era of perfection, lost and yearned for' },
+  { id:'trickster',   name:'Trickster',   icon:'🎭',  desc:'Cunning figure who subverts order, reveals truth through chaos' },
+];
+const mythBias = {};
+MYTH_DEFS.forEach(m => { mythBias[m.id] = 0; });
+
+const mythParams = { mythFrequency: 3, beliefPersistence: 4, crossCulturalAdoption: 20, distortionRate: 15 };
+
+const diplo = {
+  allianceBias: 0, tradeBias: 0, subjugationResistance: 0, tributeThreshold: 0,
+  warThreshold: 0, surrenderAcceptance: 0, ransomCulture: 0, exclusivity: 0,
+};
+
+const PRESET_CULTURES = [
+  { id:'warrior',    name:'Warrior Culture', vals:{ martialHonour:0.9, hierarchyRank:0.6, communalLoyalty:0.5, individualGlory:0.7, scholarlyPursuit:-0.3, commercialTrade:-0.2, pietyRitual:0.3 } },
+  { id:'mercantile', name:'Mercantile Republic', vals:{ commercialTrade:0.9, egalitarianism:0.5, innovationEmbrace:0.6, scholarlyPursuit:0.4, martialHonour:-0.2, hierarchyRank:-0.3 } },
+  { id:'theocracy',  name:'Theocracy', vals:{ pietyRitual:1.0, ancestorVeneration:0.7, hierarchyRank:0.8, egalitarianism:-0.6, innovationEmbrace:-0.5, commercialTrade:-0.1 } },
+  { id:'nomadic',    name:'Nomadic Tribe', vals:{ communalLoyalty:0.8, landTerritory:0.6, martialHonour:0.5, individualGlory:0.4, hierarchyRank:-0.2, scholarlyPursuit:-0.4 } },
+];
+
+const TEMPLATES = {
+  warrior: {
+    vals: { martialHonour:80, hierarchyRank:60, communalLoyalty:50, individualGlory:70,
+            scholarlyPursuit:-30, craftMastery:20, ancestorVeneration:40, innovationEmbrace:-10,
+            commercialTrade:-20, pietyRitual:30, landTerritory:50, egalitarianism:-20 },
+    taboos: { betrayal:{active:true,severity:5}, kinslaying:{active:true,severity:4}, cowardice:{active:true,severity:4}, oathbreaking:{active:true,severity:3} },
+    myths: { hero:0.9, monster:0.6, divine_wrath:0.5, golden_age:0.4, great_plague:0.3, trickster:0.2 },
+    params: { mythFrequency:4, beliefPersistence:6, crossCulturalAdoption:15, distortionRate:20 },
+    diplo: { allianceBias:-20, tradeBias:-20, subjugationResistance:60, tributeThreshold:-40, warThreshold:40, surrenderAcceptance:-30, ransomCulture:50, exclusivity:40 },
+  },
+  mercantile: {
+    vals: { martialHonour:-20, hierarchyRank:-30, communalLoyalty:20, individualGlory:30,
+            scholarlyPursuit:40, craftMastery:60, ancestorVeneration:10, innovationEmbrace:60,
+            commercialTrade:90, pietyRitual:-10, landTerritory:20, egalitarianism:50 },
+    taboos: { tradingEnemies:{active:false,severity:2}, oathbreaking:{active:true,severity:5}, betrayal:{active:true,severity:4} },
+    myths: { trickster:0.7, golden_age:0.6, hero:0.4, great_plague:0.3, monster:0.2, divine_wrath:0.2 },
+    params: { mythFrequency:2, beliefPersistence:3, crossCulturalAdoption:45, distortionRate:10 },
+    diplo: { allianceBias:30, tradeBias:80, subjugationResistance:20, tributeThreshold:20, warThreshold:-30, surrenderAcceptance:40, ransomCulture:20, exclusivity:-40 },
+  },
+  theocracy: {
+    vals: { martialHonour:30, hierarchyRank:80, communalLoyalty:60, individualGlory:-20,
+            scholarlyPursuit:30, craftMastery:20, ancestorVeneration:70, innovationEmbrace:-50,
+            commercialTrade:-10, pietyRitual:100, landTerritory:40, egalitarianism:-60 },
+    taboos: { blasphemy:{active:true,severity:5}, defilingDead:{active:true,severity:4}, oathbreaking:{active:true,severity:4}, cowardice:{active:false,severity:2}, tradingEnemies:{active:true,severity:3} },
+    myths: { divine_wrath:1.0, great_plague:0.7, golden_age:0.8, hero:0.6, monster:0.5, trickster:0.1 },
+    params: { mythFrequency:5, beliefPersistence:10, crossCulturalAdoption:10, distortionRate:8 },
+    diplo: { allianceBias:20, tradeBias:0, subjugationResistance:50, tributeThreshold:-20, warThreshold:0, surrenderAcceptance:-10, ransomCulture:-20, exclusivity:60 },
+  },
+  nomadic: {
+    vals: { martialHonour:50, hierarchyRank:-20, communalLoyalty:80, individualGlory:40,
+            scholarlyPursuit:-40, craftMastery:30, ancestorVeneration:60, innovationEmbrace:20,
+            commercialTrade:20, pietyRitual:40, landTerritory:60, egalitarianism:30 },
+    taboos: { kinslaying:{active:true,severity:5}, betrayal:{active:true,severity:5}, cowardice:{active:true,severity:3}, enslavingKin:{active:true,severity:4} },
+    myths: { trickster:0.8, hero:0.7, monster:0.5, golden_age:0.6, great_plague:0.4, divine_wrath:0.3 },
+    params: { mythFrequency:3, beliefPersistence:4, crossCulturalAdoption:25, distortionRate:25 },
+    diplo: { allianceBias:0, tradeBias:40, subjugationResistance:70, tributeThreshold:-50, warThreshold:20, surrenderAcceptance:-20, ransomCulture:30, exclusivity:30 },
+  },
+};
+
+// ── Tab switching ────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((b,i) => {
+    const ids = ['values','taboos','myths','diplo','output'];
+    b.classList.toggle('active', ids[i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'output') regen();
+}
+
+// ── Init taboo grid ──────────────────────────────────────────────────────────
+function initTaboos() {
+  const grid = document.getElementById('tabooGrid');
+  grid.innerHTML = TABOO_DEFS.map(t => `
+    <div class="taboo-card" id="tc-${t.id}">
+      <div class="taboo-header">
+        <input type="checkbox" class="taboo-toggle" id="tb-${t.id}"
+          onchange="tabooToggle('${t.id}',this.checked)">
+        <span class="taboo-name">${t.name}</span>
+      </div>
+      <div class="taboo-desc">${t.desc}</div>
+      <div class="taboo-severity" id="tsev-${t.id}">
+        <div class="slider-header">
+          <span class="slider-name">Severity</span>
+          <span class="slider-val neu" id="tsv-${t.id}">3 — Serious offence</span>
+        </div>
+        <input type="range" min="1" max="5" step="1" value="3"
+          id="tsl-${t.id}" oninput="tabooSeverity('${t.id}',this.value)">
+      </div>
+    </div>`).join('');
+}
+
+function tabooToggle(id, checked) {
+  taboos[id].active = checked;
+  const sev = document.getElementById('tsev-' + id);
+  if (sev) sev.classList.toggle('active', checked);
+  regen();
+}
+
+const SEV_LABELS = ['','Minor stigma','Social disapproval','Serious offence','Major transgression','Blood feud / exile'];
+function tabooSeverity(id, val) {
+  taboos[id].severity = parseInt(val);
+  const el = document.getElementById('tsv-' + id);
+  if (el) el.textContent = val + ' — ' + SEV_LABELS[parseInt(val)];
+  regen();
+}
+
+// ── Init myth grid ───────────────────────────────────────────────────────────
+function initMyths() {
+  const grid = document.getElementById('mythGrid');
+  grid.innerHTML = MYTH_DEFS.map(m => `
+    <div class="myth-card">
+      <div class="myth-icon">${m.icon}</div>
+      <div class="myth-name">${m.name}</div>
+      <div class="myth-desc">${m.desc}</div>
+      <input type="range" min="0" max="100" step="5" value="0" style="width:100%;margin:.3rem 0"
+        id="msl-${m.id}" oninput="mythUpdate('${m.id}',this.value)">
+      <div class="myth-bias-val" id="msv-${m.id}">0.00</div>
+    </div>`).join('');
+}
+
+function mythUpdate(id, val) {
+  mythBias[id] = parseInt(val) / 100;
+  const el = document.getElementById('msv-' + id);
+  if (el) el.textContent = (parseInt(val) / 100).toFixed(2);
+  regen();
+}
+
+// ── Init compat grid ─────────────────────────────────────────────────────────
+function initCompat() {
+  const grid = document.getElementById('compatGrid');
+  grid.innerHTML = PRESET_CULTURES.map(c => `
+    <div class="compat-card">
+      <div class="compat-name">${c.name}</div>
+      <div class="compat-val" id="compat-${c.id}">—</div>
+    </div>`).join('');
+}
+
+function computeCompat(targetVals) {
+  // Dot-product similarity normalised to [-1, 1]
+  let dot = 0, magA = 0, magB = 0;
+  VALUES_KEYS.forEach(k => {
+    const a = (vals[k] || 0) / 100;
+    const b = targetVals[k] || 0;
+    dot += a * b;
+    magA += a * a;
+    magB += b * b;
+  });
+  if (magA === 0 || magB === 0) return 0;
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+}
+
+function updateCompat() {
+  PRESET_CULTURES.forEach(c => {
+    const score = computeCompat(c.vals);
+    const el = document.getElementById('compat-' + c.id);
+    if (!el) return;
+    const pct = Math.round(score * 100);
+    el.textContent = (pct >= 0 ? '+' : '') + pct + '%';
+    el.style.color = pct > 20 ? 'var(--pass)' : pct < -20 ? 'var(--rose)' : 'var(--cyan)';
+  });
+}
+
+// ── Value / diplo update helpers ─────────────────────────────────────────────
+function valUpdate(key, rawVal) {
+  const v = parseInt(rawVal);
+  vals[key] = v;
+  const el = document.getElementById('sv-' + key);
+  if (el) {
+    const f = (v / 100).toFixed(1);
+    el.textContent = (v > 0 ? '+' : '') + f;
+    el.className = 'slider-val ' + (v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu');
+  }
+  regen();
+}
+
+function paramUpdate(key, val) {
+  mythParams[key] = parseInt(val);
+  const el = document.getElementById('sv-' + key);
+  if (el) el.textContent = key === 'crossCulturalAdoption' || key === 'distortionRate' ? val + '%' : val;
+  regen();
+}
+
+function diploUpdate(key, rawVal) {
+  const v = parseInt(rawVal);
+  diplo[key] = v;
+  const el = document.getElementById('sv-' + key);
+  if (el) {
+    const f = (v / 100).toFixed(1);
+    el.textContent = (v > 0 ? '+' : '') + f;
+    el.className = 'slider-val ' + (v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu');
+  }
+  regen();
+}
+
+// ── Template loading ─────────────────────────────────────────────────────────
+function loadTemplate(name) {
+  if (!name) return;
+  const t = TEMPLATES[name];
+  if (!t) return;
+
+  // Values
+  VALUES_KEYS.forEach(k => {
+    const v = t.vals[k] !== undefined ? t.vals[k] : 0;
+    vals[k] = v;
+    const sl = document.getElementById('sl-' + k);
+    if (sl) sl.value = v;
+    valUpdate(k, v);
+  });
+
+  // Taboos
+  TABOO_DEFS.forEach(td => {
+    const cfg = t.taboos[td.id] || { active:false, severity:3 };
+    taboos[td.id] = { active: cfg.active, severity: cfg.severity };
+    const cb = document.getElementById('tb-' + td.id);
+    const sl = document.getElementById('tsl-' + td.id);
+    const sev = document.getElementById('tsev-' + td.id);
+    if (cb) cb.checked = cfg.active;
+    if (sl) sl.value = cfg.severity;
+    if (sev) sev.classList.toggle('active', cfg.active);
+    tabooSeverity(td.id, cfg.severity);
+  });
+
+  // Myths
+  MYTH_DEFS.forEach(m => {
+    const v = t.myths[m.id] !== undefined ? Math.round(t.myths[m.id] * 100) : 0;
+    mythBias[m.id] = v / 100;
+    const sl = document.getElementById('msl-' + m.id);
+    const sv = document.getElementById('msv-' + m.id);
+    if (sl) sl.value = v;
+    if (sv) sv.textContent = (v / 100).toFixed(2);
+  });
+
+  // Myth params
+  Object.keys(t.params).forEach(k => {
+    mythParams[k] = t.params[k];
+    const sl = document.getElementById('sl-' + k);
+    if (sl) sl.value = t.params[k];
+    paramUpdate(k, t.params[k]);
+  });
+
+  // Diplo
+  Object.keys(t.diplo).forEach(k => {
+    diplo[k] = t.diplo[k];
+    const sl = document.getElementById('sl-' + k);
+    if (sl) sl.value = t.diplo[k];
+    diploUpdate(k, t.diplo[k]);
+  });
+
+  document.getElementById('template').value = '';
+  regen();
+}
+
+// ── Summary stats update ─────────────────────────────────────────────────────
+function updateStats() {
+  // Cohesion = avg of communalLoyalty + hierarchyRank
+  const cohesion = ((vals.communalLoyalty + vals.hierarchyRank) / 200).toFixed(2);
+  // Militarism = martialHonour clamp 0..1
+  const militarism = (Math.max(0, vals.martialHonour) / 100).toFixed(2);
+  // Openness = innovationEmbrace + commercialTrade + scholarlyPursuit, avg
+  const openness = ((vals.innovationEmbrace + vals.commercialTrade + vals.scholarlyPursuit) / 300).toFixed(2);
+  // Active taboos
+  const activeTaboos = TABOO_DEFS.filter(t => taboos[t.id].active).length;
+  // Dominant myth
+  let domMyth = '—';
+  let maxBias = 0;
+  MYTH_DEFS.forEach(m => {
+    if (mythBias[m.id] > maxBias) { maxBias = mythBias[m.id]; domMyth = m.name; }
+  });
+
+  document.getElementById('stat-cohesion').textContent = cohesion;
+  document.getElementById('stat-militarism').textContent = militarism;
+  document.getElementById('stat-openness').textContent = openness;
+  document.getElementById('stat-taboos').textContent = activeTaboos;
+  document.getElementById('stat-dominant-myth').textContent = domMyth;
+
+  updateCompat();
+}
+
+// ── Code generation ──────────────────────────────────────────────────────────
+function fmtQ(v100) {
+  // v100 is integer -100..100, map to q() call or literal
+  const sign = v100 < 0 ? '-' : '';
+  const abs = Math.abs(v100);
+  if (abs === 0) return 'q(0)';
+  const whole = Math.floor(abs / 100);
+  const frac = abs % 100;
+  if (frac === 0) return `q(${sign}${whole})`;
+  return `q(${sign}${whole}.${frac < 10 ? '0' + frac : frac})`;
+}
+
+function regen() {
+  updateStats();
+  const name = document.getElementById('cultureName').value.trim() || 'MyCulture';
+  const id   = document.getElementById('cultureId').value.trim() || 'myCulture';
+  const constName = id.charAt(0).toUpperCase() + id.slice(1).replace(/[^a-zA-Z0-9_]/g,'');
+
+  const activeTabooList = TABOO_DEFS.filter(t => taboos[t.id].active);
+  const mythEntries = MYTH_DEFS.filter(m => mythBias[m.id] > 0);
+
+  let code = `import { q } from './units';\n\n`;
+  code += `// Generated by Culture Forge — https://ananke-docs/editors/culture-forge.html\n\n`;
+  code += `export const ${constName.toUpperCase()}_CULTURE: CultureProfile = {\n`;
+  code += `  id:   '${id}',\n`;
+  code += `  name: '${name}',\n\n`;
+
+  code += `  /** Cultural value dimensions — Q ∈ [−SCALE.Q, +SCALE.Q] */\n`;
+  code += `  values: {\n`;
+  VALUES_KEYS.forEach(k => {
+    code += `    ${k.padEnd(22)}: ${fmtQ(vals[k])},\n`;
+  });
+  code += `  },\n\n`;
+
+  if (activeTabooList.length > 0) {
+    code += `  /** Active taboos and their severity (1 = minor, 5 = blood feud) */\n`;
+    code += `  taboos: [\n`;
+    activeTabooList.forEach(t => {
+      code += `    { id: '${t.id.padEnd(18)}', severity: ${taboos[t.id].severity} },  // ${t.name}\n`;
+    });
+    code += `  ],\n\n`;
+  } else {
+    code += `  taboos: [],\n\n`;
+  }
+
+  code += `  /** Myth archetype predisposition biases — Q ∈ [0, SCALE.Q] */\n`;
+  code += `  mythBias: {\n`;
+  MYTH_DEFS.forEach(m => {
+    code += `    ${m.id.padEnd(14)}: ${fmtQ(Math.round(mythBias[m.id] * 100))},\n`;
+  });
+  code += `  },\n\n`;
+
+  code += `  /** Myth generation parameters */\n`;
+  code += `  mythParams: {\n`;
+  code += `    mythFrequency:          ${mythParams.mythFrequency},\n`;
+  code += `    beliefPersistence:      ${mythParams.beliefPersistence},\n`;
+  code += `    crossCulturalAdoption:  q(${(mythParams.crossCulturalAdoption / 100).toFixed(2)}),\n`;
+  code += `    distortionRate:         q(${(mythParams.distortionRate / 100).toFixed(2)}),\n`;
+  code += `  },\n\n`;
+
+  code += `  /** Diplomacy modifiers */\n`;
+  code += `  diplo: {\n`;
+  Object.keys(diplo).forEach(k => {
+    code += `    ${k.padEnd(26)}: ${fmtQ(diplo[k])},\n`;
+  });
+  code += `  },\n`;
+  code += `};\n`;
+
+  document.getElementById('output').value = code;
+}
+
+function copyCode() {
+  const ta = document.getElementById('output');
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy to clipboard'; }, 1500);
+  });
+}
+
+// ── Initialise ───────────────────────────────────────────────────────────────
+initTaboos();
+initMyths();
+initCompat();
+regen();
+</script>
+</body>
+</html>

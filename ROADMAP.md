@@ -5955,17 +5955,22 @@ Four built-in templates loaded from the template dropdown:
 
 ---
 
-### Culture Forge
+### Culture Forge — COMPLETE
 
-**Concept:** Extend the Species Forge to allow editing of cultural values, taboos, and myths.
-Users could define what a society considers "honourable" or "taboo," and these values would
-influence faction standing, diplomacy outcomes, and the generation of new myths by
-`compressMythsFromHistory`.  A warrior culture with a "death in battle is honourable" value
-would produce different myth archetypes than a mercantile culture with a "trade enriches all"
-value.
+**Delivered:** `docs/editors/culture-forge.html` — standalone HTML/JS editor, same dark-theme
+pattern as Species Forge.
+
+**What it does:**
+- **Tab 1 — Cultural Values**: 12 sliders across three groups (Martial & Social Order, Knowledge & Craft, Economy & Religion), each −1.0 to +1.0
+- **Tab 2 — Taboos**: 10 taboo types (betrayal, kinslaying, cowardice, defiling the dead, trading with enemies, blasphemy, cannibalism, enslaving kin, oath-breaking, poisoning); toggle + severity slider (1 minor → 5 blood feud)
+- **Tab 3 — Myth Predispositions**: Bias sliders for all 6 Phase 66 archetypes (hero, monster, great plague, divine wrath, golden age, trickster); myth generation parameters (frequency, belief persistence, cross-cultural adoption, distortion rate)
+- **Tab 4 — Diplomacy Modifiers**: Computed cosine-similarity compatibility against 4 preset culture types; manual sliders for alliance/trade/war/surrender/ransom/exclusivity biases
+- **Tab 5 — Generated Code**: Outputs a `CultureProfile` TypeScript constant with all dimensions as `q()` fixed-point calls
+- **4 presets**: Warrior Culture, Mercantile Republic, Theocracy, Nomadic Tribe
+- **Summary stats bar**: Cohesion, Militarism, Openness, Active Taboos, Dominant Myth
 
 **Ananke hooks:** Phase 66 (Generative Mythology), Phase 24 (faction standing), Phase 37
-(linguistic intelligence), Phase 45 (dialogue layer).  Would live in `docs/editors/culture-forge.html`.
+(linguistic intelligence), Phase 45 (dialogue layer). Linked from `docs/editors/index.html`.
 
 ---
 
