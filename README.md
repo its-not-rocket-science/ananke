@@ -30,6 +30,10 @@ Requires **Node ≥ 18**. TypeScript declarations are included — no `@types/` 
 The package is ESM-only and ships compiled JS + `.d.ts` files.  There are no runtime
 dependencies.
 
+> **New to Ananke?**  Start with the **[Programmer's Guide](docs/programmers-guide.md)** —
+> quick starts for all three adoption paths, core concepts, API reference, and worked code
+> examples.
+
 > **Versioning:** pin to a specific version in production.  The `0.x` series may include
 > minor-version breaking changes to Tier 2 (experimental) APIs; Tier 1 (Stable) APIs follow
 > full semver.  See [`STABLE_API.md`](STABLE_API.md) for the tier breakdown and
