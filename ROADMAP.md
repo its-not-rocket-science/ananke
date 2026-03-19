@@ -5974,19 +5974,20 @@ pattern as Species Forge.
 
 ---
 
-### Simulation Zoo / Ananke Archive
+### Simulation Zoo / Ananke Archive — COMPLETE
 
-**Concept:** A public website hosting pre-built, runnable scenarios — "Knight vs. Boxer",
-"Dragon's Breath", "The Blade Runner Test", "Mongol Plague" — where visitors can trigger
-simulations and see outcome distributions in real time (or pre-computed replays).
+**Delivered:** `tools/generate-zoo.ts` + `docs/zoo/index.html` — pre-computed scenario archive with a self-contained browser viewer.
 
-This serves two purposes: demonstration ("show, don't tell") and archive.  Over time, the
-archive would accumulate validated scenario outputs that researchers and world-builders could
-browse, filter by scenario type, and download as trace data.
+**What it does:**
+- `npm run generate-zoo` runs 5 scenarios and writes a standalone `docs/zoo/index.html` (no server required)
+- Sidebar lists all scenarios with category badges (combat / disease / squad) and outcome summaries
+- Detail panel shows: description, stats bar (entities, ticks, seed), entity health tracks (colour-coded grid showing consciousness or fatigue progression over every 20-tick snapshot), and a scrollable event log
+- Health colour coding: green → lime → amber → red → dark red → dead black
+- Events: hit detected (shock delta > 300), death, infection
+- **5 pre-built scenarios**: Knight vs Brawler, Two Knights (mirror match), Knight vs Pro Boxer, 3v3 Squad Battle, Pneumonic Plague (30-day epidemic, 5 villagers)
+- Disease scenario uses `spreadDisease` + `stepDiseaseForEntity` from Phase 56; all entity pairs checked each hour within airborne range
 
-**Ananke hooks:** `ReplayRecorder`, `serializeReplay`, `tools/arena.ts` scenario DSL,
-validation framework, Blade Runner test.  Would require a minimal server-side runner and a
-browser-based replay viewer.
+**Ananke hooks:** `stepWorld`, `buildWorldIndex`, `buildSpatialIndex`, `decideCommandsForEntity`, `spreadDisease`, `exposeToDisease`, `stepDiseaseForEntity`. Regenerate after physics changes with `npm run generate-zoo`.
 
 ---
 
