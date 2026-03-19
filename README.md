@@ -15,13 +15,37 @@ built on top of that foundation and can be adopted independently.
 
 ---
 
+## Installation
+
+```bash
+npm install @its-not-rocket-science/ananke
+```
+
+```typescript
+import { stepWorld, mkWorld, q, SCALE } from "@its-not-rocket-science/ananke";
+```
+
+Requires **Node ≥ 18**. TypeScript declarations are included — no `@types/` package needed.
+
+The package is ESM-only and ships compiled JS + `.d.ts` files.  There are no runtime
+dependencies.
+
+> **Versioning:** pin to a specific version in production.  The `0.x` series may include
+> minor-version breaking changes to Tier 2 (experimental) APIs; Tier 1 (Stable) APIs follow
+> full semver.  See [`STABLE_API.md`](STABLE_API.md) for the tier breakdown and
+> [`docs/versioning.md`](docs/versioning.md) for the upgrade policy.
+
+---
+
 ## Start here: three adoption paths
 
 Choose the path that matches your immediate need.  Ignore the rest until you need it.
 
 ### Path A — "I want a deterministic combat kernel"
 
-**Minimal modules:** `src/units.ts`, `src/sim/kernel.ts`, `src/presets.ts`, `src/weapons.ts`
+**Install:** `npm install @its-not-rocket-science/ananke`
+
+**Minimal imports:** `stepWorld`, `mkWorld`, `q`, `SCALE`, `generateIndividual`
 
 **30-minute quickstart:** Run `tools/vertical-slice.ts` (`npm run run:vertical-slice`).
 A Knight fights a Brawler across three seeds, producing a physics-grounded combat log.

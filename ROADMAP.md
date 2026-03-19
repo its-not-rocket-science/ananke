@@ -6068,41 +6068,31 @@ lead-time (WASM kernel).
 
 ---
 
-### CE-1 · npm Publish + Subpath Exports Map
+### CE-1 · npm Publish + Subpath Exports Map — **COMPLETE** (2026-03-19)
 
-**Problem:** `package.json` has `"private": true`.  Every companion project (renderer
-plugin, species pack, world UI) must either git-submodule Ananke or copy-paste dist files.
-The import paths (`../ananke/dist/src/units.js`) are fragile and undiscoverable.
+**Published as:** [`@its-not-rocket-science/ananke`](https://www.npmjs.com/package/@its-not-rocket-science/ananke)
 
-**Changes needed:**
-
-1. Remove `"private": true`.
-2. Add `"files": ["dist/src", "src"]` so the published package includes compiled JS, source
-   maps, and `.d.ts` declarations but not tools/ or test/.
-3. Add an `"exports"` field with clean subpath aliases:
-
-```json
-"exports": {
-  ".":           "./dist/src/index.js",
-  "./units":     "./dist/src/units.js",
-  "./archetypes":"./dist/src/archetypes.js",
-  "./equipment": "./dist/src/equipment.js",
-  "./campaign":  "./dist/src/campaign.js",
-  "./polity":    "./dist/src/polity.js",
-  "./replay":    "./dist/src/replay.js",
-  "./bridge":    "./dist/src/bridge/index.js",
-  "./sim":       "./dist/src/sim/kernel.js",
-  "./generate":  "./dist/src/generate.js",
-  "./types":     "./dist/src/sim/entity.js"
-}
+```bash
+npm install @its-not-rocket-science/ananke
 ```
 
-4. Create `src/index.ts` re-exporting all Tier 1 (Stable) API surface from `STABLE_API.md`.
-5. Run `npm publish --access public` (or scoped: `@ananke/core`).
+```typescript
+import { stepWorld, mkWorld, q, SCALE } from "@its-not-rocket-science/ananke";
+```
 
-**Impact:** companion projects can `npm install ananke` and import
-`import { stepWorld } from "ananke/sim"`.  Renderer bridges, species packs, and the world UI
-all become one-line installs.  Versions are pinnable.
+**What was done:**
+
+- Removed `"private": true`; renamed to scoped package `@its-not-rocket-science/ananke`
+- Added `"exports"` map with typed entry point (`"import"` + `"types"` condition)
+- Added `"files": ["dist/src", "CHANGELOG.md", "STABLE_API.md"]` — tools/ and examples/ excluded
+- Added `"engines": { "node": ">=18" }`, `"repository"`, `"keywords"`
+- Added `"prepublishOnly"` script: gates publish on full build + test suite pass
+- Published with `npm publish --access public` under the `@its-not-rocket-science` org
+
+**Impact:** companion projects can `npm install @its-not-rocket-science/ananke` and import
+from the stable entry point.  Renderer bridges, species packs, and the world UI all become
+one-line installs.  Versions are pinnable.  TypeScript declarations are included — no
+`@types/` package needed.
 
 ---
 
@@ -6326,7 +6316,7 @@ adopters should treat this as a source-pinned kernel, a versioned package, or bo
 - Update `docs/versioning.md` to state this unambiguously.
 - Update `CHANGELOG.md` header to match.
 - Add a one-paragraph "Which version do I use?" FAQ to the onboarding doc.
-- CE-1 (npm publish) is a dependency — resolve versioning before publishing to npm.
+- CE-1 (npm publish) — **resolved**: published as `@its-not-rocket-science/ananke` (2026-03-19).
 
 **Success criterion:** A first-time reader of `docs/versioning.md` can answer "what do I put in
 my package.json?" in under 60 seconds.

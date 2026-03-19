@@ -1,11 +1,35 @@
 {
-  "name": "ananke",
+  "name": "@its-not-rocket-science/ananke",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    }
+  },
+  "files": [
+    "dist/src",
+    "CHANGELOG.md",
+    "STABLE_API.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/its-not-rocket-science/ananke.git"
+  },
+  "keywords": [
+    "simulation", "physics", "combat", "rpg",
+    "deterministic", "fixed-point", "game-engine"
+  ],
   "scripts": {
+    "prepublishOnly": "npm run build && npm run test:coverage",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
