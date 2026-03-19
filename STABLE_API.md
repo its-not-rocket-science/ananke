@@ -1,23 +1,19 @@
 # Ananke — Stable API Reference
 
 This document defines the three stability tiers for Ananke's public API surface.
-Read the [versioning policy](#versioning-policy) before pinning a dependency.
+See [`docs/versioning.md`](docs/versioning.md) for the full versioning policy, upgrade
+cadence, and commit-hash pinning guide.
 
 ---
 
-## Versioning policy
+## Versioning policy (summary)
 
-Ananke follows **semantic versioning (semver)**:
+Ananke uses **semantic versioning (semver)** as its public contract.  Tier 1 exports
+will not break without a major version bump and migration guide.  See
+[`docs/versioning.md`](docs/versioning.md) for the complete policy.
 
-| Version change | Meaning |
-|---------------|---------|
-| Patch (`0.1.x`) | Bug fixes, documentation corrections, internal refactors that do not change observable output |
-| Minor (`0.x.0`) | Additive changes: new exports, new optional fields, new simulation phases.  **Stable-tier exports are not broken.** Experimental-tier exports may change with a `CHANGELOG.md` entry |
-| Major (`x.0.0`) | Breaking changes to stable-tier exports.  A migration guide accompanies every major bump |
-
-> The project is currently pre-1.0 (`0.1.0`).  Stable-tier exports will not break within the
-> `0.x` line without a minor-version bump and changelog entry.  The 1.0 release will lock the
-> stable tier fully under semver guarantees.
+Every export in `src/index.ts` is annotated with its tier via inline comments.
+The tables below list key symbols by tier.
 
 ---
 
