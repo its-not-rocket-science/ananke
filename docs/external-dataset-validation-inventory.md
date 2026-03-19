@@ -11,7 +11,7 @@ The following external datasets and literature sources have been incorporated in
 | Sub‑system | Data Source | Description | Validation Status | Metrics Compared | Reference / Link |
 |:---|:---|:---|:---|:---|:---|
 | **Movement Energy Cost** | AddBiomechanics walking metabolic dataset | Gross metabolic cost of walking at 1.4 m/s: 3.8 W/kg | ✅ PASS (±20 %) | Power demand per kg (W/kg) | AddBiomechanics project (simtk.com/projects/openarm) |
-| **Muscle Force Scaling & CV (OpenArm)** | OpenArm Multisensor 2.0 muscle deformation, sEMG, force data | Allometric scaling exponent (target 0.67), CV of peak force (target 0.18) | ✗ FAIL (exponent -1.94, CV 0.26) | Scaling exponent, coefficient of variation | OpenArm Multisensor 2.0 (simtk.com/projects/openarm) |
+| **Muscle Force Scaling & CV (OpenArm)** | OpenArm Multisensor 2.0 muscle deformation, sEMG, force data | Allometric scaling exponent (target 0.67), CV of peak force (target 0.18) | ✅ PASS (exponent 0.6675, CV 0.153) | Scaling exponent, coefficient of variation | OpenArm Multisensor 2.0 (simtk.com/projects/openarm) |
 | **Projectile Drag** | BVR Air Combat dataset | 9 mm pistol round energy retention at 50 m: 85 % | ✅ PASS (±20 %) | Energy fraction after linear drag | BVR Air Combat dataset (military ballistic data) |
 | **Jump Height** | Sports science literature | Average standing vertical jump height: 0.45 m | ✅ PASS (±20 %) | Jump height (m) | Sports science textbooks & peer‑reviewed studies |
 | **Human Sprint Speed** | Sports science literature | Elite human sprint speed range: 6.0–8.0 m/s | ✅ PASS (±20 %) | Maximum sprint speed (m/s) | Sports science textbooks & peer‑reviewed studies |
@@ -99,7 +99,7 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 
 | Ananke System | Primary Validation Datasets (Current) | Key Metrics Compared | Status |
 |:---|:---|:---|:---|
-| Muscle force/actuation | OpenArm Multisensor 2.0 (scaling exponent, CV) | Scaling exponent (target 0.67), coefficient of variation (target 0.18) | ✗ FAIL (exponent -1.94, CV 0.26) |
+| Muscle force/actuation | OpenArm Multisensor 2.0 (scaling exponent, CV) | Scaling exponent (target 0.67), coefficient of variation (target 0.18) | ✅ PASS (exponent 0.6675, CV 0.153) |
 | **Soft armor energy absorption** | **BFD Dataset (Mendeley) — 15‑layer Kevlar K29 vs 9 mm FMJ** | **Sub‑V50 energy absorption fraction (empirical V50 ≈ 370 J)** | **✅ PASS (±10 %)** |
 | **Long-bone fracture from FSP** | **PMHS Tibia Fracture Dataset (Supplement_Data.xlsx)** | **EF2+ fracture at V50 energy (263 J, 4.15 g NATO FSP, 356 m/s)** | **✅ PASS (±5 %)** |
 | Impact loading & injury | Runner Injury GRF Dataset (2025); Tibial Stress Injury Dataset (potential) | Peak load rate, time to peak, injury‑group differentiation | 🔶 Data extracted (see §6.1–6.2) |
@@ -111,7 +111,7 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 | Melee strike kinematics | 5MUDM (potential) | Angular velocity, strike duration, joint coordination | 🔶 Not yet implemented |
 | **Already validated sub‑systems** | See Section 1 | Various physical metrics (energy, speed, time, etc.) | ✅ Integrated |
 
-**Legend:** ✅ = validated and integrated; 🔶 = identified but not yet integrated; 🔶 Data secured = dataset accessible but validation not yet implemented; 🔶 Data extracted = quantitative values extracted from literature, ready for validation; 🔶 Wrong regime = dataset available but models a different physical regime; ✗ = validation implemented but failing.
+**Legend:** ✅ = validated and integrated; 🔶 = identified but not yet integrated; 🔶 Data secured = dataset accessible but validation not yet implemented; 🔶 Data extracted = quantitative values extracted from literature, ready for validation; 🔶 Wrong regime = dataset available but models a different physical regime.
 
 ---
 

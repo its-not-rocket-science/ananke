@@ -61,3 +61,5 @@ export * from "./sim/impairment.js"; // low-level impairment accumulators
 export * from "./sim/indexing.js";   // SpatialIndex internals
 export * from "./sim/tuning.js";     // kernel tuning constants (may be adjusted)
 export * from "./sim/testing.js";    // mkHumanoidEntity() and other test helpers
+export * from "./world-factory.js";  // createWorld(), EntitySpec, ARCHETYPE_MAP, ITEM_MAP
+export * from "./scenario.js";       // loadScenario(), validateScenario(), AnankeScenario
