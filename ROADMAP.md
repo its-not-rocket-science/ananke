@@ -6043,15 +6043,229 @@ pattern as Species Forge.
 
 ---
 
-*Ideas not included:*
+*Ideas not included — companion projects instead:*
 
-- **Procedural Language Generation** — While Phase 37 (linguistic intelligence) provides
-  a numeric proxy for language capability, generating a plausible evolving pidgin/creole
-  requires a natural-language model that is outside Ananke's physics-first scope.  This is
-  better addressed by an external language model layer that reads Ananke's faction/contact
-  history as input.
+- **Procedural Language Generation** — outside Ananke's physics-first scope; see companion
+  project `ananke-language-forge` (`docs/companion-projects/ananke-language-forge/README.md`).
 
-- **Full standalone UI** — A complete application (world creation, entity editing, command
-  input, simulation playback, data visualisation) is a separate product, not a kernel
-  extension.  The kernel's clean API is designed precisely so that such a UI can be built
-  on top of it independently.  See ROADMAP item 6 (Reference Renderer) as the first step.
+- **Full standalone UI** — a separate product; see companion project `ananke-world-ui`
+  (`docs/companion-projects/ananke-world-ui/README.md`).
+
+- **Game engine renderer plugins** — separate companion repos; see
+  `ananke-godot-reference` and `ananke-unity-reference`
+  (`docs/companion-projects/`).
+
+- **Body-plan and scenario content packs** — `ananke-fantasy-species`,
+  `ananke-historical-battles`, and template packs; see `docs/companion-projects/`.
+
+---
+
+## Companion Ecosystem Infrastructure
+
+The items below are Ananke-side changes that directly unblock or accelerate the companion
+projects listed above.  They are sequenced from highest leverage (npm publish) to longest
+lead-time (WASM kernel).
+
+---
+
+### CE-1 · npm Publish + Subpath Exports Map
+
+**Problem:** `package.json` has `"private": true`.  Every companion project (renderer
+plugin, species pack, world UI) must either git-submodule Ananke or copy-paste dist files.
+The import paths (`../ananke/dist/src/units.js`) are fragile and undiscoverable.
+
+**Changes needed:**
+
+1. Remove `"private": true`.
+2. Add `"files": ["dist/src", "src"]` so the published package includes compiled JS, source
+   maps, and `.d.ts` declarations but not tools/ or test/.
+3. Add an `"exports"` field with clean subpath aliases:
+
+```json
+"exports": {
+  ".":           "./dist/src/index.js",
+  "./units":     "./dist/src/units.js",
+  "./archetypes":"./dist/src/archetypes.js",
+  "./equipment": "./dist/src/equipment.js",
+  "./campaign":  "./dist/src/campaign.js",
+  "./polity":    "./dist/src/polity.js",
+  "./replay":    "./dist/src/replay.js",
+  "./bridge":    "./dist/src/bridge/index.js",
+  "./sim":       "./dist/src/sim/kernel.js",
+  "./generate":  "./dist/src/generate.js",
+  "./types":     "./dist/src/sim/entity.js"
+}
+```
+
+4. Create `src/index.ts` re-exporting all Tier 1 (Stable) API surface from `STABLE_API.md`.
+5. Run `npm publish --access public` (or scoped: `@ananke/core`).
+
+**Impact:** companion projects can `npm install ananke` and import
+`import { stepWorld } from "ananke/sim"`.  Renderer bridges, species packs, and the world UI
+all become one-line installs.  Versions are pinnable.
+
+---
+
+### CE-2 · `createWorld()` Convenience Factory
+
+**Problem:** Spawning a `WorldState` currently requires ~30 lines of boilerplate
+(`generateIndividual`, `defaultIntent`, `defaultCondition`, `defaultInjury`, `v3`, `loadout`,
+`grapple`, etc.).  Every companion project, tutorial, and quickstart re-invents this.
+
+**Proposed API (Stable tier):**
+
+```typescript
+// src/world-factory.ts
+
+export interface EntitySpec {
+  id:        number;
+  teamId:    number;
+  seed:      number;
+  archetype: Archetype;
+  weaponId:  string;
+  armourId?: string;
+  x_m?:     number;   // metres; default: 0 for team 1, 0.6 for team 2
+  y_m?:     number;
+}
+
+export function createWorld(
+  seed:     number,
+  entities: EntitySpec[],
+): WorldState;
+```
+
+**Impact:** `examples/quickstart-combat.ts` drops from 45 to 10 lines.  Godot/Unity
+sidecar scripts can create a fully-valid world in one call.  All seven companion project
+quickstarts become trivial.
+
+---
+
+### CE-3 · JSON Scenario Schema + `loadScenario()`
+
+**Problem:** Godot GDScript and Unity C# cannot import TypeScript.  They need a
+data-only way to define scenarios (entity composition, archetype, weapon, position, tick
+count) that Ananke's TypeScript sidecar can load and run.
+
+**Proposed format (`ananke-scenario.schema.json`):**
+
+```json
+{
+  "$schema": "https://ananke.dev/schema/scenario/v1.json",
+  "id": "knight-vs-brawler",
+  "seed": 1,
+  "maxTicks": 400,
+  "tractionCoeff": 0.9,
+  "entities": [
+    { "id": 1, "teamId": 1, "archetype": "KNIGHT_INFANTRY",
+      "weapon": "wpn_longsword", "armour": "arm_mail", "x_m": 0 },
+    { "id": 2, "teamId": 2, "archetype": "HUMAN_BASE",
+      "weapon": "wpn_club", "x_m": 0.6 }
+  ]
+}
+```
+
+**Proposed API:**
+
+```typescript
+// src/scenario.ts
+export function loadScenario(json: unknown): WorldState;
+export function validateScenario(json: unknown): string[];  // returns error strings
+```
+
+**Impact:** `ananke-godot-reference` and `ananke-unity-reference` can ship scenario files
+with no TypeScript knowledge required.  `ananke-historical-battles` becomes a folder of
+JSON files.  Non-developer scenario authoring is possible without the Validation Scenario
+Builder HTML tool.
+
+---
+
+### CE-4 · `src/index.ts` Stable-API Barrel
+
+**Problem:** No single entry point re-exports the Stable tier.  Adopters must know which
+internal module to reach into, which exposes them to Internal-tier breakage.
+
+**Deliverable:** `src/index.ts` re-exporting exactly the items listed in `STABLE_API.md`
+Tier 1, no more.  This becomes the `"."` export in CE-1's exports map and the only thing
+companion projects should import from `"ananke"` (not `"ananke/sim"`).
+
+```typescript
+// src/index.ts — Stable API barrel
+export { stepWorld }                       from "./sim/kernel.js";
+export { generateIndividual }              from "./generate.js";
+export { q, qMul, clampQ, mulDiv, SCALE }  from "./units.js";
+export { createWorld, type EntitySpec }    from "./world-factory.js";  // CE-2
+export { loadScenario, validateScenario }  from "./scenario.js";       // CE-3
+export { extractRigSnapshots }             from "./bridge/index.js";
+export { ReplayRecorder, serializeReplay,
+         deserializeReplay, replayTo }     from "./replay.js";
+// ... all other Tier 1 exports
+```
+
+---
+
+### CE-5 · WebAssembly Kernel (Long-term)
+
+**Problem:** `ananke-godot-reference` and `ananke-unity-reference` currently require a
+Node.js sidecar process running alongside the game engine.  This adds latency (IPC round
+trip), a deployment dependency, and platform friction.  The ideal integration is a WASM
+module imported natively by C#/GDScript with no external process.
+
+**Approach options (in order of feasibility):**
+
+1. **AssemblyScript port of the kernel** — rewrite only the hot path (kernel.ts, push.ts,
+   units.ts) in AssemblyScript, which compiles directly to WASM.  The rest of Ananke stays
+   TypeScript and calls the WASM module for simulation steps.
+
+2. **Emscripten-compiled JS** — use Emscripten's `wasm-bindgen`-equivalent for JavaScript
+   to wrap the compiled TypeScript output.  Less clean but avoids a full rewrite.
+
+3. **C port of the fixed-point kernel** — write `kernel.c` that mirrors `kernel.ts` using
+   the same fixed-point arithmetic; compile with `clang --target wasm32`.  Unity and Godot
+   can import the `.wasm` directly.
+
+**Milestone:** A WASM build of `stepWorld` + `generateIndividual` + `extractRigSnapshots`
+that Godot 4 can call via `JavaScriptBridge` or a native GDExtension wrapper.
+
+**Impact:** Eliminates the sidecar process for all renderer plugins; reduces integration
+complexity from "two processes" to "one binary."  Unlocks mobile deployment.
+
+**Note:** This is the highest-impact but longest-lead-time item.  CE-1 through CE-4 should
+ship first — they unblock companion projects immediately with no WASM required.
+
+---
+
+### CE-6 · WebSocket Upgrade for World Server
+
+**Problem:** `tools/world-server.ts` (reference implementation) uses HTTP polling.  The
+browser client polls every 1.5 seconds, causing visible lag and unnecessary bandwidth at
+high entity counts.  Production use of `ananke-world-ui` requires push-based state updates.
+
+**Changes needed:**
+
+1. Add a WebSocket endpoint (`/ws`) to `world-server.ts` using Node's built-in `ws`-less
+   WebSocket — actually requires the `ws` package (one external dep) or Node 22's native
+   `WebSocketServer` from `node:http`.
+2. Push a delta snapshot to all connected clients each tick (not full state — only changed
+   polity fields and new events).
+3. Client subscribes to `ws://localhost:3000/ws` and receives tick-rate updates.
+4. HTTP `/state` and `/events` remain for initial load and non-WS clients.
+
+**Impact:** `ananke-world-ui` gets real-time updates without polling.  Multiplayer scenario
+(multiple browser clients watching the same world) becomes practical.  Node 22's native
+`WebSocketServer` keeps the zero-external-dependency constraint intact.
+
+---
+
+### Companion project README index
+
+The following starter READMEs for companion GitHub projects live in `docs/companion-projects/`:
+
+| Project | Purpose | Key Ananke hook |
+|---------|---------|-----------------|
+| `ananke-godot-reference` | Godot 4 humanoid rig plugin | `extractRigSnapshots`, `deriveAnimationHints` |
+| `ananke-unity-reference` | Unity 6 humanoid rig plugin | `extractRigSnapshots`, `deriveAnimationHints` |
+| `ananke-threejs-bridge`  | Three.js in-browser renderer | `stepWorld`, bridge module, no sidecar |
+| `ananke-language-forge`  | LLM language generation from faction history | `linguisticIntelligence_Q`, Phase 66 events |
+| `ananke-world-ui`        | Full standalone world creation + simulation UI | All Stable-tier APIs, `ReplayRecorder` |
+| `ananke-fantasy-species` | Fantasy species body-plan + archetype pack | `generateIndividual`, `BodyPlan`, `Archetype` |
+| `ananke-historical-battles` | Historical battle scenarios with validation | `ArenaScenario`, `DirectValidationScenario` |

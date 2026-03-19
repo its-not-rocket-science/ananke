@@ -76,7 +76,7 @@ are partially or fully implemented; Layer 7 is long-term vision.
 | **4 — The Group** | Social scale: parties, armies, organisations, emotional contagion | **Complete** (Phases 22, 48, 51, 65) |
 | **3 — The Individual** | Character scale: generation, narrative shaping, aging, sleep, skill progression | **Complete** (Phases 21, 33–39, 57–58, 62) |
 | **2 — The Simulation** | Physics and biology kernel | **Complete** (Phases 1–60) |
-| **1 — The Interface** | Visual editors, Species Forge, "What If?" engine, validation dashboard, Narrative Stress Test | **Mostly complete** (ROADMAP items 7–11; Phases 62–63; item 6 pending) |
+| **1 — The Interface** | Visual editors, Species Forge, Culture Forge, Simulation Zoo, Generative Cartography, Persistent World Server, "What If?" engine, validation dashboard, Narrative Stress Test | **Complete** (ROADMAP items 7–11, Long-Term Vision all four; companion renderer READMEs in `docs/companion-projects/`) |
 
 The kernel's deterministic, physics-first foundation makes it suited to the full stack.  A
 scenario that would require hand-waving in a narrative RPG — "does the hero survive this
@@ -2058,6 +2058,9 @@ tools/             Developer utilities and runnable demos
   emergent-validation.ts  Emergent Behaviour Validation Suite — 4 historical combat scenarios × 100 seeds
   benchmark.ts            Performance & Scalability Benchmarks — 10/100/500/1 000 entity throughput
   what-if.ts              "What If?" Alternate History Engine — polity divergence × 100 seeds (Phase 64)
+  generate-zoo.ts         Simulation Zoo generator — 5 pre-computed scenarios embedded in docs/zoo/index.html
+  generate-map.ts         Generative Cartography — 180-day polity simulation → docs/map/index.html SVG viewer
+  world-server.ts         Persistent World Server — HTTP server with live polling client at docs/world-client/
 docs/
   onboarding.md         New-engineer two-week onboarding guide
   contributing.md       Contribution guide: conventions, PR checklist, module skeleton
@@ -2067,57 +2070,67 @@ docs/
   bridge-api.md         Renderer bridge API reference
   use-case-validation.md Integration Milestone 1 — use-case fit validation
   narrative-stress-test.md Narrative Stress Test guide: API, Deus Ex score, cinematic benchmark table
+  editors/
+    index.html          Editor hub — links to all visual design tools
+    species-forge.html  Species Forge — body plan + archetype + narrative bias editor
+    culture-forge.html  Culture Forge — cultural values, taboos, myth predispositions, diplomacy modifiers editor
+  zoo/
+    index.html          Simulation Zoo — 5 pre-computed combat/disease scenarios with health visualiser
+  map/
+    index.html          Generative Cartography — 180-day polity map with timeline slider
+  world-client/
+    index.html          Persistent World Client — live-polling browser UI for world-server.ts
+  companion-projects/
+    ananke-godot-reference/README.md    Godot 4 physics-driven character plugin starter
+    ananke-unity-reference/README.md    Unity 6 physics-driven character plugin starter
+    ananke-threejs-bridge/README.md     In-browser Three.js renderer bridge starter
+    ananke-language-forge/README.md     LLM-backed dynamic dialogue generation starter
+    ananke-world-ui/README.md           SvelteKit world management UI starter
+    ananke-fantasy-species/README.md    Fantasy / sci-fi species pack starter
+    ananke-historical-battles/README.md Historical battle validation suite starter
 ```
 
 ---
 
-## Known gaps and next steps
+## Companion ecosystem
 
-The following are the highest-priority items that remain unaddressed.  They do not affect the
-correctness of the simulation kernel but limit adoption and scientific credibility.
+Seven companion projects are designed to build on top of Ananke.  Each has a starter README
+in `docs/companion-projects/` describing the architecture, key Ananke entry points, and a
+suggested first milestone.
 
-### 1. The renderer integration gap
+| Repository | Purpose |
+|---|---|
+| `ananke-godot-reference` | Godot 4 plugin driving a humanoid rig from `extractRigSnapshots` over WebSocket |
+| `ananke-unity-reference` | Unity 6 plugin using the HTTP polling sidecar; HumanBodyBones mapping |
+| `ananke-threejs-bridge` | In-browser Three.js renderer — no sidecar, WebAssembly kernel long-term target |
+| `ananke-language-forge` | LLM-backed dynamic dialogue generation reading `linguisticIntelligence_Q` and Phase 66 myth events |
+| `ananke-world-ui` | SvelteKit world management UI — supersedes `docs/editors/` when feature-complete |
+| `ananke-fantasy-species` | Fantasy / sci-fi species pack with allometric-scaled body plans and archetype templates |
+| `ananke-historical-battles` | Historical battle validation suite comparing outcomes against primary sources |
 
-**What exists:** `src/model3d.ts` provides `extractRigSnapshots`, `derivePoseModifiers`, and
-`deriveGrappleConstraint` as pure data-extraction functions.  The bridge module (`src/bridge/`)
-documents the output format and provides Unity/Godot adapter sketches in `docs/ecosystem.md`.
+### Companion ecosystem infrastructure (ROADMAP CE-1 to CE-4)
 
-**What is still missing:** A minimal, runnable reference implementation that actually drives a
-real character rig in a specific engine.  Mapping Ananke's abstract segment IDs (`"torso"`,
-`"leftArm"`) to a concrete engine skeleton, handling tick-rate mismatch (20 Hz simulation vs.
-60+ Hz renderer), and blending pose modifiers into an animation state machine are all
-left to the host.  Until a reference plugin exists, each adopter must solve this from scratch.
+The following Ananke-side changes are the highest-leverage items for enabling companion projects:
 
-**Next step (ROADMAP item 6):** A minimal Godot 4 or Unity 6 plugin — a separate repository —
-that drives a humanoid character rig from `extractRigSnapshots` output.  See ROADMAP for scope.
+**CE-1 — npm publish + subpath exports map.**  Remove `"private": true` from `package.json`,
+add a `"exports"` map so consumers can import `ananke/units`, `ananke/sim/kernel`, etc.
+without bundling the whole library.  See ROADMAP for proposed exports JSON.
 
-### 2. Validation depth: emergent behaviour
+**CE-2 — `createWorld()` convenience factory.**  A single call that builds a `World` with
+sensible defaults (5 humans, no terrain, tactical tuning).  Eliminates 20 lines of setup
+boilerplate for companion projects that need a quick simulation harness.
 
-**What exists:** The validation framework tests 19+ isolated sub-systems (sprint speed,
-bleeding rate, impact energy, sleep deprivation, etc.) each against an empirical dataset with
-a ±20 % tolerance on the simulated mean.
+**CE-3 — JSON scenario schema + `loadScenario()`.**  Lets companion projects (especially
+`ananke-historical-battles` and `ananke-fantasy-species`) ship scenario definitions as JSON
+files rather than TypeScript, reducing the barrier to non-developer contribution.
 
-**What is missing:** Validation of *multi-system interactions*.  A ±20 % match on isolated
-parts does not guarantee that a 10 vs. 10 skirmish in rain produces plausible casualty rates,
-rout distances, and fight durations.  Emergent behaviour is not tested.
+**CE-4 — `src/index.ts` stable-API barrel.**  A single import surface (`import { ... } from "ananke"`)
+covering everything in `STABLE_API.md`.  Companion projects should depend on this barrel, not
+on internal module paths that may change.
 
-**Next step (ROADMAP item 7):** An Emergent Behaviour Validation Suite — complex long-duration
-scenarios (small-unit skirmishes, siege attrition, epidemic spread) where the *distribution of
-outcomes* is compared against historical or experimental data.
+---
 
-### 3. Tooling for non-developers
-
-**What exists:** Species, body plans, and validation scenarios are defined as TypeScript code.
-Adding a new archetype requires understanding `IndividualAttributes`, fixed-point arithmetic,
-and the archetype variance system.
-
-**What is missing:** A GUI layer that allows a game designer or biomechanics researcher to
-author body plans and validation scenarios without writing kernel code.
-
-**Next step (ROADMAP item 8):** A Body Plan Editor and Validation Scenario Builder — standalone
-web-based tools that emit TypeScript/JSON compatible with the kernel's data structures.
-
-### 4. Performance baselines
+## Performance baselines
 
 Performance is a published contract, not just a tool that exists.
 
@@ -2136,5 +2149,5 @@ breakdown, spatial-index comparison, memory footprint, and tuning guidance are i
 1 000 entities requires a tick-rate reduction or spatial partitioning.  `stepWorld` (kernel
 physics) consumes ≥ 95% of tick budget at all entity counts; AI is negligible (< 1%).
 
-**Next step (ROADMAP item 15):** add a benchmark regression check to nightly CI so
-throughput regressions are caught before release.
+Benchmark regression is enforced in CI via `npm run benchmark-check` — throughput regressions
+are caught before release (ROADMAP item 15, complete).
