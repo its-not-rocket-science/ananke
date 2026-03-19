@@ -14,7 +14,7 @@
   },
   "files": [
     "dist/src",
-    "docs/programmers-guide.md",
+    "docs/project-overview.md",
     "docs/host-contract.md",
     "docs/integration-primer.md",
     "docs/bridge-contract.md",

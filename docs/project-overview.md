@@ -1,0 +1,2227 @@
+# Ananke
+![CI](../../actions/workflows/ci.yml/badge.svg)
+
+**Ananke** is a deterministic, physics-grounded simulation engine for characters, combat,
+and survivability — from a single duel to a campaign-scale world.
+
+It models entities using **real physical quantities** rather than abstract hit points,
+using **SI units stored as fixed-point integers** for full determinism.
+Same seed + same inputs → identical results, at every scale.
+
+The core promise is narrow and hard: deterministic, physics-grounded simulation for
+characters, combat, and survivability across tactical-to-campaign scales.
+Everything else — world simulation, mythology, emotional contagion, tech diffusion — is
+built on top of that foundation and can be adopted independently.
+
+---
+
+## Installation
+
+```bash
+npm install @its-not-rocket-science/ananke
+```
+
+```typescript
+import { stepWorld, mkWorld, q, SCALE } from "@its-not-rocket-science/ananke";
+```
+
+Requires **Node ≥ 18**. TypeScript declarations are included — no `@types/` package needed.
+
+The package is ESM-only and ships compiled JS + `.d.ts` files.  There are no runtime
+dependencies.
+
+> **New to Ananke?**  Start with the **[Programmer's Guide](docs/programmers-guide.md)** —
+> quick starts for all three adoption paths, core concepts, API reference, and worked code
+> examples.
+
+> **Versioning:** pin to a specific version in production.  The `0.x` series may include
+> minor-version breaking changes to Tier 2 (experimental) APIs; Tier 1 (Stable) APIs follow
+> full semver.  See [`STABLE_API.md`](STABLE_API.md) for the tier breakdown and
+> [`docs/versioning.md`](docs/versioning.md) for the upgrade policy.
+
+---
+
+## Start here: three adoption paths
+
+Choose the path that matches your immediate need.  Ignore the rest until you need it.
+
+### Path A — "I want a deterministic combat kernel"
+
+**Install:** `npm install @its-not-rocket-science/ananke`
+
+**Minimal imports:** `stepWorld`, `mkWorld`, `q`, `SCALE`, `generateIndividual`
+
+**30-minute quickstart:** Run `tools/vertical-slice.ts` (`npm run run:vertical-slice`).
+A Knight fights a Brawler across three seeds, producing a physics-grounded combat log.
+Read `docs/host-contract.md` for the stable integration surface, then
+`docs/integration-primer.md` for data-flow diagrams and type glossary.
+
+**Key entry points:** `stepWorld()`, `resolveHit()`, `generateIndividual()`, `mkKnight()`
+
+**What to ignore for now:** Phases 56–67 (campaign-scale systems), all `tools/` except `vertical-slice.ts`
+
+---
+
+### Path B — "I want a campaign / world simulation"
+
+**Minimal modules:** Path A + `src/campaign.ts`, `src/polity.ts`, `src/tech-diffusion.ts`
+
+**30-minute quickstart:** Run `npm run run:what-if` to see alternate-history polity scenarios
+(plague, charismatic leader, sudden war) with probability-weighted outcome distributions.
+
+**Key entry points:** `stepPolityDay()`, `stepTechDiffusion()`, `applyEmotionalContagion()`,
+`compressMythsFromHistory()`
+
+**What to ignore for now:** `src/sim/model3d.ts`, `src/bridge/`, `docs/editors/`
+
+---
+
+### Path C — "I want physiology / species modelling"
+
+**Minimal modules:** `src/units.ts`, `src/sim/bodyplan.ts`, `src/archetypes.ts`,
+`src/describe.ts`
+
+**30-minute quickstart:** Open `docs/editors/species-forge.html` in a browser.
+Design a body plan, set archetype sliders, and copy the generated TypeScript trio
+(`BodyPlan` + `Archetype` + `NarrativeBias`) into your project.
+
+**Key entry points:** `generateIndividual()`, `applyAgingToAttributes()`,
+`applySleepToAttributes()`, `extractRigSnapshots()`
+
+**What to ignore for now:** `src/polity.ts`, `src/tech-diffusion.ts`, all `tools/`
+
+---
+
+### Where Ananke sits in a larger system
+
+Ananke is the physics and biology layer — Layer 2 in the stack below.  Layers above it
+are partially or fully implemented; Layer 7 is long-term vision.
+
+| Layer | Purpose | Status |
+|-------|---------|--------|
+| **7 — The Universe** | Cosmological scale: planets, interstellar travel, multiple worlds | Long-term vision |
+| **6 — The World** | Geopolitical scale: nations, empires, diplomacy, trade, war, tech diffusion | **Complete** (Phases 61, 67) |
+| **5 — The Society** | Cultural scale: cities, factions, myths, legends, mass psychology | **Complete** (Phases 36, 45, 50, 66) |
+| **4 — The Group** | Social scale: parties, armies, organisations, emotional contagion | **Complete** (Phases 22, 48, 51, 65) |
+| **3 — The Individual** | Character scale: generation, narrative shaping, aging, sleep, skill progression | **Complete** (Phases 21, 33–39, 57–58, 62) |
+| **2 — The Simulation** | Physics and biology kernel | **Complete** (Phases 1–60) |
+| **1 — The Interface** | Visual editors, Species Forge, Culture Forge, Simulation Zoo, Generative Cartography, Persistent World Server, "What If?" engine, validation dashboard, Narrative Stress Test | **Complete** (ROADMAP items 7–11, Long-Term Vision all four; companion renderer READMEs in `docs/companion-projects/`) |
+
+The kernel's deterministic, physics-first foundation makes it suited to the full stack.  A
+scenario that would require hand-waving in a narrative RPG — "does the hero survive this
+battle?" — becomes a distribution of outcomes across thousands of seeded runs, each
+physically grounded.
+
+---
+
+## Core design principles
+
+### Deterministic by default
+
+- Lockstep-safe simulation
+- No floating-point drift
+- Stable ordering and RNG consumption
+- Same seed + inputs → identical results
+- Entity iteration and pair resolution are stable and ordered
+
+### Physics-first
+
+- Impact energy → injury (not dice roll → damage)
+- Mass, velocity, leverage, penetration physics
+- Encumbrance affects movement and fatigue
+
+### Fixed-point arithmetic
+
+- All simulation values use Q fixed-point integers
+- No runtime floats in simulation path
+- Units centralised in `src/units.ts`
+
+### No arbitrary scales
+
+Individual variation is expressed in absolute physical terms, not 1–20 ranges.
+
+| What varies | Engine representation | Unit |
+|---|---|---|
+| Strength | `peakForce_N` | N (newtons) |
+| Explosive power | `peakPower_W` | W (watts) |
+| Stamina | `continuousPower_W` | W (watts) |
+| Energy reserves | `reserveEnergy_J` | J (joules) |
+| Reaction speed | `reactionTime_s` | s (seconds) |
+| Motor coordination | `controlQuality`, `fineControl` | dimensionless 0–1 |
+| Body size | `stature_m`, `mass_kg` | m, kg |
+
+An "average human" has `peakForce_N = 1840`, `peakPower_W = 1200`, `continuousPower_W = 200`,
+`reserveEnergy_J = 20000`, `reactionTime_s = 0.20`. These are real sport-science values.
+Variation between individuals is generated by `generateIndividual()` using per-archetype
+variance distributions, producing a unique entity with realistic physical spread.
+
+### Biology-agnostic
+
+- Supports humans, robots, aliens, and abstract entities
+- Genericised actuation, structure, and control systems
+- Region-based anatomy adaptable to any morphology (Phase 8)
+
+### Scalable
+
+- Single entity to squad to formation to army
+- Spatial partitioning and density modelling
+- Deterministic large-battle simulation
+
+---
+
+## Current implementation status
+
+**Phases 1–60 complete** (including Phase 6 Formation System, 2ext, 3ext, 8B, 8C, 10B, 10C, 11C, 12B, 31–60). Melee combat,
+grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
+and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
+and ammo type overrides), injury, entity environmental hazards, movement physics, formation
+basics, deterministic AI scaffolding,
+perception/cognition (sensory model, decision latency, surprise mechanics), morale and
+psychological state (fear accumulation, routing, panic variety, leader/banner auras, rally
+mechanic), terrain systems (surface friction, obstacle/cover grids, elevation, slope direction,
+dynamic hazard cells, AI cover-seeking, cover morale bonus, elevation melee advantage), a
+physics-grounded skill system, a universal data-driven body plan system (humanoid, quadruped,
+theropod, sauropod, avian, vermiform, centaur, octopoid — adding a new species requires only a
+BodyPlan data file and an Archetype baseline, no kernel changes), a full injury and medical
+simulation layer (fractures, infection, permanent damage, natural clotting, fatal fluid loss,
+and a `TreatCommand` system with tiered medical equipment and skill-scaled treatment rates),
+environmental physics including blast and fragmentation explosions, fall damage,
+pharmacokinetics with substance interactions (stimulant/haemostatic/anaesthetic/poison
+cross-effects, temperature-dependent metabolism), flash blindness from explosions, ambient
+temperature stress, a technology spectrum system (`TechContext`, `TechEra`,
+`TechCapability`, `validateLoadout`) with powered exoskeleton items, energy weapons,
+reflective and ablative armour, sensor items, and era-gated starter items, a **capability
+sources and effects** system (Clarke's Third Law — magic and advanced technology are the
+same abstraction; only the tags differ), a **deterministic replay and analytics** system
+(`ReplayRecorder`, `replayTo`, `serializeReplay`/`deserializeReplay`, `CollectingTrace`,
+`collectMetrics`, `survivalRate`, `meanTimeToIncapacitation`), a **3D model integration
+layer** (`deriveMassDistribution`, `deriveInertiaTensor`, `deriveAnimationHints`,
+`derivePoseModifiers`, `deriveGrappleConstraint`, `extractRigSnapshots`) for driving
+host renderer rigs from simulation state, a **named archetype and scenario library**
+(`AMATEUR_BOXER`, `PRO_BOXER`, `GRECO_WRESTLER`, `KNIGHT_INFANTRY`, `LARGE_PACIFIC_OCTOPUS`
+with corresponding `mkBoxer`/`mkWrestler`/`mkKnight`/`mkOctopus`/`mkScubaDiver` factory
+functions in `src/presets.ts`) validated against real-world biomechanics data by a
+statistical scenario test suite, a **character description layer** (`describeCharacter`,
+`formatCharacterSheet`, `formatOneLine` in `src/describe.ts`) that translates SI fixed-point
+attributes into human-readable summaries with tier ratings, labelled comparisons, and plain
+English descriptions grounded in real-world benchmarks, a **historical weapons database**
+(`src/weapons.ts`) covering ~70 weapons across six eras (Prehistoric through Contemporary)
+with two combat extensions: flexible/chain weapon **shield bypass** (`shieldBypassQ` reduces
+effective blocking coverage for flails and morning stars) and **magazine tracking**
+(`magCapacity` + `shotInterval_s` give magazine firearms per-shot and reload cooldowns), a
+**combat narrative layer** (`src/narrative.ts`) that converts trace event streams into
+human-readable combat logs with configurable verbosity, physics-grounded verb selection, and
+injury/outcome summaries, a **downtime and recovery simulation** (`src/downtime.ts`) that
+bridges combat-resolution time (20 Hz) and campaign time (hours to weeks) via a compressed
+1 Hz loop with tiered care levels, resource tracking, and recovery projection, an **arena
+simulation framework** (`src/arena.ts`) providing a declarative scenario DSL, batch trial
+runner, expectation system, and six physics-calibrated built-in scenarios for validating
+simulation realism, and a **character progression system** (`src/progression.ts`) that adds
+the temporal axis to entity attributes: XP/milestone-driven skill advancement using geometric
+thresholds, physical training drift bounded by genetic ceiling, physiologically-grounded
+ageing curves, and permanent injury sequelae, and a **campaign and world state layer**
+(`src/campaign.ts`) that persists entity state, location, and inventory between sessions:
+world clock advancement with integrated downtime healing, a location registry with
+travelCost routing, campaign-level item stockpiles, and Map-aware JSON serialisation so
+full campaign state round-trips cleanly, and a **dialogue and negotiation layer**
+(`src/dialogue.ts`) that resolves non-combat social actions — intimidation, persuasion,
+deception, surrender, and trade negotiation — using the same physical and psychological
+attributes as the combat engine: intimidation strength derives from `peakForce_N`, deception
+is defeated by `attentionDepth`, and escalation triggers when a fearless target interprets
+an intimidation attempt as an insult, and a **faction and reputation system**
+(`src/faction.ts`) that tracks faction membership, inter-faction standing, entity reputation,
+and a witness system that propagates reputation deltas from combat events: kills reduce the
+actor's standing with the victim's faction, aid increases it, and the AI decision layer
+suppresses attacks on entities with standing above `STANDING_FRIENDLY_THRESHOLD`, with a
+self-defence override when the attacker has already taken damage, and a **loot and economy
+layer** (`src/economy.ts`) that adds item valuation, equipment degradation, drop resolution,
+and trade mechanics: `computeItemValue` derives cost-unit prices from physical properties
+(mass, reach, armour resist), `applyWear` tracks cumulative use-wear on melee weapons
+(penalty at q(0.30), fumble at q(0.70), breaks at q(1.0)), `resolveDrops` produces
+deterministic loot from dead or incapacitated entities, and `evaluateTradeOffer` evaluates
+trades from the accepting party's perspective, a **momentum transfer and knockback**
+layer (`src/sim/knockback.ts`) that converts impulse-momentum physics into stagger and
+prone transitions, a **hydrostatic shock and cavitation** layer (`src/sim/hydrostatic.ts`)
+that amplifies internal damage for high-velocity projectiles based on per-tissue compliance
+(temporary cavity ×1.0–×3.0 above 600 m/s; cavitation bleed boost in fluid-saturated organs
+above 900 m/s), and a **cone AoE** system (`src/sim/cone.ts`) that adds directional
+geometry to the capability system for breath weapons, flamethrowers, gas dispersal, and
+sonic blasts: `entityInCone` geometry with configurable half-angle and range, `"facing"` and
+`"fixed"` direction modes, sustained emission with per-tick cost deduction and shock interrupt,
+a `weaponImpact` payload variant for custom per-effect damage profiles, and a full
+dragon-vs-knight scenario demonstration, a **staged thermoregulation model**
+(`src/sim/thermoregulation.ts`) that tracks core body temperature using a heat-balance
+equation (metabolic heat vs. conductive loss through armour and skin), deriving performance
+modifiers across seven stages from mild hyperthermia to cardiac-arrest hypothermia — each
+with calibrated powerMul, fineControlPen, and latencyMul penalties, and a **nutrition and
+starvation model** (`src/sim/nutrition.ts`) that adds the longest survivability axis:
+caloric balance tracked via Kleiber's-law BMR, four hunger states (sated → hungry →
+starving → critical) with staged fat catabolism (300 g/day), muscle catabolism (0.5 N/hour
+reduction in peakForce_N), and a six-item food catalogue from ration bars to water flasks,
+a **species and race system** (`src/species.ts`) providing a data-driven species registry
+where `SpeciesDefinition` bundles archetype, body plan, innate traits, capabilities, natural
+weapons, and physiological overrides into one record: 14 species across fantasy humanoids
+(elf, dwarf, halfling, orc, ogre, goblin, troll), sci-fi humanoids (Vulcan, Klingon, Romulan),
+mythological (dragon, centaur, satyr), and fictional (Heechee); `SpeciesPhysiology` adds
+`coldBlooded` (skips thermoregulation), `bmrMultiplier` (Vulcan q(0.72) starves slower;
+orc q(1.15) starves faster), and `naturalInsulation_m2KW` (scales heat loss), and a
+**multiple intelligences layer** (`src/types.ts`, wired through targeting, morale, decide,
+and dialogue) implementing Howard Gardner's nine cognitive domains plus inter-species empathy
+as Q-coded attributes on every archetype and species: `spatial` scales the threat-horizon
+perception radius (human baseline q(0.60) → ×1.0; octopus q(0.90) → ×1.30),
+`logicalMathematical` reduces decision latency (Vulcan q(0.95) → ×0.82; ogre q(0.25) →
+×1.10), `interpersonal` scales the effective leader-aura reception radius, `intrapersonal`
+boosts effective distress tolerance in morale computations, `linguistic` sets the per-entity
+persuasion base probability in dialogue (elf q(0.80) → q(0.44); ogre q(0.25) → q(0.275)),
+and `bodilyKinesthetic` sets a floor on fine-motor precision (`fineControl ≥ bk × q(0.80)`).
+
+**Phase 34** extends `bodilyKinesthetic` and `spatial` into non-combat competence resolvers
+(`src/competence/`): `resolveCrafting(entity, spec, seed)` computes craft quality
+(materialQ × BK × fineControl-bonus × toolBonus ± RNG) and time (baseTime_s × q(0.50) / BK);
+`computeSurgicalPrecision(entity)` returns lerp(q(0.70), q(1.30), BK) for use as
+`TreatmentSchedule.surgicalPrecisionMul` in downtime surgery; `resolveNavigation(entity, spec, seed)`
+gives routeEfficiency = clamp(spatial × mapBonus × terrainQ × visibilityQ, q(0.50), q(1.0)) and
+the resulting timeLost_s.
+
+**Phase 35** adds the `naturalist` intelligence competence resolver (`src/competence/naturalist.ts`):
+`resolveTracking(entity, spec, seed)` computes track confidence from naturalist skill, track age,
+terrain preservation (ideal/rain/urban/deep_water/forest), and species-specific difficulty;
+`resolveForaging(entity, spec, seed)` yields itemsFound per hour by biome (forest/plains/desert/
+swamp/mountain) and season with misidentification risk (P_misidentify = max(0, 0.30 − naturalist × 0.40));
+`resolveTaming(entity, spec, seed)` computes trust_Q = naturalist × interSpecies × effort − fear × 0.50,
+with attack probability when fear exceeds trust.
+
+**Phase 36** adds inter-species intelligence (`src/competence/interspecies.ts`): the `signal` dialogue
+action for cross-species communication (`{ kind: "signal"; targetSpecies; intent: "calm" | "submit" | "ally" | "territory" }`)
+with success probability `empathy_Q × vocab × (1 − fear × 0.60)` and potential aggravation when low
+empathy meets fearful targets; `computeUnfamiliarSpeciesLatencyPenalty(entity, species)` returns
+up to +80 ms decision latency when facing unfamiliar species (those not in `speciesAffinity`).
+
+**Phase 37** extends linguistic and interpersonal intelligence into practical applications:
+`LanguageCapacity` (languageId + fluency_Q) added to `Entity.languages`; `resolveCommandTransmission`
+computes formation reception rate (`linguistic × formationBonus`) and transmission delay;
+`resolveTeaching` computes XP transfer (`hours × BASE_XP_RATE × interpersonalTeacher × interpersonalLearner`)
+with teacher fatigue; `computeDeceptionDetectionProbability` factors interpersonal intuition into
+detecting lies (`attentionDepth × 0.50 + interpersonal × 0.50 − plausibility`).
+
+**Phase 38** implements logical-mathematical and intrapersonal intelligence: `WillpowerState`
+(`current_J/max_J`) added to `Entity.willpower`; `computeMaxWillpower(entity)` calculates capacity
+from intrapersonal intelligence (max 50kJ); `deductWillpower()`, `replenishWillpower()`, and
+`stepConcentrationWillpower()` manage cognitive stamina for sustained concentration (Phase 12B);
+`resolveEngineering(entity, spec, seed)` computes project quality (`qualityMul = logicalMath ×
+complexityMul × timeFactor`) with latent flaw probability (`P_flaw = max(0, complexity − logicalMath) × 0.40`);
+descriptor bands: exceptional/good/adequate/poor/failure.
+
+**Phase 39** adds musical intelligence and acoustic systems: `deriveAcousticSignature(entity)`
+computes noise level from movement velocity, equipment (metal armour +15, heavy weapons +10),
+and stealth skill; `detectAcousticSignature(listener, source, dist_m)` returns detection confidence
+(`sourceNoise / dist_m × listener.musical × SCALE_ACOUSTIC`); `resolveFormationSignal(signaller,
+signal, listener, dist_m)` computes command clarity (`musical(signaller) × musical(listener) ×
+rangeFactor`) for military coordination (drums, horns); `resolvePerformance(performer, spec)`
+generates morale auras (`fearDecayBonus = musical × q(0.020)`) draining willpower per second;
+performance types: march/rally/dirge/celebration/lament.
+
+**Phase 47** adds individual AI personalities beyond policy presets (`src/sim/ai/personality.ts`):
+`PersonalityTraits` — four Q-coded axes: `aggression` (shifts retreat range, overrides hesitation
+above q(0.70)), `caution` (±q(0.20) defence intensity boost), `loyalty` (switches focus target to
+protect a distressed ally), `opportunism` (switches to the most-wounded enemy). Five named presets:
+`berserker`, `coward`, `guardian`, `schemer`, `soldier`. `derivePersonalityFromCognition()` maps
+distressTolerance → aggression, intrapersonal → caution, interpersonal → loyalty,
+logicalMathematical → opportunism. `entity.personality?: PersonalityTraits` is optional and
+backward-compatible (absent = neutral = q(0.50) on all axes, no behaviour change).
+
+**Phase 48** adds multi-party dynamics (`src/party.ts`): `Party` and `PartyMember` types with
+per-member `loyaltyQ`, `stepPartyLoyalty()` (leader interpersonal aura + resource/injury/hunger
+modifiers), `checkDefection()` (probabilistic when loyalty < q(0.20)), `resolvePartyConflict()`
+(combat-power ratio determines outcome), `recordMissionSuccess/Failure()`.
+
+**Phase 49** adds legacy and inheritance (`src/inheritance.ts`): character death does not end the
+campaign — `transferEquipment()` moves loadout items to the heir, `transferRelationships()` partially
+copies the relationship graph (trust/affinity scaled by `relationshipTransferRate_Q`, default q(0.50)),
+`transferInventory()` merges campaign inventories, and `applyInheritance()` orchestrates all three
+steps while updating the campaign registry and location tracking.
+
+**Phase 50** adds mythology and legend (`src/legend.ts`): high-significance chronicle entries crystallise
+into `Legend` objects with a `LegendReputation` (`heroic`, `notorious`, `legendary`, `forgotten`),
+a `fame_Q` (how widely known), and thematic `tags` derived from source events and story arcs.
+`createLegendFromChronicle(chronicle, subjectId, subjectName)` promotes qualifying entries (default
+significance ≥ 60) into a legend; `fame_Q` scales with total significance (7 × 100-pt entries →
+q(1.0)). `getLegendEffect(legend)` returns `LegendEffect` — persuasion, intimidation, fear, and
+morale bonuses that scale with fame. `npcKnowsLegend(legend, npcId, worldSeed, tick)` is a
+deterministic fame roll (same inputs = same result). `applyLegendToDialogueContext(initiatorId,
+targetId, registry, worldSeed, tick)` aggregates effects for NPCs who know the legend. `stepLegendFame`
+decays fame over time (legendary legends have a q(0.50) floor). Full serialisation support.
+
+**Phase 51** adds weather and atmospheric environment (`src/sim/weather.ts`): `WeatherState` bundles
+`WindField`, `PrecipitationType` (`none` / `rain` / `heavy_rain` / `snow` / `blizzard` / `hail`),
+and `fogDensity_Q`. `deriveWeatherModifiers(weather)` returns `WeatherModifiers` — traction,
+vision, and thermal deltas. Per-tick kernel integration: rain/snow reduce `ctx.tractionCoeff`
+(blizzard → q(0.40)), fog and precipitation reduce `SensoryEnvironment.lightMul` and `.smokeMul`,
+precipitation cools `ctx.thermalAmbient_Q` (snow −5 °C, blizzard −12 °C). `computeWindAimError`
+adds crosswind drift to ranged-combat grouping radius (drift = v_wind_perp × range / v_proj).
+`adjustConeRange` modulates breath-weapon range ±20 % for head/tailwind. All effects are additive
+with existing sensory and thermal modifiers; `weather` absent = backward-compatible.
+
+**Phase 52** adds extended sensory modalities (`src/sim/sensory-extended.ts`): `ExtendedSenses` on
+`Entity` enables echolocation (range-checked, darkness-independent, degraded by noiseMul — dead
+targets still detected via physical echo), electroreception (bioelectric field detection, dead
+targets not detected), and olfaction (wind-direction-aware, precipitation-dispersed scent tracking).
+`computeDaylightMul(hourOfDay)` returns a Q multiplier (q(0.10) at midnight → q(1.0) at noon) for
+integration with `SensoryEnvironment.lightMul`. `canDetectExtended` wraps Phase 4 `canDetect` and
+additionally checks each extended modality in quality order: electroreception q(0.80),
+echolocation q(0.70), olfaction q(0.20–0.40).
+
+**Phase 53** adds systemic toxicology for ingested substances (`src/sim/systemic-toxicology.ts`):
+five toxin profiles — `alcohol` (15 min onset, motor impairment + disinhibition, addictive),
+`sedative_plant` (30 min onset, consciousness erosion, addictive), `alkaloid_poison` (20 min,
+internal damage + fear), `heavy_lead` and `radiation_dose` (cumulative irreversible dose
+accumulation via `CumulativeExposureRecord`). Exponential concentration decay via metabolic
+half-life (fixed-point minimum-1/s guarantee ensures clearance). Withdrawal states
+(`WithdrawalState`) are triggered after sustained addictive use, applying fatigue and fear
+penalties for the withdrawal duration. `deriveCumulativeToxicity(entity)` → Q for chronic
+exposure queries. Stepped at 1 Hz alongside nutrition and Phase 32C venom. Backward-compatible:
+absent fields = no change.
+
+**Phase 54** adds wound aging and long-term sequelae (`src/sim/wound-aging.ts`):
+`stepWoundAging(entity, elapsedSeconds)` models four time-scale processes — uninfected-region
+healing (surface 1%/day, internal 0.5%/day, clamped to permanentDamage floor), infection
+worsening (1.5%/day internalDamage, sepsis threshold at q(0.85)), chronic fatigue from
+sustained permanent damage, and phantom pain shock from fractured+permanent regions.
+`recordTraumaEvent` / `deriveFearThresholdMul` implement PTSD-like trauma accumulation
+with natural q(0.002)/day decay; max trauma halves the effective fear threshold (q(0.50)).
+`deriveSepsisRisk(entity)` → Q aggregates infected-region severity for medical triage AI.
+`TraumaState` added to `Entity`. All healing and worsening rates are deterministic from
+elapsed seconds — no RNG required. Backward-compatible: absent `traumaState` = no effect.
+
+**Phase 55** adds collective non-combat activities (`src/collective-activities.ts`):
+three self-contained group systems for downtime and logistics. **Siege engineering**:
+`createCollectiveProject` / `contributeToCollectiveProject` maintain a shared `progress_Q`
+pool; each entity's contribution = `deriveEngineeringCompetence(entity) × hoursWorked /
+requiredWorkHours`, where competence is the average of `logicalMathematical + bodilyKinesthetic`;
+`isProjectComplete` and `completedAtTick` track completion. **Ritual & ceremony**:
+`stepRitual(participants, elapsedSeconds)` produces a `moraleBonus_Q` (cap q(0.30)) and
+`fearReduction_Q` (60 % of morale bonus) by pooling each participant's average `(intrapersonal
++ musical) / 2` with sqrt(N) group scaling and a linear time ramp over one hour. **Trade
+caravan logistics**: `planCaravanRoute(waypoints, participants, inventory)` derives
+`routeQuality_Q` from the best navigator's `logicalMathematical`, a `negotiationBonus_Q` from
+the best `interpersonal` score, shortens travel time via a speed factor ∈ [q(0.80), q(1.00)],
+and computes `supplySufficiency_Q` from available rations vs. travel-day demand.
+No kernel integration — all three systems are host-application-driven downtime APIs.
+
+**Phase 56** adds entity-to-entity disease transmission (`src/sim/disease.ts`):
+six disease profiles (common_fever, wound_fever, plague_pneumonic, dysentery, marsh_fever,
+wasting_sickness) each with `transmissionRoute`, daily fatigue drain, incubation/symptomatic
+phase timers, a mortality roll via deterministic `eventSeed`, and graduated immunity.
+`exposeToDisease(entity, id)` adds an incubating state (skips immune/already-infected
+entities); `stepDiseaseForEntity(entity, delta_s, worldSeed, tick)` advances phases, drains
+fatigue, rolls mortality on recovery, grants immunity; `computeTransmissionRisk` returns Q
+risk — airborne decays linearly to zero at `airborneRange_Sm`, contact/vector/waterborne are
+flat within 2 m; `spreadDisease(entityMap, pairs, worldSeed, tick)` performs a deterministic
+batch exposure from host-supplied spatial pairs. `DiseaseState` and `ImmunityRecord` added
+to `Entity`. Backward-compatible: absent `activeDiseases` = no effect.
+
+**Phase 57** adds aging and lifespan simulation (`src/sim/aging.ts`):
+species-agnostic attribute curves parameterized by normalized age fraction
+(`ageFrac = ageYears / lifespanYears`). Seven piecewise-linear Q dimensions —
+muscular strength (peaks at ageFrac ≈ 0.28), reaction time (faster at peak,
+slowest in infancy and antiquity), motor control, stature (stable adult, slight
+compression in ancient), fluid cognition (logical/spatial/musical — peaks young),
+crystallized cognition (linguistic/interpersonal/intrapersonal — peaks mid-life,
+wisdom outlasts speed), and distress tolerance (peaks middle age). A 25-year-old
+human and a 187-year-old elf (lifespan 600) share the same ageFrac and therefore
+the same developmental multipliers. `applyAgingToAttributes(base, ageYears)` returns
+a new `IndividualAttributes` without mutating the peak baseline; `stepAging(entity,
+elapsedSeconds)` accumulates `entity.age.ageSeconds` for campaign-scale time tracking.
+
+**Phase 58** adds sleep and circadian rhythm (`src/sim/sleep.ts`): a two-factor
+deprivation model tracking `awakeSeconds` (continuous wake duration) and `sleepDebt_s`
+(cumulative nightly shortfall, capped at 72 h). `circadianAlertness(hourOfDay)` → Q
+piecewise-linear alertness curve (peak 17:00, nadir 03:00). Impairment begins after 17 h
+awake and degrades four attributes linearly to max at 72 h: fluid cognition −45%, reaction
+time +45% slower, stability −25%, distress tolerance −35%. Sleep-phase cycling follows the
+90-minute NREM/REM cycle (light 45 min → deep 25 min → rem 20 min → repeat). Prior-night
+debt persists even after short sleep: effective driver = max(awakeSeconds, sleepDebt_s).
+`applySleepToAttributes(base, state)` returns a new `IndividualAttributes` (immutable,
+same pattern as Phase 57); `stepSleep(entity, elapsedSeconds, isSleeping)` mutates
+`entity.sleep`; `entitySleepDebt_h(entity)` convenience helper.
+
+**Phase 59** adds mounted combat (`src/sim/mount.ts`): five mount profiles (pony, horse,
+warhorse, camel, war_elephant) with physics-based charge energy (`bonusEnergy_J = ½mv²`),
+rider height advantage (aim bonus proportional to seat elevation, q(0.12)/m, max q(0.30)),
+mount-to-rider fear contagion (40% of excess shock beyond fearThreshold), and
+forced-dismount detection (rider over-shock, mount death, mount bolt). `checkMountStep`
+returns a pure `MountStepResult` with no entity mutation. `MountState { mountId, riderId,
+gait }` added to `Entity`.
+
+**Phase 60** adds environmental hazard zones (`src/sim/hazard.ts`): persistent 2-D circular areas
+with linear exposure falloff that inflict per-second effects (fatigue, thermal shift, radiation dose,
+surface damage, disease exposure). Five types: fire, radiation, toxic_gas, acid, extreme_cold.
+`computeHazardExposure(dist_Sm, hazard)` → Q; `deriveHazardEffect(hazard, exposureQ)` → `HazardEffect`;
+`stepHazardZone` ticks duration (permanent zones are untouched); `isHazardExpired` signals removal.
+No entity field needed — hazards are world-level objects the host iterates each tick.
+
+**Phase 63** adds a **narrative stress test** framework (`src/narrative-stress.ts`): given a
+scene described as a sequence of `NarrativeBeat` predicates — each with a tick window in which
+it must become true — `runNarrativeStressTest` runs the simulation across hundreds of seeds
+and measures what fraction of runs spontaneously produce that sequence. The complement is the
+**narrative push**: `0.00` = plausible (no authorial pressure needed); `1.00` = "extreme — plot
+armour" (the story never happens without explicit intervention). Beat predicate helpers
+(`beatEntityDefeated`, `beatEntitySurvives`, `beatTeamDefeated`, `beatEntityShockExceeds`,
+`beatEntityFatigued`) cover the most common story requirements. `formatStressTestReport`
+produces a human-readable breakdown labelled "none — plausible" / "light" / "moderate" /
+"heavy" / "extreme — plot armour". Demo: `npm run run:narrative-stress-test`.
+
+**Artificial Life Validation ("Blade Runner" Test)** (`tools/blade-runner.ts`, `npm run run:blade-runner`) —
+the ultimate integration test: 198 named NPCs, 3 polities, and 365 simulated days wiring every
+major phase simultaneously (disease, polity economics, war, sleep debt, skill progression).
+Validates 4 emergent-behaviour claims: social hierarchy, disease mortality spikes, morale–economy
+correlation, and skill accumulation hierarchy. All 4/4 claims pass on seed 1.
+
+**Species Forge** (`docs/editors/species-forge.html`) — four-tab standalone HTML/JS species designer
+extending the Body Plan Editor. Tab 1: segment body plan with live validation. Tab 2: 24 archetype
+sliders (stature, mass, peak force/power, reaction time, control quality, resilience, perception).
+Tab 3: five Narrative Bias sliders (strength/speed/resilience/agility/size, −1 to +1) with six
+preset profiles (Warrior/Scholar/Rogue/Tank/Feral Beast/Clear). Tab 4: live-generated TypeScript
+trio (`BodyPlan` + `Archetype` + `NarrativeBias`). Four templates: Humanoid, Large Beast, War
+Machine, Mind Swarm. Linked from `docs/editors/index.html`.
+
+**Phase 67 — Technology Diffusion at Polity Scale** (`src/tech-diffusion.ts`) — tech eras
+spread from advanced polities to lagging neighbours via trade routes and cultural contact.
+`computeDiffusionPressure(source, target, pair, warActive)` computes per-day advance probability
+scaling with era gap (×1–3×), route quality, shared locations, and stability threshold.
+`stepTechDiffusion(registry, pairs, worldSeed, tick)` rolls for advances each tick, mutates
+`techEra`, and refreshes military strength; one advance per polity per tick maximum.
+`totalInboundPressure` provides a signed-Q AI query for "how likely is this polity to advance?"
+Long-run convergence test: era-1 polity reaches era-3 within 2 000 daily ticks (~5.5 years).
+34 tests; 100% coverage.
+
+**Phase 66 — Generative Mythology** (`src/mythology.ts`) — narrative compression of the Legend/
+Chronicle log into in-world cultural beliefs.  `compressMythsFromHistory(legendRegistry, entries,
+factionIds)` detects six archetypal patterns (hero, monster, great_plague, divine_wrath, golden_age,
+trickster) from accumulated legends and chronicle events; each myth carries a `MythEffect` (fear
+threshold, diplomacy, morale, tech modifiers) scaled by its `belief_Q`.  `stepMythologyYear`
+decays belief 12%/year to a floor of q(0.10).  `aggregateFactionMythEffect` gives the net cultural
+modifier for polity-day AI use.  39 tests; 100% statement/branch/function/line coverage.
+
+**Phase 65 — Emotional Contagion at Polity Scale** (`src/emotional-contagion.ts`) — fear and hope
+propagate between polities using the Phase 56 disease transmission model with `fear_Q`/`hope_Q` as
+the "pathogen".  Four built-in profiles: `military_rout` (fast-spreading panic), `plague_panic`
+(slow-decaying dread), `victory_rally` (hope wave from a battle win), `charismatic_address`
+(leader-amplified; Phase 39 `leaderPerformance_Q` scales initial intensity).
+`applyEmotionalContagion(registry, pairs, waves, profiles, worldSeed, tick)` drives spread +
+moraleQ updates each polity day-tick.  `netEmotionalPressure` gives a signed Q for AI queries.
+46 tests; 100% statement/function/line coverage.
+
+**"What If?" / Alternate History Engine** (`tools/what-if.ts`, `npm run run:what-if`, Phase 64) —
+polity-scale alternate-history simulator that runs a `WhatIfScenario` across N seeds and reports
+probability-weighted outcome distributions. Three built-in scenarios: plague devastating a capital
+(−92.5% population; density-floor mechanics), a charismatic leader's morale surge (+22% military
+at day 90), and a sudden war between equal polities (−100% aggressor stability; −40% treasury for
+both; war persists all 180 days). Demonstrates geopolitical consequence modelling built on Phase 61.
+
+**Emergent Behaviour Validation Suite** (`tools/emergent-validation.ts`, `npm run run:emergent-validation`) —
+four historical combat scenarios validated across 100 seeds each: 10v10 open-ground skirmish
+(Ardant du Picq), environmental friction in rain + fog (Keegan), Lanchester's numerical
+superiority law (5 vs. 10), and siege attrition via disease (Raudzens). All 4/4 scenarios pass.
+
+**Performance & Scalability Benchmarks** (`tools/benchmark.ts`, `npm run run:benchmark`) —
+reproducible throughput figures across four entity-count scenarios (10 / 100 / 500 / 1 000).
+Includes AI-decision-budget breakdown, spatial-index comparison vs. naïve O(n²), and a tuning
+guide. Full report in `docs/performance.md`.
+
+**Dataset Contribution Pipeline** (`docs/dataset-contribution.md`) — step-by-step guide for
+adding empirical datasets and `DirectValidationScenario` entries to the validation runner.
+Includes CSV format spec, four code templates, tolerance-selection table, and a live example
+(`datasets/example-sprint-speed.csv` — human peak anaerobic power, ✓ PASS at 9.5% error).
+
+**Public Validation Dashboard** (`docs/dashboard/`, `npm run run:validation-dashboard`) —
+self-contained HTML dashboard showing all 43 validation scenarios with pass/fail status,
+simulated vs. empirical bars with ±tolerance bands, and filter controls. JSON data is
+regenerated automatically on push via `.github/workflows/validation-dashboard.yml`.
+Serve locally with `python -m http.server` inside `docs/dashboard/`.
+
+**Visual Editors for Non-Developers** (`docs/editors/`) — two standalone HTML/JS tools
+requiring no build step or TypeScript knowledge. **Body Plan Editor**: define species segments
+with mass-share sliders, locomotion/manipulation/CNS roles, and live validation; generates a
+`BodyPlan` TypeScript literal. **Validation Scenario Builder**: configure entities, simulation
+parameters, weather, and empirical reference data; generates a `DirectValidationScenario`
+block. Both tools serve via GitHub Pages or `python -m http.server`.
+
+**2904 tests.** All coverage thresholds met (statements 93.75%+, branches 84.69%+, functions 92%+, lines 93.75%+).
+
+See `ROADMAP.md` for the full development plan.
+
+---
+
+## Validation against real-world data
+
+> **Emergent validation report:** [`docs/emergent-validation-report.md`](docs/emergent-validation-report.md)
+> — four historical combat scenarios, 100 seeds each, all passing.  This is the flagship trust
+> artifact: it validates *distributions of outcomes* across multi-system interactions, not just
+> individual formula outputs.  CI runs a 20-seed fast subset on every push.
+
+Ananke's physics-based approach is systematically validated against external real-world datasets and literature sources. The validation framework (`tools/validation.ts`) compares simulation outputs with empirical measurements across multiple sub‑systems, ensuring the simulation's predictions remain grounded in reality.
+
+**Key validated sub‑systems:**
+- Movement energy cost (AddBiomechanics walking metabolic dataset)
+- Projectile drag (BVR Air Combat dataset)
+- Jump height and sprint speed (sports‑science literature)
+- Fracture thresholds (Yamada 1970, McElhaney 1970)
+- Thoracic and pelvic impact tolerance (AFRL Biodynamics Data Bank)
+- Damage energy constants (NATO STANAG 4526)
+- Sleep deprivation cognitive impairment (Van Dongen et al. 2003 meta‑analysis)
+- Disease mortality rates (historical epidemiology)
+- Calibration scenarios: armed vs. unarmed, untreated knife wound, first‑aid saves lives, fracture recovery, untreated infection, plate armour effectiveness
+
+Each validation scenario runs a deterministic simulation that replicates the experimental conditions of the external dataset, then compares the simulated mean against the empirical mean with a ±20 % tolerance. A constant‑suggestion system provides actionable recommendations for tuning constants when deviations exceed tolerance.
+
+**Validation inventory:** A comprehensive catalogue of all validated and potential future datasets is maintained in [`docs/external-dataset-validation-inventory.md`](docs/external-dataset-validation-inventory.md). The inventory includes 19 currently validated sources and identifies 11 high‑value external datasets for future validation work across muscle mechanics, ground‑reaction forces, blast physics, cognitive state, and melee combat.
+
+**Run validation:** `npm run run:validation <subsystem>` generates a validation report for a specific sub‑system.
+
+## Physics realism summary (post-Phase 30)
+
+Ananke now models the complete survivability stack. Five independent threat vectors can kill
+an entity, each operating on a different time scale and requiring different intervention:
+
+| Threat | Time scale | Mechanism | Primary phases |
+|--------|-----------|-----------|----------------|
+| Injury / blood loss | Seconds | Fluid loss → shock → death | 1, 9 |
+| Infection | Hours–days | Internal damage accumulation | 9 |
+| Thermal stress | Minutes–hours | Core temperature extremes | 29 |
+| Dehydration | Hours–days | Hydration balance collapse | 30 |
+| Starvation | Days–weeks | Caloric deficit → catabolism | 30 |
+
+### Physical phenomena modelled
+
+**Newtonian mechanics**
+- Kinetic energy → injury via impact physics, penetration, and leverage (Phases 1–3)
+- Impulse-momentum → knockback velocity and stagger/prone transitions (Phase 26)
+- Angular momentum → miss recovery time and weapon bind probability (Phase 2)
+
+**Wound physiology**
+- Per-region surface / internal / structural damage; penetration bias by tissue type
+- Bleeding rate proportional to internal damage; natural clotting proportional to tissue integrity
+- Fluid loss → haemodynamic shock → consciousness erosion → death (`fluidLoss ≥ 0.80` fatal)
+- Fracture (structural ≥ 0.70), permanent damage (≥ 0.90), infection onset after 100 ticks of bleeding
+
+**High-velocity ballistics** (Phase 27)
+- Temporary cavity multiplier ×1.0–×3.0 above 600 m/s; scales by tissue compliance
+- Cavitation bleed boost in fluid-saturated organs (torso, liver, spleen, lung, legs) above 900 m/s
+
+**Thermodynamics** (Phase 29)
+- Core temperature balance: metabolic heat (1.06–5.50 W/kg by activity) vs. conductive loss through skin + armour insulation
+- Thermal resistance: `R = 0.09 + Σ(armour.insulation_m2KW)` °C/W; thermal mass = `3500 × mass_real` J/°C
+- Seven-stage temperature model: critical hyperthermia → heat stroke → heat exhaustion → normal → mild → moderate → severe hypothermia → cardiac arrest
+
+**Metabolism** (Phase 30)
+- Basal metabolic rate: `80 × (mass_kg / 75)^0.75` W (Kleiber's law)
+- Active metabolic rate: `BMR + peakPower_W × activityFrac × 0.15`
+- Four hunger states: sated (< 12 h deficit), hungry (12–24 h), starving (24–72 h), critical (≥ 72 h)
+- Fat catabolism: 300 g/day during starvation; muscle catabolism: 0.5 N/hour reduction in `peakForce_N` during critical state
+
+**Pharmacokinetics** (Phase 10)
+- One-compartment absorption/elimination model per active substance
+- Cross-substance interactions: stimulant, haemostatic, anaesthetic, poison
+
+**Neuromuscular and cognitive**
+- Reaction time → attack/defence timing; decision latency → AI replanning interval
+- Fine motor control impairment from arm damage; manipulation penalty from fractures
+- Fatigue accumulation (joules) → exhaustion threshold → prone collapse
+
+**Environmental**
+- Fire, corrosive, electrical, radiation, suffocation — tick-based accumulation with channel-specific armour
+- Blast wave (quadratic falloff) and fragmentation (stochastic count, random region)
+- Ambient temperature stress (Phase 10); terrain friction, elevation, cover, hazard cells (Phase 6)
+
+**Psychology**
+- Fear accumulation from near-miss fire, ally deaths, calibre size (Phase 5)
+- Routing, panic varieties (surrender / freeze / flee), leader auras, rally mechanics
+- Suppression from near-miss ranged fire → AI cover-seeking
+
+### Time scales covered
+
+| Scale | System |
+|-------|--------|
+| 50 ms / tick (20 Hz) | Combat resolution, movement, stamina |
+| Seconds | Bleeding, pharmacokinetics, thermal tick |
+| Minutes | Clotting, hypothermia onset |
+| Hours | Infection onset, hunger onset, thermal equilibrium |
+| Days | Hunger state transitions, mass loss from starvation |
+| Weeks | Wound healing, infection mortality |
+| Months / years | Training drift, ageing decline, injury sequelae (Phase 21) |
+
+---
+
+## Quick start
+
+```typescript
+import { stepWorld, TICK_HZ } from "./src/sim/kernel.js";
+import { STARTER_WEAPONS } from "./src/equipment.js";
+import { HUMAN_BASE } from "./src/archetypes.js";
+import { generateIndividual } from "./src/generate.js";
+import { q, SCALE } from "./src/units.js";
+import { v3 } from "./src/sim/vec3.js";
+import { defaultIntent } from "./src/sim/intent.js";
+import { defaultAction } from "./src/sim/action.js";
+import { defaultCondition } from "./src/sim/condition.js";
+import { defaultInjury } from "./src/sim/injury.js";
+
+// Two fighters, procedurally generated from the human archetype.
+// Each will have unique physical attributes drawn from realistic distributions.
+const attrsA = generateIndividual(1, HUMAN_BASE);
+const attrsB = generateIndividual(2, HUMAN_BASE);
+
+const world = {
+  tick: 0,
+  seed: 12345,
+  entities: [
+    {
+      id: 1, teamId: 1,
+      attributes: attrsA,
+      energy: { reserveEnergy_J: attrsA.performance.reserveEnergy_J, fatigue: q(0) },
+      loadout: { items: [STARTER_WEAPONS[0]] },
+      traits: [],
+      position_m: v3(0, 0, 0),
+      velocity_mps: v3(0, 0, 0),
+      intent: defaultIntent(), action: defaultAction(),
+      condition: defaultCondition(), injury: defaultInjury(),
+      grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0) },
+    },
+    {
+      id: 2, teamId: 2,
+      attributes: attrsB,
+      energy: { reserveEnergy_J: attrsB.performance.reserveEnergy_J, fatigue: q(0) },
+      loadout: { items: [] },
+      traits: [],
+      position_m: v3(Math.trunc(0.8 * SCALE.m), 0, 0),
+      velocity_mps: v3(0, 0, 0),
+      intent: defaultIntent(), action: defaultAction(),
+      condition: defaultCondition(), injury: defaultInjury(),
+      grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0) },
+    },
+  ],
+};
+
+const cmds = new Map([
+  [1, [{ kind: "attack", targetId: 2, weaponId: "wpn_club", intensity: q(1.0), mode: "strike" }]],
+]);
+
+for (let i = 0; i < 5 * TICK_HZ; i++) {
+  stepWorld(world, cmds, { tractionCoeff: q(0.9) });
+}
+
+const target = world.entities.find(e => e.id === 2)!;
+console.log("Torso surface damage:", target.injury.byRegion.torso.surfaceDamage / SCALE.Q);
+console.log("Consciousness:",        target.injury.consciousness / SCALE.Q);
+console.log("Dead:",                 target.injury.dead);
+```
+
+---
+
+## Fixed-point unit system
+
+All simulation values are scaled integers. Never use `Math.random()` or floating-point
+arithmetic in simulation code.
+
+| Unit | SCALE constant | Meaning |
+|---|---|---|
+| metres | `SCALE.m = 10000` | 1 m = 10 000 units |
+| seconds | `SCALE.s = 10000` | 1 s = 10 000 units |
+| kilograms | `SCALE.kg = 1000` | 1 kg = 1 000 units |
+| newtons | `SCALE.N = 1000` | 1 N = 1 000 units |
+| joules | `SCALE.J = 1000` | 1 J = 1 000 units |
+| watts | `SCALE.W = 1000` | 1 W = 1 000 units |
+| dimensionless | `SCALE.Q = 10000` | 1.0 = 10 000 units |
+
+Convert to fixed-point: `q(0.5)` → `5000`, `to.m(1.8)` → `18000`.
+Read back: `value / SCALE.m` → metres, `value / SCALE.Q` → dimensionless fraction.
+
+---
+
+## Entity model
+
+Every entity is built from four attribute groups, all in SI units.
+
+### Morphology
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `stature_m` | m | Height |
+| `mass_kg` | kg | Total mass |
+| `actuatorMass_kg` | kg | Muscle or actuator mass |
+| `actuatorScale` | Q | Actuator strength multiplier |
+| `structureScale` | Q | Structural toughness multiplier |
+| `reachScale` | Q | Limb reach multiplier |
+
+### Performance
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `peakForce_N` | N | Maximum output force |
+| `peakPower_W` | W | Maximum instantaneous power |
+| `continuousPower_W` | W | Sustainable aerobic power |
+| `reserveEnergy_J` | J | Total metabolic reserve (stamina pool) |
+| `conversionEfficiency` | Q | Fraction of metabolic energy delivered as mechanical work |
+
+### Control
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `controlQuality` | Q | Overall motor coordination (0–1) |
+| `reactionTime_s` | s | Neuromuscular response latency |
+| `stability` | Q | Balance and postural stability (0–1) |
+| `fineControl` | Q | Precision of fine movements (0–1) |
+
+### Resilience
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `surfaceIntegrity` | Q | Resistance to surface-layer damage |
+| `bulkIntegrity` | Q | Resistance to bulk soft-tissue damage |
+| `structureIntegrity` | Q | Resistance to skeletal or structural damage |
+| `distressTolerance` | Q | Pain and distress tolerance (0–1) |
+| `shockTolerance` | Q | Resistance to haemodynamic shock (0–1) |
+| `concussionTolerance` | Q | CNS impact tolerance (0–1) |
+| `heatTolerance` | Q | Thermal hazard resistance (0–1) |
+| `coldTolerance` | Q | Cold hazard resistance (0–1) |
+| `fatigueRate` | Q | Fatigue accumulation rate multiplier |
+| `recoveryRate` | Q | Recovery rate multiplier |
+| `magicResist` | Q | Resistance to capability effects (magic/technology); q(1.0) = fully immune (optional) |
+
+### Perception (Phase 4)
+
+| Field | Unit | Meaning |
+|---|---|---|
+| `visionRange_m` | m | Maximum reliable visual detection range |
+| `visionArcDeg` | degrees | Horizontal field of view (120° human, 360° robot) |
+| `halfArcCosQ` | Q | cos(visionArcDeg/2) pre-computed for fast sim-path arc checks |
+| `hearingRange_m` | m | Omnidirectional acoustic detection range |
+| `decisionLatency_s` | s | Minimum time between plan revisions (500ms human, 50ms robot) |
+| `attentionDepth` | integer | Maximum simultaneously tracked threats |
+| `threatHorizon_m` | m | Range at which threats are integrated into decisions |
+
+### Individual variation
+
+`generateIndividual(seed, archetype)` produces a unique entity by applying triangular
+distributions to each attribute, parameterised by the archetype's variance fields.
+
+A human with seed 1 might have `peakForce_N = 1640` (below average) but
+`reserveEnergy_J = 26000` (high stamina). These values are physically meaningful and feed
+directly into combat, movement, and fatigue calculations with no intermediate conversion.
+
+Archetypes in `src/archetypes.ts`: `HUMAN_BASE`, `SERVICE_ROBOT`, `AMATEUR_BOXER`,
+`PRO_BOXER`, `GRECO_WRESTLER`, `KNIGHT_INFANTRY`, `LARGE_PACIFIC_OCTOPUS`. Additional
+archetypes (quadruped, alien, etc.) are data additions, not code changes.
+
+---
+
+## Anatomy and injury
+
+Per-region injury tracking — fully data-driven via `BodyPlan` (Phase 8). Default is humanoid
+(head, torso, left arm, right arm, left leg, right leg). Other plans: quadruped, theropod,
+sauropod, avian, vermiform, centaur, octopoid — see `src/sim/bodyplan.ts`.
+
+Each region tracks:
+
+- `surfaceDamage` — skin, scales, outer covering
+- `internalDamage` — organ, soft-tissue, deep injury
+- `structuralDamage` — bone, frame, load-bearing structure
+- `bleedingRate` — active blood loss rate
+- `fractured` — set when `structuralDamage ≥ 0.70`; persistent impairment until surgically repaired (Phase 9)
+- `permanentDamage` — floor below which surgery cannot reduce `structuralDamage` (set at ≥ 0.90) (Phase 9)
+- `bleedDuration_ticks` — ticks with active bleeding; infection onsets after 100 ticks if `internalDamage > 0.10` (Phase 9)
+- `infectedTick` — tick at which infection began (`-1` = none); infected regions gain `+q(0.0003)` internal damage per tick (Phase 9)
+
+Global injury state:
+
+- `shock` — haemodynamic and neurological shock (0–1)
+- `fluidLoss` — cumulative blood or fluid loss (0–1); fatal at 0.80 (Phase 9)
+- `consciousness` — 1.0 = fully conscious, 0 = unconscious
+- `dead` — irreversible cessation
+
+---
+
+## Functional impairment
+
+Damage produces functional penalties that feed automatically into movement, combat, and
+stamina calculations:
+
+| Damage location | Effect |
+|---|---|
+| Leg structural | Sprint speed and acceleration reduction |
+| Leg fracture | Up to −30% mobility (Phase 9) |
+| Arm damage | Manipulation quality and parry effectiveness reduction |
+| Arm fracture | Up to −25% manipulation (Phase 9) |
+| Head damage | Coordination and consciousness degradation |
+| Torso damage | Breathing impairment and shock vulnerability |
+| Shock (global) | All performance multipliers degraded |
+
+---
+
+## Combat resolution
+
+### Hit resolution
+
+1. Attacker rolls against `controlQuality` and `reactionTime_s`
+2. Defender rolls against their defence mode (block, parry, dodge) and intensity
+3. Geometry influence (facing angle) modifies contest
+4. On hit: location selected by weighted region roll, hit quality computed
+5. Shield interposition checked against region coverage
+6. Armour checked per region and channel
+7. Residual energy applied to injury
+
+### Impact physics
+
+Impact energy derived from:
+
+- Weapon effective mass (kg)
+- Relative velocity (m/s) from attacker's `peakPower_W` and `continuousPower_W`
+- Leverage: parry leverage from weapon moment arm (N·m)
+- Two-handed grip: 1.12× energy bonus when both arms are free
+
+Converted to surface, internal, and structural injury proportional to penetration profile.
+Bleeding rate increases proportionally to internal damage severity.
+
+### Weapon dynamics
+
+- **Reach dominance**: shorter weapon is penalised in both attack and parry against a longer one
+- **Miss recovery**: missed strikes add extra cooldown ticks proportional to weapon angular momentum (mass × reach)
+- **Weapon bind**: successful parry with heavy weapons can lock both weapons; requires a strength contest (`breakBind`) to escape
+- **Grappling**: strength+mass+technique contest; positions (standing/pinned/prone), throws, chokes, joint locks
+- **Swing momentum carry**: `swingMomentumQ` decays 5%/tick; a clean hit sets it to `intensity × q(0.80)`; adds up to +12% energy on the next strike; reset to 0 on miss, block, or parry
+
+### Stamina
+
+Actions cost energy (joules). When reserve falls below 15% of baseline, functional penalties
+ramp in. At zero reserve the entity collapses prone and loses all active defence.
+
+### Medical treatment (Phase 9)
+
+Treatment is issued via `TreatCommand` and resolved by `resolveTreat()` in the kernel.
+The treater must be within 2 m of the target. Outcome scales with equipment tier and the
+treater's `medical` skill (`treatmentRateMul`).
+
+**Equipment tiers** (ascending capability): `bandage`, `surgicalKit`, `autodoc`, `nanomedicine`.
+
+| Action | Min tier | Effect |
+|---|---|---|
+| `tourniquet` | bandage | Zeroes `bleedingRate` for one region immediately |
+| `bandage` | bandage | Reduces `bleedingRate` by `q(0.005) × effectMul` per tick |
+| `surgery` | surgicalKit | Reduces `structuralDamage`; clears fracture; clears infection (≥ surgicalKit) |
+| `fluidReplacement` | autodoc | Reduces `fluidLoss`; slightly reduces shock |
+
+**Natural clotting**: `bleedingRate` decays automatically each tick at a rate proportional
+to `(1 − structuralDamage) × q(0.0002)`. Severe structural damage slows natural clotting.
+
+**Injury progression** each tick:
+- Bleeding accumulates `fluidLoss` at `bleedingRate / TICK_HZ`
+- Fluid loss drives shock; shock erodes consciousness
+- `fluidLoss ≥ 0.80` → immediate death
+- Infection (if present) adds `+q(0.0003)` internal damage per tick
+
+### Ranged combat
+
+Physics-based projectile system parallel to melee. Issued via `shoot` command.
+
+**Energy at range** — linear drag approximation: `energy_J = launchEnergy_J × max(0, 1 − range_m × dragCoeff_perM)`. No energy means no hit.
+
+**Accuracy** — angular dispersion converts to grouping radius at range (`dispersionQ × range_m`). Compared against body half-width (~20% of stature). Miss if error exceeds half-width; near-miss if within 3× half-width.
+
+**Dispersion modifiers**: `controlQuality`, `fineControl`, fatigue, and aiming intensity all scale the base weapon dispersion.
+
+**Aiming time** — issuing consecutive `shoot` commands against the same target while stationary accumulates `aimTicks` (max 20, capped at 50% dispersion reduction). Resets on target switch, movement above 0.5 m/s, or after firing.
+
+**Moving target penalty** — target velocity adds a lead error (`velocity × 0.2 s reaction time`) to the grouping radius before the hit roll. A sprinting target at 30 m is dramatically harder to hit than a stationary one.
+
+**Suppression** — near-misses set `suppressedTicks` on the target, applying a −10% `coordinationMul` penalty until the counter drains. Entities with `suppressedTicks ≥ 3` and low `distressTolerance` will go prone via AI; all suppressed entities seek cover at a higher threshold (q(0.50) vs q(0.30)).
+
+**Ammo types** — a `RangedWeapon` may carry an `ammo: AmmoType[]` array. A `shoot` command with `ammoId` selects a round that overrides mass, drag, damage profile, and/or launch energy multiplier for that shot. `STARTER_AMMO` provides `ammo_ap` (penetrating), `ammo_hv` (×1.20 launch energy), and `ammo_hollow` (high bleed factor).
+
+**Projectile categories:**
+
+| Category | Launch energy | Examples |
+|---|---|---|
+| Thrown | Derived from thrower `peakPower_W` (÷10) | Sling |
+| Bow | Fixed weapon property (J) | Short bow, long bow, crossbow |
+| Firearm | Fixed weapon property (J) | Pistol, musket |
+
+Hits reuse the existing injury pipeline (`applyImpactToInjury`) via a weapon proxy. Armour and shields interpose by the same rules as melee.
+
+---
+
+## Armour
+
+Per-region coverage with per-channel protection:
+
+| Channel | Protects against |
+|---|---|
+| Kinetic | Blunt and penetrating impacts |
+| Thermal | Fire, extreme heat |
+| Chemical | Corrosive aerosols |
+| Electrical | Electrical discharge |
+| Radiation | Ionising radiation |
+| Suffocation | Airborne hazard (sealed suits) |
+| ControlDisruption | EMP, neural disruption |
+
+Armour properties: `resist_J` (kinetic threshold), `coverageByRegion` (probability of
+interposition), `protectedDamageMul` (residual damage fraction), `channelResistMul`
+(per-channel resistance modifier), `mobilityMul`, `fatigueMul`.
+
+---
+
+## Environmental hazards
+
+Conditions accumulate on entities per tick and drive injury via the same per-channel,
+per-region pipeline as combat:
+
+| Condition | Effect |
+|---|---|
+| `onFire` | Surface damage + shock accumulation |
+| `corrosiveExposure` | Surface and internal damage |
+| `electricalOverload` | Internal damage + stun |
+| `radiation` | Internal damage + shock |
+| `suffocation` | Shock and consciousness erosion |
+
+Armour provides protection against all channels. Traits (`radiationHardened`, `sealed`,
+`nonConductive`, etc.) provide immunity or resistance.
+
+### Blast and fragmentation (Phase 10)
+
+`applyExplosion(world, origin, spec, tick, trace)` applies a `BlastSpec` point-source explosion
+to all living entities within the blast radius. Uses quadratic falloff (`1 − dist²/radius²`).
+
+- **Blast wave**: delivered to torso as `BLAST_WEAPON` (high internal damage)
+- **Fragments**: stochastic count per entity; each fragment hits a random region as `FRAG_WEAPON`
+  (high penetration bias, high bleed factor)
+- Emits `BlastHit` trace event per affected entity
+
+### Fall damage (Phase 10)
+
+`applyFallDamage(world, entityId, height_m, tick, trace)` applies fall physics.
+KE = mass × g × height; 85% absorbed by muscles (15% transmitted). Any fall ≥ 1 m forces prone.
+Damage distributed: locomotion-primary regions 70%, others 30% (body-plan-aware).
+Humanoid fallback: legs 35% each, arms 10% each, torso/head 5% each.
+
+### Pharmacokinetics (Phase 10)
+
+One-compartment model per active substance (`entity.substances`). Each tick:
+absorption rate × pendingDose absorbed into concentration; elimination rate × concentration removed.
+Effects activate when concentration exceeds `effectThreshold`:
+
+| Effect type | Per-tick effect |
+|---|---|
+| `stimulant` | Reduces `fearQ` and slows fatigue accumulation |
+| `anaesthetic` | Erodes `consciousness` |
+| `poison` | Internal damage to torso + mild shock |
+| `haemostatic` | Reduces `bleedingRate` across all regions |
+
+`STARTER_SUBSTANCES` provides four ready-made entries: `stimulant`, `anaesthetic`, `poison`, `haemostatic`.
+
+### Ambient temperature (Phase 10)
+
+`KernelContext.ambientTemperature_Q` — comfort range `[q(0.35), q(0.65)]`.
+- Heat (above q(0.65)): shock + torso surface damage; scaled by `heatTolerance`
+- Cold (below q(0.35)): shock + fatigue accumulation; scaled by `coldTolerance`
+
+### Technology spectrum (Phase 11)
+
+`TechContext` gates which items are usable in a scenario without locking them to a specific era.
+
+```typescript
+import { TechEra, defaultTechContext, isCapabilityAvailable } from "./src/sim/tech.js";
+import { validateLoadout, STARTER_EXOSKELETONS } from "./src/equipment.js";
+
+const ctx = defaultTechContext(TechEra.NearFuture);
+// ctx.available includes PoweredExoskeleton but not EnergyWeapons
+
+const exo = STARTER_EXOSKELETONS.find(e => e.id === "exo_combat")!;
+const loadout = { items: [exo] };
+const errors = validateLoadout(loadout, ctx); // [] — valid
+```
+
+**`Exoskeleton` item kind** — integrated with kernel:
+- `speedMultiplier: Q` — factored into `stepMovement` baseMul
+- `forceMultiplier: Q` — applied to strike `energy_J` in `resolveAttack`
+- `powerDrain_W: number` — added to metabolic demand in `stepEnergy`
+
+**Starter items**: `exo_combat` (+25% speed, +40% force, 200 W drain),
+`exo_heavy` (+10% speed, +80% force, 400 W drain), `arm_plate` (800 J resist, requires `MetallicArmour`),
+`rng_plasma_rifle` (2000 J, requires `EnergyWeapons`).
+
+Era capabilities are cumulative: Prehistoric has none; DeepSpace has all eight.
+
+**Magic and para-science types** (Phase 12B) — four additional `TechCapability` values gate
+Clarke's Third Law capability effects: `ArcaneMagic`, `DivineMagic`, `Psionics`, `Nanotech`.
+These are not assigned to any era by `ERA_DEFAULTS`; host applications opt in explicitly.
+
+**Medical technology gate**: `TIER_TECH_REQ` in `medical.ts` maps medical tiers to required
+capabilities. When `ctx.techCtx` is set, `resolveTreat()` blocks treatment if the treater's
+tier requires a capability absent from the scenario. Currently: `nanomedicine` tier requires
+`NanomedicalRepair`. Tiers without a listed requirement work in any era.
+
+---
+
+## Capability Sources and Effects (Phase 12)
+
+**Clarke's Third Law**: a fireball and a plasma grenade, a healing spell and a nanobot swarm,
+a mana pool and a fusion reactor — all resolve through identical engine primitives. The engine
+cannot distinguish magic from technology. Only the `tags` field differs.
+
+### CapabilitySource
+
+Attached to `entity.capabilitySources?: CapabilitySource[]`. Each source is an energy reservoir
+(always in joules) with one of five regen models:
+
+| RegenModel type | Behaviour |
+|---|---|
+| `rest` | Regens only when entity is stationary and not in combat |
+| `constant` | Regens every tick regardless of activity |
+| `ambient` | Regens proportional to `ambientGrid` cell value at entity's position |
+| `event` | Fires on tick intervals or kill triggers |
+| `boundless` | Never depletes; cost deduction skipped entirely |
+
+### ActivateCommand
+
+```typescript
+{ kind: "activate", sourceId: string, effectId: string, targetId?: number, targetPos?: Vec3 }
+```
+
+### EffectPayload variants
+
+| Payload kind | Effect | Engine primitive |
+|---|---|---|
+| `impact` | Kinetic, thermal, internal, or penetrating damage | `applyImpactToInjury` |
+| `treatment` | Healing at specified tier and rate multiplier | `resolveTreat` |
+| `armourLayer` | Temporary per-channel armour overlay | `condition.temporaryArmour` |
+| `velocity` | Direct velocity delta (telekinesis, jump jet) | velocity integration |
+| `substance` | Pharmacokinetic substance injection | `stepSubstances` |
+| `structuralRepair` | Structural damage write-back (respects `permanentDamage`) | injury state |
+| `fieldEffect` | Places suppression zone in `world.activeFieldEffects` | `stepFieldEffects` |
+
+### Phase 12B extensions
+
+- **Per-capability cooldowns**: `cooldown_ticks?: number` on `CapabilityEffect`; tracked in
+  `action.capabilityCooldowns` (Map, key = `"sourceId:effectId"`); decremented at tick start.
+- **TechCapability gating**: `requiredCapability?: TechCapability` on `CapabilityEffect`;
+  checked against `ctx.techCtx` when set. Includes magic gates: `ArcaneMagic`, `DivineMagic`,
+  `Psionics`, `Nanotech`.
+- **Magic resistance**: `magicResist?: Q` on `Resilience`; seeded roll per non-self target in
+  `applyCapabilityEffect`; q(1.0) = always resist; self-cast bypasses entirely.
+- **Kill-triggered regen**: `{ on: "kill", amount_J }` in `EventRegen.triggers`; dispatched at
+  entity death; all living non-dead observers receive the reward (including the killer).
+- **Terrain-entry triggers**: `{ on: "terrain", tag, amount_J }` fires exactly once per
+  cell-boundary crossing; `action.lastCellKey` tracks the previous cell; supply
+  `KernelContext.terrainTagGrid` (Map of cell key → tag array) and optional `cellSize_m`.
+- **Concentration auras**: `castTime_ticks = -1` marks an ongoing per-tick effect;
+  `entity.activeConcentration` holds the active aura; `cost_J` is deducted every tick;
+  concentration breaks when reserve falls below `cost_J` or shock reaches q(0.30), emitting
+  `CastInterrupted`.
+- **Linked sources**: `CapabilitySource.linkedFallbackId` names a secondary source to draw
+  from when the primary is depleted; fallback can be `boundless` for unlimited overflow.
+- **Effect chains**: `FieldEffectSpec.chainPayload?: EffectPayload | EffectPayload[]` — payload
+  applied to every living entity within the field's radius each tick while the field is active;
+  fires before expiry so the final tick still delivers the payload.
+
+---
+
+## 3D model integration (Phase 14)
+
+`src/model3d.ts` provides pure data-extraction functions for driving 3D character rigs from
+simulation state. No kernel changes, no state mutations. Call once per tick after `stepWorld`.
+
+```typescript
+import { extractRigSnapshots } from "./src/model3d.js";
+
+const snapshots = extractRigSnapshots(world);
+for (const snap of snapshots) {
+  // snap.mass     — MassDistribution: per-segment mass and estimated CoG in real metres
+  // snap.inertia  — InertiaTensor: yaw/pitch/roll moment of inertia (kg·m²)
+  // snap.animation — AnimationHints: locomotion blend weights, guarding, attacking, prone, dead
+  // snap.pose     — PoseModifier[]: per-region injury deformation blend weights
+  // snap.grapple  — GrapplePoseConstraint: relative pose lock for grappling pairs
+  hostRenderer.updateRig(snap.entityId, snap);
+}
+```
+
+**Mass and inertia** are derived from `entity.bodyPlan` segment masses via canonical keyword
+matching (`head`, `torso`, `forearm`, `thigh`, `shin`, `wing`, etc.); fallback to a solid-sphere
+approximation when no body plan is present.
+
+**Animation hints** — locomotion weights (`idle`/`walk`/`run`/`sprint`/`crawl`) are mutually
+exclusive; exactly one is `SCALE.Q` when mobile. Overlays include `guardingQ`, `attackingQ`,
+`shockQ`, `fearQ`, and boolean flags `prone`, `unconscious`, `dead`.
+
+**Pose modifiers** — one entry per `injury.byRegion` key. `impairmentQ = max(structuralQ, surfaceQ)`.
+Map each `segmentId` to a skeleton bone and drive blend-shape or constraint weights.
+
+**Grapple constraints** — `isHolder`/`isHeld` flags, `holdingEntityId`, `heldByIds`, `position`
+(`standing`/`prone`/`pinned`), and `gripQ`. Use to lock relative pose between grappling entities.
+
+**Integration note:** These functions provide data snapshots only.  Mapping Ananke's abstract
+segment IDs to a specific engine's skeleton, handling tick-rate mismatch (20 Hz → 60+ Hz), and
+wiring animation hints into a state machine are the host's responsibility.  See
+`docs/bridge-api.md` for the full API reference and `docs/ecosystem.md` for Unity/Godot adapter
+sketches.  A minimal runnable reference plugin (ROADMAP item 6) is the next priority for
+lowering this integration barrier.
+
+---
+
+## API stability contract
+
+> Full reference: [`STABLE_API.md`](./STABLE_API.md) — Versioning policy: [`CHANGELOG.md`](./CHANGELOG.md)
+
+Ananke distinguishes three tiers of API stability so adopters know what to pin and what to
+expect to change.
+
+| Tier | What | Promise |
+|------|------|---------|
+| **Stable host API** | `stepWorld()`, `generateIndividual()`, `resolveHit()`, `Entity` shape (core fields), `q()` / `qMul()` / `clampQ()`, `ReplayRecorder` / `replayTo()`, `serializeReplay()` / `deserializeReplay()`, `extractRigSnapshots()` | No breaking changes without a major version bump and migration guide |
+| **Experimental extension API** | `stepPolityDay()`, `stepTechDiffusion()`, `applyEmotionalContagion()`, `compressMythsFromHistory()`, `stepNarrativeStress()`, `arena.ts` scenario DSL | Good-faith stability; may shift between minor versions with changelog |
+| **Internal kernel structures** | `src/sim/push.ts`, `src/sim/kernel.ts` internals, `src/rng.ts`, `eventSeed()` | No stability promise; do not import directly |
+
+All replay, serialization, and campaign round-trip guarantees apply only to the Stable tier.
+Experimental APIs are safe to use but may require migration on minor version updates.
+
+---
+
+## Determinism rules
+
+To maintain lockstep safety:
+
+- Never use `Math.random()`
+- Avoid floating point in simulation path
+- Iterate in stable, deterministic order
+- Consume RNG in fixed sequence per event type
+- Use deterministic event batching
+- Avoid unordered map iteration for gameplay logic
+- All seeds derived from `(worldSeed, tick, entityId, eventType)` — no global state
+
+---
+
+## AI and Perception
+
+Deterministic AI modules (Phase 4):
+
+- `sensory.ts` — `canDetect()`: vision arc, hearing range, environmental multipliers
+- `perception.ts` — `perceiveLocal()`: sensory-filtered enemy and ally detection
+- `targeting.ts` — `pickTarget()`, `updateFocus()`: horizon-limited, focus stickiness
+- `decide.ts` — `decideCommandsForEntity()`: behaviour presets with decision latency
+- `presets.ts` — `AI_PRESETS`: lineInfantry, skirmisher
+- `system.ts` — `buildAICommands()`: full AI pass over world
+
+**Decision latency**: entities re-plan at most once every `decisionLatency_s` seconds
+(10 ticks for humans, 1 tick for robots). Between plans, previous intent persists.
+
+**Surprise mechanics**: `canDetect(defender, attacker, env)` returns detection quality Q.
+If attacker is outside defender's FoV (< q(0.8)), defensive intensity is scaled
+proportionally. Full surprise (q(0)) eliminates defensive reaction entirely.
+
+---
+
+## Skills (Phase 7)
+
+Skills represent learned technique — adjustments to physical outcomes, not abstract point totals.
+They are provided by the host application and consumed by the engine. The engine never writes
+back to skill values; progression is the host's responsibility.
+
+### Skill map
+
+Each entity carries an optional `skills?: SkillMap` (`Map<SkillId, SkillLevel>`).
+When a skill is absent, `getSkill()` returns neutral defaults (no effect on simulation output),
+making all existing entities fully backward-compatible.
+
+```typescript
+import { buildSkillMap } from "./src/sim/skills.js";
+
+entity.skills = buildSkillMap({
+  meleeCombat:  { hitTimingOffset_s: -to.s(0.2), energyTransferMul: q(1.35) },
+  meleeDefence: { energyTransferMul: q(1.5) },
+  athleticism:  { fatigueRateMul: q(0.75) },
+});
+```
+
+### Skill domains
+
+| SkillId | Physical effect |
+|---|---|
+| `meleeCombat` | `hitTimingOffset_s` reduces attack cooldown; `energyTransferMul` scales strike energy |
+| `meleeDefence` | `energyTransferMul` scales effective parry/block quality |
+| `grappling` | `energyTransferMul` scales grapple contest score |
+| `rangedCombat` | `dispersionMul` tightens grouping radius (more accurate fire) |
+| `throwingWeapons` | `energyTransferMul` scales thrown weapon launch energy |
+| `shieldCraft` | `energyTransferMul` boosts defence skill when blocking with a shield |
+| `medical` | `treatmentRateMul` reduces fluid loss from bleeding each tick |
+| `athleticism` | `fatigueRateMul` reduces fatigue accumulation per energy tick |
+| `tactics` | `hitTimingOffset_s` reduces AI decision latency |
+| `stealth` | `dispersionMul` reduces the subject's acoustic signature (harder to hear) |
+
+### Composing skill levels
+
+`combineSkillLevels(a, b)` multiplies Q fields and adds time offsets, letting the host express
+synergy bonuses or composite experience modifiers before building the SkillMap:
+
+```typescript
+import { combineSkillLevels, defaultSkillLevel } from "./src/sim/skills.js";
+
+// Melee expert with an athleticism timing synergy (−0.25 s total)
+const combined = combineSkillLevels(
+  { ...defaultSkillLevel(), hitTimingOffset_s: -to.s(0.20), energyTransferMul: q(1.40) },
+  { ...defaultSkillLevel(), hitTimingOffset_s: -to.s(0.05) },
+);
+entity.skills = buildSkillMap({ meleeCombat: combined });
+```
+
+---
+
+## Replay and analytics (Phase 13)
+
+### Deterministic replay
+
+Every simulation is reproducible from initial state + command log. `ReplayRecorder` snapshots
+the world before the first tick and records command maps per tick. `replayTo` reconstructs
+any past tick by restoring the snapshot and re-applying frames.
+
+```typescript
+import { ReplayRecorder, replayTo, serializeReplay, deserializeReplay } from "./src/replay.js";
+
+const recorder = new ReplayRecorder(world);
+for (let i = 0; i < 100; i++) {
+  recorder.record(world.tick, cmds);
+  stepWorld(world, cmds, ctx);
+}
+
+// Seek to any past tick
+const worldAt50 = replayTo(recorder.toReplay(), 50, ctx);
+
+// Persist and restore across sessions
+const json = serializeReplay(recorder.toReplay());
+const restored = deserializeReplay(json);
+const worldAt50Again = replayTo(restored, 50, ctx);
+```
+
+`serializeReplay`/`deserializeReplay` handle `Map` fields (`entity.armourState`,
+`action.capabilityCooldowns`) that `JSON.stringify` would otherwise drop.
+
+### Combat analytics
+
+`CollectingTrace` implements `TraceSink` and accumulates all trace events for offline
+analysis. Pass it to `stepWorld` via `ctx.trace`, then extract metrics.
+
+```typescript
+import { CollectingTrace, collectMetrics, survivalRate, meanTimeToIncapacitation }
+  from "./src/metrics.js";
+
+const tracer = new CollectingTrace();
+for (let i = 0; i < 200; i++) stepWorld(world, cmds, { ...ctx, trace: tracer });
+
+const m = collectMetrics(tracer.events);
+console.log("Damage dealt by entity 1:", m.damageDealt.get(1));   // joules
+console.log("Hits landed by entity 1:", m.hitsLanded.get(1));
+console.log("Survival rate:", survivalRate(tracer.events, [1, 2, 3, 4]));
+console.log("Mean TTI (ticks):", meanTimeToIncapacitation(tracer.events, [1, 2, 3, 4], 200));
+```
+
+`collectMetrics` covers melee `Attack` events and ranged `ProjectileHit` events in a single
+pass over any flat `TraceEvent[]` — ordering and tick mixing are fine.
+
+### Visual debug layer (Phase 13)
+
+`extractMotionVectors`, `extractHitTraces`, and `extractConditionSamples` in `src/debug.ts`
+transform world state and trace events into renderer-friendly snapshots:
+
+```typescript
+import { extractMotionVectors, extractHitTraces, extractConditionSamples } from "./src/debug.js";
+import { CollectingTrace } from "./src/metrics.js";
+
+const tracer = new CollectingTrace();
+stepWorld(world, commands, { ...ctx, trace: tracer });
+
+// Motion overlay — one entry per entity with position, velocity, and facing
+const arrows = extractMotionVectors(world);
+
+// Hit display — melee and projectile hits with region and energy
+const { meleeHits, projectileHits } = extractHitTraces(tracer.events);
+
+// Condition heatmap — fear, shock, consciousness, fluid loss per entity
+const heatmap = extractConditionSamples(world);
+
+// Sample any past tick via replay
+const past = replayTo(recorder.toReplay(), 42, ctx);
+const pastHeatmap = extractConditionSamples(past);
+```
+
+---
+
+## Character description layer (Phase 16)
+
+`src/describe.ts` translates raw SI fixed-point attributes into human-readable summaries.
+No simulation dependencies — safe to import from any host application.
+
+```typescript
+import { describeCharacter, formatCharacterSheet, formatOneLine } from "./src/describe.js";
+import { generateIndividual } from "./src/generate.js";
+import { PRO_BOXER } from "./src/archetypes.js";
+
+const attrs = generateIndividual(7, PRO_BOXER);
+const desc  = describeCharacter(attrs);
+
+console.log(formatOneLine(desc));
+// → "Tall (1.83 m), 86.4 kg; strength excellent (4982 N), reaction quick (180 ms), resilience tough."
+
+console.log(formatCharacterSheet(desc));
+// Body
+//   Stature:      1.83 m — tall
+//   Mass:         86.4 kg — average build
+//
+// Performance
+//   Strength:     4982 N      [excellent]    elite level — professional fighter strength
+//   Power:        2214 W      [excellent]    elite explosive output
+//   Endurance:    398 W       [strong]       strong sustained performance
+//   Stamina:      40 kJ       [strong]       good combat energy reserves
+// ...
+```
+
+### Tier system
+
+Every attribute is rated 1–6 using breakpoints grounded in sports-science literature:
+
+| Tier | Label | Meaning |
+|------|-------|---------|
+| 1 | feeble / sluggish / fragile | Well below human baseline |
+| 2 | weak / slow / low | Below-average adult |
+| 3 | average | Baseline healthy adult (HUMAN_BASE anchor) |
+| 4 | strong / precise / resilient | Trained athlete or competitive fighter |
+| 5 | excellent / fast / tough | Elite / professional level |
+| 6 | exceptional / instant / ironclad | Superhuman, mechanical, or distributed biology |
+
+Reaction time and decision latency use an **inverted** scale (lower value = higher tier).
+`SERVICE_ROBOT` (80 ms reaction, 50 ms decision) → tier 6 "instant" / "machine-like" in both.
+`LARGE_PACIFIC_OCTOPUS` (no enclosed skull) → tier 6 "ironclad" concussion resistance.
+
+### API
+
+```typescript
+describeCharacter(attrs: IndividualAttributes): CharacterDescription
+// Returns a structured object with tier, label, comparison string, and formatted value
+// for every attribute. Vision and hearing are formatted strings (e.g. "200 m, 120° arc").
+
+formatCharacterSheet(desc: CharacterDescription): string
+// Multi-line columnar output suitable for a character screen or debug log.
+
+formatOneLine(desc: CharacterDescription): string
+// Single sentence, no newlines — suitable for tooltips or list views.
+```
+
+---
+
+## Combat narrative layer (Phase 18)
+
+`src/narrative.ts` converts raw `TraceEvent` streams into human-readable text. Like
+`src/describe.ts`, it has no simulation dependencies — safe to import from UI code or CLI tools.
+
+```typescript
+import { narrateEvent, buildCombatLog, describeInjuries, describeCombatOutcome }
+  from "./src/narrative.js";
+import { CollectingTrace } from "./src/metrics.js";
+import { ALL_HISTORICAL_MELEE } from "./src/weapons.js";
+
+const tracer = new CollectingTrace();
+for (let i = 0; i < 10 * TICK_HZ; i++) stepWorld(world, cmds, { ...ctx, trace: tracer });
+
+// Build weapon profile lookup for verb selection
+const profiles = new Map(ALL_HISTORICAL_MELEE.map(w => [w.id, w.damage]));
+
+const cfg = {
+  verbosity: "normal" as const,
+  nameMap: new Map([[1, "Sir Roland"], [2, "the orc"]]),
+  weaponProfiles: profiles,
+};
+
+// Per-event narration
+for (const ev of tracer.events) {
+  const line = narrateEvent(ev, cfg);
+  if (line) console.log(line);
+}
+// → "Sir Roland stabs the orc in the torso"
+// → "the orc attacks Sir Roland — parried"
+// → "Sir Roland powerfully stabs the orc in the head"
+// → "the orc is knocked unconscious"
+
+// Batch log
+const log = buildCombatLog(tracer.events, cfg);
+
+// Injury summary
+const orc = world.entities.find(e => e.id === 2)!;
+console.log(describeInjuries(orc.injury));
+// → "Unconscious; Significant blood loss; head fractured"
+
+// Outcome
+const summary = describeCombatOutcome(
+  world.entities.map(e => ({ id: e.id, teamId: e.teamId, injury: e.injury })),
+  200,
+);
+console.log(summary);
+// → "Team 1 wins — Team 2 defeated (200 ticks)"
+```
+
+### Verbosity levels
+
+| Level | What is included |
+|-------|-----------------|
+| `terse` | Landed hits, KO, death, morale route/rally, fractures, blasts — nothing else |
+| `normal` | Adds blocked/parried/shield notes, misses, grapple start/break, weapon bind, treatment |
+| `verbose` | Adds grapple maintenance ticks, capability events |
+
+### Verb selection
+
+Verb is chosen from the weapon's `WeaponDamageProfile` (supplied via `weaponProfiles` config):
+
+| Profile dominant field | Verb |
+|------------------------|------|
+| `penetrationBias ≥ q(0.65)` | stab(s) |
+| `structuralFrac ≥ q(0.50)` | bludgeon(s) |
+| `surfaceFrac ≥ q(0.50)` | slash(es) |
+| Default | strike(s) |
+
+Ranged: `penetrationBias ≥ q(0.80)` → snipe(s); `surfaceFrac ≥ q(0.55)` → blast(s); default → shoot(s).
+
+Energy qualifiers: `< 10J` → "barely grazes"; `≥ 200J` → "powerfully"; `≥ 500J` → "devastatingly".
+
+Set an entity's name to `"you"` in `nameMap` for second-person verb conjugation
+("you strike" rather than "you strikes").
+
+---
+
+## Downtime & Recovery simulation (Phase 19)
+
+`src/downtime.ts` bridges the gap between 20 Hz combat and hours-to-weeks campaign time.
+It runs a compressed 1 Hz loop applying the same healing physics as the kernel, suitable
+for computing wound outcomes, resource consumption, and recovery timelines between sessions.
+
+```typescript
+import { stepDowntime, MEDICAL_RESOURCES } from "./src/downtime.js";
+
+const reports = stepDowntime(world, 3600, {
+  treatments: new Map([
+    [1, { careLevel: "first_aid" }],
+    [2, { careLevel: "field_medicine", onsetDelay_s: 120 }],
+  ]),
+  rest: true,
+});
+
+for (const r of reports) {
+  console.log(`Entity ${r.entityId}: died=${r.died}, bleedingStopped=${r.bleedingStopped}`);
+  console.log(`  Fluid loss: ${r.injuryAtStart.fluidLoss} → ${r.injuryAtEnd.fluidLoss}`);
+  console.log(`  Resources used: ${r.totalCostUnits} cost units`);
+  console.log(`  Combat ready in: ${r.combatReadyAt_s}s`);
+}
+```
+
+**Care levels:** `"none"` | `"first_aid"` | `"field_medicine"` | `"hospital"` | `"autodoc"` | `"nanomedicine"`
+
+**Resource catalogue** (`MEDICAL_RESOURCES`): 7 items from field bandage (1 unit) to nanomed dose (2000 units). All items have `costUnits` and `massGrams` for encumbrance and economy integration.
+
+**Calibration:** `q(0.06)` bleedingRate → fatal in ~267 simulated seconds without treatment. First aid stops bleeding in under 60 seconds. Untreated infection fatal within 21 simulated days.
+
+---
+
+## Arena simulation framework (Phase 20)
+
+`src/arena.ts` provides a declarative scenario DSL for batch-running combat trials with statistical expectations. Use it to validate simulation realism, balance archetypes, and author calibration tests.
+
+```typescript
+import { runArena, expectWinRate, expectSurvivalRate, formatArenaReport }
+  from "./src/arena.js";
+import { mkKnight, mkBoxer } from "./src/presets.js";
+
+const scenario = {
+  name: "Knight vs Boxer",
+  combatants: [
+    { id: 1, teamId: 1, factory: () => mkKnight(1, 1, 0, 0) },
+    { id: 2, teamId: 2, factory: () => mkBoxer(2, 2, 1, 0) },
+  ],
+  maxTicks: 400,
+  expectations: [
+    expectWinRate(1, 0.70),           // knight wins ≥ 70% of trials
+    expectSurvivalRate(1, 1, 0.90),   // knight survives ≥ 90%
+  ],
+};
+
+const result = runArena(scenario, 50);
+console.log(formatArenaReport(result));
+```
+
+**Six built-in calibration scenarios** validate core physics:
+`CALIBRATION_ARMED_VS_UNARMED`, `CALIBRATION_UNTREATED_KNIFE_WOUND`,
+`CALIBRATION_FIRST_AID_SAVES_LIVES`, `CALIBRATION_FRACTURE_RECOVERY`,
+`CALIBRATION_INFECTION_UNTREATED`, `CALIBRATION_PLATE_ARMOUR`.
+
+**Recovery integration:** supply `scenario.recovery` to run `stepDowntime` post-combat and get `recoveryStats` (mean days to combat-ready, p90 resource cost, etc.).
+
+---
+
+## Character progression (Phase 21)
+
+`src/progression.ts` adds the temporal axis: how entities improve through training and experience, decline through ageing, and carry permanent marks from injury. No simulation dependencies — safe to use in save-game serialisation and UI layers.
+
+```typescript
+import {
+  createProgressionState, awardXP, advanceSkill,
+  applyTrainingSession, stepAgeing, applyAgeingDelta,
+  deriveSequelae, serialiseProgression,
+} from "./src/progression.js";
+import { buildSkillMap } from "./src/sim/skills.js";
+import { to, q } from "./src/units.js";
+
+// XP and milestones
+const prog = createProgressionState();
+const milestones = awardXP(prog, "meleeCombat", 1, world.tick);  // +1 XP per combat
+for (const m of milestones) {
+  entity.skills = advanceSkill(entity.skills ?? buildSkillMap({}), m.domain, m.delta);
+}
+
+// Physical training (peakForce_N ceiling 3500 N)
+const plan   = { sessions: [], frequency_d: 3/7, ceiling: to.N(3500) };
+const sess   = { attribute: "peakForce_N", intensity_Q: q(0.50), duration_s: 3600 };
+entity.attributes.performance.peakForce_N =
+  applyTrainingSession(entity.attributes.performance.peakForce_N, plan, sess, 3);
+
+// Annual ageing
+const delta = stepAgeing(entity.attributes, entity.ageYears ?? 30);
+applyAgeingDelta(entity.attributes, delta);
+
+// Injury sequelae after a bad fracture
+const seqs = deriveSequelae(entity.injury.byRegion["leftLeg"]!, entity.bodyPlan!);
+for (const s of seqs) prog.sequelae.push({ region: "leftLeg", ...s });
+
+// Persist
+const json = serialiseProgression(prog);  // Map-aware JSON
+```
+
+**Milestone thresholds** grow geometrically (`BASE_XP=20`, `GROWTH_FACTOR=1.80`): milestone 0 at 20 XP, milestone 1 at 36, milestone 2 at 65, milestone 3 at 117… Calibrated so 100 combats (1 XP each) reduce `meleeCombat` reaction time by ~80 ms.
+
+**Training calibration:** 12-week strength programme (3×/week, moderate intensity) raises `peakForce_N` by 150–300 N. Overtraining penalty applies above 5 sessions/week.
+
+**Ageing:** 1 %/year performance decline after 35; +2 ms decision latency per year after 45. Integrating from age 20 to 70 always stays above zero (physically plausible minimum).
+
+**Sequelae types:** `fracture_malunion` (−15 % peak force), `nerve_damage` (−10 % fine control), `scar_tissue` (surface bleed threshold −5 %).
+
+---
+
+## Campaign & World State (Phase 22)
+
+`src/campaign.ts` is the persistence layer for multi-session campaigns. It tracks world time,
+entity state, location, and item stockpiles between encounters, and delegates wound recovery
+to `stepDowntime`.
+
+```typescript
+import {
+  createCampaign, addLocation, travel,
+  creditInventory, debitInventory, getInventoryCount,
+  stepCampaignTime, mergeEntityState,
+  serialiseCampaign, deserialiseCampaign,
+} from "./src/campaign.js";
+
+// Create a campaign with starting entities
+const campaign = createCampaign("my-campaign", [fighter1, fighter2], "2025-01-01T00:00:00Z");
+
+// Register locations with travel costs (seconds)
+addLocation(campaign, { id: "town", name: "Town", elevation_m: 50, travelCost: new Map() });
+addLocation(campaign, { id: "dungeon", name: "Dungeon", elevation_m: 20,
+  travelCost: new Map([["town", 1800]]) });  // 30 min from dungeon to town
+
+// Move an entity — advances worldTime_s by travel cost
+const travelTime = travel(campaign, fighter1.id, "dungeon");  // 1800
+
+// After an encounter, merge updated entity states back into the registry
+mergeEntityState(campaign, [fighter1, fighter2]);
+
+// Advance time with wound recovery (delegates to stepDowntime)
+const reports = stepCampaignTime(campaign, 3600, {
+  downtimeConfig: {
+    treatments: new Map([[fighter1.id, { careLevel: "first_aid" }]]),
+    rest: true,
+  },
+});
+
+// Campaign inventory (arrows, bandages, rations, etc.)
+creditInventory(campaign, fighter1.id, "arrow", 30);
+debitInventory(campaign, fighter1.id, "arrow", 5);   // returns false if insufficient
+getInventoryCount(campaign, fighter1.id, "arrow");   // 25
+
+// Persist across sessions (Map-aware JSON)
+const json = serialiseCampaign(campaign);
+const restored = deserialiseCampaign(json);
+```
+
+**`CampaignState` fields:**
+- `id`, `epoch` — campaign identity and ISO start timestamp
+- `worldTime_s` — absolute simulated seconds since epoch (monotonically increasing)
+- `entities: Map<number, Entity>` — master registry; deep-cloned on write
+- `locations: Map<string, Location>` — registered locations with travel routing
+- `entityLocations: Map<number, string>` — current locationId per entity
+- `entityInventories: Map<number, Map<string, number>>` — campaign item stockpiles (separate from `entity.loadout`)
+- `log: Array<{ worldTime_s, text }>` — timestamped event log
+
+**Healing integration:** `stepCampaignTime` builds a minimal `WorldState`, calls `stepDowntime`,
+then writes the healed `InjuryState` back into the entity registry. The optional
+`downtimeConfig` matches `stepDowntime`'s `DowntimeConfig` exactly; if omitted, all entities
+rest with `careLevel: "none"` (natural clotting only).
+
+**Serialisation:** `serialiseCampaign`/`deserialiseCampaign` handle all nested `Map` fields
+using the `__ananke_map__` marker pattern — entities, locations, entityLocations,
+entityInventories, entity skills, armourState, and location travelCost all survive round-trip.
+
+---
+
+## Dialogue & Negotiation (Phase 23)
+
+`src/dialogue.ts` resolves non-combat social encounters. No Charisma stat — intimidation
+strength comes from `peakForce_N`, persuasion from cognitive depth, deception is beaten by
+sharp minds. Fully deterministic when given a seed.
+
+```typescript
+import {
+  resolveDialogue, applyDialogueOutcome, narrateDialogue, dialogueProbability,
+  type DialogueContext,
+} from "./src/dialogue.js";
+
+const ctx: DialogueContext = {
+  initiator:  knight,
+  target:     bandit,
+  worldSeed:  world.seed,
+  tick:       world.tick,
+};
+
+// Check probability before rolling
+const P = dialogueProbability({ kind: "intimidate", intensity_Q: q(0.80) }, ctx);
+// → q(0.72) for a 2800N knight vs. a mid-fear bandit
+
+// Roll the outcome
+const outcome = resolveDialogue({ kind: "intimidate", intensity_Q: q(0.80) }, ctx);
+// → { result: "success", fearDelta: q(0.15) }  or  { result: "failure", cooldown_s: 30 }
+// → { result: "escalate" }  if target.fearQ < q(0.20) and failed
+
+// Write deltas back to entities
+applyDialogueOutcome(outcome, bandit);
+
+// Natural language description
+const line = narrateDialogue(
+  { kind: "intimidate", intensity_Q: q(0.80) }, outcome,
+  { verbosity: "verbose", nameMap: new Map([[1, "Sir Roland"], [2, "the bandit"]]) },
+  { initiatorId: 1, targetId: 2 },
+);
+// → "Sir Roland attempted intimidation on the bandit — the target was cowed by the show of force."
+```
+
+### Action types
+
+| Action | Resolution | Escalates? |
+|--------|-----------|------------|
+| `intimidate` | `q(peakForce_N/4000) + fearQ − distressTolerance`; leader trait −q(0.15) | Yes, if fearQ < q(0.20) |
+| `persuade` | base q(0.40) + learningBonus(attentionDepth) + factionBonus − failurePenalty | No |
+| `deceive` | `plausibility_Q × (1 − attentionDepth/10)` | No |
+| `surrender` | Deterministic: accepted if `target.fearQ > q(0.40)` | No |
+| `negotiate` | Deterministic: accepted if trade utility is positive for target | No |
+
+**`dialogueProbability(action, ctx)`** — exported helper that returns the success probability
+without rolling RNG. Useful for UI previews, AI decision-making, and testing.
+
+**Verbosity levels** match the narrative layer: `terse` (label: result), `normal` (one sentence),
+`verbose` (entity names + full outcome description). Entity names resolved from `cfg.nameMap`.
+
+---
+
+## Faction & Reputation (Phase 24)
+
+`src/faction.ts` tracks political standing, witnesses hostile events, and modulates AI
+behaviour based on inter-faction relationships. Fully deterministic — no RNG, standing
+changes are pure arithmetic.
+
+```typescript
+import {
+  createFactionState, adjustStanding, getStanding,
+  extractWitnessEvents, applyReputationDelta,
+  type FactionState,
+} from "./src/faction.js";
+```
+
+- **`adjustStanding(state, factionId, delta)`** — clamp standing to [−SCALE.Q, SCALE.Q]
+- **`getStanding(state, factionId)`** — 0 for unknown factions
+- **`extractWitnessEvents(world, env)`** — returns assault events seen by bystanders
+- **`applyReputationDelta`** — propagate witness events into faction standing
+
+AI target-selection uses `STANDING_HOSTILE_THRESHOLD = q(−0.40)` to activate attack
+mode; the `factionGuard` preset additionally suppresses attack below standing `q(0.60)`.
+
+---
+
+## Loot & Economy (Phase 25)
+
+`src/economy.ts` provides item valuation, equipment wear, loot drop resolution, and
+trade evaluation. No kernel dependency — pure data management.
+
+```typescript
+import {
+  computeItemValue, armourConditionQ, applyWear,
+  resolveDrops, evaluateTradeOffer, totalInventoryValue,
+  type ItemInventory, type TradeOffer, type DropTable,
+} from "./src/economy.js";
+```
+
+- **`computeItemValue(item, wear_Q?)`** — derives `baseValue`, `condition_Q`, `sellFraction`
+  for any weapon, armour, or medical resource
+- **`applyWear(weapon, intensity_Q, seed?)`** — accumulates `WEAR_BASE = q(0.001)` per strike;
+  penalty at `q(0.30)`, fumble at `q(0.70)`, breaks at `q(1.0)`
+- **`resolveDrops(entity, seed, extra?, config?)`** — dead → all equipped items drop;
+  probabilistic extras rolled deterministically from seed
+- **`evaluateTradeOffer(offer, inventory)`** — `netValue` + `feasible` from accepting party's view
+
+---
+
+## Momentum Transfer & Knockback (Phase 26)
+
+`src/sim/knockback.ts` adds the impulse-momentum half of Newtonian mechanics: every
+impact now imparts a velocity delta to the target. Calibrated to real physics — a
+5.56 mm rifle round produces negligible knockback (≈ 0.05 m/s on 75 kg), while a
+large-creature kick can knock humans prone.
+
+```typescript
+import {
+  computeKnockback, applyKnockback,
+  STAGGER_THRESHOLD_mps, PRONE_THRESHOLD_mps, STAGGER_TICKS,
+} from "./src/sim/knockback.js";
+
+const result = computeKnockback(energy_J, massEff_kg, target);
+// → { impulse_Ns, knockback_v, staggered, prone }
+
+applyKnockback(target, result, { dx, dy });
+// → mutates velocity_mps, condition.prone, action.staggerTicks
+```
+
+**Physics**: `impulse = sqrt(2 × E × m_eff)` [N·s]; `Δv = impulse / m_target` [m/s].
+Stability coefficient reduces effective knockback before threshold checks:
+`effective_v = Δv × (1 − stabilityQ)`.
+
+| Threshold | Value | Effect |
+|-----------|-------|--------|
+| `STAGGER_THRESHOLD_mps` | 0.5 m/s | 3-tick stagger window |
+| `PRONE_THRESHOLD_mps` | 2.0 m/s | `condition.prone = true` |
+
+The kernel integrates knockback automatically for every melee and ranged hit — no
+changes to call sites required.
+
+---
+
+## Hydrostatic Shock & Cavitation (Phase 27)
+
+`src/sim/hydrostatic.ts` models the wound-amplification physics of high-velocity
+projectiles. Above 600 m/s a temporary stretch wave radiates outward through
+inelastic tissue; above 900 m/s momentary vacuum cavitation further boosts
+haemorrhage in fluid-saturated organs.
+
+```typescript
+import {
+  computeTemporaryCavityMul, computeCavitationBleed,
+  HYDROSTATIC_THRESHOLD_mps, CAVITATION_THRESHOLD_mps,
+} from "./src/sim/hydrostatic.js";
+
+// Multiplier applied to internalDamage (q(1.0) = no effect, q(3.0) = max)
+const cavMul = computeTemporaryCavityMul(v_impact_mps, "liver");  // → q(3.0) at 960 m/s
+
+// Cavitation bleed boost for fluid-saturated tissue (torso, liver, lung, spleen, legs)
+const newBleed = computeCavitationBleed(v_impact_mps, currentBleed, "torso");
+```
+
+**Tissue compliance** governs how much the stretch wave amplifies damage:
+
+| Region | Compliance | Behaviour |
+|--------|-----------|-----------|
+| bone / skull | q(0.05) | Brittle; maximum cavity damage |
+| brain / liver / spleen | q(0.10) | Very inelastic; high amplification |
+| lung | q(0.30) | Partially air-filled; intermediate |
+| torso | q(0.40) | Mixed; moderate amplification |
+| muscle / limbs | q(0.60) | Elastic; minimum amplification |
+
+The kernel computes `v_impact_mps` from pre-armour projectile energy and mass in
+`resolveShoot`, passes it through `ImpactEvent`, and applies both functions
+automatically in the finalImpacts loop — no changes to call sites required.
+
+---
+
+## Cone AoE: Breath Weapons, Fire, Gas (Phase 28)
+
+`src/sim/cone.ts` adds directional cone geometry to the capability system, enabling
+breath weapons, flamethrowers, gas dispensers, and sonic disorientation blasts.
+
+```typescript
+import { entityInCone, buildEntityFacingCone } from "./src/sim/cone.js";
+import type { CapabilityEffect, CapabilitySource } from "./src/sim/capability.js";
+import { q, SCALE } from "./src/units.js";
+import { DamageChannel } from "./src/channels.js";
+
+// Dragon fire breath — 20 ticks sustained, 30° half-angle cone, 10m range
+const DRAGON_FIRE: CapabilityEffect = {
+  id:               "fire_breath",
+  cost_J:           800,           // deducted each sustained tick
+  castTime_ticks:   5,
+  sustainedTicks:   20,            // fires 20 consecutive ticks
+  coneHalfAngle_rad: Math.PI / 6,  // 30° half-angle = 60° total cone
+  coneDir:          "facing",      // follows entity's facingDirQ
+  range_m:          10 * SCALE.m,
+  payload: {
+    kind:     "weaponImpact",
+    energy_J:  800,
+    profile: {
+      surfaceFrac:     q(0.60),  // fire burns surface heavily
+      internalFrac:    q(0.30),  // convective heat reaches internal tissue
+      structuralFrac:  q(0.10),
+      bleedFactor:     q(0.05),
+      penetrationBias: q(0.05),
+    },
+  },
+};
+// Total reserve cost for one breath: 800J × 20 ticks = 16 000 J
+```
+
+**Cone direction modes**:
+- `coneDir: "facing"` — cone follows the actor's `facingDirQ` (updated by movement commands)
+- `coneDir: "fixed"` with `coneDirFixed: { dx, dy }` — fixed world-space direction (gas cloud, mounted turret)
+
+**Sustained emission** respects the same concentration-break rules as `castTime_ticks = -1`
+auras: shock ≥ q(0.30) cancels emission immediately. Each tick deducts `cost_J`; if the
+source reserve falls below `cost_J` the emission stops early.
+
+**`weaponImpact` payload** allows any damage profile without being constrained to a
+`DamageChannel`. Unlike `impact` (which maps to a synthetic weapon via `DamageChannel`),
+`weaponImpact` takes a `WeaponDamageProfile` directly — enabling fire's
+surface-heavy/internal-pass-through split or acid's structural bias.
+
+---
+
+## Environmental Stress: Thermoregulation (Phase 29)
+
+`src/sim/thermoregulation.ts` models core body temperature as a continuous heat-balance
+system. Unlike abstract "cold resistance" stats, temperature is tracked in real °C (encoded
+as Q) and driven by genuine thermophysics.
+
+```typescript
+import { stepCoreTemp, deriveTempModifiers, cToQ, CORE_TEMP_NORMAL_Q } from "./src/sim/thermoregulation.js";
+import type { KernelContext } from "./src/sim/context.js";
+
+// Ambient temperature −10°C arctic environment
+const ctx: KernelContext = {
+  thermalAmbient_Q: cToQ(-10),  // cToQ converts Celsius to engine Q encoding
+  tractionCoeff: q(0.9),
+};
+
+// stepWorld automatically calls stepCoreTemp for every living entity each tick.
+// After simulation, query an entity's thermal state:
+const mods = deriveTempModifiers((entity.condition as any).coreTemp_Q ?? CORE_TEMP_NORMAL_Q);
+// → { powerMul: q(0.80), fineControlPen: q(0.15), latencyMul: q(1.2), dead: false }
+// → moderate hypothermia: −20% power, +20% reaction time
+```
+
+**Temperature stage thresholds** (Q encoding; `q(0.5)` = 37 °C; full range 10–64 °C):
+
+| Stage | Core temp | `powerMul` | `fineControlPen` | `latencyMul` |
+|-------|-----------|-----------|-----------------|-------------|
+| Critical hyperthermia | > 40.1 °C | q(0.60) | q(0.30) | q(3.0) — dead |
+| Heat stroke | 39.4–40.1 °C | q(0.60) | q(0.20) | q(2.0) |
+| Heat exhaustion | 38.6–39.4 °C | q(0.85) | q(0.10) | q(1.0) |
+| Mild hyperthermia | 37.8–38.6 °C | q(0.95) | q(0) | q(1.0) |
+| Normal | 37.0–37.8 °C | q(1.0) | q(0) | q(1.0) |
+| Mild hypothermia | 36.2–37.0 °C | q(0.95) | q(0.05) | q(1.0) |
+| Moderate hypothermia | 34.6–36.2 °C | q(0.80) | q(0.15) | q(1.2) |
+| Severe hypothermia | 33.0–34.6 °C | q(0.50) | q(0.20) | q(3.0) |
+| Critical hypothermia | < 33.0 °C | q(0.50) | q(0.30) | q(4.0) — dead |
+
+**Armour insulation** is modelled via `insulation_m2KW?: number` on `Armour` items.
+Higher insulation slows both heating and cooling. Typical values: plate armour 0.02, wool 0.15, fur 0.25.
+
+**Downtime integration**: `DowntimeConfig.thermalAmbient_Q` enables temperature tracking
+through multi-hour recovery simulations. `EntityRecoveryReport.finalCoreTemp_Q` reports the
+final state.
+
+---
+
+## Nutrition & Starvation (Phase 30)
+
+`src/sim/nutrition.ts` adds the longest survivability axis: caloric balance from hours to
+weeks. Hunger states impose escalating combat penalties and eventually cause mass loss —
+fat catabolism first, then muscle tissue.
+
+```typescript
+import {
+  computeBMR, stepNutrition, consumeFood, deriveHungerModifiers,
+  FOOD_ITEMS, type HungerState,
+} from "./src/sim/nutrition.js";
+
+// BMR for a 75 kg entity: 80 W (Kleiber's law)
+const bmr = computeBMR(entity.attributes.morphology.mass_kg);  // → 80
+
+// stepWorld calls stepNutrition automatically at 1 Hz for every living entity.
+// Feed an entity from their food inventory:
+(entity as any).foodInventory = new Map([["ration_bar", 3], ["water_flask", 2]]);
+const ate = consumeFood(entity, "ration_bar", world.tick);  // → true; caloricBalance += 2 000 000 J
+
+// Query current state:
+const hunger: HungerState = (entity.condition as any).hungerState ?? "sated";
+const mods = deriveHungerModifiers(hunger);
+// → { staminaMul: q(1.0), forceMul: q(1.0), latencyMul: q(1.0), moraleDecay: q(0) }  // sated
+// → { staminaMul: q(0.50), forceMul: q(0.80), latencyMul: q(1.50), moraleDecay: q(0.030) }  // critical
+```
+
+**Hunger state thresholds** (deficit relative to BMR):
+
+| State | Onset | `staminaMul` | `forceMul` | `latencyMul` | `moraleDecay` |
+|-------|-------|-------------|-----------|-------------|--------------|
+| `sated` | deficit < 12 h × BMR | q(1.0) | q(1.0) | q(1.0) | q(0) |
+| `hungry` | 12–24 h × BMR | q(0.90) | q(1.0) | q(1.0) | q(0) |
+| `starving` | 24–72 h × BMR | q(0.75) | q(0.90) | q(1.0) | q(0.030)/tick |
+| `critical` | ≥ 72 h × BMR | q(0.50) | q(0.80) | q(1.50) | q(0.030)/tick |
+
+**Food catalogue** (`FOOD_ITEMS`):
+
+| Item | Energy | Mass | Hydration |
+|------|--------|------|-----------|
+| `ration_bar` | 2 000 000 J | 500 g | — |
+| `dried_meat` | 1 500 000 J | 300 g | — |
+| `hardtack` | 800 000 J | 200 g | — |
+| `fresh_bread` | 700 000 J | 250 g | — |
+| `berry_handful` | 150 000 J | 50 g | — |
+| `water_flask` | 0 J | 500 g | 500 000 hydJ |
+
+**Mass loss** (accumulated as float; applies only during starvation/critical):
+- Fat catabolism: 300 g/day (`mass_kg -= 300/86400 × delta_s`)
+- Muscle catabolism: 0.5 N/hour (`peakForce_N -= 0.5 × SCALE.N / 3600 × delta_s`, critical only)
+
+**Entity food inventory**: attach `(entity as any).foodInventory = new Map<string, number>()`
+before calling `consumeFood`. Absent inventory = unlimited supply.
+
+---
+
+## Project layout
+
+```
+src/
+  units.ts          Fixed-point SI unit system and arithmetic helpers
+  types.ts          Core attribute interfaces (Morphology, Performance, Control, Resilience, Perception)
+  channels.ts       DamageChannel enum and bitmask helpers
+  traits.ts         Entity trait definitions and attribute multiplier application
+  archetypes.ts     Reference archetype baselines (HUMAN_BASE, SERVICE_ROBOT, AMATEUR_BOXER, PRO_BOXER, GRECO_WRESTLER, KNIGHT_INFANTRY, LARGE_PACIFIC_OCTOPUS)
+  equipment.ts      Weapon, Armour, Shield, RangedWeapon, Loadout types and starter item catalogue (includes wpn_boxing_gloves)
+  generate.ts       Procedural individual generation from archetype with variance distributions; NarrativeBias parameter (Phase 62)
+  polity.ts         Phase 61: Polity & World-State System — createPolity/Registry, trade, war, diplomacy, tech advancement, population-scale disease spread; integrates with Faction/Economy/Tech/Disease/Campaign
+  presets.ts        Entity factory functions for named real-world archetypes (mkBoxer, mkWrestler, mkKnight, mkOctopus, mkScubaDiver)
+  derive.ts         Movement caps and energy/fatigue derived from attributes and loadout
+  replay.ts         ReplayRecorder, replayTo, serializeReplay/deserializeReplay — deterministic replay
+  metrics.ts        CollectingTrace, collectMetrics, survivalRate, meanTimeToIncapacitation — analytics
+  debug.ts          extractMotionVectors, extractHitTraces, extractConditionSamples — visual debug layer
+  model3d.ts        deriveMassDistribution, deriveInertiaTensor, deriveAnimationHints, derivePoseModifiers, deriveGrappleConstraint, extractRigSnapshots — 3D rig integration
+  describe.ts       describeCharacter, formatCharacterSheet, formatOneLine — SI→human-readable translation layer (no sim dependencies)
+  weapons.ts        Historical weapons database — ~70 weapons across 6 eras (Prehistoric → Contemporary); shieldBypassQ for flexible weapons; magCapacity + shotInterval_s for magazine firearms
+  narrative.ts      narrateEvent, buildCombatLog, describeInjuries, describeCombatOutcome — combat narrative layer (no sim dependencies)
+  downtime.ts       stepDowntime(), MEDICAL_RESOURCES — 1 Hz wound recovery bridge (hours-to-weeks scale)
+  arena.ts          runArena(), expectWinRate/SurvivalRate/MeanDuration/Recovery/ResourceCost, formatArenaReport, 6 calibration scenarios
+  progression.ts    createProgressionState(), awardXP(), advanceSkill(), applyTrainingSession(), stepAgeing(), applyAgeingDelta(), deriveSequelae()
+  campaign.ts       createCampaign(), addLocation(), travel(), mergeEntityState(), stepCampaignTime(), debitInventory/creditInventory/getInventoryCount(), serialiseCampaign/deserialiseCampaign()
+  dialogue.ts       resolveDialogue(), applyDialogueOutcome(), narrateDialogue(), dialogueProbability() — social encounter resolution (intimidate/persuade/deceive/surrender/negotiate)
+  faction.ts        createFactionState(), adjustStanding(), extractWitnessEvents(), applyReputationDelta() — faction tracking and reputation system
+  economy.ts        computeItemValue(), applyWear(), resolveDrops(), evaluateTradeOffer() — item valuation, wear, loot drops, trade evaluation
+  narrative-stress.ts  runNarrativeStressTest(), formatStressTestReport(), beatEntityDefeated/Survives/TeamDefeated/ShockExceeds/Fatigued() — narrative push analyser (Phase 63)
+
+  sim/
+    kernel.ts           stepWorld(), applyFallDamage(), applyExplosion() — main simulation entry points
+    entity.ts           Entity type (all mutable simulation state)
+    world.ts            WorldState type
+    kinds.ts            CommandKind, TraceKind, MoveMode, DefenceMode enums (includes MoraleRally)
+    body.ts             BodyRegion type, region weights, hit-to-region mapping
+    injury.ts           InjuryState, per-region damage, bleeding rate helpers
+    medical.ts          MedicalTier, MedicalAction, tier rank/multiplier tables
+    condition.ts        ConditionState (fire, radiation, suffocation, stun, prone, etc.)
+    impairment.ts       deriveFunctionalState() — damage to mobility and manipulation penalties
+    combat.ts           resolveHit(), parryLeverageQ(), shield helpers
+    grapple.ts          Grapple resolution: score, positions, throw/choke/joint-lock
+    weapon_dynamics.ts  Reach dominance, two-handed bonus, miss recovery, weapon bind/break
+    ranged.ts           Ranged physics: energy at range, dispersion, grouping radius, costs
+    explosion.ts        BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy
+    substance.ts        Substance, ActiveSubstance, STARTER_SUBSTANCES — pharmacokinetics model
+    tech.ts             TechEra, TechCapability, TechContext, defaultTechContext, isCapabilityAvailable
+    capability.ts       CapabilitySource, CapabilityEffect, RegenModel, EffectPayload, FieldEffect — Clarke's Third Law abstraction
+    knockback.ts        computeKnockback(), applyKnockback() — impulse-momentum transfer; stagger/prone checks
+    hydrostatic.ts      computeTemporaryCavityMul(), computeCavitationBleed() — high-velocity wound physics
+    cone.ts             entityInCone(), buildEntityFacingCone(), ConeSpec — directional cone AoE geometry (breath weapons, flamethrowers, gas)
+    thermoregulation.ts stepCoreTemp(), deriveTempModifiers(), cToQ() — 9-stage core-temp model (mild hyperthermia → cardiac-arrest hypothermia)
+    nutrition.ts        computeBMR(), stepNutrition(), consumeFood(), deriveHungerModifiers(), FOOD_ITEMS — caloric balance, hunger states, fat/muscle catabolism
+    events.ts           ImpactEvent type, deterministic sort
+    seeds.ts            Deterministic per-event seed derivation
+    formation.ts        pickNearestEnemyInReach()
+    frontage.ts         applyFrontageCap() — limits engagers per target
+    occlusion.ts        isMeleeLaneOccludedByFriendly()
+    density.ts          computeDensityField() — crowd slowdown
+    push.ts             stepPushAndRepulsion() — entity separation
+    spatial.ts          Grid spatial index and neighbour queries
+    indexing.ts         buildWorldIndex() — O(1) id-to-entity lookup
+    vec3.ts             Fixed-point 3D vector maths
+    team.ts             isEnemy() helper
+    intent.ts           IntentState defaults
+    action.ts           ActionState defaults
+    trace.ts            TraceSink interface and nullTrace
+    tuning.ts           SimulationTuning presets (arcade, tactical, sim)
+    testing.ts          mkHumanoidEntity(), mkWorld() test helpers
+
+    bodyplan.ts         BodyPlan, BodySegment, 8 body plan constants, resolveHitSegment, getExposureWeight
+    sensory.ts          canDetect(), SensoryEnvironment — vision arc + hearing + env modifiers
+    skills.ts           SkillId, SkillLevel, SkillMap, buildSkillMap, getSkill, combineSkillLevels
+
+    ai/
+      types.ts      AIPolicy interface
+      presets.ts    AI_PRESETS (lineInfantry, skirmisher)
+      perception.ts perceiveLocal() — sensory-filtered enemy and ally detection
+      targeting.ts  pickTarget(), updateFocus() — horizon-limited target selection
+      decide.ts     decideCommandsForEntity() — with decision latency cooldown
+      system.ts     buildAICommands() — full AI pass over world
+
+    formation-unit.ts   computeShieldWallCoverage, deriveRankSplit, stepFormationCasualtyFill, computeFormationMomentum, deriveFormationCohesion, deriveFormationAllyFearDecay — Phase 6 formation system
+
+test/              Vitest test suite (one file per feature area)
+tools/             Developer utilities and runnable demos
+  blade-runner.ts         Artificial Life Validation — 365-day city-scale emergent-behaviour test
+  emergent-validation.ts  Emergent Behaviour Validation Suite — 4 historical combat scenarios × 100 seeds
+  benchmark.ts            Performance & Scalability Benchmarks — 10/100/500/1 000 entity throughput
+  what-if.ts              "What If?" Alternate History Engine — polity divergence × 100 seeds (Phase 64)
+  generate-zoo.ts         Simulation Zoo generator — 5 pre-computed scenarios embedded in docs/zoo/index.html
+  generate-map.ts         Generative Cartography — 180-day polity simulation → docs/map/index.html SVG viewer
+  world-server.ts         Persistent World Server — HTTP server with live polling client at docs/world-client/
+docs/
+  onboarding.md         New-engineer two-week onboarding guide
+  contributing.md       Contribution guide: conventions, PR checklist, module skeleton
+  versioning.md         Versioning contract: commit-hash pinning, breaking-change tiers, upgrade cadence
+  ecosystem.md          Ecosystem index: body-plan templates, renderer bridge boilerplate, companion repo suggestions
+  integration-primer.md Deep technical onboarding (architecture, data-flow, gotchas)
+  bridge-api.md         Renderer bridge API reference
+  use-case-validation.md Integration Milestone 1 — use-case fit validation
+  narrative-stress-test.md Narrative Stress Test guide: API, Deus Ex score, cinematic benchmark table
+  editors/
+    index.html          Editor hub — links to all visual design tools
+    species-forge.html  Species Forge — body plan + archetype + narrative bias editor
+    culture-forge.html  Culture Forge — cultural values, taboos, myth predispositions, diplomacy modifiers editor
+  zoo/
+    index.html          Simulation Zoo — 5 pre-computed combat/disease scenarios with health visualiser
+  map/
+    index.html          Generative Cartography — 180-day polity map with timeline slider
+  world-client/
+    index.html          Persistent World Client — live-polling browser UI for world-server.ts
+  companion-projects/
+    ananke-godot-reference/README.md    Godot 4 physics-driven character plugin starter
+    ananke-unity-reference/README.md    Unity 6 physics-driven character plugin starter
+    ananke-threejs-bridge/README.md     In-browser Three.js renderer bridge starter
+    ananke-language-forge/README.md     LLM-backed dynamic dialogue generation starter
+    ananke-world-ui/README.md           SvelteKit world management UI starter
+    ananke-fantasy-species/README.md    Fantasy / sci-fi species pack starter
+    ananke-historical-battles/README.md Historical battle validation suite starter
+    ananke-archive/README.md           Searchable public simulation database starter
+```
+
+---
+
+## Companion ecosystem
+
+Seven companion projects are designed to build on top of Ananke.  Each has a starter README
+in `docs/companion-projects/` describing the architecture, key Ananke entry points, and a
+suggested first milestone.
+
+| Repository | Purpose |
+|---|---|
+| `ananke-godot-reference` | Godot 4 plugin driving a humanoid rig from `extractRigSnapshots` over WebSocket |
+| `ananke-unity-reference` | Unity 6 plugin using the HTTP polling sidecar; HumanBodyBones mapping |
+| `ananke-threejs-bridge` | In-browser Three.js renderer — no sidecar, WebAssembly kernel long-term target |
+| `ananke-language-forge` | LLM-backed dynamic dialogue generation reading `linguisticIntelligence_Q` and Phase 66 myth events |
+| `ananke-world-ui` | SvelteKit world management UI — supersedes `docs/editors/` when feature-complete |
+| `ananke-fantasy-species` | Fantasy / sci-fi species pack with allometric-scaled body plans and archetype templates |
+| `ananke-historical-battles` | Historical battle validation suite comparing outcomes against primary sources |
+| `ananke-archive` | Searchable public database of simulation runs, parameter spaces, and raw trace data |
+
+### Companion ecosystem infrastructure (ROADMAP CE-1 to CE-4)
+
+The following Ananke-side changes are the highest-leverage items for enabling companion projects:
+
+**CE-1 — npm publish + subpath exports map.**  Remove `"private": true` from `package.json`,
+add a `"exports"` map so consumers can import `ananke/units`, `ananke/sim/kernel`, etc.
+without bundling the whole library.  See ROADMAP for proposed exports JSON.
+
+**CE-2 — `createWorld()` convenience factory.**  A single call that builds a `World` with
+sensible defaults (5 humans, no terrain, tactical tuning).  Eliminates 20 lines of setup
+boilerplate for companion projects that need a quick simulation harness.
+
+**CE-3 — JSON scenario schema + `loadScenario()`.**  Lets companion projects (especially
+`ananke-historical-battles` and `ananke-fantasy-species`) ship scenario definitions as JSON
+files rather than TypeScript, reducing the barrier to non-developer contribution.
+
+**CE-4 — `src/index.ts` stable-API barrel.**  A single import surface (`import { ... } from "ananke"`)
+covering everything in `STABLE_API.md`.  Companion projects should depend on this barrel, not
+on internal module paths that may change.
+
+---
+
+## Performance baselines
+
+Performance is a published contract, not just a tool that exists.
+
+| Scenario | Entities | Median tick | Throughput | 20 Hz budget |
+|----------|----------|-------------|------------|--------------|
+| Melee skirmish | 10 | 0.19 ms | 5 300 ticks/s | 4% |
+| Mixed ranged/melee | 100 | 4.68 ms | 214 ticks/s | 9% |
+| Formation combat | 500 | 31 ms | 32 ticks/s | 62% |
+| Weather + disease | 1 000 | 64 ms | 16 ticks/s | 129% (exceeds real-time) |
+
+Measured on Node 22, Apple M-series reference hardware.  Full methodology, AI-budget
+breakdown, spatial-index comparison, memory footprint, and tuning guidance are in
+`docs/performance.md`.  Run with `npm run run:benchmark`.
+
+**Key constraint:** at 20 Hz real-time rate, 500 entities fits comfortably within budget;
+1 000 entities requires a tick-rate reduction or spatial partitioning.  `stepWorld` (kernel
+physics) consumes ≥ 95% of tick budget at all entity counts; AI is negligible (< 1%).
+
+Benchmark regression is enforced in CI via `npm run benchmark-check` — throughput regressions
+are caught before release (ROADMAP item 15, complete).
+
+---
+
+## Validation
+
+Ananke's validation strategy has two layers:
+
+**Isolated subsystem validation** — 19+ subsystems (sprint speed, bleeding rate, sleep
+deprivation, thermoregulation, etc.) tested individually against empirical datasets with
+±20 % tolerance on the simulated mean.  Run with `npm run run:validation`.
+
+**Emergent behaviour validation** — Four historical combat scenarios (English longbowmen at
+Agincourt, Roman testudo vs. Gaul charge, small-unit skirmish attrition, epidemic spread)
+each run across 100 seeds.  The distribution of outcomes is compared against historical
+casualty data.  Run with `npm run run:emergent-validation`.
+
+Results from both suites are committed to `docs/` and linked from releases.  See ROADMAP
+item PH-8 for the plan to make these first-class trust artifacts.
+
+---
+
+## Next steps — Platform Hardening
+
+The simulation is architecturally complete.  The highest-leverage remaining work is making
+the existing depth trustworthy and legible to adopters:
+
+| Item | What | Status |
+|------|------|--------|
+| PH-1 | API tiering — Stable / Advanced / Internal tiers in exports and docs | Planned |
+| PH-2 | Versioning policy unification — one unambiguous adopter contract | Planned |
+| PH-3 | Minimal host integration contract document | Planned |
+| PH-4 | Save / replay / bridge contract tests — golden compatibility fixtures | Planned |
+| PH-5 | Bridge as first-class supported surface — `docs/bridge-contract.md` | Planned |
+| PH-6 | Entity / WorldState core vs. extensions split — JSDoc annotations | Planned |
+| PH-7 | Benchmark operational guide — tick-rate and entity-cap recommendations | Planned |
+| PH-8 | Emergent validation as flagship trust artifact — versioned, CI-enforced | Planned |
+
+See ROADMAP `## Platform Hardening` for full scope of each item.
