@@ -35,7 +35,8 @@
     "world-server": "node dist/tools/world-server.js",
     "benchmark-check": "node dist/tools/benchmark-check.js",
     "benchmark-check:strict": "node dist/tools/benchmark-check.js --threshold=0.10",
-    "benchmark-check:update": "node dist/tools/benchmark-check.js --update-baseline"
+    "benchmark-check:update": "node dist/tools/benchmark-check.js --update-baseline",
+    "benchmark:guide": "node dist/tools/benchmark-guide.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

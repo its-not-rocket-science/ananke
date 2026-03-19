@@ -123,3 +123,111 @@ npm run build && npm run run:benchmark
 
 Results will vary by hardware. The reference numbers above were measured on
 an Intel i7-12700 running Node 22 LTS under Windows 10.
+
+---
+
+## Operational Guide
+
+> Run `npm run benchmark:guide` to regenerate this table from a live measurement on your
+> hardware.  The numbers below are from the reference configuration (Intel i7-12700,
+> Node 22 LTS, Windows 10).
+
+### Quick-reference: entity cap by tick rate
+
+This table answers "how many entities can I run at tick rate X?" without running benchmarks.
+
+| Entities | 20 Hz (50 ms) | 10 Hz (100 ms) | 5 Hz (200 ms) | 1 Hz (1 000 ms) |
+|----------|:-------------:|:--------------:|:-------------:|:---------------:|
+| 10       | ✅ (0.4%)     | ✅             | ✅            | ✅              |
+| 50       | ✅ (~5%)      | ✅             | ✅            | ✅              |
+| 100      | ✅ (9%)       | ✅             | ✅            | ✅              |
+| 200      | ✅ (~25%)     | ✅             | ✅            | ✅              |
+| 300      | ✅ (~40%)     | ✅             | ✅            | ✅              |
+| 500      | ⚠️ (62%)     | ✅             | ✅            | ✅              |
+| 750      | ⚠️ (~95%)    | ✅             | ✅            | ✅              |
+| 1 000    | ❌ (129%)     | ⚠️ (65%)      | ✅            | ✅              |
+| 2 000    | ❌            | ❌             | ⚠️ (~65%)    | ✅              |
+| 5 000    | ❌            | ❌             | ❌            | ⚠️ (~65%)      |
+
+**Legend:** ✅ = comfortably within budget  ⚠️ = p99 may spike above budget under load  ❌ = over budget
+
+### Recommended tick rate by scenario class
+
+| Scenario class | Typical entity count | Recommended tick rate | Notes |
+|----------------|---------------------|-----------------------|-------|
+| 1v1 duel / tactical combat | 2–20 | **20 Hz** | Full physics resolution; headroom > 90% |
+| Squad skirmish | 20–100 | **20 Hz** | Safe on any modern CPU |
+| Battle scene (real-time) | 100–500 | **20 Hz** (or 10 Hz if p99 spikes) | Monitor p99; enable AI staggering |
+| Large battle / RTS simulation | 500–1 000 | **10 Hz** | Reduces tick budget to ~65% at 1k entities |
+| Campaign / world-simulation | 1 000–5 000 | **1 Hz** | One tick per in-game second; plenty of headroom |
+| Downtime / recovery simulation | any | **0.01–0.1 Hz** | Sleeping, disease, aging — not real-time |
+
+### Supported real-time envelope
+
+What Ananke guarantees on the reference hardware at 20 Hz (50 ms tick budget):
+
+| Guarantee | Value |
+|-----------|-------|
+| **Maximum entity count within median budget** | 500 entities |
+| **Maximum entity count within p99 budget** | ~350 entities |
+| **Median tick at 500 entities** | 31 ms (62% of budget) |
+| **p99 tick at 500 entities** | 55 ms (110% — occasional overrun) |
+| **Median tick at 100 entities** | 4.7 ms (9% of budget) |
+| **Minimum entity count for budget to matter** | > 200 entities |
+
+For reliable real-time at 20 Hz, stay under **300 entities** to keep p99 inside the 50 ms budget.
+At 500 entities, median is fine but occasional p99 spikes exceed the budget by ~10%.
+
+### Subsystem feature-toggle guidance
+
+Each optional subsystem adds per-tick cost when entities carry the corresponding
+`@subsystem` field.  Costs below are rough estimates at 500 entities.
+
+| Subsystem | `Entity` field | Tick cost (500 entities) | Toggle guidance |
+|-----------|----------------|--------------------------|-----------------|
+| AI command generation | `ai?` | < 1% (negligible) | Always safe; stagger updates to save CPU |
+| Ablative armour | `armourState?` | < 1% | Negligible; enable freely |
+| Weather modifiers | `ctx.weather` | ~2–5% | Omit when weather is irrelevant |
+| Disease spread | `activeDiseases?` / `spreadDisease()` | O(n²) in pairs | **Call once per in-game minute**, not each tick |
+| Thermoregulation | `physiology?` | < 2% | Negligible at combat scale |
+| Sleep deprivation | `sleep?` | < 1% | Downtime only; safe in combat ticks |
+| Aging | `age?` | < 1% | Downtime only; negligible in combat ticks |
+| Mounted combat | `mount?` | < 1% | Negligible |
+| Extended senses | `extendedSenses?` | < 1% | Negligible |
+| Capability / magic | `capabilitySources?` | 1–3% depending on active effects | Profile if many entities have active auras |
+
+**Rule of thumb:** subsystems add < 1–3% each at combat scale.  The dominant cost at all entity
+counts is the kernel physics computation (`stepWorld`), not subsystems.  Removing subsystems
+rarely buys more than 5–10% at high entity counts.
+
+### Spatial-index guidance
+
+| Scenario | Recommended setting | Rationale |
+|----------|---------------------|-----------|
+| Dense close-formation (≤ 500 m² area, melee-only) | **No spatial index** (cell size = arena) | Cell-map overhead cancels pair-count reduction |
+| Mixed melee + ranged (engagement range ≥ 10 m) | **4–10 m cell size** | Filters most non-interacting pairs |
+| Sparse open-field (engagement range ≥ 30 m) | **30–50 m cell size** | Large benefit; most pairs never interact |
+| Large-scale simulation (> 500 entities, spread over km) | **50–200 m cell size** | Essential; naïve O(n²) is prohibitive |
+
+For dense formations (all entities within ~100 m), the overhead of building and querying the
+spatial index exceeds its benefit.  At 500 entities in a 100 m² arena, naïve scanning is
+1.19× faster than a 4 m cell grid (see benchmark data above).
+
+### Choosing a tick rate
+
+Use this decision tree:
+
+1. Is the simulation **interactive / real-time**?
+   - **Yes** → start at 20 Hz; profile at your target entity count; step down to 10 Hz if p99 > 50 ms.
+   - **No (campaign / downtime)** → use 1 Hz or lower; entity count is rarely the bottleneck.
+
+2. Do you have **> 300 entities**?
+   - **No** → 20 Hz is safe; no further tuning needed.
+   - **Yes** → enable AI staggering (update ¼ of entities per tick); consider 10 Hz if still over budget.
+
+3. Are entities **spread across > 1 km**?
+   - **No** → omit spatial index or use large cells.
+   - **Yes** → use a 50–200 m spatial grid.
+
+4. Do you use `spreadDisease`?
+   - **Yes** → call it once per in-game minute, not each tick (it is O(n²)).
