@@ -1,0 +1,6 @@
+{
+  "rig_snapshot_entity1_shape": "{\"entityId\":1,\"teamId\":1,\"hasAnimation\":true,\"animationKeys\":[\"attackingQ\",\"crawl\",\"dead\",\"fearQ\",\"guardingQ\",\"idle\",\"prone\",\"run\",\"shockQ\",\"sprint\",\"unconscious\",\"walk\"],\"hasPose\":true,\"hasGrapple\":true,\"grappleKeys\":[\"gripQ\",\"heldByIds\",\"isHeld\",\"isHolder\",\"position\"],\"hasMass\":true,\"massKeys\":[\"cogOffset_m\",\"segments\",\"totalMass_kg\"],\"hasInertia\":true}",
+  "rig_snapshot_entity2_shape": "{\"entityId\":2,\"teamId\":2,\"hasAnimation\":true,\"animationKeys\":[\"attackingQ\",\"crawl\",\"dead\",\"fearQ\",\"guardingQ\",\"idle\",\"prone\",\"run\",\"shockQ\",\"sprint\",\"unconscious\",\"walk\"],\"hasPose\":true,\"hasGrapple\":true,\"grappleKeys\":[\"gripQ\",\"heldByIds\",\"isHeld\",\"isHolder\",\"position\"],\"hasMass\":true,\"massKeys\":[\"cogOffset_m\",\"segments\",\"totalMass_kg\"],\"hasInertia\":true}",
+  "animation_hints_keys": "[\"attackingQ\",\"crawl\",\"dead\",\"fearQ\",\"guardingQ\",\"idle\",\"prone\",\"run\",\"shockQ\",\"sprint\",\"unconscious\",\"walk\"]",
+  "grapple_constraint_keys": "[\"gripQ\",\"heldByIds\",\"isHeld\",\"isHolder\",\"position\"]"
+}

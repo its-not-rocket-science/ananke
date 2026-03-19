@@ -25,7 +25,8 @@ Choose the path that matches your immediate need.  Ignore the rest until you nee
 
 **30-minute quickstart:** Run `tools/vertical-slice.ts` (`npm run run:vertical-slice`).
 A Knight fights a Brawler across three seeds, producing a physics-grounded combat log.
-Read `docs/integration-primer.md` for data-flow diagrams and type glossary.
+Read `docs/host-contract.md` for the stable integration surface, then
+`docs/integration-primer.md` for data-flow diagrams and type glossary.
 
 **Key entry points:** `stepWorld()`, `resolveHit()`, `generateIndividual()`, `mkKnight()`
 

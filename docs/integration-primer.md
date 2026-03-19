@@ -6,6 +6,10 @@
 
 ## Purpose
 
+> **New to Ananke?** Start with [`docs/host-contract.md`](host-contract.md) — it covers the
+> complete stable integration surface with working code examples.  Return here for
+> architecture diagrams, type glossary, and integration gotchas.
+
 This document captures the technical insights, data‑flow diagrams, type glossaries, and gotchas discovered during the 2–4 week evaluation spike described in the ROADMAP’s **Deep Integration & Technical Onboarding** milestone. It is intended as an internal reference for engineers who will be integrating Ananke into a production game or simulation.
 
 The spike consisted of three concrete experiments:
