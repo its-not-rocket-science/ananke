@@ -2088,6 +2088,7 @@ docs/
     ananke-world-ui/README.md           SvelteKit world management UI starter
     ananke-fantasy-species/README.md    Fantasy / sci-fi species pack starter
     ananke-historical-battles/README.md Historical battle validation suite starter
+    ananke-archive/README.md           Searchable public simulation database starter
 ```
 
 ---
@@ -2107,6 +2108,7 @@ suggested first milestone.
 | `ananke-world-ui` | SvelteKit world management UI — supersedes `docs/editors/` when feature-complete |
 | `ananke-fantasy-species` | Fantasy / sci-fi species pack with allometric-scaled body plans and archetype templates |
 | `ananke-historical-battles` | Historical battle validation suite comparing outcomes against primary sources |
+| `ananke-archive` | Searchable public database of simulation runs, parameter spaces, and raw trace data |
 
 ### Companion ecosystem infrastructure (ROADMAP CE-1 to CE-4)
 
@@ -2151,3 +2153,41 @@ physics) consumes ≥ 95% of tick budget at all entity counts; AI is negligible 
 
 Benchmark regression is enforced in CI via `npm run benchmark-check` — throughput regressions
 are caught before release (ROADMAP item 15, complete).
+
+---
+
+## Validation
+
+Ananke's validation strategy has two layers:
+
+**Isolated subsystem validation** — 19+ subsystems (sprint speed, bleeding rate, sleep
+deprivation, thermoregulation, etc.) tested individually against empirical datasets with
+±20 % tolerance on the simulated mean.  Run with `npm run run:validation`.
+
+**Emergent behaviour validation** — Four historical combat scenarios (English longbowmen at
+Agincourt, Roman testudo vs. Gaul charge, small-unit skirmish attrition, epidemic spread)
+each run across 100 seeds.  The distribution of outcomes is compared against historical
+casualty data.  Run with `npm run run:emergent-validation`.
+
+Results from both suites are committed to `docs/` and linked from releases.  See ROADMAP
+item PH-8 for the plan to make these first-class trust artifacts.
+
+---
+
+## Next steps — Platform Hardening
+
+The simulation is architecturally complete.  The highest-leverage remaining work is making
+the existing depth trustworthy and legible to adopters:
+
+| Item | What | Status |
+|------|------|--------|
+| PH-1 | API tiering — Stable / Advanced / Internal tiers in exports and docs | Planned |
+| PH-2 | Versioning policy unification — one unambiguous adopter contract | Planned |
+| PH-3 | Minimal host integration contract document | Planned |
+| PH-4 | Save / replay / bridge contract tests — golden compatibility fixtures | Planned |
+| PH-5 | Bridge as first-class supported surface — `docs/bridge-contract.md` | Planned |
+| PH-6 | Entity / WorldState core vs. extensions split — JSDoc annotations | Planned |
+| PH-7 | Benchmark operational guide — tick-rate and entity-cap recommendations | Planned |
+| PH-8 | Emergent validation as flagship trust artifact — versioned, CI-enforced | Planned |
+
+See ROADMAP `## Platform Hardening` for full scope of each item.

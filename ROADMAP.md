@@ -6269,3 +6269,202 @@ The following starter READMEs for companion GitHub projects live in `docs/compan
 | `ananke-world-ui`        | Full standalone world creation + simulation UI | All Stable-tier APIs, `ReplayRecorder` |
 | `ananke-fantasy-species` | Fantasy species body-plan + archetype pack | `generateIndividual`, `BodyPlan`, `Archetype` |
 | `ananke-historical-battles` | Historical battle scenarios with validation | `ArenaScenario`, `DirectValidationScenario` |
+| `ananke-archive`         | Searchable public database of simulation runs and trace data | REST API over validation/replay output |
+
+---
+
+## Platform Hardening
+
+> **Context:** External review of the v0.1 architecture identified that Ananke's core technology
+> is mature and validated, but the project is "mid-transition from powerful codebase to adoptable
+> platform."  The eight items below address the specific vulnerabilities identified — concentrated
+> in API surface clarity, versioning-policy coherence, contract guarantees, and integration cost.
+> No new simulation work is needed; all eight items are about making existing depth trustworthy
+> and legible.
+
+The scope of items 12 and 14 (Stable Host API, Golden Fixtures) overlaps with these; the PH
+items sharpen and extend them based on concrete external critique.
+
+---
+
+### PH-1 · API Tiering — Stable / Advanced / Internal
+
+**Problem (external review):** `src/index.ts` exports a very large surface.  Adopters cannot
+tell what is truly stable, what is experimental, and what they rely on at their own risk.
+"The boundary between public API and internals is blurry."
+
+**Work:**
+- Define three tiers formally in `STABLE_API.md` (already exists) and `docs/versioning.md`:
+  - **Stable integration API** — `stepWorld`, core types, serialization, replay, bridge
+    entrypoints, quickstart-safe helpers.  Breaking changes require a major version bump and
+    migration guide.
+  - **Advanced / experimental API** — Useful subsystems under active development.  May change
+    between minor versions; changelog will note it.
+  - **Internal / kernel API** — Exported for power users but explicitly not
+    stability-guaranteed.  Prefixed with `_` or documented as internal in JSDoc.
+- Annotate every export in `src/index.ts` with its tier via a JSDoc `@tier` tag.
+- Add a "Tier table" to `docs/versioning.md` listing key symbols by tier.
+- Update the three adoption-path quickstarts in README to reference only Stable-tier symbols.
+
+**Success criterion:** A new adopter reading `src/index.ts` can identify the stable surface
+without reading implementation source.
+
+---
+
+### PH-2 · Versioning Policy Unification
+
+**Problem (external review):** `docs/versioning.md` says the authoritative version is a commit
+hash and there is no semver automation, while `CHANGELOG.md` presents `0.1.0` and says the
+format follows Semantic Versioning.  "That mixed signalling makes it harder to know whether
+adopters should treat this as a source-pinned kernel, a versioned package, or both."
+
+**Work:**
+- Decide and document one canonical policy.  Recommended:
+  - **Versioned package** (real semver) is the public contract.
+  - Commit-hash pinning is a *supplementary* option for adopters who need byte-for-byte
+    determinism across patch releases.
+- Update `docs/versioning.md` to state this unambiguously.
+- Update `CHANGELOG.md` header to match.
+- Add a one-paragraph "Which version do I use?" FAQ to the onboarding doc.
+- CE-1 (npm publish) is a dependency — resolve versioning before publishing to npm.
+
+**Success criterion:** A first-time reader of `docs/versioning.md` can answer "what do I put in
+my package.json?" in under 60 seconds.
+
+---
+
+### PH-3 · Minimal Host Integration Contract
+
+**Problem (external review):** The onboarding guide is good, but it still points engineers at
+internal source files (`src/units.ts`, `src/types.ts`, specific sim modules) rather than a
+published integration surface.  "The boundary between supported API and internals to read at
+your own risk is still blurry."
+
+**Work:**
+- Write `docs/host-contract.md` — a single, crisp document covering exactly:
+  1. World creation (`createWorld()` once CE-2 ships; `mkWorld()` until then)
+  2. Command injection (input protocol)
+  3. `stepWorld()` — call contract, return value, mutation semantics
+  4. Replay/serialization — `ReplayRecorder`, `serializeWorld`, `deserializeWorld`
+  5. Bridge data extraction — `extractRigSnapshots`, `deriveAnimationHints`
+  6. Quickstart-safe helpers — which test helpers are export-stable
+- Every symbol in this document must be Stable-tier (PH-1).
+- Link this document from README and from `docs/integration-primer.md`.
+
+**Success criterion:** An engineer can embed Ananke in a host process using only
+`docs/host-contract.md` and the three quickstart examples, without reading any `src/` files.
+
+---
+
+### PH-4 · Save / Replay / Bridge Contract Tests
+
+**Problem (external review):** "Given how central determinism and replay are, I'd add golden
+compatibility tests for serialized world state, serialized replay, and representative
+snapshots/fixtures across versions."  Item 14 added golden fixtures but did not add
+*bridge-output* fixtures or explicit compatibility assertions across simulated version bumps.
+
+**Work:**
+- Extend `test/golden-fixtures/` to include:
+  - Serialized bridge snapshots (`extractRigSnapshots` output for the Knight vs. Brawler tick 50)
+  - `deriveAnimationHints` output fixture
+  - `GrapplePoseConstraint` fixture for an active grapple pair
+- Add a `test/compat/` suite that loads the v0.1 fixtures and asserts:
+  - Deserialized world produces identical tick-100 output
+  - Bridge snapshot format is structurally compatible
+- CI must run this suite; any bridge or serialization breaking change fails the build.
+
+**Success criterion:** A bridge output format change cannot land without a deliberate fixture
+update in the same PR — making breakage visible and intentional.
+
+---
+
+### PH-5 · Bridge as First-Class Supported Surface
+
+**Problem (external review):** The bridge engine has interpolation, extrapolation, body-plan
+mapping, and condition blending — "substantial enough that it deserves explicit compatibility
+guarantees, golden output fixtures, and one canonical reference host."  Currently it is treated
+as auxiliary glue rather than a first-class supported surface.
+
+**Work:**
+- Promote `src/bridge/` to Stable tier in PH-1.
+- Add `docs/bridge-contract.md` documenting:
+  - The double-buffer protocol (write side / read side)
+  - Interpolation/extrapolation semantics and their determinism guarantees
+  - Body-plan segment ID mapping conventions
+  - `AnimationHints` field-by-field contract
+  - `GrapplePoseConstraint` usage contract
+- Add bridge contract tests (PH-4 dependency).
+- The companion renderer READMEs (`ananke-godot-reference`, `ananke-unity-reference`) link
+  here as the authoritative integration reference.
+
+**Success criterion:** A renderer developer can implement a correct bridge consumer using only
+`docs/bridge-contract.md` — no source reading required.
+
+---
+
+### PH-6 · Entity / WorldState Core vs. Extensions Split
+
+**Problem (external review):** "`Entity` and `WorldState` are already central gravity wells.
+Adding one field changes behaviour in unexpected places."  The versioning doc correctly treats
+these shapes as high-risk breaking surfaces; the architectural response is to separate invariant
+core state from optional subsystem slices before further accretion.
+
+**Work:**
+- Audit `Entity` and `WorldState` for fields that are:
+  - **Core** — required by `stepWorld`/kernel for every tick (e.g. `position`, `injury`,
+    `energy_J`, `teamId`)
+  - **Subsystem slice** — optional, consumed only by specific modules (e.g. `sleep?`, `age?`,
+    `mount?`, `traumaState?`)
+  - **Host extension** — not consumed by Ananke at all; host puts data here
+- Add JSDoc `@core`, `@subsystem(moduleName)`, `@extension` annotations to every field.
+- Publish the split as a section in `STABLE_API.md`.
+- Long-term goal: make subsystem slices tree-shakeable so hosts that do not use aging/sleep/etc.
+  do not pay the type or runtime cost.
+
+**Success criterion:** A new contributor can tell by inspection which `Entity` fields the kernel
+requires at every tick vs. which are opt-in subsystem state.
+
+---
+
+### PH-7 · Benchmark Operational Guide
+
+**Problem (external review):** The performance report is honest about the 500 vs. 1 000 entity
+cliff and dense-scenario spatial-index tradeoffs, but it stops short of giving adopters
+actionable guidance.  "Turn that into a more explicit operational guide: recommended tick rates,
+entity caps, feature toggles, supported real-time envelope."
+
+**Work:**
+- Extend `docs/performance.md` with a new **Operational Guide** section covering:
+  - Recommended tick rate by scenario class (tactical 20 Hz / campaign 1 Hz / downtime 0.01 Hz)
+  - Recommended entity caps by use case (duel, skirmish, siege, world-sim)
+  - Feature-toggle guidance: which subsystems (thermoregulation, disease, sleep, AI) are
+    significant budget items at high entity counts
+  - "Supported real-time envelope" table: what Ananke guarantees to fit within at 20 Hz
+  - Spatial-index on/off guidance — when dense formation is cheaper without it
+- Add a `npm run benchmark:guide` script that prints the operational table from a live run.
+
+**Success criterion:** An adopter can choose their entity cap and tick rate from a table in
+`docs/performance.md` without running their own benchmarks.
+
+---
+
+### PH-8 · Emergent Validation as Flagship Trust Artifact
+
+**Problem (external review):** "The emergent validation suite is one of the most persuasive
+parts of the repo because it tests distributions and multi-system behaviour rather than isolated
+formulas.  Make it more visible and more formal: publish fixed seed counts and result summaries,
+version the historical/calibration claims, link results directly from README/releases."
+
+**Work:**
+- Pin the four emergent validation scenarios to fixed seeds (100 seeds each) and commit the
+  result summaries to `docs/emergent-validation-report.md`.
+- Distinguish empirical validation (claims backed by historical/experimental sources with
+  citations) from plausibility checks (claims that outcomes are physically reasonable).
+- Add a "Validation" section to the README that links `docs/emergent-validation-report.md`
+  and the isolated-subsystem validation dashboard.
+- Tag each release with the emergent validation result summary in the GitHub release notes.
+- CI should run the emergent validation suite (or a fast subset) and fail if any scenario
+  diverges beyond tolerance from the committed summary.
+
+**Success criterion:** The emergent validation report is a first-class artifact visible from
+README and linked from every release — not buried inside `tools/`.
