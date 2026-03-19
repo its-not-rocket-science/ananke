@@ -169,3 +169,98 @@ These are implementation details.  Do not import them directly; they may change 
 
 Adding new **optional** fields to `Entity` or `IndividualAttributes` is never a breaking change.
 Adding new exports is never a breaking change at any tier.
+
+---
+
+## Entity and WorldState Field Tiers
+
+Every field on `Entity` and `WorldState` carries a JSDoc annotation that identifies which
+subsystem owns it and whether it is required by the kernel.  There are three tiers:
+
+### `@core` — Required by `stepWorld` every tick
+
+These fields must always be present.  Removing or renaming them is a Tier 1 breaking change.
+
+**`Entity` core fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `number` | Unique entity identifier; stable across ticks |
+| `teamId` | `number` | Combat team / allegiance for attack resolution and AI targeting |
+| `attributes` | `IndividualAttributes` | Physical and cognitive capabilities |
+| `energy` | `EnergyState` | Energy reserve and fatigue accumulator |
+| `loadout` | `Loadout` | Equipped items: weapons, armour, held objects |
+| `traits` | `TraitId[]` | Permanent trait flags |
+| `position_m` | `Vec3` | World-space position (fixed-point, `SCALE.m` = 1 m) |
+| `velocity_mps` | `Vec3` | Velocity (fixed-point, `SCALE.mps` = 1 m/s) |
+| `intent` | `IntentState` | Movement and defence intent derived from the previous tick's commands |
+| `action` | `ActionState` | Attack cooldowns, swing momentum, weapon-bind state |
+| `condition` | `ConditionState` | Fear, morale, sensory modifiers, fatigue, thermal state |
+| `injury` | `InjuryState` | Per-region damage, shock, consciousness, fluid loss, death flag |
+| `grapple` | `GrappleState` | Active grapple relationships, grip strength, positional lock |
+
+**`WorldState` core fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tick` | `number` | Current tick count; incremented by `stepWorld` |
+| `seed` | `number` | Deterministic RNG seed |
+| `entities` | `Entity[]` | All live and dead entities |
+
+### `@subsystem(name)` — Optional state consumed by a specific module
+
+These fields are optional `?` properties.  Omitting a subsystem field disables that module's
+behaviour for the entity; the kernel continues to run correctly without it.  Adding new
+subsystem fields is never a breaking change.
+
+**`Entity` subsystem fields:**
+
+| Field | Module | Description |
+|-------|--------|-------------|
+| `willpower?` | `willpower` | Cognitive stamina reserve for concentration abilities |
+| `skills?` | `skills` | Per-skill proficiency map for skill-contest resolution |
+| `bodyPlan?` | `anatomy` | Body plan defining injury segments and mass distribution |
+| `substances?` | `pharmacology` | Active pharmacological substances in the bloodstream |
+| `foodInventory?` | `nutrition` | Consumable food items and counts |
+| `molting?` | `anatomy` | Arthropod molting state (softening segments, repair cycles) |
+| `ai?` | `ai` | AI decision state (target selection, threat map) |
+| `capabilitySources?` | `capability` | Attached capability sources (mana pools, divine reserves) |
+| `armourState?` | `armour` | Mutable resist state for ablative armour items |
+| `pendingActivation?` | `capability` | In-flight capability cast |
+| `activeConcentration?` | `capability` | Active concentration aura |
+| `faction?` | `faction` | Faction membership identifier |
+| `party?` | `party` | Adventuring party membership identifier |
+| `reputations?` | `faction` | Entity-level faction-standing overrides |
+| `physiology?` | `thermoregulation` | Species-level physiological overrides |
+| `activeVenoms?` | `toxicology` | Active venom/toxin injections |
+| `limbStates?` | `anatomy` | Per-limb state for multi-limb entities |
+| `personality?` | `ai` | AI personality traits (aggression, caution, loyalty) |
+| `extendedSenses?` | `sensory` | Extended sensory modalities (echolocation, olfaction) |
+| `activeIngestedToxins?` | `toxicology` | Active ingested toxins (alcohol, sedatives, heavy metals) |
+| `cumulativeExposure?` | `toxicology` | Cumulative lifetime dose records |
+| `withdrawal?` | `toxicology` | Active withdrawal states |
+| `traumaState?` | `wound-aging` | PTSD-like trauma state from severe shock events |
+| `activeDiseases?` | `disease` | Active systemic disease states |
+| `immunity?` | `disease` | Post-recovery immunity records |
+| `age?` | `aging` | Elapsed life-seconds for aging calculations |
+| `sleep?` | `sleep` | Sleep-phase state and debt accumulator |
+| `mount?` | `mount` | Rider/mount pair state for mounted combat |
+| `compiledAnatomy?` | `anatomy` | Internal anatomy cache — do not set manually |
+| `anatomyHelpers?` | `anatomy` | Internal anatomy helper cache — do not set manually |
+
+**`WorldState` subsystem fields:**
+
+| Field | Module | Description |
+|-------|--------|-------------|
+| `activeFieldEffects?` | `capability` | Active suppression zones and field-effect modifiers |
+| `__sensoryEnv?` | `sensory` | Ambient lighting and visibility environment |
+| `__factionRegistry?` | `faction` | Global faction-standing registry |
+| `__partyRegistry?` | `party` | Global party registry |
+| `__relationshipGraph?` | `relationships` | Inter-entity relationship graph |
+| `__nutritionAccum?` | `nutrition` | Cross-tick nutrition accumulator |
+
+### `@extension` — Host-owned data
+
+No built-in fields carry this tag.  Hosts may add their own optional `?` fields to pass
+renderer metadata, network session IDs, or other application-specific data alongside entities.
+TypeScript's structural typing allows this without modifying `Entity`'s definition.

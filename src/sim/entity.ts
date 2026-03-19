@@ -44,130 +44,246 @@ export interface GrappleState {
   position: GrapplePosition; // Phase 2A: positional control
 }
 
+/**
+ * Core entity shape.
+ *
+ * Fields are annotated with one of three stability tiers:
+ *
+ * - **`@core`** — Required by `stepWorld` on every tick.  Always present; never optional.
+ *   Removing or renaming any `@core` field is a Tier 1 breaking change.
+ *
+ * - **`@subsystem(name)`** — Optional state consumed only by a specific sub-module
+ *   (`src/sim/sleep.ts`, `src/sim/aging.ts`, etc.).  Omitting a subsystem field disables that
+ *   module's behaviour for this entity; the kernel continues to run correctly without it.
+ *   Adding new optional subsystem fields is never a breaking change.
+ *
+ * - **`@extension`** — Not consumed by Ananke at all.  Reserved for host-application data
+ *   that travels alongside entities (e.g. renderer-side metadata, network session IDs).
+ *   Currently no built-in fields carry this tag; hosts may add their own `?` fields freely.
+ */
 export interface Entity {
+  /** @core Unique entity identifier — must be stable across ticks. */
   id: number;
+  /** @core Combat team / allegiance used by attack resolution and AI targeting. */
   teamId: number;
 
+  /** @core Physical and cognitive capabilities (mass, force, reaction time, etc.). */
   attributes: IndividualAttributes;
+  /** @core Energy reserve and fatigue accumulator — drained by movement and combat. */
   energy: EnergyState;
 
-  /** Phase 38: cognitive stamina reserve — depleted by sustained concentration, replenished by rest. */
+  /**
+   * @subsystem(willpower) Cognitive stamina reserve — depleted by sustained concentration,
+   * replenished by rest.  Consumed by `src/competence/willpower.ts`.
+   */
   willpower?: WillpowerState;
 
+  /** @core Equipped items: weapons, armour, held objects. */
   loadout: Loadout;
+  /** @core Permanent trait flags that modify combat and skill outcomes. */
   traits: TraitId[];
 
-  /** Phase 7: optional skill map — consumes values from the host application. */
+  /**
+   * @subsystem(skills) Per-skill proficiency map.
+   * Consumed by skill-contest resolution in `src/sim/combat.ts` and `src/sim/ai/`.
+   */
   skills?: SkillMap;
 
-  /** Phase 8: optional body plan — enables data-driven injury and impairment. */
+  /**
+   * @subsystem(anatomy) Body plan defining injury segments, mass distribution, and
+   * data-driven impairment tables.  Consumed by `src/sim/injury.ts`, `src/model3d.ts`,
+   * and the anatomy compiler.
+   */
   bodyPlan?: BodyPlan;
 
-  /** Phase 10: active pharmacological substances (ingested/injected by the host application). */
+  /**
+   * @subsystem(pharmacology) Active pharmacological substances currently in the bloodstream.
+   * Consumed by `src/sim/substance.ts`.
+   */
   substances?: ActiveSubstance[];
 
-  foodInventory?: Map<string, number> | undefined; // optional Phase 12: tracks consumable food items and counts
+  /**
+   * @subsystem(nutrition) Consumable food items and counts.
+   * Consumed by the nutrition accumulator in `src/sim/kernel.ts` when present.
+   */
+  foodInventory?: Map<string, number> | undefined;
 
   /**
-   * Phase 8B: molting state for arthropod-type entities.
+   * @subsystem(anatomy) Molting state for arthropod-type entities.
    * Active molt: segments in `softeningSegments` take reduced kinetic structural damage.
-   * When `ticksRemaining` reaches 0, `active` is set to false and `regeneratesViaMolting`
-   * segments receive partial structural repair (−q(0.10) per cycle).
+   * When `ticksRemaining` reaches 0, `regeneratesViaMolting` segments receive partial repair.
+   * Consumed by `src/sim/injury.ts`.
    */
   molting?: {
     active: boolean;
     ticksRemaining: number;
-    /** Segment IDs currently softening — these take reduced kinetic structural damage (×q(0.70)). */
+    /** Segment IDs currently softening — take reduced kinetic structural damage (×q(0.70)). */
     softeningSegments: string[];
   };
 
+  /** @core World-space position in fixed-point metres (`SCALE.m` = 1 m). */
   position_m: Vec3;
+  /** @core Velocity in fixed-point metres per second (`SCALE.mps` = 1 m/s). */
   velocity_mps: Vec3;
 
+  /** @core Movement and defence intent derived from the previous tick's commands. */
   intent: IntentState;
+  /** @core Attack cooldowns, swing momentum, weapon-bind state. */
   action: ActionState;
 
+  /** @core Physiological condition: fear, morale, sensory modifiers, fatigue, thermal. */
   condition: ConditionState;
+  /** @core Per-region damage, shock, consciousness, fluid loss, death flag. */
   injury: InjuryState;
 
+  /** @core Active grapple relationships, grip strength, positional lock. */
   grapple: GrappleState;
 
+  /**
+   * @subsystem(ai) AI decision state (target selection, last-seen position, threat map).
+   * Consumed by `src/sim/ai/system.ts`; absent for player-controlled or scripted entities.
+   */
   ai?: AIState;
 
-  /** Phase 12: attached capability sources (mana pools, fusion cells, divine reserves, …). */
+  /**
+   * @subsystem(capability) Attached capability sources (mana pools, fusion cells, divine
+   * reserves).  Consumed by `src/sim/capability.ts`.
+   */
   capabilitySources?: CapabilitySource[];
 
   /**
-   * Phase 11C: mutable resist state for ablative armour items.
+   * @subsystem(armour) Mutable resist state for ablative armour items.
    * Key = item id; value = remaining resist in joules.
-   * Initialized automatically by stepWorld for entities with ablative items.
+   * Initialised automatically by `stepWorld` for entities with ablative items.
    */
   armourState?: Map<string, { resistRemaining_J: number }>;
 
-  /** Phase 12: in-flight cast — cleared on completion or concentration break. */
+  /**
+   * @subsystem(capability) In-flight capability activation — cleared on completion or
+   * concentration break.  Consumed by `src/sim/capability.ts`.
+   */
   pendingActivation?: PendingActivation;
 
-  /** Phase 12B: active concentration aura — cleared when reserve depletes or shock interrupts. */
+  /**
+   * @subsystem(capability) Active concentration aura — cleared when willpower reserve
+   * depletes or shock interrupts.  Consumed by `src/sim/capability.ts`.
+   */
   activeConcentration?: ConcentrationState;
 
-  /** Phase 24: faction this entity belongs to (factionId string). */
+  /**
+   * @subsystem(faction) Faction membership identifier.
+   * Consumed by `src/faction.ts` and AI targeting.
+   */
   faction?: string;
-  /** Phase 48: adventuring party this entity belongs to (partyId string). */
+
+  /**
+   * @subsystem(party) Adventuring party membership identifier.
+   * Consumed by `src/party.ts` for morale and formation bonuses.
+   */
   party?: string | undefined;
 
   /**
-   * Phase 24: entity-level standing overrides toward specific factions.
+   * @subsystem(faction) Entity-level faction-standing overrides.
    * Map<factionId, Q> — takes priority over faction-default standings when set.
+   * Consumed by `src/faction.ts`.
    */
   reputations?: Map<string, number>;
 
-  /** Phase 31: species-level physiological overrides (thermoregulation, nutrition). */
+  /**
+   * @subsystem(thermoregulation) Species-level physiological overrides.
+   * Consumed by `src/sim/thermoregulation.ts` for heat/cold stress modelling.
+   */
   physiology?: SpeciesPhysiology | undefined;
 
-  /** Phase 32C: active venom/toxin injections — ticked at 1 Hz by stepToxicology. */
+  /**
+   * @subsystem(toxicology) Active venom/toxin injections — ticked at 1 Hz.
+   * Consumed by `src/sim/toxicology.ts`.
+   */
   activeVenoms?: ActiveVenom[];
 
-  /** Phase 32B: per-limb state for multi-limb entities (octopoids, arachnids, etc.). */
+  /**
+   * @subsystem(anatomy) Per-limb state for multi-limb entities (octopoids, arachnids).
+   * Consumed by `src/sim/limb.ts`.
+   */
   limbStates?: LimbState[];
 
-  /** Phase 47: individual AI personality traits (aggression, caution, loyalty, opportunism). */
+  /**
+   * @subsystem(ai) Individual AI personality traits (aggression, caution, loyalty).
+   * Consumed by `src/sim/ai/personality.ts`.
+   */
   personality?: PersonalityTraits;
 
-  /** Phase 52: extended sensory modalities (echolocation, electroreception, olfaction). */
+  /**
+   * @subsystem(sensory) Extended sensory modalities (echolocation, electroreception,
+   * olfaction).  Consumed by `src/sim/sensory-extended.ts`.
+   */
   extendedSenses?: ExtendedSenses;
 
-  /** Phase 53: active ingested toxins (alcohol, sedatives, alkaloids, heavy metals, radiation). */
+  /**
+   * @subsystem(toxicology) Active ingested toxins (alcohol, sedatives, alkaloids, heavy
+   * metals, radiation).  Consumed by `src/sim/systemic-toxicology.ts`.
+   */
   activeIngestedToxins?: ActiveIngestedToxin[];
 
-  /** Phase 53: cumulative lifetime dose records for heavy metals and radiation. */
+  /**
+   * @subsystem(toxicology) Cumulative lifetime dose records for heavy metals and radiation.
+   * Consumed by `src/sim/systemic-toxicology.ts`.
+   */
   cumulativeExposure?: CumulativeExposureRecord[];
 
-  /** Phase 53: active withdrawal states from addictive toxin removal. */
+  /**
+   * @subsystem(toxicology) Active withdrawal states from addictive toxin removal.
+   * Consumed by `src/sim/systemic-toxicology.ts`.
+   */
   withdrawal?: WithdrawalState[];
 
   /**
-   * Phase 54: PTSD-like trauma state accumulated from severe shock events.
+   * @subsystem(wound-aging) PTSD-like trauma state accumulated from severe shock events.
    * Reduces effective fear threshold via `deriveFearThresholdMul`.
+   * Consumed by `src/sim/wound-aging.ts`.
    */
   traumaState?: TraumaState;
 
-  /** Phase 56: active systemic disease states (incubating or symptomatic). */
+  /**
+   * @subsystem(disease) Active systemic disease states (incubating or symptomatic).
+   * Consumed by `src/sim/disease.ts`.
+   */
   activeDiseases?: DiseaseState[];
 
-  /** Phase 56: post-recovery immunity records preventing re-infection. */
+  /**
+   * @subsystem(disease) Post-recovery immunity records preventing re-infection.
+   * Consumed by `src/sim/disease.ts`.
+   */
   immunity?: ImmunityRecord[];
 
-  /** Phase 57: elapsed life-seconds for aging calculations. */
+  /**
+   * @subsystem(aging) Elapsed life-seconds for aging calculations.
+   * Consumed by `src/sim/aging.ts`.
+   */
   age?: AgeState;
 
-  /** Phase 58: sleep-phase state, debt accumulator, and continuous wake time. */
+  /**
+   * @subsystem(sleep) Sleep-phase state, debt accumulator, and continuous wake time.
+   * Consumed by `src/sim/sleep.ts`.
+   */
   sleep?: SleepState;
 
-  /** Phase 59: rider/mount pair state for cavalry and mounted combat. */
+  /**
+   * @subsystem(mount) Rider/mount pair state for cavalry and mounted combat.
+   * Consumed by `src/sim/mount.ts`.
+   */
   mount?: MountState;
 
-  // anatomy related cache
+  /**
+   * @subsystem(anatomy) Compiled anatomy model — cached on first access by
+   * `ensureAnatomyRuntime`.  Do not set manually.
+   */
   compiledAnatomy?: CompiledAnatomyModel;
+
+  /**
+   * @subsystem(anatomy) Anatomy helper registry — cached on first access by
+   * `ensureAnatomyRuntime`.  Do not set manually.
+   */
   anatomyHelpers?: AnatomyHelperRegistry;
 }
 
