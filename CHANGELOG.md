@@ -10,6 +10,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.1] — 2026-03-19
+
+### Documentation
+
+- Replace root `README.md` with a focused programmer's guide (installation, three
+  quick-start examples, core concepts, command reference, determinism rules, replay,
+  bridge, API tier table, TypeScript types, performance guidance)
+- Preserve full original README as `docs/project-overview.md`
+- Publish `docs/` reference suite in npm tarball: host-contract, integration-primer,
+  bridge-contract, performance, versioning, emergent-validation-report, project-overview
+- Mark Platform Hardening PH-1 through PH-8 complete in ROADMAP
+- Mark CE-1 (npm publish) complete; package published as `@its-not-rocket-science/ananke`
+
+---
+
 ## [0.1.0] — 2026-03-18
 
 Initial published release.  All simulation layers (2–6) complete.
