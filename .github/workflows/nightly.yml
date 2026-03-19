@@ -1,0 +1,76 @@
+name: Nightly
+
+on:
+  schedule:
+    # 03:00 UTC every day
+    - cron: "0 3 * * *"
+  workflow_dispatch:  # allow manual trigger
+
+jobs:
+  benchmark-regression:
+    name: Benchmark regression check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run benchmark regression check
+        # 50% threshold: catches algorithmic regressions while tolerating
+        # normal GitHub Actions runner variance (±30–50% run-to-run).
+        # For fine-grained detection on controlled hardware use --threshold=0.10.
+        run: node dist/tools/benchmark-check.js --threshold=0.50
+
+      - name: Upload benchmark results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-baseline
+          path: benchmarks/baseline.json
+          retention-days: 90
+
+  golden-fixtures:
+    name: Golden fixture determinism check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify golden fixtures are up-to-date
+        # Regenerates fixtures and checks they are identical to committed versions.
+        # Fails if a physics change altered deterministic output without updating fixtures.
+        run: |
+          node dist/tools/generate-fixtures.js
+          git diff --exit-code fixtures/ || (
+            echo ""
+            echo "✗  Golden fixtures have changed — physics output is non-deterministic"
+            echo "   or a physics change was made without updating fixtures."
+            echo "   Run 'npm run generate-fixtures' locally, review the diff,"
+            echo "   and commit the updated fixtures alongside the physics change."
+            exit 1
+          )

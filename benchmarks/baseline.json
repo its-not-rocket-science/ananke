@@ -1,0 +1,27 @@
+{
+  "generatedAt": "2026-03-19T11:42:47.672Z",
+  "note": "Update with: npm run benchmark-check -- --update-baseline.  CI uses --threshold=0.50; local fine-grained checks use --threshold=0.10.",
+  "scenarios": [
+    {
+      "id": "melee-10",
+      "label": "10 entities, melee skirmish",
+      "n": 10,
+      "baselineMedianMs": 0.5673500000000331,
+      "baselineThroughputTps": 1763
+    },
+    {
+      "id": "mixed-100",
+      "label": "100 entities, mixed ranged/melee",
+      "n": 100,
+      "baselineMedianMs": 8.028650000000198,
+      "baselineThroughputTps": 125
+    },
+    {
+      "id": "formation-500",
+      "label": "500 entities, formation combat",
+      "n": 500,
+      "baselineMedianMs": 35.21759999999904,
+      "baselineThroughputTps": 28
+    }
+  ]
+}

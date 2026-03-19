@@ -5455,19 +5455,33 @@ Tests verify:
 
 ---
 
-### 15 · Published Benchmark Methodology + CI Regression Budget
+### 15 · Published Benchmark Methodology + CI Regression Budget *(COMPLETE)*
 
-**The gap:** `tools/benchmark.ts` and `docs/performance.md` establish baseline numbers but
-there is no CI integration — a slow PR is invisible.
+**Deliverable:** `tools/benchmark-check.ts` + `benchmarks/baseline.json` +
+`.github/workflows/nightly.yml`.
 
-**What is needed:**
-- A nightly CI job running the benchmark and comparing against baseline (10% regression = fail)
-- Published methodology: hardware spec, Node version, warm-up runs, measurement window
-- Versioned baseline JSON so regressions can be tracked over time
+- **`tools/benchmark-check.ts`** — lean benchmark over three scenarios (10/100/500 entities),
+  compares against stored baseline, exits non-zero if throughput degrades beyond threshold
+- **`benchmarks/baseline.json`** — versioned baseline with per-scenario median tick times and
+  throughput; regenerate with `npm run benchmark-check:update`
+- **`.github/workflows/nightly.yml`** — two nightly jobs:
+  1. Benchmark regression check at 50% threshold (catches algorithmic regressions while
+     tolerating GitHub Actions runner variance of ±30–50%)
+  2. Golden fixture determinism check: regenerates fixtures and diffs vs. committed version
 
-**Why this matters:** Performance is part of the Stable tier contract.  Publishing baselines
-and regressing against them signals that performance is a first-class commitment, not an
-afterthought.
+**npm scripts:**
+
+| Script | What |
+|--------|------|
+| `npm run benchmark-check` | Run check at 50% CI threshold |
+| `npm run benchmark-check:strict` | Run check at 10% for same-hardware fine-grained detection |
+| `npm run benchmark-check:update` | Regenerate `benchmarks/baseline.json` from current machine |
+
+**Threshold rationale:** 50% catches "someone made O(n²) accidentally"; 10% catches "this
+PR added 8 ms of overhead on formation combat."  Use 10% locally, 50% in CI.
+
+**Intentional update workflow:** after an accepted performance-altering change, run
+`npm run benchmark-check:update`, review the diff, and commit alongside the change.
 
 ---
 
