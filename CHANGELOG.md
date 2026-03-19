@@ -10,6 +10,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.2] — 2026-03-19
+
+### Added
+
+- `createWorld(seed, entities)` — Tier-1 convenience factory; builds a `WorldState` from
+  `EntitySpec[]` (archetype, weapon, armour string IDs) without manual entity construction
+- `loadScenario(json)` / `validateScenario(json)` — JSON-driven world creation for
+  non-TypeScript consumers (Godot GDScript, Unity C#, scenario files)
+- `ARCHETYPE_MAP` — `ReadonlyMap` of all 21 built-in archetypes (7 base + 14 species)
+- `ITEM_MAP` — `ReadonlyMap` of all historical and starter weapons/armour
+
+---
+
 ## [0.1.1] — 2026-03-19
 
 ### Documentation
