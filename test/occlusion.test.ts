@@ -3,7 +3,7 @@ import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";
 import { isMeleeLaneOccludedByFriendly } from "../src/sim/occlusion";
 import { SCALE } from "../src/units";
-import { mkWorld, mkHumanoidEntity } from "../src";
+import { mkWorld, mkHumanoidEntity } from "../src/sim/testing.js";
 
 
 test("rear-rank melee lane is occluded by a friendly in between", () => {

@@ -3,7 +3,7 @@ import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";
 import { pickNearestEnemyInReach } from "../src/sim/formation";
 import { SCALE, q } from "../src/units";
-import { mkHumanoidEntity, mkWorld } from "../src";
+import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
 
 
 test("pickNearestEnemyInReach ignores friendlies and breaks ties by id", () => {

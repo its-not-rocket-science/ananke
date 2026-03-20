@@ -6096,7 +6096,7 @@ one-line installs.  Versions are pinnable.  TypeScript declarations are included
 
 ---
 
-### CE-2 · `createWorld()` Convenience Factory
+### CE-2 · `createWorld()` Convenience Factory — **COMPLETE** (2026-03-19)
 
 **Problem:** Spawning a `WorldState` currently requires ~30 lines of boilerplate
 (`generateIndividual`, `defaultIntent`, `defaultCondition`, `defaultInjury`, `v3`, `loadout`,
@@ -6130,7 +6130,7 @@ quickstarts become trivial.
 
 ---
 
-### CE-3 · JSON Scenario Schema + `loadScenario()`
+### CE-3 · JSON Scenario Schema + `loadScenario()` — **COMPLETE** (2026-03-19)
 
 **Problem:** Godot GDScript and Unity C# cannot import TypeScript.  They need a
 data-only way to define scenarios (entity composition, archetype, weapon, position, tick

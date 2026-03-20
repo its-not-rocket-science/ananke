@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { ImpactEvent, sortEventsDeterministic } from "../src/sim/events";
-import { mkImpactEvent } from "../src";
+import { mkImpactEvent } from "../src/sim/testing.js";
 
 test("impact events sort deterministically by attackerId then targetId", () => {
   const ev: ImpactEvent[] = [

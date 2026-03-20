@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { applyFrontageCap } from "../src/sim/frontage";
 import { buildWorldIndex } from "../src/sim/indexing";
 import { SCALE } from "../src/units";
-import { mkHumanoidEntity, mkWorld, mkImpactEvent } from "../src";
+import { mkHumanoidEntity, mkWorld, mkImpactEvent } from "../src/sim/testing.js";
 
 
 test("frontage cap keeps nearest attackers, tie-break by attackerId", () => {
