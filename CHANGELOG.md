@@ -10,6 +10,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.3] — 2026-03-20
+
+### Changed
+
+- `src/index.ts` (CE-4) now exports only the Tier 1 stable surface defined in `STABLE_API.md`.
+  Tier 2 (experimental) and Tier 3 (internal) exports have been removed from the root barrel
+  and are accessible via direct module paths (e.g. `dist/src/sim/aging.js`).
+- `createWorld`, `loadScenario`, `validateScenario`, `ARCHETYPE_MAP`, `ITEM_MAP` promoted to
+  Tier 1 (were incorrectly placed under Tier 3 in 0.1.2).
+- `describeCharacter`, `formatCharacterSheet`, `formatOneLine` added to root barrel (were
+  listed as Tier 1 in `STABLE_API.md` but missing from the 0.1.2 export).
+
+---
+
 ## [0.1.2] — 2026-03-19
 
 ### Added
