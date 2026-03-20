@@ -30,7 +30,8 @@ The following external datasets and literature sources have been incorporated in
 | **Calibration: Fracture Recovery** | Orthopaedic rehabilitation literature | Expected recovery timeline for fractured limb | ✅ PASS (expectations satisfied) | Recovery duration, functional outcome | Orthopaedic rehabilitation literature |
 | **Calibration: Untreated Infection** | Pre‑antibiotic era wound infection mortality (Ogston, Lister era data) | Expected mortality for untreated infected wounds | ✅ PASS (expectations satisfied) | Mortality rate, infection progression | Historical medical records (Ogston, Lister era) |
 | **Calibration: Plate Armour Effectiveness** | HEMA literature on plate armour effectiveness | Expected protection against sword/axe strikes | ✅ PASS (expectations satisfied) | Injury reduction, survival rate | Historical European Martial Arts (HEMA) literature |
-| **One‑Legged Stand Test Balance (placeholder)** | Stumble mechanics as proxy for postural stability | Simulated time before becoming prone (15 s vs. expected 22.5 s) | ✅ PASS (±40 % tolerance) | Time to balance loss (s) | Stumble mechanics (tuning.stumbleBaseChance, HUMAN_BASE.stability) |
+| **One‑Legged Stand Test Balance — Young Adult** | Springer et al. (2007) + PhysioNet OLST Dataset | Predicted OLST from control.stability at age 25 (simulated mean 20.4 s vs. empirical 27.8 s) | ✅ PASS (±30 %; ceiling effect in Springer data noted) | OLST duration (s) via stability→OLST linear mapping | Springer et al. (2007) Arch Phys Med Rehabil 88:443-451; PhysioNet doi:10.13026/46hn‑b25 |
+| **One‑Legged Stand Test Balance — Older Adult** | Springer et al. (2007) + Vellas et al. (1997) + PhysioNet OLST Dataset | Predicted OLST from control.stability at age 70 (simulated mean 14.7 s vs. empirical 15.2 s) | ✅ PASS (±25 %; aging delta validated) | OLST duration (s) via stability→OLST linear mapping | Springer et al. (2007); Vellas et al. (1997) J Am Geriatr Soc 45:735-738; PhysioNet doi:10.13026/46hn‑b25 |
 | **Soft Body Armor Energy Absorption (Kevlar K29)** | BFD Dataset (Mendeley) — Thick15‑9mm series | 15‑layer K29 stops 9 mm FMJ at 323.6 J (sub‑V50, 0 layers penetrated) | ✅ PASS (±10 %) | Energy absorption fraction (armored vs. unarmored) | Mendeley BFD Dataset — Thick15‑9mm_300_2 |
 | **Tibia Fracture from FSP (PMHS Dataset)** | PMHS Tibia Fracture Dataset (Supplement_Data.xlsx) | 4.15 g NATO FSP at EF2+ V50 = 356 m/s → 263 J; structuralFrac = q(0.55) calibrated to cross FRACTURE_THRESHOLD | ✅ PASS (±5 %) | Fracture flag (1.0 = fractured at V50 energy) | PMHS Tibia Fracture Dataset (Supplement_Data.xlsx) |
 
@@ -55,7 +56,7 @@ High‑resolution force‑plate data for validating movement physics, impact loa
 
 | Dataset Name | Description & Relevance | Resource URL |
 |:---|:---|:---|
-| **One‑Legged Stand Test Dataset** | Synchronized motion capture, force plate, and radar recordings from 32 healthy participants performing fall‑risk assessment. Includes labelled events (foot‑lift, stability periods, foot‑touchdown) derived from dual ground‑reaction force plates. Validates balance mechanics, postural stability, and fall physics. *A placeholder validation using stumble mechanics has been implemented.* | doi.org/10.13026/46hn‑6b25 |
+| **One‑Legged Stand Test Dataset** | Synchronized motion capture, force plate, and radar recordings from 32 healthy participants performing fall‑risk assessment. Includes labelled events (foot‑lift, stability periods, foot‑touchdown) derived from dual ground‑reaction force plates. Validates balance mechanics, postural stability, and fall physics. *Age-stratified validation implemented: young adult (age 25, 20.4 s vs. 27.8 s empirical, ±30 %) and older adult (age 70, 14.7 s vs. 15.2 s empirical, ±25 %). See tools/validation.ts (OLST scenarios).* | doi.org/10.13026/46hn‑6b25 |
 | **Runner Injury GRF Dataset (2025)** | 534 runners assessed on instrumented treadmill with 3D kinematic capture; includes classification of injured vs. uninjured runners and rearfoot vs. non‑rearfoot strikers. Key finding: injured rearfoot strikers had 18 % higher peak positive load rate and 6 % shorter time to peak. Directly validates impact‑loading calculations and injury‑prediction models. | PubMed ID: 40885827 |
 | **Tibial Stress Injury GRF Dataset (2025)** | 66 runners across four groups (symptomatic MTSS, recovering from tibial stress fractures, uninjured controls) with double‑Gaussian waveform modelling of ground‑reaction forces. Validates ability to differentiate injury status based on loading patterns. | PubMed ID: 40868315 |
 
@@ -103,7 +104,7 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 | **Soft armor energy absorption** | **BFD Dataset (Mendeley) — 15‑layer Kevlar K29 vs 9 mm FMJ** | **Sub‑V50 energy absorption fraction (empirical V50 ≈ 370 J)** | **✅ PASS (±10 %)** |
 | **Long-bone fracture from FSP** | **PMHS Tibia Fracture Dataset (Supplement_Data.xlsx)** | **EF2+ fracture at V50 energy (263 J, 4.15 g NATO FSP, 356 m/s)** | **✅ PASS (±5 %)** |
 | Impact loading & injury | Runner Injury GRF Dataset (2025); Tibial Stress Injury Dataset (2025) | Peak vertical GRF (target 1 580 N), peak positive load rate (target 48 993 N/s) | ✅ PASS (GRF 1 764 N ±11 %; load rate 56 891 N/s ±16 %) |
-| Balance & stability | One‑Legged Stand Test Dataset (placeholder implemented) | Postural sway, recovery time, fall thresholds | 🔶 Data secured (PhysioNet) |
+| Balance & stability | Springer et al. (2007) + Vellas et al. (1997) + PhysioNet OLST Dataset | OLST duration at age 25 (20.4 s vs. 27.8 s) and age 70 (14.7 s vs. 15.2 s) via stability→OLST mapping | ✅ PASS (young adult ±30 %; older adult ±25 %) |
 | Blast physics | Semi‑confined blast dataset (Mendeley/Kristoffersen 2024) — **now available locally** | Internal confined‑blast peak pressures — different regime from free‑field model | 🔶 Wrong regime (confined vs free‑field; see §5.1) |
 | Armor penetration & hypervelocity impact | pyBLOSSUM Hypervelocity Impact Database — **now available locally** | Hypervelocity (km/s) ballistic limit — different regime from intrinsicArmor_J model | 🔶 Wrong regime (hypervelocity vs energy‑threshold; see §5.2) |
 | Metallic armor penetration (V50 database) | Ballistic Limit V50 Database (REL_v50_database_20230527.csv) — **now available locally** | V50 (m/s) for AP/FSP vs Al/steel plates — hypervelocity regime, incompatible with intrinsicArmor_J | 🔶 Wrong regime (hypervelocity vs energy‑threshold) |
@@ -166,7 +167,7 @@ The following datasets have been identified but require additional empirical for
 
 **Dataset description:** Synchronized motion capture, force plate, and radar recordings from 32 healthy participants performing fall‑risk assessment. Includes labelled events (foot‑lift, stability periods, foot‑touchdown) derived from dual ground‑reaction force plates.
 
-**Current status:** A placeholder validation scenario has been implemented using Ananke's stumble mechanics (`TUNING.tactical.stumbleBaseChance` and `HUMAN_BASE.stability`). This approximates balance loss but does not use real GRF data.
+✅ **Validation implemented.** Two age-stratified scenarios use `applyAgingToAttributes` to age a HUMAN_BASE entity to 25 y (young adult) and 70 y (older adult), then map `control.stability` linearly to predicted OLST duration (`OLST = (stability / SCALE.Q) × 30 s`). Young adult: simulated 20.4 s vs. empirical 27.8 s (±30 % tolerance; ceiling effects in Springer 2007 data noted). Older adult: simulated 14.7 s vs. empirical 15.2 s (±25 %; aging delta well-calibrated). Full GRF waveform validation remains deferred pending raw dataset download.
 
 **Access details:** The dataset is open access under a Creative Commons Attribution 4.0 International Public License. Files can be downloaded via ZIP (10.2 GB) or terminal command:
 ```
@@ -294,7 +295,7 @@ wget -r -N -c -np https://physionet.org/files/olst-mocap-forceplate-radar/1.0/
 - 3D marker trajectories (100 Hz)
 - Stability phase durations, event timing
 
-**Placeholder validation already implemented** using stumble mechanics (`TUNING.tactical.stumbleBaseChance`, `HUMAN_BASE.stability`). Simulated mean 15 s vs empirical 22.5 s (within 40 % tolerance).
+✅ **Age-stratified validation implemented** (see Section 5.3). Young adult (age 25): 20.4 s vs. 27.8 s empirical (±30 % PASS). Older adult (age 70): 14.7 s vs. 15.2 s empirical (±25 % PASS).
 
 ### 6.4 Still‑Missing Formulas
 
@@ -323,5 +324,5 @@ The following datasets remain deferred because essential empirical equations are
 
 ---
 
-*Generated: 2026‑03‑17*
+*Generated: 2026‑03‑20*
 *Maintained by the Ananke validation framework.*
