@@ -6169,7 +6169,7 @@ Builder HTML tool.
 
 ---
 
-### CE-4 · `src/index.ts` Stable-API Barrel
+### CE-4 · `src/index.ts` Stable-API Barrel — **COMPLETE** (2026-03-20)
 
 **Problem:** No single entry point re-exports the Stable tier.  Adopters must know which
 internal module to reach into, which exposes them to Internal-tier breakage.
@@ -6224,7 +6224,7 @@ ship first — they unblock companion projects immediately with no WASM required
 
 ---
 
-### CE-6 · WebSocket Upgrade for World Server
+### CE-6 · WebSocket Upgrade for World Server — **COMPLETE** (2026-03-20)
 
 **Problem:** `tools/world-server.ts` (reference implementation) uses HTTP polling.  The
 browser client polls every 1.5 seconds, causing visible lag and unnecessary bandwidth at

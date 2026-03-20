@@ -1,19 +1,25 @@
 // tools/world-server.ts — Persistent World Server (reference implementation)
 //
-// Runs a continuous polity-scale world simulation and exposes it over HTTP.
-// A browser client at docs/world-client/index.html polls /state for live updates.
+// Runs a continuous polity-scale world simulation and exposes it over HTTP and WebSocket.
+// A browser client at docs/world-client/index.html connects via WebSocket for real-time
+// push updates, with HTTP polling as a fallback.
 //
 // Architecture:
 //   - 1 real second = 1 simulated day (adjustable via TICK_MS env var)
 //   - Auto-checkpoint every 30 days to world-checkpoint.json
 //   - Loads checkpoint on startup if present
-//   - Zero external dependencies — Node built-ins only
+//   - Zero external dependencies — Node built-ins only (crypto, http, fs, net)
+//
+// WebSocket endpoint: ws://localhost:3000/ws
+//   Messages pushed: { type: "init"|"tick", state, events|newEvents }
 //
 // Run:  npm run build && node dist/tools/world-server.js
 // Then: open docs/world-client/index.html in a browser
 
-import * as http from "node:http";
-import * as fs   from "node:fs";
+import * as http   from "node:http";
+import * as crypto from "node:crypto";
+import * as fs     from "node:fs";
+import type { Socket } from "node:net";
 import { q, SCALE, type Q }         from "../src/units.js";
 import { TechEra }                   from "../src/sim/tech.js";
 import {
@@ -144,38 +150,6 @@ function saveCheckpoint(): void {
   }
 }
 
-// ── World tick ────────────────────────────────────────────────────────────────
-
-function tick(): void {
-  day++;
-
-  const dayResult  = stepPolityDay(registry, PAIRS, SEED, day);
-  const techResult = stepTechDiffusion(registry, PAIRS, SEED, day);
-
-  // Log tech advances
-  for (const t of techResult) {
-    const name = registry.polities.get(t.polityId)?.name ?? t.polityId;
-    events.push({ day, type: "tech",
-      text: `${name} advances to ${techEraName(t.newTechEra)} era` });
-    console.log(`[day ${day}] TECH: ${name} → ${techEraName(t.newTechEra)}`);
-  }
-
-  // Log significant trade (only when substantial)
-  for (const t of dayResult.trade) {
-    if (t.incomeEach_cu >= 100) {
-      const a = registry.polities.get(t.polityAId)?.name ?? t.polityAId;
-      const b = registry.polities.get(t.polityBId)?.name ?? t.polityBId;
-      events.push({ day, type: "trade", text: `${a} ↔ ${b}: ${t.incomeEach_cu} cu each` });
-    }
-  }
-
-  // Auto-checkpoint
-  if (day % AUTO_SAVE_DAYS === 0) saveCheckpoint();
-
-  // Trim events
-  if (events.length > MAX_EVENTS) events = events.slice(-MAX_EVENTS);
-}
-
 // ── Snapshot for API ──────────────────────────────────────────────────────────
 
 function getSnapshot() {
@@ -196,6 +170,126 @@ function getSnapshot() {
     wars:    [...registry.activeWars],
     running: true,
   };
+}
+
+// ── WebSocket server (zero external deps — Node built-ins only) ───────────────
+
+const WS_MAGIC = "258EAFA5-E914-4789-ABBA-C4952A17A1B1";
+
+interface WsClient {
+  socket:         Socket;
+  lastEventCount: number;
+}
+
+const wsClients = new Set<WsClient>();
+
+function wsAcceptKey(clientKey: string): string {
+  return crypto.createHash("sha1")
+    .update(clientKey + WS_MAGIC)
+    .digest("base64");
+}
+
+function wsSendText(socket: Socket, text: string): void {
+  if (socket.destroyed) return;
+  const payload = Buffer.from(text, "utf8");
+  const len     = payload.length;
+  let   header: Buffer;
+  if (len < 126) {
+    header = Buffer.from([0x81, len]);
+  } else if (len < 65536) {
+    header = Buffer.from([0x81, 0x7E, len >> 8, len & 0xFF]);
+  } else {
+    const b = Buffer.alloc(10);
+    b[0] = 0x81; b[1] = 0x7F;
+    b.writeBigUInt64BE(BigInt(len), 2);
+    header = b;
+  }
+  try { socket.write(Buffer.concat([header, payload])); }
+  catch { /* client gone */ }
+}
+
+function wsBroadcastTick(): void {
+  for (const client of wsClients) {
+    const newEvents = events.slice(client.lastEventCount);
+    wsSendText(client.socket, JSON.stringify({ type: "tick", state: getSnapshot(), newEvents }));
+    client.lastEventCount = events.length;
+  }
+}
+
+function wsHandleUpgrade(req: http.IncomingMessage, socket: Socket): void {
+  const key = (req.headers as Record<string, string | undefined>)["sec-websocket-key"];
+  if (!key) { socket.destroy(); return; }
+
+  socket.write(
+    "HTTP/1.1 101 Switching Protocols\r\n" +
+    "Upgrade: websocket\r\n" +
+    "Connection: Upgrade\r\n" +
+    `Sec-WebSocket-Accept: ${wsAcceptKey(key)}\r\n\r\n`
+  );
+
+  const client: WsClient = { socket, lastEventCount: 0 };
+  wsClients.add(client);
+
+  // Send full initial state + all events on connect
+  wsSendText(socket, JSON.stringify({ type: "init", state: getSnapshot(), events }));
+  client.lastEventCount = events.length;
+
+  // Handle incoming frames — server is push-only; clients only send close/ping
+  socket.on("data", (chunk: Buffer) => {
+    if (chunk.length < 2) return;
+    const b0     = chunk.readUInt8(0);
+    const b1     = chunk.readUInt8(1);
+    const opcode = b0 & 0x0F;
+    if (opcode === 0x8) {                               // close
+      try { socket.write(Buffer.from([0x88, 0x00])); } catch { /* ignore */ }
+      socket.destroy();
+    } else if (opcode === 0x9) {                        // ping → pong
+      const masked    = (b1 & 0x80) !== 0;
+      const payLen    = b1 & 0x7F;
+      const dataStart = masked ? 6 : 2;
+      const raw       = chunk.slice(dataStart, dataStart + payLen);
+      const payload   = masked
+        ? Buffer.from(raw.map((b, i) => b ^ (chunk.readUInt8(2 + (i % 4)))))
+        : raw;
+      try { socket.write(Buffer.concat([Buffer.from([0x8A, payLen]), payload])); } catch { /* ignore */ }
+    }
+  });
+
+  const remove = () => wsClients.delete(client);
+  socket.on("close", remove);
+  socket.on("error", () => { remove(); socket.destroy(); });
+
+  console.log(`[world-server] WebSocket client connected (${wsClients.size} total)`);
+}
+
+// ── World tick ────────────────────────────────────────────────────────────────
+
+function tick(): void {
+  day++;
+
+  const dayResult  = stepPolityDay(registry, PAIRS, SEED, day);
+  const techResult = stepTechDiffusion(registry, PAIRS, SEED, day);
+
+  for (const t of techResult) {
+    const name = registry.polities.get(t.polityId)?.name ?? t.polityId;
+    events.push({ day, type: "tech",
+      text: `${name} advances to ${techEraName(t.newTechEra)} era` });
+    console.log(`[day ${day}] TECH: ${name} → ${techEraName(t.newTechEra)}`);
+  }
+
+  for (const t of dayResult.trade) {
+    if (t.incomeEach_cu >= 100) {
+      const a = registry.polities.get(t.polityAId)?.name ?? t.polityAId;
+      const b = registry.polities.get(t.polityBId)?.name ?? t.polityBId;
+      events.push({ day, type: "trade", text: `${a} ↔ ${b}: ${t.incomeEach_cu} cu each` });
+    }
+  }
+
+  if (day % AUTO_SAVE_DAYS === 0) saveCheckpoint();
+  if (events.length > MAX_EVENTS) events = events.slice(-MAX_EVENTS);
+
+  // Push to all WebSocket clients
+  wsBroadcastTick();
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
@@ -224,21 +318,17 @@ const server = http.createServer(async (req, res) => {
   const url    = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   const method = req.method ?? "GET";
 
-  // CORS preflight
   if (method === "OPTIONS") { cors(res); res.writeHead(204); res.end(); return; }
 
-  // GET /state
   if (method === "GET" && url.pathname === "/state") {
     return json(res, 200, getSnapshot());
   }
 
-  // GET /events?since=N
   if (method === "GET" && url.pathname === "/events") {
     const since = parseInt(url.searchParams.get("since") ?? "0");
     return json(res, 200, { events: events.filter(e => e.day > since) });
   }
 
-  // POST /war  { a: polityId, b: polityId }
   if (method === "POST" && url.pathname === "/war") {
     const body = JSON.parse(await readBody(req)) as { a: string; b: string };
     if (!body.a || !body.b) return json(res, 400, { error: "Missing a or b" });
@@ -246,11 +336,11 @@ const server = http.createServer(async (req, res) => {
     declareWar(registry, body.a, body.b);
     const na = registry.polities.get(body.a)?.name ?? body.a;
     const nb = registry.polities.get(body.b)?.name ?? body.b;
-    events.push({ day, type: "war",   text: `${na} declares war on ${nb}` });
+    events.push({ day, type: "war", text: `${na} declares war on ${nb}` });
+    wsBroadcastTick();
     return json(res, 200, { ok: true });
   }
 
-  // POST /peace  { a: polityId, b: polityId }
   if (method === "POST" && url.pathname === "/peace") {
     const body = JSON.parse(await readBody(req)) as { a: string; b: string };
     if (!body.a || !body.b) return json(res, 400, { error: "Missing a or b" });
@@ -258,16 +348,15 @@ const server = http.createServer(async (req, res) => {
     const na = registry.polities.get(body.a)?.name ?? body.a;
     const nb = registry.polities.get(body.b)?.name ?? body.b;
     events.push({ day, type: "peace", text: `${na} and ${nb} make peace` });
+    wsBroadcastTick();
     return json(res, 200, { ok: true });
   }
 
-  // POST /save
   if (method === "POST" && url.pathname === "/save") {
     saveCheckpoint();
     return json(res, 200, { ok: true, day });
   }
 
-  // POST /reset
   if (method === "POST" && url.pathname === "/reset") {
     clearInterval(tickHandle);
     day      = 0;
@@ -275,10 +364,21 @@ const server = http.createServer(async (req, res) => {
     events   = [{ day: 0, type: "info", text: "World reset by operator." }];
     if (fs.existsSync(CHECKPOINT)) fs.unlinkSync(CHECKPOINT);
     tickHandle = setInterval(tick, TICK_MS);
+    wsBroadcastTick();
     return json(res, 200, { ok: true });
   }
 
   return json(res, 404, { error: "Not found" });
+});
+
+// Attach WebSocket upgrade handler
+server.on("upgrade", (req, socket, _head) => {
+  const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
+  if (url.pathname === "/ws") {
+    wsHandleUpgrade(req, socket as Socket);
+  } else {
+    (socket as Socket).destroy();
+  }
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
@@ -287,6 +387,7 @@ let tickHandle = setInterval(tick, TICK_MS);
 
 server.listen(PORT, () => {
   console.log(`[world-server] Listening on http://localhost:${PORT}`);
+  console.log(`[world-server] WebSocket endpoint: ws://localhost:${PORT}/ws`);
   console.log(`[world-server] Tick rate: ${TICK_MS}ms per simulated day`);
   console.log(`[world-server] Open docs/world-client/index.html to view live state`);
   console.log(`[world-server] Press Ctrl+C to stop (checkpoint auto-saves every ${AUTO_SAVE_DAYS} days)`);
@@ -295,6 +396,10 @@ server.listen(PORT, () => {
 process.on("SIGINT", () => {
   console.log("\n[world-server] Shutting down — saving checkpoint...");
   clearInterval(tickHandle);
+  for (const client of wsClients) {
+    try { client.socket.write(Buffer.from([0x88, 0x00])); } catch { /* ignore */ }
+    client.socket.destroy();
+  }
   saveCheckpoint();
   server.close(() => process.exit(0));
 });

@@ -57,7 +57,7 @@
 <body>
 <header>
   <h1>Ananke — Persistent World</h1>
-  <span class="sub">Live simulation · polling localhost:3000</span>
+  <span class="sub">Live simulation · WebSocket localhost:3000</span>
   <span class="day-badge" id="day-badge">Day —</span>
   <div class="conn"><div class="conn-dot" id="conn-dot"></div><span id="conn-label">Connecting…</span></div>
 </header>
@@ -249,8 +249,7 @@ function renderStats(state) {
   }).join('');
 }
 
-// Event log — accumulates across polls
-let knownEventDay = -1;
+// Event log
 function updateEvents(newEvents) {
   const el = document.getElementById('events-log');
   if (!newEvents.length) return;
@@ -261,12 +260,59 @@ function updateEvents(newEvents) {
   if (el.innerHTML.includes('Waiting')) el.innerHTML = '';
   el.innerHTML += frag;
   el.scrollTop = el.scrollHeight;
-  if (newEvents.length) knownEventDay = Math.max(knownEventDay, newEvents.at(-1).day);
 }
 
-// Poll loop
+// ── WebSocket connection (with HTTP polling fallback) ─────────────────────────
+
 let connected = false;
-async function poll() {
+let ws = null;
+let pollFallbackHandle = null;
+
+function setConnected(live, label) {
+  connected = live;
+  document.getElementById('conn-dot').classList.toggle('live', live);
+  document.getElementById('conn-label').textContent = label;
+}
+
+function applyState(state, newEvents) {
+  if (!connected) {
+    setConnected(true, 'Live · WS');
+    populateSelects(state.polities);
+  }
+  document.getElementById('day-badge').textContent = 'Day ' + state.day;
+  renderMap(state);
+  renderStats(state);
+  updateEvents(newEvents ?? []);
+}
+
+function connectWS() {
+  const wsUrl = 'ws://localhost:3000/ws';
+  ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    if (pollFallbackHandle) { clearInterval(pollFallbackHandle); pollFallbackHandle = null; }
+  };
+
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    if (msg.type === 'init')  applyState(msg.state, msg.events ?? []);
+    if (msg.type === 'tick')  applyState(msg.state, msg.newEvents ?? []);
+  };
+
+  ws.onclose = () => {
+    setConnected(false, 'Reconnecting…');
+    ws = null;
+    // Fall back to HTTP polling while WS is down; retry WS every 5s
+    if (!pollFallbackHandle) pollFallbackHandle = setInterval(pollHTTP, 1500);
+    setTimeout(connectWS, 5000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+// HTTP polling fallback (used only when WS is disconnected)
+let knownEventDay = -1;
+async function pollHTTP() {
   try {
     const [stateRes, evRes] = await Promise.all([
       fetch(SERVER + '/state'),
@@ -275,23 +321,15 @@ async function poll() {
     if (!stateRes.ok || !evRes.ok) throw new Error('bad response');
     const state  = await stateRes.json();
     const evData = await evRes.json();
-
-    if (!connected) {
-      connected = true;
-      document.getElementById('conn-dot').classList.add('live');
-      document.getElementById('conn-label').textContent = 'Live';
-      populateSelects(state.polities);
-    }
+    const newEv  = evData.events ?? [];
+    if (newEv.length) knownEventDay = Math.max(knownEventDay, newEv.at(-1).day);
+    if (!connected) setConnected(true, 'Live · HTTP');
     document.getElementById('day-badge').textContent = 'Day ' + state.day;
     renderMap(state);
     renderStats(state);
-    updateEvents(evData.events ?? []);
+    updateEvents(newEv);
   } catch {
-    if (connected) {
-      connected = false;
-      document.getElementById('conn-dot').classList.remove('live');
-      document.getElementById('conn-label').textContent = 'Disconnected';
-    }
+    if (connected) setConnected(false, 'Disconnected');
   }
 }
 
@@ -300,12 +338,10 @@ async function sendWar() {
   const a=document.getElementById('pol-a').value, b=document.getElementById('pol-b').value;
   if(a===b){alert('Select two different polities');return}
   await fetch(SERVER+'/war',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({a,b})});
-  poll();
 }
 async function sendPeace() {
   const a=document.getElementById('pol-a').value, b=document.getElementById('pol-b').value;
   await fetch(SERVER+'/peace',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({a,b})});
-  poll();
 }
 async function sendSave() {
   await fetch(SERVER+'/save',{method:'POST'});
@@ -316,11 +352,9 @@ async function sendReset() {
   knownEventDay=-1;
   document.getElementById('events-log').innerHTML='<div style="padding:.4rem .5rem;color:var(--muted);font-size:.72rem">Resetting…</div>';
   await fetch(SERVER+'/reset',{method:'POST'});
-  poll();
 }
 
-poll();
-setInterval(poll, 1500);
+connectWS();
 </script>
 </body>
 </html>
