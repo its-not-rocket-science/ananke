@@ -6250,16 +6250,16 @@ high entity counts.  Production use of `ananke-world-ui` requires push-based sta
 
 The following starter READMEs for companion GitHub projects live in `docs/companion-projects/`:
 
-| Project | Purpose | Key Ananke hook |
-|---------|---------|-----------------|
-| `ananke-godot-reference` | Godot 4 humanoid rig plugin | `extractRigSnapshots`, `deriveAnimationHints` |
-| `ananke-unity-reference` | Unity 6 humanoid rig plugin | `extractRigSnapshots`, `deriveAnimationHints` |
-| `ananke-threejs-bridge`  | Three.js in-browser renderer | `stepWorld`, bridge module, no sidecar |
-| `ananke-language-forge`  | LLM language generation from faction history | `linguisticIntelligence_Q`, Phase 66 events |
-| `ananke-world-ui`        | Full standalone world creation + simulation UI | All Stable-tier APIs, `ReplayRecorder` |
-| `ananke-fantasy-species` | Fantasy species body-plan + archetype pack | `generateIndividual`, `BodyPlan`, `Archetype` |
-| `ananke-historical-battles` | Historical battle scenarios with validation | `ArenaScenario`, `DirectValidationScenario` |
-| `ananke-archive`         | Searchable public database of simulation runs and trace data | REST API over validation/replay output |
+| Project | GitHub | Purpose | Key Ananke hook |
+|---------|--------|---------|-----------------|
+| `ananke-godot-reference` | [↗](https://github.com/its-not-rocket-science/ananke-godot-reference) | Godot 4 humanoid rig plugin | `extractRigSnapshots`, `deriveAnimationHints` |
+| `ananke-unity-reference` | [↗](https://github.com/its-not-rocket-science/ananke-unity-reference) | Unity 6 humanoid rig plugin | `extractRigSnapshots`, `deriveAnimationHints` |
+| `ananke-threejs-bridge`  | [↗](https://github.com/its-not-rocket-science/ananke-threejs-bridge) | Three.js in-browser renderer | `stepWorld`, bridge module, no sidecar |
+| `ananke-language-forge`  | [↗](https://github.com/its-not-rocket-science/ananke-language-forge) | LLM language generation from faction history | `linguisticIntelligence_Q`, Phase 66 events |
+| `ananke-world-ui`        | [↗](https://github.com/its-not-rocket-science/ananke-world-ui) | Full standalone world creation + simulation UI | All Stable-tier APIs, `ReplayRecorder` |
+| `ananke-fantasy-species` | [↗](https://github.com/its-not-rocket-science/ananke-fantasy-species) | Fantasy species body-plan + archetype pack | `generateIndividual`, `BodyPlan`, `Archetype` |
+| `ananke-historical-battles` | [↗](https://github.com/its-not-rocket-science/ananke-historical-battles) | Historical battle scenarios with validation | `ArenaScenario`, `DirectValidationScenario` |
+| `ananke-archive`         | [↗](https://github.com/its-not-rocket-science/ananke-archive) | Searchable public database of simulation runs and trace data | REST API over validation/replay output |
 
 ---
 

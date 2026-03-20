@@ -65,7 +65,7 @@ Clone Ananke into a sibling directory before cloning this project:
 
 ```
 workspace/
-  ananke/           ← https://github.com/your-org/ananke
+  ananke/           ← https://github.com/its-not-rocket-science/ananke
   ananke-world-ui/  ← this repo
 ```
 
@@ -178,11 +178,11 @@ The dashboard calls `runArenaScenario` (Tier 2) internally. For large N (>1000 s
 
 ```bash
 # 1. Clone Ananke and build it
-git clone https://github.com/your-org/ananke.git
+git clone https://github.com/its-not-rocket-science/ananke.git
 cd ananke && npm install && npm run build && cd ..
 
 # 2. Clone this repo
-git clone https://github.com/your-org/ananke-world-ui.git
+git clone https://github.com/its-not-rocket-science/ananke-world-ui.git
 cd ananke-world-ui
 
 # 3. Install dependencies

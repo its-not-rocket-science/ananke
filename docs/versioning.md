@@ -57,7 +57,7 @@ experiment results), you may also pin to a specific commit hash.
 ```json
 {
   "dependencies": {
-    "ananke": "github:your-org/ananke#<commit-sha>"
+    "ananke": "github:its-not-rocket-science/ananke#<commit-sha>"
   }
 }
 ```
@@ -67,7 +67,7 @@ Replace `<commit-sha>` with the full 40-character hash you have validated.
 ### Git submodule
 
 ```bash
-git submodule add https://github.com/your-org/ananke.git vendor/ananke
+git submodule add https://github.com/its-not-rocket-science/ananke.git vendor/ananke
 cd vendor/ananke && git checkout <commit-sha>
 git add vendor/ananke && git commit -m "pin ananke to <commit-sha>"
 ```

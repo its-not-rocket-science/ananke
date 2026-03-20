@@ -44,7 +44,7 @@ The scenarios are also useful as reference implementations for anyone building t
 
 ```
 workspace/
-  ananke/                      ← https://github.com/your-org/ananke
+  ananke/                      ← https://github.com/its-not-rocket-science/ananke
   ananke-historical-battles/   ← this repo
 ```
 
@@ -54,11 +54,11 @@ workspace/
 
 ```bash
 # 1. Clone and build Ananke
-git clone https://github.com/your-org/ananke.git
+git clone https://github.com/its-not-rocket-science/ananke.git
 cd ananke && npm install && npm run build && cd ..
 
 # 2. Clone this repo
-git clone https://github.com/your-org/ananke-historical-battles.git
+git clone https://github.com/its-not-rocket-science/ananke-historical-battles.git
 cd ananke-historical-battles && npm install
 
 # 3. Run all scenario validations

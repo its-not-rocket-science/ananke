@@ -7,7 +7,7 @@
 ![C#](https://img.shields.io/badge/C%23-11-239120?logo=csharp&logoColor=white)
 ![Status](https://img.shields.io/badge/status-reference%20implementation-orange)
 
-Minimal runnable Unity 6 plugin that drives a humanoid character rig from Ananke's physics simulation. This is the canonical reference implementation for Unity integrators. Once complete, it will be listed in [Ananke's ecosystem.md](https://github.com/your-org/ananke/blob/master/docs/ecosystem.md).
+Minimal runnable Unity 6 plugin that drives a humanoid character rig from Ananke's physics simulation. This is the canonical reference implementation for Unity integrators. Once complete, it will be listed in [Ananke's ecosystem.md](https://github.com/its-not-rocket-science/ananke/blob/master/docs/ecosystem.md).
 
 ---
 
@@ -49,7 +49,7 @@ Clone Ananke into a sibling directory before cloning this project:
 
 ```
 workspace/
-  ananke/                      ← https://github.com/your-org/ananke
+  ananke/                      ← https://github.com/its-not-rocket-science/ananke
   ananke-unity-reference/      ← this repo
 ```
 
@@ -153,11 +153,11 @@ Do not give the Rigidbody `isKinematic = false` — Ananke owns all simulation p
 
 ```bash
 # 1. Clone Ananke
-git clone https://github.com/your-org/ananke.git
+git clone https://github.com/its-not-rocket-science/ananke.git
 cd ananke && npm install && npm run build && cd ..
 
 # 2. Clone this repo
-git clone https://github.com/your-org/ananke-unity-reference.git
+git clone https://github.com/its-not-rocket-science/ananke-unity-reference.git
 cd ananke-unity-reference
 
 # 3. Install sidecar dependencies
@@ -220,8 +220,8 @@ ananke-unity-reference/
 ## Ananke API surface used
 
 All imports are from Ananke's **Tier 1 (Stable)** surface as documented in
-[`docs/bridge-contract.md`](https://github.com/your-org/ananke/blob/master/docs/bridge-contract.md)
-and [`STABLE_API.md`](https://github.com/your-org/ananke/blob/master/STABLE_API.md).
+[`docs/bridge-contract.md`](https://github.com/its-not-rocket-science/ananke/blob/master/docs/bridge-contract.md)
+and [`STABLE_API.md`](https://github.com/its-not-rocket-science/ananke/blob/master/STABLE_API.md).
 
 | Ananke export | Used in | Tier |
 |--------------|---------|------|
@@ -236,7 +236,7 @@ and [`STABLE_API.md`](https://github.com/your-org/ananke/blob/master/STABLE_API.
 
 The complete field-by-field contract for `AnimationHints`, `GrapplePoseConstraint`, and
 `InterpolatedState` is documented in
-[`docs/bridge-contract.md`](https://github.com/your-org/ananke/blob/master/docs/bridge-contract.md).
+[`docs/bridge-contract.md`](https://github.com/its-not-rocket-science/ananke/blob/master/docs/bridge-contract.md).
 
 ---
 

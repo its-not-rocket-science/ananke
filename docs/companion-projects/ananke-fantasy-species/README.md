@@ -49,8 +49,8 @@ Install alongside Ananke:
 npm install ananke ananke-fantasy-species
 
 # Until then, clone both:
-git clone https://github.com/your-org/ananke.git
-git clone https://github.com/your-org/ananke-fantasy-species.git
+git clone https://github.com/its-not-rocket-science/ananke.git
+git clone https://github.com/its-not-rocket-science/ananke-fantasy-species.git
 ```
 
 ---

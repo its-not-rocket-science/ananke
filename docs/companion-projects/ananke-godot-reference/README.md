@@ -6,7 +6,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Status](https://img.shields.io/badge/status-reference%20implementation-orange)
 
-Minimal runnable Godot 4 plugin that drives a humanoid character rig from Ananke's physics simulation. This is the canonical reference implementation proving that Ananke integrates with a production 3D engine. Once complete, it will be listed in [Ananke's ecosystem.md](https://github.com/your-org/ananke/blob/master/docs/ecosystem.md).
+Minimal runnable Godot 4 plugin that drives a humanoid character rig from Ananke's physics simulation. This is the canonical reference implementation proving that Ananke integrates with a production 3D engine. Once complete, it will be listed in [Ananke's ecosystem.md](https://github.com/its-not-rocket-science/ananke/blob/master/docs/ecosystem.md).
 
 ---
 
@@ -47,7 +47,7 @@ Clone Ananke into a sibling directory before cloning this project:
 
 ```
 workspace/
-  ananke/          ← https://github.com/your-org/ananke
+  ananke/          ← https://github.com/its-not-rocket-science/ananke
   ananke-godot-reference/   ← this repo
 ```
 
@@ -142,11 +142,11 @@ When two entities are in a grapple, `deriveGrappleConstraint` returns attachment
 
 ```bash
 # 1. Clone Ananke
-git clone https://github.com/your-org/ananke.git
+git clone https://github.com/its-not-rocket-science/ananke.git
 cd ananke && npm install && npm run build && cd ..
 
 # 2. Clone this repo
-git clone https://github.com/your-org/ananke-godot-reference.git
+git clone https://github.com/its-not-rocket-science/ananke-godot-reference.git
 cd ananke-godot-reference
 
 # 3. Install sidecar dependencies
@@ -207,8 +207,8 @@ ananke-godot-reference/
 ## Ananke API surface used
 
 All imports are from Ananke's **Tier 1 (Stable)** surface as documented in
-[`docs/bridge-contract.md`](https://github.com/your-org/ananke/blob/master/docs/bridge-contract.md)
-and [`STABLE_API.md`](https://github.com/your-org/ananke/blob/master/STABLE_API.md).
+[`docs/bridge-contract.md`](https://github.com/its-not-rocket-science/ananke/blob/master/docs/bridge-contract.md)
+and [`STABLE_API.md`](https://github.com/its-not-rocket-science/ananke/blob/master/STABLE_API.md).
 
 | Ananke export | Used in | Tier |
 |--------------|---------|------|
@@ -226,7 +226,7 @@ Tier 3 (Internal) exports are never used. If you find yourself importing from `s
 
 The complete field-by-field contract for `AnimationHints`, `GrapplePoseConstraint`, and
 `InterpolatedState` is documented in
-[`docs/bridge-contract.md`](https://github.com/your-org/ananke/blob/master/docs/bridge-contract.md).
+[`docs/bridge-contract.md`](https://github.com/its-not-rocket-science/ananke/blob/master/docs/bridge-contract.md).
 
 ---
 

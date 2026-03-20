@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Architecture questions and design discussions
-    url: https://github.com/your-org/ananke/discussions
+    url: https://github.com/its-not-rocket-science/ananke/discussions
     about: For questions about architecture, design decisions, or usage that are not bugs — use Discussions.
   - name: Documentation
-    url: https://github.com/your-org/ananke/blob/master/docs/integration-primer.md
+    url: https://github.com/its-not-rocket-science/ananke/blob/master/docs/integration-primer.md
     about: Integration primer — architecture overview, data-flow diagrams, type glossary, gotchas.

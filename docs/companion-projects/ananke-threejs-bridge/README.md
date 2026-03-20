@@ -7,7 +7,7 @@
 ![Browser](https://img.shields.io/badge/browser-Chrome%20%7C%20Firefox%20%7C%20Safari-4285f4)
 ![Status](https://img.shields.io/badge/status-wanted-lightgrey)
 
-Ananke running entirely in the browser, rendered with Three.js/WebGL. No server, no sidecar, no install — just a bundled single-page application. Once complete, it will be listed in [Ananke's ecosystem.md](https://github.com/your-org/ananke/blob/master/docs/ecosystem.md).
+Ananke running entirely in the browser, rendered with Three.js/WebGL. No server, no sidecar, no install — just a bundled single-page application. Once complete, it will be listed in [Ananke's ecosystem.md](https://github.com/its-not-rocket-science/ananke/blob/master/docs/ecosystem.md).
 
 ---
 
@@ -48,7 +48,7 @@ Clone Ananke into a sibling directory before cloning this project:
 
 ```
 workspace/
-  ananke/                     ← https://github.com/your-org/ananke
+  ananke/                     ← https://github.com/its-not-rocket-science/ananke
   ananke-threejs-bridge/      ← this repo
 ```
 
@@ -140,11 +140,11 @@ The bridge ships with a minimal GLTF character model that has idle, attack, pron
 
 ```bash
 # 1. Clone Ananke and build it
-git clone https://github.com/your-org/ananke.git
+git clone https://github.com/its-not-rocket-science/ananke.git
 cd ananke && npm install && npm run build && cd ..
 
 # 2. Clone this repo
-git clone https://github.com/your-org/ananke-threejs-bridge.git
+git clone https://github.com/its-not-rocket-science/ananke-threejs-bridge.git
 cd ananke-threejs-bridge
 
 # 3. Install dependencies
@@ -221,7 +221,7 @@ Never divide by a hardcoded `10000`. Always import and use `SCALE.m` and `SCALE.
 All imports are from Ananke's **Tier 1 (Stable)** surface. The complete field-by-field
 contract for `AnimationHints`, `GrapplePoseConstraint`, and `InterpolatedState` is
 documented in
-[`docs/bridge-contract.md`](https://github.com/your-org/ananke/blob/master/docs/bridge-contract.md).
+[`docs/bridge-contract.md`](https://github.com/its-not-rocket-science/ananke/blob/master/docs/bridge-contract.md).
 
 | Ananke export | Used in | Tier |
 |--------------|---------|------|

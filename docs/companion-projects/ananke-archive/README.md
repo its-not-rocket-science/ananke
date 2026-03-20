@@ -54,7 +54,7 @@ scenarios) and to the emergent validation report in the main Ananke repo.
 
 ```bash
 # 1. Clone
-git clone https://github.com/your-org/ananke-archive
+git clone https://github.com/its-not-rocket-science/ananke-archive
 cd ananke-archive
 
 # 2. Install

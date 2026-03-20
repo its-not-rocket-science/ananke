@@ -180,7 +180,7 @@ Per faction-pair: the fraction of the subordinate faction's vocabulary estimated
 
 ```bash
 # 1. Clone this repo
-git clone https://github.com/your-org/ananke-language-forge.git
+git clone https://github.com/its-not-rocket-science/ananke-language-forge.git
 cd ananke-language-forge
 
 # 2. Install dependencies

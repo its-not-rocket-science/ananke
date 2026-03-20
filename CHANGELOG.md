@@ -187,5 +187,5 @@ Initial published release.  All simulation layers (2–6) complete.
 
 ---
 
-[Unreleased]: https://github.com/your-org/ananke/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/your-org/ananke/releases/tag/v0.1.0
+[Unreleased]: https://github.com/its-not-rocket-science/ananke/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/its-not-rocket-science/ananke/releases/tag/v0.1.0
