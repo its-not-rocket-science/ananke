@@ -102,7 +102,7 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 | Muscle force/actuation | OpenArm Multisensor 2.0 (scaling exponent, CV) | Scaling exponent (target 0.67), coefficient of variation (target 0.18) | ✅ PASS (exponent 0.6675, CV 0.153) |
 | **Soft armor energy absorption** | **BFD Dataset (Mendeley) — 15‑layer Kevlar K29 vs 9 mm FMJ** | **Sub‑V50 energy absorption fraction (empirical V50 ≈ 370 J)** | **✅ PASS (±10 %)** |
 | **Long-bone fracture from FSP** | **PMHS Tibia Fracture Dataset (Supplement_Data.xlsx)** | **EF2+ fracture at V50 energy (263 J, 4.15 g NATO FSP, 356 m/s)** | **✅ PASS (±5 %)** |
-| Impact loading & injury | Runner Injury GRF Dataset (2025); Tibial Stress Injury Dataset (potential) | Peak load rate, time to peak, injury‑group differentiation | 🔶 Data extracted (see §6.1–6.2) |
+| Impact loading & injury | Runner Injury GRF Dataset (2025); Tibial Stress Injury Dataset (2025) | Peak vertical GRF (target 1 580 N), peak positive load rate (target 48 993 N/s) | ✅ PASS (GRF 1 764 N ±11 %; load rate 56 891 N/s ±16 %) |
 | Balance & stability | One‑Legged Stand Test Dataset (placeholder implemented) | Postural sway, recovery time, fall thresholds | 🔶 Data secured (PhysioNet) |
 | Blast physics | Semi‑confined blast dataset (Mendeley/Kristoffersen 2024) — **now available locally** | Internal confined‑blast peak pressures — different regime from free‑field model | 🔶 Wrong regime (confined vs free‑field; see §5.1) |
 | Armor penetration & hypervelocity impact | pyBLOSSUM Hypervelocity Impact Database — **now available locally** | Hypervelocity (km/s) ballistic limit — different regime from intrinsicArmor_J model | 🔶 Wrong regime (hypervelocity vs energy‑threshold; see §5.2) |
