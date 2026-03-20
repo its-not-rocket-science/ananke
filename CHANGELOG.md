@@ -10,6 +10,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.4] — 2026-03-20
+
+### Added
+
+- Subpath export `@its-not-rocket-science/ananke/species` — exposes `SpeciesDefinition`,
+  `ALL_SPECIES`, and all 14 built-in species constants for companion packages such as
+  `ananke-fantasy-species`.
+- Subpath export `@its-not-rocket-science/ananke/polity` — exposes `createPolity`,
+  `createPolityRegistry`, `stepPolityDay`, `declareWar`, `makePeace`, `areAtWar`,
+  `Polity`, `PolityRegistry`, `PolityPair` for world-simulation consumers such as
+  `ananke-world-ui`.
+
+---
+
 ## [0.1.3] — 2026-03-20
 
 ### Changed
