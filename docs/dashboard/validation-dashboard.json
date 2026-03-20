@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-03-20T00:55:54.711Z",
+  "generatedAt": "2026-03-20T01:23:39.571Z",
   "seedRange": [
     1,
     100
@@ -477,11 +477,33 @@
       "unit": "W",
       "source": "Driss & Vandewalle 2013",
       "expectationsSummary": null
+    },
+    {
+      "name": "Runner Peak GRF",
+      "type": "direct",
+      "pass": true,
+      "simulatedMean": 1761.86,
+      "empiricalMean": 1580,
+      "tolerancePercent": 25,
+      "unit": "N",
+      "source": "Nixon et al. 2025 (PubMed 40885827)",
+      "expectationsSummary": null
+    },
+    {
+      "name": "Runner GRF Load Rate",
+      "type": "direct",
+      "pass": true,
+      "simulatedMean": 56834.11,
+      "empiricalMean": 48993,
+      "tolerancePercent": 30,
+      "unit": "N/s",
+      "source": "Nixon et al. 2025 (PubMed 40885827)",
+      "expectationsSummary": null
     }
   ],
   "summary": {
-    "total": 43,
-    "passed": 43,
+    "total": 45,
+    "passed": 45,
     "failed": 0
   }
 }
