@@ -6485,7 +6485,7 @@ demonstrating:
 
 ---
 
-### CE-12 · Data-Driven Entity Catalog
+### CE-12 · Data-Driven Entity Catalog *(COMPLETE)*
 
 **Problem:** Archetypes, weapons, and armour are hard-coded TypeScript constants.  Adding
 a new species or weapon requires recompiling the library.  Content creators — level

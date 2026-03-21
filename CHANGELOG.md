@@ -10,6 +10,32 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.5] — 2026-03-21
+
+  ### Added
+
+  - **CE-12 · Data-Driven Entity Catalog** (`src/catalog.ts`, `./catalog` subpath export)
+    - `registerArchetype(json)` — parse JSON archetype with base inheritance (`HUMAN_BASE`,
+      `AMATEUR_BOXER`, `SERVICE_ROBOT`, etc.) and SI → SCALE unit conversion
+    - `registerWeapon(json)` — parse JSON weapon with damage profile; `reach_m` / `readyTime_s`
+      converted to SCALE; all ratio fields → Q
+    - `registerArmour(json)` — parse JSON armour; `protects` from channel-name strings →
+      `ChannelMask`; `coverageByRegion` values → Q
+    - `getCatalogEntry(id)` / `listCatalog(kind?)` / `unregisterCatalogEntry(id)` /
+      `clearCatalog()` for lifecycle management
+    - All numeric values in JSON are real-world SI units; conversion is automatic
+
+  - **Phase 68 · Multi-Biome Physics** (`src/sim/biome.ts`)
+    - `BiomeContext` interface with `gravity_mps2`, `thermalResistanceBase`, `dragMul`,
+      `soundPropagation`, `isVacuum` overrides
+    - Built-in profiles: `BIOME_UNDERWATER`, `BIOME_LUNAR`, `BIOME_VACUUM`
+    - Gravity threads into `deriveMovementCaps` (jump height, traction); drag applied per tick
+      in movement step; thermal resistance base overrides `stepCoreTemp`; vacuum fatigue
+      accumulates in kernel (+3 Q/tick)
+    - `KernelContext.biome?` field; fully backwards-compatible (absent = Earth defaults)
+
+---
+
 ## [0.1.4] — 2026-03-20
 
 ### Added
