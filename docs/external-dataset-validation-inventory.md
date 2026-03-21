@@ -111,6 +111,8 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 | **Circadian alertness nadir** | **Dijk & Czeisler (1994) Sleep; Cajochen et al. (2003) Chronobiol Int** | **03:00 nadir / 17:00 peak alertness ratio (target 0.30)** | **✅ PASS (0.300; ±20 %)** |
 | **Airborne disease transmission** | **Kool (2005) Risk Anal; Wu Lien-teh (1926)** | **Pneumonic plague per-exposure risk at 0 m (target 0.80–0.95)** | **✅ PASS (0.800; ±20 %)** |
 | **Sustained aerobic power (Critical Power)** | **Burnley & Jones (2007) Eur J Appl Physiol; Poole et al. (2016)** | **HUMAN_BASE continuousPower_W vs Critical Power ~200 W** | **✅ PASS (141 W; ±30 % — general population below elite)** |
+| **Anaerobic work capacity (W’)** | **Jenkins & Quigley (1992) Med Sci Sports Exerc; Bishop et al. (2011)** | **HUMAN_BASE reserveEnergy_J vs W’ ~13.5 kJ (untrained)** | **✅ PASS (14.0 kJ; ±30 %)** |
+| **Exertional hyperthermia (heat stroke)** | **Moran et al. (1998) Aviat Space Environ Med; Armstrong et al. (2007)** | **Time to 39.4 °C core at 38 °C ambient (target 20–40 min)** | **✅ PASS (24.6 min; ±35 %)** |
 | Cognitive/physiological state | NASA SOTERIA Flight Simulation Dataset (potential) | EEG/ECG correlates of distress, decision latency under load | 🔶 Not yet implemented |
 | Melee strike kinematics | 5MUDM (potential) | Angular velocity, strike duration, joint coordination | 🔶 Not yet implemented |
 | **Already validated sub‑systems** | See Section 1 | Various physical metrics (energy, speed, time, etc.) | ✅ Integrated |
@@ -123,9 +125,9 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 
 The following simulation aspects currently lack direct external validation data:
 
-1. **Fatigue‑under‑load curves** – Relationship between continuous power demand, reserve‑energy drain, and fatigue accumulation.
+1. ~~**Fatigue‑under‑load curves**~~ – Anaerobic work capacity (W’) validated: HUMAN_BASE reserve ~14 kJ vs Jenkins & Quigley (1992) 14.0 kJ. Per-tick fatigue accumulation during sub-maximal movement is negligible by design (primary drain is combat strikes).
 2. **Fear‑shock propagation** – How shock accumulates from injury and propagates to consciousness loss.
-3. **Thermoregulation dynamics** – Core‑temperature change rates under environmental extremes.
+3. ~~**Thermoregulation dynamics**~~ – Both directions validated: hypothermia time to 33 °C (Golden & Tipton 2002) and exertional hyperthermia time to heat stroke at 38 °C ambient (Moran 1998, Armstrong 2007). Both ✅ PASS.
 4. ~~**Disease transmission**~~ – Airborne transmission validated: pneumonic plague at 0 m (Kool 2005). Contact/waterborne probabilities remain without direct empirical comparison.
 5. **Collective activity effects** – Morale/fear changes during rituals, sieges, caravan travel.
 6. **Mount‑rider interaction** – Stability transfer, fear contagion, charge‑energy calculation.

@@ -10,7 +10,7 @@
 //  6. Generate validation report documenting methodology and residual error
 //
 // Usage: node dist/tools/validation.js [subsystem] [seedStart] [seedEnd]
-//   subsystem: "impact", "grappling", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology", "movement", "projectile", "jump", "muscle", "armor", "fsp", "olst", "runner", "circadian", "plague", "aerobic"
+//   subsystem: "impact", "grappling", "sprint", "metabolic", "thermoregulation", "bleeding", "all", "damage-energy", "fracture", "fluid-loss", "thermal", "thoracic", "pelvic", "aging", "sleep", "disease", "hazard", "mount", "collective", "wound", "toxicology", "movement", "projectile", "jump", "muscle", "armor", "fsp", "olst", "runner", "circadian", "plague", "aerobic", "w-prime", "hyperthermia"
 //   seedStart: first seed (default: 1)
 //   seedEnd: last seed inclusive (default: 100)
 //
@@ -42,7 +42,7 @@ import { HUMANOID_PLAN } from "../src/sim/bodyplan.js";
 import { generateIndividual } from "../src/generate.js";
 import { HUMAN_BASE, type Archetype } from "../src/archetypes.js";
 import { v3 } from "../src/sim/vec3.js";
-import { cToQ } from "../src/sim/thermoregulation.js";
+import { cToQ, computeNewCoreQ, CORE_TEMP_NORMAL_Q, CORE_TEMP_HEAT_STROKE } from "../src/sim/thermoregulation.js";
 import { DT_S } from "../src/sim/tick.js";
 import { deriveAgeMultipliers, applyAgingToAttributes } from "../src/sim/aging.js";
 import { deriveSleepDeprivationMuls, circadianAlertness } from "../src/sim/sleep.js";
@@ -2148,6 +2148,117 @@ const directValidationScenarios: DirectValidationScenario[] = [
     unit: "W",
     tolerancePercent: 30,   // ±30 % to accommodate archetype-to-real-world mapping
     minSeeds: 50,
+  },
+
+  // ─── Anaerobic work capacity W' (fatigue-under-load) ─────────────────────
+
+  {
+    name: "Anaerobic Work Capacity (W-prime)",
+    description:
+      "Total anaerobic energy reserve (W', pronounced 'W-prime') of a general-population adult. " +
+      "Jenkins & Quigley (1992) report W' ≈ 14.0 kJ for untrained males; " +
+      "Bishop et al. (2011) report 12.7 kJ for recreational runners. " +
+      "HUMAN_BASE reserveEnergy_J with actuator-mass variance applied models this cohort. " +
+      "Validates HUMAN_BASE reserveEnergy_J in src/archetypes.ts.",
+    empiricalDataset: {
+      name: "Anaerobic Work Capacity W' — untrained / recreational population literature",
+      description:
+        "W' (curvature constant of the power-duration relationship): total anaerobic work " +
+        "available above Critical Power before exhaustion, in joules. " +
+        "Jenkins & Quigley (1992) Med Sci Sports Exerc 24(11):1283–1289: W' = 14.0 ± 5.1 kJ " +
+        "for untrained healthy males. " +
+        "Bishop et al. (2011) Eur J Appl Physiol 111:1525–1532: W' = 12.7 ± 4.2 kJ " +
+        "for recreational runners. " +
+        "Murgatroyd et al. (2011) J Appl Physiol 111(2):373–381: W' = 13.7 ± 4.5 kJ " +
+        "for moderately trained cyclists. " +
+        "HUMAN_BASE archetype (with actuator-mass variance) models a general-population adult, " +
+        "not an elite athlete — W' ≈ 14 kJ is the expected range.",
+      dataPoints: [
+        { value: 14000, unit: "J", source: "Jenkins & Quigley (1992) Med Sci Sports Exerc 24(11):1283–1289", notes: "untrained healthy males, W' = 14.0 ± 5.1 kJ" },
+        { value: 12700, unit: "J", source: "Bishop et al. (2011) Eur J Appl Physiol 111:1525–1532", notes: "recreational runners, W' = 12.7 ± 4.2 kJ" },
+        { value: 13700, unit: "J", source: "Murgatroyd et al. (2011) J Appl Physiol 111(2):373–381", notes: "moderately trained cyclists, W' = 13.7 ± 4.5 kJ" },
+      ],
+      mean: 13467,
+      confidenceIntervalHalf: 4200,
+    },
+    setup: (seed: number) => {
+      const entityId = (seed % 200) + 1;
+      const entity   = mkHumanoidEntity(entityId, 1, 0, 0);
+      const world    = mkWorld(seed, [entity]);
+      const ctx: KernelContext = { tractionCoeff: q(1.0) };
+      return { world, ctx, steps: 0 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      // reserveEnergy_J is stored in raw J (SCALE.J = 1)
+      return entity.attributes.performance.reserveEnergy_J;
+    },
+    unit: "J",
+    tolerancePercent: 30,
+    minSeeds: 50,
+  },
+
+  // ─── Hyperthermia: time to heat stroke during active exercise ─────────────
+
+  {
+    name: "Hyperthermia Time to Heat Stroke",
+    description:
+      "Time for an active entity's core temperature to rise from 37 °C to the heat-stroke threshold " +
+      "(~39.4 °C) in a 38 °C environment (body-temperature ambient — no convective cooling). " +
+      "Moran et al. (1998) and Armstrong et al. (2007) report exertional heat-stroke onset " +
+      "in 20–40 min for unacclimatised individuals during vigorous exercise in hot conditions. " +
+      "Validates computeNewCoreQ() in src/sim/thermoregulation.ts.",
+    empiricalDataset: {
+      name: "Exertional heat-stroke onset time — clinical and military literature",
+      description:
+        "Time from start of vigorous exercise in extreme ambient heat to heat-stroke core temperature " +
+        "(≥39–40 °C). " +
+        "Moran et al. (1998) Aviat Space Environ Med 69(1):46–50: core temp > 40 °C in 20–30 min " +
+        "for soldiers at 38–40 °C WBGT. " +
+        "Armstrong et al. (2007) Am J Sports Med 35(8):1356–1369: exertional heat-stroke in < 30 min " +
+        "for unacclimatised athletes in ≥ 35 °C heat. " +
+        "Lind (1963) J Appl Physiol 18:51–56: core temp rise ~0.15 °C/min at 48 °C dry-bulb (moderate work).",
+      dataPoints: [
+        { value: 25, unit: "min", source: "Moran et al. (1998) Aviat Space Environ Med 69(1):46–50", notes: "soldiers at 38–40 °C WBGT, vigorous exercise" },
+        { value: 25, unit: "min", source: "Armstrong et al. (2007) Am J Sports Med 35(8):1356–1369", notes: "unacclimatised athletes at ≥ 35 °C" },
+      ],
+      mean: 25,
+      confidenceIntervalHalf: 7,
+    },
+    setup: (seed: number) => {
+      const entity = mkHumanoidEntity(1, 1, 0, 0);
+      // Start at normal core temperature
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (entity.condition as any).coreTemp_Q = CORE_TEMP_NORMAL_Q;
+      // Set entity as active (sprinting, velocity ≥ ACTIVE_VEL_THRESH = 1 m/s)
+      entity.intent.move = { dir: v3(SCALE.m, 0, 0), intensity: q(1.0), mode: "sprint" };
+      const world = mkWorld(seed, [entity]);
+      const ctx: KernelContext = {
+        tractionCoeff: q(1.0),
+        tuning: TUNING.tactical,
+        thermalAmbient_Q: cToQ(38.0),  // 38 °C — body-temperature ambient, net heat gain guaranteed
+      };
+      // Run 1 000 ticks (50 s) to measure steady-state heating rate
+      return { world, ctx, steps: 1000 };
+    },
+    extractOutcome: (world: WorldState) => {
+      const entity = world.entities[0];
+      if (!entity) return 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const finalCoreQ = (entity.condition as any).coreTemp_Q ?? CORE_TEMP_NORMAL_Q;
+      const initialCoreQ = CORE_TEMP_NORMAL_Q;
+      const elapsedSeconds = 1000 * DT_S / SCALE.s;  // 50 s
+      const deltaC = (finalCoreQ - initialCoreQ) / SCALE.Q * 54;  // same scale as qToC: TEMP_RANGE_C = 54
+      if (deltaC <= 0) return Infinity;  // should not happen at 38 °C ambient with active entity
+      const heatingRateCPerSec = deltaC / elapsedSeconds;
+      // CORE_TEMP_HEAT_STROKE is q(0.544); CORE_TEMP_NORMAL_Q is q(0.500)
+      const deltaCToStroke = (CORE_TEMP_HEAT_STROKE - initialCoreQ) / SCALE.Q * 54;
+      const timeToStrokeSeconds = deltaCToStroke / heatingRateCPerSec;
+      return timeToStrokeSeconds / 60;  // convert to minutes
+    },
+    unit: "min",
+    tolerancePercent: 35,  // wide tolerance — ambient temp, acclimatisation, and fitness all vary
   },
 ];
 
