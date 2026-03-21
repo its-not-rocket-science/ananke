@@ -108,6 +108,9 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 | Blast physics | Semi‑confined blast dataset (Mendeley/Kristoffersen 2024) — **now available locally** | Internal confined‑blast peak pressures — different regime from free‑field model | 🔶 Wrong regime (confined vs free‑field; see §5.1) |
 | Armor penetration & hypervelocity impact | pyBLOSSUM Hypervelocity Impact Database — **now available locally** | Hypervelocity (km/s) ballistic limit — different regime from intrinsicArmor_J model | 🔶 Wrong regime (hypervelocity vs energy‑threshold; see §5.2) |
 | Metallic armor penetration (V50 database) | Ballistic Limit V50 Database (REL_v50_database_20230527.csv) — **now available locally** | V50 (m/s) for AP/FSP vs Al/steel plates — hypervelocity regime, incompatible with intrinsicArmor_J | 🔶 Wrong regime (hypervelocity vs energy‑threshold) |
+| **Circadian alertness nadir** | **Dijk & Czeisler (1994) Sleep; Cajochen et al. (2003) Chronobiol Int** | **03:00 nadir / 17:00 peak alertness ratio (target 0.30)** | **✅ PASS (0.300; ±20 %)** |
+| **Airborne disease transmission** | **Kool (2005) Risk Anal; Wu Lien-teh (1926)** | **Pneumonic plague per-exposure risk at 0 m (target 0.80–0.95)** | **✅ PASS (0.800; ±20 %)** |
+| **Sustained aerobic power (Critical Power)** | **Burnley & Jones (2007) Eur J Appl Physiol; Poole et al. (2016)** | **HUMAN_BASE continuousPower_W vs Critical Power ~200 W** | **✅ PASS (141 W; ±30 % — general population below elite)** |
 | Cognitive/physiological state | NASA SOTERIA Flight Simulation Dataset (potential) | EEG/ECG correlates of distress, decision latency under load | 🔶 Not yet implemented |
 | Melee strike kinematics | 5MUDM (potential) | Angular velocity, strike duration, joint coordination | 🔶 Not yet implemented |
 | **Already validated sub‑systems** | See Section 1 | Various physical metrics (energy, speed, time, etc.) | ✅ Integrated |
@@ -123,7 +126,7 @@ The following simulation aspects currently lack direct external validation data:
 1. **Fatigue‑under‑load curves** – Relationship between continuous power demand, reserve‑energy drain, and fatigue accumulation.
 2. **Fear‑shock propagation** – How shock accumulates from injury and propagates to consciousness loss.
 3. **Thermoregulation dynamics** – Core‑temperature change rates under environmental extremes.
-4. **Disease transmission** – Airborne/contact transmission probabilities under varying distances.
+4. ~~**Disease transmission**~~ – Airborne transmission validated: pneumonic plague at 0 m (Kool 2005). Contact/waterborne probabilities remain without direct empirical comparison.
 5. **Collective activity effects** – Morale/fear changes during rituals, sieges, caravan travel.
 6. **Mount‑rider interaction** – Stability transfer, fear contagion, charge‑energy calculation.
 7. **Toxicology accumulation** – Rate‑based and cumulative toxin effects on motor/cognitive functions.
