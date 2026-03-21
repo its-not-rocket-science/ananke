@@ -6516,7 +6516,7 @@ Runtime modding (CE-16) depends on this catalog layer.
 
 ---
 
-### CE-13 · Property-Based Testing with fast-check
+### CE-13 · Property-Based Testing with fast-check *(COMPLETE)*
 
 **Problem:** Unit tests validate specific inputs.  For a physics engine, the more dangerous
 class of bug is an invariant violation — negative energy, shock outside [0, 1], consciousness
@@ -6537,6 +6537,9 @@ after death — that no specific test exercises.
 | Determinism | `stepWorld(cloneWorld(w), cmds, ctx)` produces byte-identical result for any `w` |
 
 **Note:** `fast-check` is a devDependency only; does not affect the published package size.
+
+**Delivered:** `test/invariants.test.ts` — 9 property tests across 200–500 runs each; all pass.
+`fast-check@4.6.0` added as devDependency.
 
 **Depends on:** Existing Vitest test infrastructure.
 
