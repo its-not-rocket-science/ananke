@@ -91,12 +91,13 @@ const ACTIVE_VEL_THRESH = Math.trunc(1.0 * SCALE.mps);  // 10000
  * across successive calls since Q is stored as `number` (JS float).
  */
 export function computeNewCoreQ(
-  coreQ:            number,
-  massReal_kg:      number,  // real kg (entity.attributes.morphology.mass_kg / SCALE.kg)
-  armourInsulation: number,
-  isActive:         boolean, // true if entity velocity ≥ 1 m/s
-  ambientTemp:      Q,
-  delta_s:          number,
+  coreQ:                  number,
+  massReal_kg:            number,  // real kg (entity.attributes.morphology.mass_kg / SCALE.kg)
+  armourInsulation:       number,
+  isActive:               boolean, // true if entity velocity ≥ 1 m/s
+  ambientTemp:            Q,
+  delta_s:                number,
+  thermalResistanceBase?: number,  // Phase 68: override for skin-layer base resistance (default 0.09 °C/W)
 ): Q {
   if (massReal_kg <= 0) return coreQ as Q;
 
@@ -107,7 +108,8 @@ export function computeNewCoreQ(
   const specificW     = isActive ? ACT_SPECIFIC_W : REST_SPECIFIC_W;
   const metabolicHeat = massReal_kg * specificW;  // W
 
-  const thermalResistance = 0.09 + armourInsulation;  // °C/W
+  const baseR = thermalResistanceBase ?? 0.09;
+  const thermalResistance = baseR + armourInsulation;  // °C/W
   const thermalMass       = massReal_kg * 3500;       // J/°C
 
   const conductiveLoss = (coreC - ambC) / thermalResistance;  // W
@@ -126,9 +128,10 @@ export function computeNewCoreQ(
  * Writes the new value back to `entity.condition.coreTemp_Q` and returns it.
  */
 export function stepCoreTemp(
-  entity:      Entity,
-  ambientTemp: Q,       // Phase 29 Q-coded temperature (same scale as coreTemp_Q)
-  delta_s:     number,  // elapsed seconds
+  entity:                 Entity,
+  ambientTemp:            Q,       // Phase 29 Q-coded temperature (same scale as coreTemp_Q)
+  delta_s:                number,  // elapsed seconds
+  thermalResistanceBase?: number,  // Phase 68: biome skin-layer override (default 0.09 °C/W)
 ): Q {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cond   = entity.condition as any;
@@ -142,7 +145,7 @@ export function stepCoreTemp(
   const vy   = entity.velocity_mps.y;
   const vMag = Math.sqrt(vx * vx + vy * vy);
 
-  const newCoreQ = computeNewCoreQ(coreQ, mReal, insul, vMag >= ACTIVE_VEL_THRESH, ambientTemp, delta_s);
+  const newCoreQ = computeNewCoreQ(coreQ, mReal, insul, vMag >= ACTIVE_VEL_THRESH, ambientTemp, delta_s, thermalResistanceBase);
   cond.coreTemp_Q = newCoreQ;
   return newCoreQ;
 }

@@ -571,8 +571,14 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     stepSubstances(e, ctx.ambientTemperature_Q);
     stepEnergy(e, ctx);
     // Phase 29: advance core temperature once per tick (Phase 31: skip ectotherms)
+    // Phase 68: pass biome thermal resistance base when a biome is active
     if (ctx.thermalAmbient_Q !== undefined && !e.physiology?.coldBlooded) {
-      stepCoreTemp(e, ctx.thermalAmbient_Q, 1 / TICK_HZ);
+      stepCoreTemp(e, ctx.thermalAmbient_Q, 1 / TICK_HZ, ctx.biome?.thermalResistanceBase);
+    }
+    // Phase 68: vacuum fatigue — entities in a vacuum accumulate fatigue each tick.
+    // Rate: ~3 Q/tick = 60 Q/s = 0.6 %/s → full incapacitation in ~167 s without protection.
+    if (ctx.biome?.isVacuum) {
+      e.energy.fatigue = clampQ((e.energy.fatigue + 3) as Q, 0, SCALE.Q);
     }
     stepCapabilitySources(e, world, ctx); // Phase 12
     // Phase 13: emit KO and Death events so metrics/replay consumers can track incapacitation

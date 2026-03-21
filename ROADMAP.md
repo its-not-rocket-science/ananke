@@ -5797,7 +5797,7 @@ under median route conditions — ~5.5 years, historically consistent with pre-m
 
 ---
 
-### Phase 68 — Multi-Biome Physics
+### Phase 68 — Multi-Biome Physics *(COMPLETE)*
 
 **Concept:** Extend the movement and thermoregulation systems to support non-terrestrial
 environments: underwater, low-gravity, and vacuum.  Each biome modifies a distinct set of
@@ -5817,6 +5817,15 @@ pass `BiomeContext`; the kernel uses it in movement and thermoregulation sub-ste
 
 **Deliverable:** `src/sim/biome.ts` + `BiomeContext` type + three built-in profiles
 (`BIOME_UNDERWATER`, `BIOME_LUNAR`, `BIOME_VACUUM`) + tests.
+
+**Delivered:**
+- `src/sim/biome.ts` — `BiomeContext` interface + `BIOME_UNDERWATER`, `BIOME_LUNAR`, `BIOME_VACUUM` profiles + `biomeGravity()` / `biomeThermalResistanceBase()` helpers
+- `KernelContext.biome?` field in `src/sim/context.ts`
+- `DeriveContext.gravity_mps2?` in `src/derive.ts`; `deriveMaxAcceleration_mps2` and `deriveJumpHeight_m` accept gravity override
+- `movement.ts` threads biome gravity and applies per-tick velocity drag when `dragMul < SCALE.Q`
+- `thermoregulation.ts` `computeNewCoreQ` / `stepCoreTemp` accept `thermalResistanceBase?` override
+- Kernel applies vacuum fatigue (+3 Q/tick) when `biome.isVacuum`
+- `test/biome.test.ts` — 33 tests; all pass; coverage: statements 97.22%, branches 86.73%, functions 94.53%
 
 **Depends on:** Phase 57 (aging/thermoregulation), Phase 60 (hazard zones), `KernelContext`.
 

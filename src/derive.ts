@@ -1,4 +1,4 @@
-import { Q, SCALE, q, clampQ, qMul, mulDiv, cbrtQ, sqrtQ, G_mps2 } from "./units.js";
+import { Q, SCALE, q, clampQ, qMul, mulDiv, cbrtQ, sqrtQ, G_mps2, type I32 } from "./units.js";
 import type { IndividualAttributes, EnergyState } from "./types.js";
 import type { Loadout } from "./equipment.js";
 import { computeEncumbrance, deriveArmourProfile, type CarryRules, DEFAULT_CARRY_RULES } from "./equipment.js";
@@ -12,6 +12,8 @@ export interface MovementCaps {
 export interface DeriveContext {
   tractionCoeff: Q;
   carryRules?: CarryRules;
+  /** Phase 68: override gravitational acceleration (SCALE.mps2 units). Default: G_mps2. */
+  gravity_mps2?: I32;
 }
 
 /** Fraction of reserve energy that can be spent on a single jump (~0.0283). */
@@ -24,11 +26,11 @@ export function derivePeakForceEff_N(a: IndividualAttributes): number {
   return mulDiv(F0, combined, SCALE.Q);
 }
 
-export function deriveMaxAcceleration_mps2(a: IndividualAttributes, tractionCoeff: Q): number {
+export function deriveMaxAcceleration_mps2(a: IndividualAttributes, tractionCoeff: Q, gravity_mps2: I32 = G_mps2 as I32): number {
   const m = Math.max(1, a.morphology.mass_kg);
 
-  // normalForce ~ m*g. Use g~9.81 and keep deterministic:
-  const normalForce_N_scaled = mulDiv(m, G_mps2 * SCALE.N, SCALE.mps2); // scaled N
+  // normalForce ~ m*g. Use supplied gravity and keep deterministic:
+  const normalForce_N_scaled = mulDiv(m, gravity_mps2 * SCALE.N, SCALE.mps2); // scaled N
 
   const tractionLimit_N = mulDiv(normalForce_N_scaled, tractionCoeff, SCALE.Q);
 
@@ -54,7 +56,7 @@ export function deriveMaxSprintSpeed_mps(a: IndividualAttributes): number {
   return mulDiv(mult, SCALE.mps, SCALE.Q);
 }
 
-export function deriveJumpHeight_m(a: IndividualAttributes, reserveSpend_J: number): number {
+export function deriveJumpHeight_m(a: IndividualAttributes, reserveSpend_J: number, gravity_mps2: I32 = G_mps2 as I32): number {
   const m = Math.max(1, a.morphology.mass_kg);
   const Euse = Math.min(a.performance.reserveEnergy_J, reserveSpend_J);
 
@@ -62,8 +64,10 @@ export function deriveJumpHeight_m(a: IndividualAttributes, reserveSpend_J: numb
   const Eeff = mulDiv(mulDiv(Euse, a.performance.conversionEfficiency, SCALE.Q), controlFactor, SCALE.Q);
 
   // h = E/(m*g)
-  // force_real = m * g   where m = mass_real (kg), g = G_mps2 / SCALE.mps2
-  const force_real = mulDiv(m, G_mps2, SCALE.mps2 * SCALE.kg); // integer Newtons
+  // force_real = m * g   where m = mass_real (kg), g = gravity_mps2 / SCALE.mps2
+  // When gravity is 0 (microgravity), avoid division by zero — clamp to 1 as a sentinel.
+  const gClamped = Math.max(1, gravity_mps2);
+  const force_real = mulDiv(m, gClamped, SCALE.mps2 * SCALE.kg); // integer Newtons
   return mulDiv(Eeff, SCALE.m, Math.max(1, force_real));
 }
 
@@ -81,8 +85,8 @@ export function deriveMovementCaps(
   const jumpMul = qMul(penalties.jumpMul, armour.mobilityMul);
 
   const baseV = deriveMaxSprintSpeed_mps(a);
-  const baseA = deriveMaxAcceleration_mps2(a, ctx.tractionCoeff);
-  const baseH = deriveJumpHeight_m(a, Math.trunc(a.performance.reserveEnergy_J * JUMP_ENERGY_FRACTION / SCALE.Q));
+  const baseA = deriveMaxAcceleration_mps2(a, ctx.tractionCoeff, ctx.gravity_mps2);
+  const baseH = deriveJumpHeight_m(a, Math.trunc(a.performance.reserveEnergy_J * JUMP_ENERGY_FRACTION / SCALE.Q), ctx.gravity_mps2);
 
   return {
     maxSprintSpeed_mps: mulDiv(baseV, speedMul, SCALE.Q),

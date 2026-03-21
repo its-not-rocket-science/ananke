@@ -7,6 +7,7 @@ import type { ObstacleGrid, ElevationGrid,  SlopeGrid, HazardGrid } from "./terr
 import type { TechContext } from "./tech.js";
 import type { WeatherState } from "./weather.js";
 import type { Q, I32 } from "../units.js";
+import type { BiomeContext } from "./biome.js";
 
 export interface KernelContext {
   tractionCoeff: Q;
@@ -79,4 +80,12 @@ export interface KernelContext {
    * When absent, weather has no effect (backward-compatible).
    */
   weather?: WeatherState;
+
+  /**
+   * Phase 68: biome physics overrides.
+   * When present, adjusts gravity (jump height, traction), thermal resistance,
+   * sound propagation, and velocity drag for all entities this tick.
+   * When absent, standard Earth-surface physics apply.
+   */
+  biome?: BiomeContext;
 }

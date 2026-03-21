@@ -18,7 +18,10 @@ import type { SimulationTuning } from "../tuning.js";
 export function stepMovement(e: Entity, world: WorldState, ctx: KernelContext, tuning: SimulationTuning): void {
   const cellSize = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
   const traction = tractionAtPosition(ctx.terrainGrid, cellSize, e.position_m.x, e.position_m.y, ctx.tractionCoeff);
-  const caps = deriveMovementCaps(e.attributes, e.loadout, { tractionCoeff: traction });
+  const caps = deriveMovementCaps(e.attributes, e.loadout, {
+    tractionCoeff: traction,
+    ...(ctx.biome?.gravity_mps2 !== undefined ? { gravity_mps2: ctx.biome.gravity_mps2 } : {}),
+  });
   const func = deriveFunctionalState(e, tuning);
 
   // Capability gating
@@ -181,6 +184,16 @@ export function stepMovement(e: Entity, world: WorldState, ctx: KernelContext, t
 
   e.velocity_mps = accelToward(e.velocity_mps, targetVel, effAmax);
   e.velocity_mps = clampSpeed(e.velocity_mps, effVmax);
+
+  // Phase 68: biome drag — attenuate velocity when dragMul < SCALE.Q (e.g. underwater).
+  const dragMul = ctx.biome?.dragMul;
+  if (dragMul !== undefined && dragMul < SCALE.Q) {
+    e.velocity_mps = {
+      x: mulDiv(e.velocity_mps.x, dragMul, SCALE.Q),
+      y: mulDiv(e.velocity_mps.y, dragMul, SCALE.Q),
+      z: mulDiv(e.velocity_mps.z, dragMul, SCALE.Q),
+    };
+  }
 
   // Phase 6: obstacle blocking — impassable cells (coverFraction = q(1.0)) prevent entry.
   const nextPos = integratePos(e.position_m, e.velocity_mps, DT_S);
