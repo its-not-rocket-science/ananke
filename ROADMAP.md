@@ -5258,9 +5258,19 @@ Items 6–8 lower the integration barrier.  Items 9–11 deepen validation and i
 **Items 12–16 are the new adoption and credibility path** — the highest-leverage work for
 turning a technically excellent engine into a platform people can confidently build on.
 
+> **⚠ Outstanding work (as of March 2026):**
+> Two roadmap items remain incomplete.  Everything else — all 67 simulation phases, all five
+> integration milestones, Items 7–16, all Platform Hardening items, CE-1–4 and CE-6 — is
+> delivered.
+>
+> - **Item 6 · Reference Renderer** — the single highest-leverage unstarted task; a runnable
+>   Godot or Unity plugin would cut integration time from weeks to hours for visual projects.
+> - **CE-5 · WebAssembly Kernel** — long-lead; explicitly depends on Item 6 existing first.
+>   Once the renderer plugin exists, CE-5 eliminates the Node.js sidecar it currently requires.
+
 ---
 
-### 6 · Reference Renderer Implementation
+### 6 · Reference Renderer Implementation *(OUTSTANDING — not yet started)*
 
 **The gap:** `src/model3d.ts` / `src/bridge/` provide pure data-extraction functions and
 documented output formats, but every adopter must independently solve the mapping of Ananke's
@@ -5787,6 +5797,87 @@ under median route conditions — ~5.5 years, historically consistent with pre-m
 
 ---
 
+### Phase 68 — Multi-Biome Physics
+
+**Concept:** Extend the movement and thermoregulation systems to support non-terrestrial
+environments: underwater, low-gravity, and vacuum.  Each biome modifies a distinct set of
+physical parameters without requiring new entity types or parallel simulation paths.
+
+**Biome profiles:**
+
+| Biome | Key changes |
+|-------|------------|
+| Underwater | Drag ∝ velocity² at SCALE.mps; buoyancy partially offsets G_mps2; vision range and hearing range reduced (refractive index / absorption); no fire hazards; hypothermia rate increased |
+| Low-gravity (moon, asteroid) | G_mps2 configurable per-world (e.g. lunar ≈ 1.62 m/s²); jump height scales with G_mps2 inverse; sprint energy cost reduced; fall damage reduced; projectile range increased |
+| Vacuum | No convective heat loss (thermalResistance → ∞ in exposed skin regions); radiation exposure accumulates as Phase 60 hazard; no sound propagation (hearingRange_m = 0) |
+
+**Implementation:** A `BiomeContext` extension of `KernelContext` replaces physical
+constants (G_mps2, thermalResistance, dragCoeff) on a per-world basis.  Kernel consumers
+pass `BiomeContext`; the kernel uses it in movement and thermoregulation sub-steps.
+
+**Deliverable:** `src/sim/biome.ts` + `BiomeContext` type + three built-in profiles
+(`BIOME_UNDERWATER`, `BIOME_LUNAR`, `BIOME_VACUUM`) + tests.
+
+**Depends on:** Phase 57 (aging/thermoregulation), Phase 60 (hazard zones), `KernelContext`.
+
+---
+
+### Phase 69 — Macro-Scale Formation Combat
+
+**Concept:** A tactical abstraction layer between individual entities (20 Hz simulation)
+and polity-level conflict (1 tick/day).  Squads and companies resolve combat as cohesive
+units using aggregated attributes, without simulating every individual each tick.  When
+narrative resolution is needed — a named character's duel, a heroic last stand — the
+system delegates to per-entity micro-simulation for that sub-engagement.
+
+**Why the gap exists:** Phase 61 (Polity) aggregates militaryStrength_Q but discards
+physical detail.  Full 20 Hz simulation of a 500-soldier battle is within budget (Item 9)
+but wasteful for background tactical resolution that does not need per-tick granularity.
+Formation combat sits between these poles.
+
+**Core types:**
+
+```typescript
+interface FormationUnit {
+  id: string;
+  factionId: string;
+  strength: number;          // headcount
+  aggregatedForce_N: number; // sum of peakForce_N across members
+  aggregatedEndurance: Q;    // avg continuousPower_W as fraction of max
+  moraleQ: Q;                // from Phase 32D formation morale
+  archetype: Archetype;      // representative archetype for attribute draws
+}
+
+interface TacticalEngagement {
+  attackers: FormationUnit[];
+  defenders: FormationUnit[];
+  terrain: "open" | "difficult" | "fortified";
+  durationTicks: number;     // tactical ticks (1/s, not 20 Hz)
+}
+
+interface TacticalResult {
+  attackerCasualties: number;
+  defenderCasualties: number;
+  breakThreshold: Q;          // morale below this → rout
+  routedFactions: string[];
+}
+```
+
+**Resolution:** Lanchester's square law for attrition, adjusted by terrain multiplier and
+morale modifier.  Morale collapses trigger rout (Phase 32D `BASE_DECAY`).  Attrition feeds
+back into `polity.militaryStrength_Q`.
+
+**Delegation trigger:** Any named entity (id < 1000 by convention, configurable) involved
+in the engagement gets a per-entity micro-simulation frame at the decisive tick.
+
+**Deliverable:** `src/sim/formation-combat.ts` + `TacticalEngagement` type + terrain
+multiplier table + tests validating Lanchester square law at 2:1 and 3:1 force ratios.
+
+**Depends on:** Phase 32D (formation morale), Phase 61 (PolityRegistry), Phase 67 (military
+strength aggregation), `generateIndividual` (for archetype draws on decisive engagements).
+
+---
+
 ## Long-Term Vision
 
 The following ideas are directionally sound and build naturally on existing Ananke systems,
@@ -6193,7 +6284,7 @@ export { ReplayRecorder, serializeReplay,
 
 ---
 
-### CE-5 · WebAssembly Kernel (Long-term)
+### CE-5 · WebAssembly Kernel *(OUTSTANDING — long-lead; requires Item 6 first)*
 
 **Problem:** `ananke-godot-reference` and `ananke-unity-reference` currently require a
 Node.js sidecar process running alongside the game engine.  This adds latency (IPC round
@@ -6243,6 +6334,301 @@ high entity counts.  Production use of `ananke-world-ui` requires push-based sta
 **Impact:** `ananke-world-ui` gets real-time updates without polling.  Multiplayer scenario
 (multiple browser clients watching the same world) becomes practical.  Node 22's native
 `WebSocketServer` keeps the zero-external-dependency constraint intact.
+
+---
+
+### CE-7 · Multi-threading / WebWorker Support
+
+**Problem:** `stepWorld` is single-threaded.  At 1 000+ entities the 20 Hz real-time budget
+is broken (Item 9 benchmarks: 64 ms/tick at 1 000 entities vs. 50 ms budget).  Official
+multi-threading patterns are needed to unlock higher entity counts.
+
+**Approach:** Spatial partitioning by region.  Each worker owns a partition and resolves all
+intra-partition entity pairs deterministically.  A coordinator thread handles cross-partition
+pairs (entities within range of a partition boundary) using the same pair-resolution protocol
+as `push.ts`, preserving the canonical pair order that guarantees determinism.
+
+**Key constraint:** Ananke's determinism guarantee applies within a single partition.
+Cross-partition merging must replay boundary pairs in canonical order (lower entity id first)
+to avoid seed divergence.
+
+**Proposed API:**
+
+```typescript
+// src/parallel.ts
+interface PartitionSpec { regionIds: string[]; entities: number[] }
+function partitionWorld(world: WorldState, specs: PartitionSpec[]): WorldState[];
+function mergePartitions(partitions: WorldState[], boundary Pairs: [number, number][]): WorldState;
+```
+
+**Deliverable:** `src/parallel.ts` + `tools/benchmark-parallel.ts` + documentation on
+determinism constraints and recommended partition sizes.
+
+**Note:** JavaScript's SharedArrayBuffer availability and COOP/COEP headers are prerequisites
+for `Worker` + `SharedArrayBuffer` approach in browser environments.
+
+---
+
+### CE-8 · Visual Debugging Tools
+
+**Problem:** Diagnosing simulation behaviour requires reading raw `WorldState` JSON or adding
+`console.log` to the kernel.  There is no visual way to inspect force vectors, hit zones,
+injury states, command queues, or spatial index topology.
+
+**Deliverable:** `docs/debugger/index.html` — a standalone HTML/JS tool (no build step,
+no TypeScript required) that connects to a running `tools/world-server.ts` instance and
+renders:
+
+- **Force vector overlay:** peakForce_N, current velocity, GRF arrows per entity each tick
+- **Hit zone heatmap:** per-region injury levels (surface / internal / structural) as a
+  colour gradient over a humanoid silhouette
+- **Command queue inspector:** intent, move direction, and resolved command per tick,
+  with a per-entity timeline scrubber
+- **Spatial index visualisation:** grid cells, entity occupancy, and collision pair counts
+
+Could evolve into a separate `@its-not-rocket-science/ananke-debugger` npm package if the
+tool becomes large enough to warrant it.
+
+---
+
+### CE-9 · Binary World-State Diffing + Incremental Snapshots
+
+**Problem:** `serializeReplay` stores full state each tick.  A 30-day campaign at 1 Hz
+polity ticks generates thousands of snapshots; JSON serialisation of a 1 000-entity world
+is multiple MB per checkpoint.
+
+**Approach:** Delta encoding.  Each snapshot stores only fields that changed since the
+previous snapshot.  A binary wire format (MessagePack or CBOR) reduces payload size further.
+
+**Proposed API:**
+
+```typescript
+// src/snapshot.ts
+function diffWorldState(prev: WorldState, next: WorldState): WorldStateDiff;
+function applyDiff(base: WorldState, diff: WorldStateDiff): WorldState;
+function packDiff(diff: WorldStateDiff): Uint8Array;   // binary encoding
+function unpackDiff(bytes: Uint8Array): WorldStateDiff;
+```
+
+**Impact:** Long-running campaign storage shrinks from O(ticks × fullState) to
+O(initialState + sum of deltas).  Network sync for `ananke-world-ui` sends only changed
+fields per tick instead of full polity snapshot.
+
+---
+
+### CE-10 · Pre-built AI Behavior Tree Library
+
+**Problem:** `buildAICommands` / `decideCommandsForEntity` is functional but low-level.
+Every adopter re-implements flank, retreat, and protect-ally logic independently, with no
+sharing or validation across projects.
+
+**Deliverable:** `src/sim/ai/behavior-trees.ts` — a thin, composable layer over the
+existing AI system.
+
+**Core interface:**
+
+```typescript
+interface BehaviorNode {
+  tick(entity: Entity, world: WorldState, ctx: KernelContext): Command | null;
+}
+
+// Built-in nodes
+const Nodes = {
+  FlankTarget:    (targetId: number) => BehaviorNode,
+  RetreatTo:      (x_m: number, y_m: number) => BehaviorNode,
+  ProtectAlly:    (allyId: number) => BehaviorNode,
+  GuardPosition:  (x_m: number, y_m: number, radius_m: number) => BehaviorNode,
+  HealTarget:     (targetId: number) => BehaviorNode,
+  Sequence:       (...nodes: BehaviorNode[]) => BehaviorNode,  // first success wins
+  Fallback:       (...nodes: BehaviorNode[]) => BehaviorNode,  // first non-null wins
+};
+```
+
+**Constraint:** All nodes must be deterministic (no `Math.random()`); randomised choices
+use `eventSeed` with the entity id and current tick as salt.
+
+---
+
+### CE-11 · Network Replication Reference Implementation
+
+**Problem:** Ananke's deterministic core is ideal for lock-step multiplayer, but there is
+no reference showing how to implement command propagation, state reconciliation, or latency
+compensation in practice.
+
+**Approach:** Leverage determinism.  Clients send only *commands* (intents), never state.
+The server ticks the authoritative `WorldState`; clients replay the same seeds locally and
+reconcile when their predicted state diverges from the authoritative snapshot.
+
+**Deliverable:** `tools/replication-server.ts` + `docs/world-client/replication-client.html`
+demonstrating:
+
+1. **Command propagation:** client `POST /command { entityId, intent }` → server queues for
+   next tick; broadcasts tick number + command list to all clients
+2. **Client-side prediction:** client runs `stepWorld` locally using the same seed; renders
+   predicted state immediately
+3. **State reconciliation:** server sends authoritative snapshot every N ticks; client
+   `replayTo` from last confirmed snapshot if diverged
+4. **Latency compensation:** command timestamps + grace-tick window (configurable) so a
+   200 ms RTT client still lands commands in the correct causal tick
+
+**Depends on:** CE-9 (delta snapshots for efficient authoritative broadcasts), CE-6
+(WebSocket push for tick-rate updates), `ReplayRecorder`.
+
+---
+
+### CE-12 · Data-Driven Entity Catalog
+
+**Problem:** Archetypes, weapons, and armour are hard-coded TypeScript constants.  Adding
+a new species or weapon requires recompiling the library.  Content creators — level
+designers, narrative writers — cannot define entities without TypeScript knowledge.
+
+**Deliverable:** `src/catalog.ts` — a runtime loader for JSON-defined entities.
+
+**JSON format (extends CE-3 scenario schema):**
+
+```json
+{
+  "$schema": "https://ananke.dev/schema/catalog/v1.json",
+  "type": "archetype",
+  "id": "orc_warrior",
+  "displayName": "Orc Warrior",
+  "base": "HUMAN_BASE",
+  "overrides": {
+    "mass_kg": 110,
+    "peakForce_N": 3200,
+    "distressTolerance": 0.65
+  }
+}
+```
+
+**API:**
+
+```typescript
+// src/catalog.ts
+function registerArchetype(json: unknown): Archetype;
+function registerWeapon(json: unknown): Weapon;
+function registerArmour(json: unknown): ArmourItem;
+function getCatalogEntry(id: string): Archetype | Weapon | ArmourItem | undefined;
+```
+
+**Impact:** `ananke-fantasy-species` becomes a folder of JSON files, not a TypeScript fork.
+Runtime modding (CE-16) depends on this catalog layer.
+
+---
+
+### CE-13 · Property-Based Testing with fast-check
+
+**Problem:** Unit tests validate specific inputs.  For a physics engine, the more dangerous
+class of bug is an invariant violation — negative energy, shock outside [0, 1], consciousness
+after death — that no specific test exercises.
+
+**Deliverable:** `test/invariants.test.ts` using the `fast-check` property-testing library.
+
+**Invariants to enforce:**
+
+| Invariant | Checked property |
+|-----------|-----------------|
+| Energy conservation | `entity.energy.fatigue ∈ [0, SCALE.Q]` after any `stepWorld` call |
+| Shock bounds | `entity.injury.shock ∈ [0, SCALE.Q]` |
+| Consciousness bounds | `entity.condition.consciousness ∈ [0, SCALE.Q]` |
+| Dead stays dead | if `entity.condition.dead`, no subsequent tick clears it without explicit revival |
+| Momentum sign | push resolution never reverses velocity beyond zero in a single tick |
+| Damage monotonicity | `permanentDamage ≤ internalDamage ≤ 1.0` at all times |
+| Determinism | `stepWorld(cloneWorld(w), cmds, ctx)` produces byte-identical result for any `w` |
+
+**Note:** `fast-check` is a devDependency only; does not affect the published package size.
+
+**Depends on:** Existing Vitest test infrastructure.
+
+---
+
+### CE-14 · Socio-Economic Campaign Layer → Stable Promotion
+
+**Problem:** The polity, tech-diffusion, and emotional-contagion systems (Phases 61, 67, 65)
+are currently Tier 2 (Experimental).  Their API can change between minor versions.  This
+is a barrier for game studios building 4X or grand strategy titles on top of Ananke.
+
+**Work:**
+
+1. Freeze the `PolityRegistry`, `PolityPair`, `Polity`, and `ContagionWave` interfaces
+   (no field additions without a minor-version bump).
+2. Move `stepPolityDay`, `stepTechDiffusion`, `applyEmotionalContagion`, `declareWar`,
+   `makePeace` to Tier 1 in `STABLE_API.md`.
+3. Write a migration guide for the v0.1.x → v0.2.0 boundary (breaking-change policy:
+   see `docs/versioning.md`).
+4. Add `"ananke/polity"` subpath export to `package.json` pointing to these APIs.
+
+**Success criterion:** A 4X prototype can `import { stepPolityDay } from "ananke/polity"`
+and be confident it will not break on a patch release.
+
+---
+
+### CE-15 · Dynamic Terrain + Cover System
+
+**Context:** Fire, smoke, acid, radiation, and extreme cold are already modelled by
+Phase 60 (Environmental Hazard Zones).  What is missing is *structural* terrain interaction:
+cover that reduces incoming damage, and terrain that changes state during a simulation.
+
+**Deliverable:** `src/sim/terrain.ts`
+
+**Cover system:**
+- `CoverSegment { id, x_Sm, y_Sm, length_Sm, height_Sm, material: "dirt"|"stone"|"wood"|"sandbag" }`
+- `computeCoverProtection(attacker, target, segments)` → `Q` reduction factor on incoming
+  energy (0 = no cover; SCALE.Q = full cover)
+- `isLineOfSightBlocked(from, to, segments)` → boolean (integer, no float sqrt)
+- Material energy absorption: stone q(0.70), sandbag q(0.60), wood q(0.35), dirt q(0.50)
+
+**Dynamic terrain deformation:**
+- `applyExplosionToTerrain(center_Sm, energy_J, segments)` → modifies material and height
+  (craters reduce cover height; wood ignites → becomes Phase 60 fire hazard)
+- `stepTerrainDecay(segments, elapsedSeconds)` → wood burn-out, crater erosion over hours
+
+**Depends on:** Phase 60 (HazardZone for fire propagation), `src/sim/vec3.ts`.
+
+---
+
+### CE-16 · Modding Support
+
+**Problem:** Power users want to define custom species, weapons, AI behaviours, and event
+hooks without forking the library.  Deterministic multiplayer requires that all clients
+use identical mod definitions.
+
+**Deliverable:** A modding contract built on CE-12 (data-driven catalog) and the existing
+stable API.
+
+**Three layers:**
+
+1. **Data mods (CE-12):** JSON-defined archetypes, weapons, armour.  No code required.
+   Checksum-validated: `hashMod(modFile)` produces a deterministic fingerprint that the
+   network replication layer (CE-11) can compare across clients.
+
+2. **Behavior hooks:** A callback registration pattern that does NOT execute arbitrary code
+   in the kernel path.  Hooks fire *after* each `stepWorld` call, not within it.
+   ```typescript
+   registerPostTickHook(id: string, fn: (world: WorldState) => void): void;
+   ```
+   Hooks are purely observational; they cannot mutate `WorldState` during the tick.
+
+3. **AI overrides (CE-10):** Custom `BehaviorNode` implementations registered by id;
+   `loadScenario` (CE-3) can reference them by id in the scenario JSON.
+
+**Deterministic multiplayer constraint:** All clients must register the same set of mods
+(checked by fingerprint) before joining a session.  Data mods are safely shareable; AI
+overrides require explicit opt-in and manual review.
+
+---
+
+### Feedback evaluated but not added
+
+Two items from external feedback were reviewed and rejected as redundant:
+
+- **Performance regression CI** — already delivered as Item 15 (`tools/benchmark-check.ts`
+  + `benchmarks/baseline.json` + `.github/workflows/nightly.yml`).  The nightly CI catches
+  algorithmic regressions at a 50% threshold; strict local mode uses 10%.
+- **First-party integration examples** — already covered by Item 6 (Godot/Unity companion
+  repos `ananke-godot-reference` / `ananke-unity-reference`), CE-5 (WASM for native C#/GDScript),
+  and the existing `ananke-threejs-bridge` companion project (Three.js / Babylon.js in-browser
+  renderer with no sidecar process required).
 
 ---
 
