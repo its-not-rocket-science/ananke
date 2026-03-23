@@ -6575,7 +6575,7 @@ and be confident it will not break on a patch release.
 
 ---
 
-### CE-15 · Dynamic Terrain + Cover System
+### CE-15 · Dynamic Terrain + Cover System *(COMPLETE)*
 
 **Context:** Fire, smoke, acid, radiation, and extreme cold are already modelled by
 Phase 60 (Environmental Hazard Zones).  What is missing is *structural* terrain interaction:

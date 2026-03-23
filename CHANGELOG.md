@@ -10,6 +10,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.6] — 2026-03-23
+
+  ### Added
+
+  - **CE-15 · Dynamic Terrain Cover System** (`src/sim/cover.ts`)
+    - CoverSegment type: axis-aligned obstacle with material, height, burn state
+    - isLineOfSightBlocked(): pure integer segment-intersection test (no sqrt)
+    - computeCoverProtection(): multiplicative absorption across stacked cover
+    - arcClearsCover(): indirect/lob fire height check
+    - applyExplosionToTerrain(): proximity-scaled crater + wood ignition
+    - stepCoverDecay(): wood burn-out and crater erosion over real time
+    - 4 sample presets: stone wall, sandbag barricade, wooden palisade, dirt berm
+    - 60 tests
+    - Export via src/index.ts
+
+---
+
 ## [0.1.5] — 2026-03-21
 
   ### Added
