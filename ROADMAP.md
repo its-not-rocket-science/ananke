@@ -5831,7 +5831,7 @@ pass `BiomeContext`; the kernel uses it in movement and thermoregulation sub-ste
 
 ---
 
-### Phase 69 — Macro-Scale Formation Combat
+### Phase 69 — Macro-Scale Formation Combat ✅ COMPLETE
 
 **Concept:** A tactical abstraction layer between individual entities (20 Hz simulation)
 and polity-level conflict (1 tick/day).  Squads and companies resolve combat as cohesive

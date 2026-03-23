@@ -31,3 +31,4 @@ export * from "./bridge/index.js";   // BridgeEngine, InterpolatedState, BridgeC
 export * from "./world-factory.js";  // createWorld(), EntitySpec, ARCHETYPE_MAP, ITEM_MAP
 export * from "./scenario.js";       // loadScenario(), validateScenario(), AnankeScenario
 export * from "./catalog.js";        // CE-12: registerArchetype(), registerWeapon(), registerArmour(), getCatalogEntry()
+export * from "./sim/formation-combat.js"; // Phase 69: FormationUnit, TacticalEngagement, resolveTacticalEngagement()
