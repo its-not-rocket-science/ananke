@@ -6400,7 +6400,7 @@ tool becomes large enough to warrant it.
 
 ---
 
-### CE-9 · Binary World-State Diffing + Incremental Snapshots
+### CE-9 · Binary World-State Diffing + Incremental Snapshots *(COMPLETE)*
 
 **Problem:** `serializeReplay` stores full state each tick.  A 30-day campaign at 1 Hz
 polity ticks generates thousands of snapshots; JSON serialisation of a 1 000-entity world

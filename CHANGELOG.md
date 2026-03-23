@@ -10,6 +10,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.7] — 2026-03-23
+
+  ### Added
+
+  - **CE-9 · World-state Diffing and Incremental Snapshots** (`src/sim/cover.ts`)
+    - diffWorldState(prev, next): top-level-field diff per entity; world
+      scalar/subsystem diffs; added/removed entity tracking
+    - applyDiff(base, diff): reconstruct next state (non-mutating, copy-on-write)
+    - packDiff(diff): custom binary encoding — magic "ANKD", tagged-value
+      format (null/bool/uint8/int32/float64/string/array/object); zero
+      external dependencies, implemented with DataView/Uint8Array
+    - unpackDiff(bytes): full round-trip with magic and version validation
+    - isDiffEmpty(), diffStats() — helpers for logging and network budgeting
+    - 30 tests; verified binary size < full JSON for single-entity changes
+    - Export via src/index.ts
+
+---
+
+---
+
 ## [0.1.6] — 2026-03-23
 
   ### Added

@@ -34,3 +34,4 @@ export * from "./catalog.js";        // CE-12: registerArchetype(), registerWeap
 export * from "./sim/formation-combat.js"; // Phase 69: FormationUnit, TacticalEngagement, resolveTacticalEngagement()
 export * from "./sim/cover.js";            // CE-15: CoverSegment, computeCoverProtection(), isLineOfSightBlocked(), applyExplosionToTerrain()
 export * from "./sim/ai/behavior-trees.js"; // CE-10: BehaviorNode, FlankTarget, RetreatTo, ProtectAlly, GuardPosition, HealTarget, Sequence, Fallback
+export * from "./snapshot.js";              // CE-9: diffWorldState(), applyDiff(), packDiff(), unpackDiff(), WorldStateDiff
