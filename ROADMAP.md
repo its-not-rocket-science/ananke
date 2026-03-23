@@ -6378,7 +6378,7 @@ for `Worker` + `SharedArrayBuffer` approach in browser environments.
 
 ---
 
-### CE-8 · Visual Debugging Tools
+### CE-8 · Visual Debugging Tools *(COMPLETE)*
 
 **Problem:** Diagnosing simulation behaviour requires reading raw `WorldState` JSON or adding
 `console.log` to the kernel.  There is no visual way to inspect force vectors, hit zones,
@@ -6425,7 +6425,7 @@ fields per tick instead of full polity snapshot.
 
 ---
 
-### CE-10 · Pre-built AI Behavior Tree Library
+### CE-10 · Pre-built AI Behavior Tree Library *(COMPLETE)*
 
 **Problem:** `buildAICommands` / `decideCommandsForEntity` is functional but low-level.
 Every adopter re-implements flank, retreat, and protect-ally logic independently, with no

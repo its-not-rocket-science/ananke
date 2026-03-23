@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Simulation Debugger</title>
+<style>
+:root {
+  --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3245;
+  --text:#e0e4f0; --muted:#7a81a0; --accent:#6366f1; --warn:#f59e0b;
+  --cyan:#22d3ee; --pass:#22c55e; --fail:#ef4444; --purple:#a855f7;
+  --orange:#fb923c; --pink:#ec4899;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:ui-monospace,"Cascadia Code",Menlo,monospace;font-size:12px;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── Header ── */
+header{padding:.45rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;flex-shrink:0;background:var(--surface)}
+header h1{font-size:.95rem;font-weight:700;letter-spacing:.02em}
+.sub{color:var(--muted);font-size:.72rem}
+.conn{display:flex;align-items:center;gap:.35rem;margin-left:auto;font-size:.72rem;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--fail);flex-shrink:0;transition:background .3s}
+.dot.live{background:var(--pass)}
+.tick-badge{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:.15rem .45rem;color:var(--warn);font-weight:700;font-size:.72rem;min-width:52px;text-align:center}
+.btn{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;font-family:inherit;font-size:.7rem;font-weight:600;padding:.2rem .5rem;transition:border-color .15s}
+.btn:hover{border-color:var(--accent)}
+.btn.active{border-color:var(--accent);color:var(--accent)}
+select{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:inherit;font-size:.7rem;padding:.15rem .35rem;outline:none}
+
+/* ── Grid layout ── */
+.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;flex:1;gap:1px;background:var(--border);overflow:hidden}
+.panel{background:var(--bg);display:flex;flex-direction:column;overflow:hidden}
+.panel-head{background:var(--surface);border-bottom:1px solid var(--border);padding:.3rem .65rem;display:flex;align-items:center;gap:.5rem;flex-shrink:0}
+.panel-title{font-weight:700;font-size:.75rem;color:var(--cyan)}
+.panel-sub{color:var(--muted);font-size:.67rem;margin-left:auto}
+.panel-body{flex:1;overflow:hidden;position:relative}
+canvas{display:block;width:100%;height:100%}
+
+/* ── Force overlay controls ── */
+.overlay-controls{position:absolute;top:6px;right:8px;display:flex;gap:4px;z-index:10}
+
+/* ── Injury heatmap ── */
+.heatmap-wrap{display:flex;flex:1;overflow:hidden;gap:0}
+.silhouette-col{flex:1;display:flex;align-items:center;justify-content:center;padding:.5rem}
+.legend-col{width:120px;overflow-y:auto;padding:.4rem .5rem;border-left:1px solid var(--border);flex-shrink:0}
+.region-row{display:flex;align-items:center;gap:.35rem;margin-bottom:.25rem;font-size:.67rem;cursor:pointer;border-radius:3px;padding:.1rem .25rem}
+.region-row:hover{background:var(--surface)}
+.region-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.region-label{flex:1;color:var(--muted)}
+.region-val{color:var(--text);font-weight:600;min-width:26px;text-align:right}
+.region-row.selected .region-label{color:var(--cyan)}
+.entity-sel{padding:.3rem .5rem;border-bottom:1px solid var(--border);display:flex;gap:.4rem;align-items:center;flex-shrink:0;background:var(--surface)}
+
+/* ── Command queue ── */
+.cq-wrap{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.cq-toolbar{padding:.3rem .5rem;border-bottom:1px solid var(--border);display:flex;gap:.4rem;align-items:center;flex-shrink:0;background:var(--surface)}
+.timeline{flex:1;overflow-y:auto;padding:.35rem .5rem}
+.tick-row{display:flex;gap:.4rem;align-items:flex-start;margin-bottom:.25rem;font-size:.69rem}
+.tick-num{color:var(--muted);min-width:38px;flex-shrink:0;padding-top:.05rem}
+.cmd-chip{display:inline-flex;align-items:center;gap:.25rem;border-radius:3px;padding:.1rem .3rem;font-size:.67rem;font-weight:600}
+.cmd-move{background:#1e3a5f;color:var(--cyan)}
+.cmd-attack{background:#5f1e1e;color:#fca5a5}
+.cmd-defend{background:#3a3a1e;color:#fde68a}
+.cmd-treat{background:#1a3d2b;color:#86efac}
+.cmd-other{background:var(--surface2);color:var(--muted)}
+.cmd-detail{color:var(--muted);font-size:.65rem;margin-top:.08rem}
+.tick-divider{border:none;border-top:1px solid var(--border);margin:.35rem 0}
+
+/* ── Spatial index ── */
+.si-toolbar{padding:.3rem .5rem;border-bottom:1px solid var(--border);display:flex;gap:.5rem;align-items:center;flex-shrink:0;background:var(--surface)}
+.si-legend{display:flex;gap:.6rem;flex-wrap:wrap;font-size:.65rem;color:var(--muted)}
+.si-swatch{display:inline-block;width:10px;height:10px;border-radius:1px;vertical-align:middle;margin-right:3px}
+
+/* ── Mode banner ── */
+.demo-banner{position:absolute;bottom:6px;left:6px;background:rgba(99,102,241,.18);border:1px solid var(--accent);border-radius:3px;padding:.15rem .4rem;font-size:.65rem;color:var(--accent);pointer-events:none;z-index:20}
+
+/* ── Tooltip ── */
+#tooltip{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.3rem .5rem;font-size:.69rem;pointer-events:none;display:none;z-index:100;max-width:200px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Ananke Debugger</h1>
+  <span class="sub">simulation inspector</span>
+  <div style="display:flex;gap:.4rem">
+    <button class="btn" id="btnPause">⏸ Pause</button>
+    <button class="btn" id="btnStep">⏭ Step</button>
+    <select id="speedSel">
+      <option value="200">5 Hz</option>
+      <option value="100" selected>10 Hz</option>
+      <option value="50">20 Hz</option>
+      <option value="20">50 Hz</option>
+    </select>
+  </div>
+  <div class="conn">
+    <div class="dot" id="connDot"></div>
+    <span id="connLabel">demo mode</span>
+    <span class="tick-badge" id="tickBadge">t=0</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- ── Panel 1: Force Vector Overlay ── -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Force Vector Overlay</span>
+      <div class="overlay-controls">
+        <button class="btn active" id="togVel" title="Velocity">vel</button>
+        <button class="btn active" id="togForce" title="peakForce_N">F</button>
+        <button class="btn active" id="togGRF" title="Ground reaction">GRF</button>
+      </div>
+      <span class="panel-sub" id="fvSub">5 entities</span>
+    </div>
+    <div class="panel-body">
+      <canvas id="canvasForce"></canvas>
+      <div class="demo-banner" id="fvBanner">DEMO</div>
+    </div>
+  </div>
+
+  <!-- ── Panel 2: Hit Zone Heatmap ── -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Hit Zone Heatmap</span>
+      <span class="panel-sub">surface / internal / structural</span>
+    </div>
+    <div class="entity-sel">
+      <span style="color:var(--muted);font-size:.68rem">Entity:</span>
+      <select id="hmEntitySel"></select>
+      <select id="hmTypeSel">
+        <option value="surface">surface</option>
+        <option value="internal">internal</option>
+        <option value="structural">structural</option>
+      </select>
+    </div>
+    <div class="panel-body heatmap-wrap">
+      <div class="silhouette-col">
+        <svg id="svgSilhouette" viewBox="0 0 120 260" xmlns="http://www.w3.org/2000/svg" style="max-height:100%;max-width:100%"></svg>
+      </div>
+      <div class="legend-col" id="hmLegend"></div>
+      <div class="demo-banner">DEMO</div>
+    </div>
+  </div>
+
+  <!-- ── Panel 3: Command Queue Inspector ── -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Command Queue Inspector</span>
+      <span class="panel-sub" id="cqSub"></span>
+    </div>
+    <div class="panel-body cq-wrap">
+      <div class="cq-toolbar">
+        <span style="color:var(--muted);font-size:.68rem">Entity:</span>
+        <select id="cqEntitySel"></select>
+        <span style="color:var(--muted);font-size:.68rem;margin-left:auto">last</span>
+        <select id="cqDepth">
+          <option value="10">10 ticks</option>
+          <option value="30" selected>30 ticks</option>
+          <option value="60">60 ticks</option>
+        </select>
+      </div>
+      <div class="timeline" id="timeline"></div>
+      <div class="demo-banner">DEMO</div>
+    </div>
+  </div>
+
+  <!-- ── Panel 4: Spatial Index ── -->
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-title">Spatial Index</span>
+      <span class="panel-sub" id="siSub"></span>
+    </div>
+    <div class="panel-body" style="flex-direction:column;display:flex">
+      <div class="si-toolbar">
+        <div class="si-legend">
+          <span><span class="si-swatch" style="background:#1e3a5f"></span>entity</span>
+          <span><span class="si-swatch" style="background:#3d2a0a"></span>pair</span>
+          <span><span class="si-swatch" style="background:#2a1a3d"></span>occupied cell</span>
+          <span><span class="si-swatch" style="background:var(--border)"></span>empty cell</span>
+        </div>
+        <button class="btn active" id="togCellInfo" style="margin-left:auto">cells</button>
+      </div>
+      <div style="flex:1;overflow:hidden;position:relative">
+        <canvas id="canvasSI"></canvas>
+        <div class="demo-banner">DEMO</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ── Simulation state ──────────────────────────────────────────────────────────
+
+const SCALE_Q  = 10000;
+const SCALE_M  = 10000;
+const SCALE_N  = 100;
+const TICK_HZ  = 20;
+const CELL_M   = 4;  // spatial index cell size (m)
+
+// REGIONS: id → {label, x, y, w, h} in SVG viewBox 0 0 120 260 (humanoid)
+const REGIONS = {
+  head:     { label: "Head",      svgPath: "M45,2 Q60,0 75,2 Q82,12 80,25 Q60,32 40,25 Q38,12 45,2 Z" },
+  torso:    { label: "Torso",     svgPath: "M35,32 Q60,28 85,32 L90,90 Q60,98 30,90 Z" },
+  leftArm:  { label: "Left Arm",  svgPath: "M85,32 L95,35 L100,85 L88,87 Z" },
+  rightArm: { label: "Right Arm", svgPath: "M35,32 L25,35 L20,85 L32,87 Z" },
+  leftLeg:  { label: "Left Leg",  svgPath: "M62,90 L75,92 L78,160 L62,162 Z" },
+  rightLeg: { label: "Right Leg", svgPath: "M58,90 L45,92 L42,160 L58,162 Z" },
+};
+
+// Entity pool — synthetic demo data
+let tick = 0;
+let paused = false;
+let tickInterval = null;
+
+const ENTITY_COUNT = 5;
+
+function makeEntity(id) {
+  return {
+    id,
+    name: ["Knight","Brawler","Archer","Berserker","Defender"][id % 5],
+    teamId: id < 3 ? 1 : 2,
+    x: 20 + Math.round(Math.random() * 60),  // metres
+    y: 20 + Math.round(Math.random() * 60),
+    vx: (Math.random() - 0.5) * 3,
+    vy: (Math.random() - 0.5) * 3,
+    peakForce_N: 800 + Math.round(Math.random() * 1200),
+    fatigue: Math.random() * 0.5,
+    injury: {
+      head:     { surface: Math.random() * 0.4, internal: Math.random() * 0.3, structural: Math.random() * 0.2 },
+      torso:    { surface: Math.random() * 0.6, internal: Math.random() * 0.5, structural: Math.random() * 0.3 },
+      leftArm:  { surface: Math.random() * 0.5, internal: Math.random() * 0.3, structural: Math.random() * 0.15 },
+      rightArm: { surface: Math.random() * 0.5, internal: Math.random() * 0.3, structural: Math.random() * 0.15 },
+      leftLeg:  { surface: Math.random() * 0.4, internal: Math.random() * 0.25, structural: Math.random() * 0.1 },
+      rightLeg: { surface: Math.random() * 0.4, internal: Math.random() * 0.25, structural: Math.random() * 0.1 },
+    },
+    cmdHistory: [],
+  };
+}
+
+// Deterministic LCG for reproducible demo
+function lcg(seed) {
+  seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+  return (seed >>> 0) / 0xffffffff;
+}
+
+const entities = Array.from({ length: ENTITY_COUNT }, (_, i) => makeEntity(i));
+const WORLD_SIZE = 100;  // metres
+
+// ── Simulation step (demo) ────────────────────────────────────────────────────
+
+const CMD_TYPES = ["move","attack","defend","treat","move","move","attack"];
+
+function simStep() {
+  tick++;
+  const seed = tick * 6364136223846793005n;
+
+  entities.forEach((e, i) => {
+    // Drift position
+    e.x = Math.max(2, Math.min(WORLD_SIZE - 2, e.x + e.vx * 0.05));
+    e.y = Math.max(2, Math.min(WORLD_SIZE - 2, e.y + e.vy * 0.05));
+
+    // Bounce off walls
+    if (e.x <= 2 || e.x >= WORLD_SIZE - 2) e.vx *= -1;
+    if (e.y <= 2 || e.y >= WORLD_SIZE - 2) e.vy *= -1;
+
+    // Slowly accumulate fatigue, then recover
+    e.fatigue = Math.min(0.99, e.fatigue + (Math.sin(tick * 0.03 + i) * 0.005));
+    if (e.fatigue < 0) e.fatigue = 0;
+
+    // Drift injury values slowly
+    for (const r of Object.keys(e.injury)) {
+      const rng = lcg(tick * 31 + i * 7 + r.charCodeAt(0));
+      e.injury[r].surface = Math.max(0, Math.min(1, e.injury[r].surface + (rng - 0.5) * 0.015));
+      e.injury[r].internal = Math.max(0, Math.min(1, e.injury[r].internal + (rng - 0.48) * 0.008));
+    }
+
+    // Synthesise command for this tick
+    const rng2 = lcg(tick * 17 + i * 13);
+    const cmdType = CMD_TYPES[Math.floor(rng2 * CMD_TYPES.length)];
+    let cmdDetail = "";
+    const target = entities[(i + 1) % ENTITY_COUNT];
+    if (cmdType === "move") {
+      const dx = (rng2 > 0.5 ? 1 : -1);
+      const dy = (rng2 > 0.3 ? 1 : -1);
+      cmdDetail = `dir(${dx > 0 ? "+" : ""}${dx},${dy > 0 ? "+" : ""}${dy}) run`;
+    } else if (cmdType === "attack") {
+      cmdDetail = `→ #${target.id} int=q(1.0)`;
+    } else if (cmdType === "defend") {
+      cmdDetail = `block int=q(0.7)`;
+    } else if (cmdType === "treat") {
+      cmdDetail = `→ #${target.id} torso bandage`;
+    }
+
+    e.cmdHistory.unshift({ tick, type: cmdType, detail: cmdDetail });
+    if (e.cmdHistory.length > 60) e.cmdHistory.length = 60;
+  });
+
+  document.getElementById("tickBadge").textContent = `t=${tick}`;
+  renderAll();
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+
+// Colour helpers
+function heatColour(v) {
+  // 0 → dark blue, 0.5 → amber, 1 → red
+  const r = Math.round(Math.min(255, v * 2 * 255));
+  const g = Math.round(Math.max(0, (0.5 - Math.abs(v - 0.5)) * 255));
+  const b = Math.round(Math.max(0, (1 - v * 2) * 200));
+  return `rgba(${r},${g},${b},0.82)`;
+}
+
+function teamColour(teamId) {
+  return teamId === 1 ? "#6366f1" : "#ef4444";
+}
+
+// ── Force Vector Panel ────────────────────────────────────────────────────────
+
+const cfv = document.getElementById("canvasForce");
+const ctxFV = cfv.getContext("2d");
+let showVel = true, showForce = true, showGRF = true;
+
+document.getElementById("togVel").addEventListener("click", function() {
+  showVel = !showVel; this.classList.toggle("active", showVel);
+});
+document.getElementById("togForce").addEventListener("click", function() {
+  showForce = !showForce; this.classList.toggle("active", showForce);
+});
+document.getElementById("togGRF").addEventListener("click", function() {
+  showGRF = !showGRF; this.classList.toggle("active", showGRF);
+});
+
+function renderForcePanel() {
+  const W = cfv.parentElement.clientWidth;
+  const H = cfv.parentElement.clientHeight;
+  cfv.width  = W;
+  cfv.height = H;
+  const cx = ctxFV;
+
+  // Background grid
+  cx.fillStyle = "#0f1117";
+  cx.fillRect(0, 0, W, H);
+
+  const CELL_PX = Math.min(W, H) / (WORLD_SIZE / CELL_M + 2);
+  const WORLD_PX = CELL_PX * WORLD_SIZE / CELL_M;
+  const OX = (W - WORLD_PX) / 2;
+  const OY = (H - WORLD_PX) / 2;
+
+  // Grid cells
+  const nx = Math.ceil(WORLD_SIZE / CELL_M);
+  cx.strokeStyle = "#1e2235";
+  cx.lineWidth = 0.5;
+  for (let gx = 0; gx <= nx; gx++) {
+    const px = OX + gx * CELL_PX;
+    cx.beginPath(); cx.moveTo(px, OY); cx.lineTo(px, OY + WORLD_PX); cx.stroke();
+  }
+  for (let gy = 0; gy <= nx; gy++) {
+    const py = OY + gy * CELL_PX;
+    cx.beginPath(); cx.moveTo(OX, py); cx.lineTo(OX + WORLD_PX, py); cx.stroke();
+  }
+
+  // World border
+  cx.strokeStyle = "#2e3245";
+  cx.lineWidth = 1;
+  cx.strokeRect(OX, OY, WORLD_PX, WORLD_PX);
+
+  function wx(xm) { return OX + (xm / CELL_M) * CELL_PX; }
+  function wy(ym) { return OY + (ym / CELL_M) * CELL_PX; }
+  const SCALE = CELL_PX / CELL_M;  // px per metre
+
+  for (const e of entities) {
+    const px = wx(e.x);
+    const py = wy(e.y);
+    const col = teamColour(e.teamId);
+
+    // Entity dot
+    cx.beginPath();
+    cx.arc(px, py, 5, 0, Math.PI * 2);
+    cx.fillStyle = col;
+    cx.fill();
+    cx.strokeStyle = "#fff2";
+    cx.lineWidth = 0.5;
+    cx.stroke();
+
+    // Label
+    cx.fillStyle = "#ccc";
+    cx.font = "9px ui-monospace";
+    cx.fillText(`#${e.id} ${e.name}`, px + 7, py - 3);
+    cx.fillStyle = "#7a81a0";
+    cx.fillText(`F=${e.peakForce_N}N  fat=${(e.fatigue*100).toFixed(0)}%`, px + 7, py + 8);
+
+    const arrowScale = SCALE * 0.8;
+
+    // Velocity vector (cyan)
+    if (showVel) {
+      const vScale = 4;
+      drawArrow(cx, px, py, px + e.vx * arrowScale * vScale, py + e.vy * arrowScale * vScale,
+        "#22d3ee", 1.5, "vel");
+    }
+
+    // Force vector (orange) — direction of motion, scaled by peakForce
+    if (showForce) {
+      const fMag = (e.peakForce_N / 2000) * arrowScale * 5;
+      const vLen = Math.sqrt(e.vx * e.vx + e.vy * e.vy) || 1;
+      const fx = (e.vx / vLen) * fMag;
+      const fy = (e.vy / vLen) * fMag;
+      drawArrow(cx, px, py, px + fx, py + fy, "#fb923c", 1.5, "F");
+    }
+
+    // GRF (green, always downward on ground contact)
+    if (showGRF) {
+      const grfY = (1 - e.fatigue) * arrowScale * 4;
+      drawArrow(cx, px, py, px, py + grfY, "#22c55e", 1.5, "GRF");
+    }
+  }
+
+  // Legend
+  if (showVel || showForce || showGRF) {
+    cx.font = "9px ui-monospace";
+    const items = [];
+    if (showVel)   items.push({ col: "#22d3ee", label: "velocity" });
+    if (showForce) items.push({ col: "#fb923c", label: "peakForce_N" });
+    if (showGRF)   items.push({ col: "#22c55e", label: "GRF" });
+    items.forEach((item, i) => {
+      const lx = OX + 6, ly = OY + 14 + i * 13;
+      cx.fillStyle = item.col;
+      cx.fillRect(lx, ly - 7, 14, 2);
+      cx.fillStyle = "#7a81a0";
+      cx.fillText(item.label, lx + 18, ly);
+    });
+  }
+
+  document.getElementById("fvSub").textContent = `${ENTITY_COUNT} entities`;
+}
+
+function drawArrow(cx, x1, y1, x2, y2, col, lw, label) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len < 2) return;
+  cx.save();
+  cx.strokeStyle = col;
+  cx.fillStyle = col;
+  cx.lineWidth = lw;
+  cx.beginPath();
+  cx.moveTo(x1, y1);
+  cx.lineTo(x2, y2);
+  cx.stroke();
+  // Arrowhead
+  const angle = Math.atan2(dy, dx);
+  cx.beginPath();
+  cx.moveTo(x2, y2);
+  cx.lineTo(x2 - 5 * Math.cos(angle - 0.4), y2 - 5 * Math.sin(angle - 0.4));
+  cx.lineTo(x2 - 5 * Math.cos(angle + 0.4), y2 - 5 * Math.sin(angle + 0.4));
+  cx.closePath();
+  cx.fill();
+  cx.restore();
+}
+
+// ── Hit Zone Heatmap Panel ────────────────────────────────────────────────────
+
+const hmEntitySel = document.getElementById("hmEntitySel");
+const hmTypeSel   = document.getElementById("hmTypeSel");
+const svgSil      = document.getElementById("svgSilhouette");
+const hmLegend    = document.getElementById("hmLegend");
+
+// Populate entity selectors
+function populateEntitySelectors() {
+  [hmEntitySel, document.getElementById("cqEntitySel")].forEach(sel => {
+    sel.innerHTML = entities.map(e =>
+      `<option value="${e.id}">#${e.id} ${e.name}</option>`
+    ).join("");
+  });
+}
+
+function renderHeatmap() {
+  const eId    = parseInt(hmEntitySel.value);
+  const dmgKey = hmTypeSel.value;
+  const e      = entities.find(x => x.id === eId) ?? entities[0];
+
+  // Build SVG silhouette with coloured regions
+  const paths = Object.entries(REGIONS).map(([rid, rdef]) => {
+    const val = e.injury[rid]?.[dmgKey] ?? 0;
+    const fill = heatColour(val);
+    const title = `${rdef.label}: ${(val * 100).toFixed(1)}%`;
+    return `<path d="${rdef.svgPath}" fill="${fill}" stroke="#2e3245" stroke-width="0.5" opacity="0.92">
+      <title>${title}</title>
+    </path>`;
+  }).join("\n");
+
+  svgSil.innerHTML = paths;
+
+  // Legend
+  hmLegend.innerHTML = Object.entries(REGIONS).map(([rid, rdef]) => {
+    const val = e.injury[rid]?.[dmgKey] ?? 0;
+    return `<div class="region-row" data-region="${rid}">
+      <div class="region-swatch" style="background:${heatColour(val)}"></div>
+      <span class="region-label">${rdef.label}</span>
+      <span class="region-val">${(val * 100).toFixed(0)}%</span>
+    </div>`;
+  }).join("");
+}
+
+hmEntitySel.addEventListener("change", renderHeatmap);
+hmTypeSel.addEventListener("change", renderHeatmap);
+
+// ── Command Queue Panel ───────────────────────────────────────────────────────
+
+const cqEntitySel = document.getElementById("cqEntitySel");
+const cqDepth     = document.getElementById("cqDepth");
+const timeline    = document.getElementById("timeline");
+
+function renderCommandQueue() {
+  const eId   = parseInt(cqEntitySel.value);
+  const depth = parseInt(cqDepth.value);
+  const e     = entities.find(x => x.id === eId) ?? entities[0];
+  const hist  = e.cmdHistory.slice(0, depth);
+
+  document.getElementById("cqSub").textContent = `#${e.id} ${e.name}`;
+
+  if (hist.length === 0) {
+    timeline.innerHTML = `<div style="color:var(--muted);font-size:.7rem;padding:.5rem">No commands yet.</div>`;
+    return;
+  }
+
+  timeline.innerHTML = hist.map(cmd => {
+    const chipClass = {
+      move: "cmd-move", attack: "cmd-attack",
+      defend: "cmd-defend", treat: "cmd-treat",
+    }[cmd.type] ?? "cmd-other";
+    return `<div class="tick-row">
+      <span class="tick-num">t=${cmd.tick}</span>
+      <div>
+        <span class="cmd-chip ${chipClass}">${cmd.type}</span>
+        <div class="cmd-detail">${cmd.detail}</div>
+      </div>
+    </div>`;
+  }).join(`<hr class="tick-divider">`);
+}
+
+cqEntitySel.addEventListener("change", renderCommandQueue);
+cqDepth.addEventListener("change", renderCommandQueue);
+
+// ── Spatial Index Panel ───────────────────────────────────────────────────────
+
+const csi   = document.getElementById("canvasSI");
+const ctxSI = csi.getContext("2d");
+let showCellInfo = true;
+
+document.getElementById("togCellInfo").addEventListener("click", function() {
+  showCellInfo = !showCellInfo; this.classList.toggle("active", showCellInfo);
+});
+
+function renderSpatialIndex() {
+  const W = csi.parentElement.clientWidth;
+  const H = csi.parentElement.clientHeight;
+  csi.width  = W;
+  csi.height = H;
+  const cx = ctxSI;
+
+  cx.fillStyle = "#0f1117";
+  cx.fillRect(0, 0, W, H);
+
+  const nx = Math.ceil(WORLD_SIZE / CELL_M);
+  const cellPx = Math.min(W, H) / (nx + 1);
+  const OX = (W - cellPx * nx) / 2;
+  const OY = (H - cellPx * nx) / 2;
+
+  // Build occupancy grid
+  const grid = {};  // "cx,cy" → { entities: [], pairs: 0 }
+  for (const e of entities) {
+    const cx_ = Math.floor(e.x / CELL_M);
+    const cy_ = Math.floor(e.y / CELL_M);
+    const key = `${cx_},${cy_}`;
+    if (!grid[key]) grid[key] = { entities: [], pairs: 0 };
+    grid[key].entities.push(e);
+  }
+
+  // Count collision pairs: entities within 1 cell of each other
+  let totalPairs = 0;
+  for (let i = 0; i < entities.length; i++) {
+    for (let j = i + 1; j < entities.length; j++) {
+      const dx = Math.abs(entities[i].x - entities[j].x);
+      const dy = Math.abs(entities[i].y - entities[j].y);
+      if (dx <= CELL_M * 2 && dy <= CELL_M * 2) {
+        const cx_ = Math.floor((entities[i].x + entities[j].x) / 2 / CELL_M);
+        const cy_ = Math.floor((entities[i].y + entities[j].y) / 2 / CELL_M);
+        const key = `${cx_},${cy_}`;
+        if (!grid[key]) grid[key] = { entities: [], pairs: 0 };
+        grid[key].pairs++;
+        totalPairs++;
+      }
+    }
+  }
+
+  document.getElementById("siSub").textContent =
+    `${Object.keys(grid).length} cells occupied · ${totalPairs} pairs`;
+
+  // Draw cells
+  for (let gx = 0; gx < nx; gx++) {
+    for (let gy = 0; gy < nx; gy++) {
+      const key = `${gx},${gy}`;
+      const cell = grid[key];
+      const px = OX + gx * cellPx;
+      const py = OY + gy * cellPx;
+
+      let fill = "#1a1d27";
+      if (cell) {
+        if (cell.pairs > 0) fill = "#3d2a0a";
+        else if (cell.entities.length > 0) fill = "#1e2a5f";
+        else fill = "#2a1a3d";
+      }
+
+      cx.fillStyle = fill;
+      cx.fillRect(px + 0.5, py + 0.5, cellPx - 1, cellPx - 1);
+
+      if (cell && showCellInfo && cellPx > 12) {
+        cx.font = `${Math.min(8, cellPx * 0.3)}px ui-monospace`;
+        cx.fillStyle = "#7a81a0";
+        if (cell.entities.length > 0)
+          cx.fillText(`${cell.entities.length}e`, px + 2, py + cellPx * 0.45);
+        if (cell.pairs > 0)
+          cx.fillText(`${cell.pairs}p`, px + 2, py + cellPx * 0.8);
+      }
+    }
+  }
+
+  // Entity dots
+  for (const e of entities) {
+    const px = OX + (e.x / CELL_M) * cellPx;
+    const py = OY + (e.y / CELL_M) * cellPx;
+    cx.beginPath();
+    cx.arc(px, py, Math.min(4, cellPx * 0.15), 0, Math.PI * 2);
+    cx.fillStyle = teamColour(e.teamId);
+    cx.fill();
+  }
+
+  // Pair lines
+  cx.strokeStyle = "#fb923c44";
+  cx.lineWidth = 0.8;
+  for (let i = 0; i < entities.length; i++) {
+    for (let j = i + 1; j < entities.length; j++) {
+      const dx = Math.abs(entities[i].x - entities[j].x);
+      const dy = Math.abs(entities[i].y - entities[j].y);
+      if (dx <= CELL_M * 2 && dy <= CELL_M * 2) {
+        const ax = OX + (entities[i].x / CELL_M) * cellPx;
+        const ay = OY + (entities[i].y / CELL_M) * cellPx;
+        const bx = OX + (entities[j].x / CELL_M) * cellPx;
+        const by = OY + (entities[j].y / CELL_M) * cellPx;
+        cx.beginPath(); cx.moveTo(ax, ay); cx.lineTo(bx, by); cx.stroke();
+      }
+    }
+  }
+}
+
+// ── WebSocket connection to world-server ──────────────────────────────────────
+
+let ws = null;
+const connDot   = document.getElementById("connDot");
+const connLabel = document.getElementById("connLabel");
+
+function tryConnect() {
+  try {
+    ws = new WebSocket("ws://localhost:3000/ws");
+    ws.onopen = () => {
+      connDot.classList.add("live");
+      connLabel.textContent = "live · world-server";
+    };
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+        if (msg.type === "tick" || msg.type === "init") {
+          // Show world-server day in the tick badge suffix when connected
+          document.getElementById("tickBadge").textContent =
+            `t=${tick} · day ${msg.state?.day ?? "?"}`;
+        }
+      } catch { /* ignore */ }
+    };
+    ws.onclose = ws.onerror = () => {
+      connDot.classList.remove("live");
+      connLabel.textContent = "demo mode";
+      ws = null;
+      // Retry after 5 s
+      setTimeout(tryConnect, 5000);
+    };
+  } catch {
+    connLabel.textContent = "demo mode";
+  }
+}
+
+tryConnect();
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
+
+function renderAll() {
+  renderForcePanel();
+  renderHeatmap();
+  renderCommandQueue();
+  renderSpatialIndex();
+}
+
+function startLoop() {
+  const ms = parseInt(document.getElementById("speedSel").value);
+  if (tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(() => { if (!paused) simStep(); }, ms);
+}
+
+document.getElementById("btnPause").addEventListener("click", function() {
+  paused = !paused;
+  this.textContent = paused ? "▶ Play" : "⏸ Pause";
+});
+
+document.getElementById("btnStep").addEventListener("click", () => {
+  paused = true;
+  document.getElementById("btnPause").textContent = "▶ Play";
+  simStep();
+});
+
+document.getElementById("speedSel").addEventListener("change", startLoop);
+
+// Resize observer — re-render on panel resize
+const ro = new ResizeObserver(() => renderAll());
+ro.observe(document.querySelector(".grid"));
+
+// Init
+populateEntitySelectors();
+renderAll();
+startLoop();
+</script>
+</body>
+</html>
