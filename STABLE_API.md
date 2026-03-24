@@ -185,21 +185,112 @@ version bump; renames require a major bump and migration guide.
 These exports are usable and tested but may change across minor versions.
 A `CHANGELOG.md` entry will document any breaking change.
 
+All Tier 2 modules are accessible via deep imports:
+```typescript
+import { stepAging } from "@its-not-rocket-science/ananke/dist/src/sim/aging.js";
+```
+
+### AI command system
+
 | Module | Key exports |
 |--------|------------|
-| `src/mythology.ts` | `compressMythsFromHistory`, `stepMythologyYear`, `aggregateFactionMythEffect`, `scaledMythEffect` |
-| `src/narrative-stress.ts` | `runNarrativeStressTest`, `scoreNarrativePush` |
-| `src/campaign.ts` | `Campaign`, `stepCampaignDay`, `advanceCampaignClock`, `serializeCampaign`, `deserializeCampaign` |
-| `src/arena.ts` | Arena scenario DSL, `runArenaTrial`, `runArenaScenario` |
+| `src/sim/ai/system.ts` | `buildAICommands(world, ctx)` — build a `CommandMap` for all AI-controlled entities |
+
+### Character lifecycle
+
+| Module | Key exports |
+|--------|------------|
 | `src/sim/aging.ts` | `applyAgingToAttributes`, `stepAging`, `deriveAgeMultipliers`, `getAgePhase` |
 | `src/sim/sleep.ts` | `applySleepToAttributes`, `stepSleep`, `deriveSleepDeprivationMuls`, `circadianAlertness` |
 | `src/sim/disease.ts` | `exposeToDisease`, `stepDiseaseForEntity`, `spreadDisease`, `computeTransmissionRisk` |
+| `src/sim/wound-aging.ts` | `stepWoundAging`, `recordTraumaEvent`, `deriveFearThresholdMul`, `deriveSepsisRisk` |
+| `src/sim/thermoregulation.ts` | `stepThermoregulation`, `deriveThermalComfort`, `computeMetabolicRate` |
+| `src/sim/nutrition.ts` | `stepNutrition`, `computeHungerEffect`, food catalogue constants |
+| `src/sim/medical.ts` | `resolveTreatment`, `computeTreatmentEffect`, medical tier definitions |
+| `src/sim/toxicology.ts` | `applyVenom`, `stepActiveVenoms`, `resolveIngestedToxin` |
+| `src/progression.ts` | `applyXP`, `applyTrainingDrift`, `computeMilestones` |
+
+### Combat extensions
+
+| Module | Key exports |
+|--------|------------|
 | `src/sim/mount.ts` | `checkMountStep`, `computeChargeBonus`, `deriveRiderHeightBonus` |
 | `src/sim/hazard.ts` | `deriveHazardEffect`, `computeHazardExposure`, `stepHazardZone` |
+| `src/sim/ranged.ts` | `resolveRangedAttack`, `computeRangedAccuracy`, `computeProjectileEnergy` |
+| `src/sim/grapple.ts` | `resolveGrappleContest`, `computeGrappleStrength`, `stepGrapple` |
+| `src/sim/formation.ts` | `FormationConfig`, `computeFormationBonus`, `resolveFormationStep` |
+| `src/sim/morale.ts` | `computeMoraleEffect`, `stepMorale`, `applyRoutEffect` |
+| `src/sim/sensory.ts` | `computeVisibility`, `computeHearingRange`, `stepSensoryState` |
+| `src/sim/sensory-extended.ts` | `computeEcholocationRange`, `computeOlfactionRange` — non-human senses |
+| `src/sim/weather.ts` | `WeatherState`, `stepWeather`, `computeWeatherEffect` |
+| `src/sim/terrain.ts` | `TerrainType`, `TERRAIN_PROFILES`, `computeTerrainTraction` |
+| `src/sim/skills.ts` | `SkillId`, `SkillLevel`, `SKILL_LEVEL_MULS`, `buildSkillMap`, `getSkillMul` |
+| `src/sim/biome.ts` | `BiomeType`, `BIOME_PROFILES`, `deriveBiomeEnvironment` |
+
+### Social and economic systems
+
+| Module | Key exports |
+|--------|------------|
 | `src/dialogue.ts` | `resolveIntimidation`, `resolvePersuasion`, `resolveDeception`, `resolveTradeNegotiation` |
 | `src/faction.ts` | `FactionRegistry`, `updateStanding`, `getFactionStanding` |
 | `src/economy.ts` | `computeItemValue`, `applyWear`, `resolveDrops`, `evaluateTradeOffer` |
-| `src/progression.ts` | `applyXP`, `applyTrainingDrift`, `computeMilestones` |
+| `src/relationships.ts` | `createRelationshipGraph`, `establishRelationship`, `recordEvent`, `getRelationshipAffinity` |
+| `src/relationships-effects.ts` | Relationship modifiers applied to dialogue, teaching, morale contexts |
+| `src/party.ts` | `createPartyRegistry`, `createParty`, `addPartyMember`, `setPartyStanding` |
+
+### Campaign and world management
+
+| Module | Key exports |
+|--------|------------|
+| `src/campaign.ts` | `Campaign`, `stepCampaignDay`, `advanceCampaignClock`, `serializeCampaign`, `deserializeCampaign` |
+| `src/downtime.ts` | `stepDowntime`, `TreatmentSchedule`, `EntityRecoveryReport` |
+| `src/collective-activities.ts` | `createCollectiveProject`, `contributeToCollectiveProject`, `stepRitual`, `planCaravanRoute` |
+| `src/inventory.ts` | `createInventory`, `addItemToInventory`, `consumeItemsByTemplateId`, `getEncumbrancePenalty` |
+| `src/item-durability.ts` | `stepWear`, `applyWearPenalty` |
+| `src/settlement.ts` | `createSettlement`, `upgradeSettlement`, `getServiceBonus` |
+| `src/settlement-services.ts` | Service definitions (forge, medical, market, barracks, temple) |
+| `src/inheritance.ts` | `transferEquipment`, `transferRelationships`, `transferInventory` — character death succession |
+| `src/world-generation.ts` | `generateWorld`, `deriveStartingRelationships`, `deriveStartingConflicts` |
+
+### Quest and narrative layer
+
+| Module | Key exports |
+|--------|------------|
+| `src/quest.ts` | `questFactory`, `updateQuestState`, `resolveObjective`, `Quest`, `QuestObjective` |
+| `src/quest-generators.ts` | `generateBountyQuest`, `generateEscortQuest`, `generateRetrievalQuest` |
+| `src/chronicle.ts` | `createChronicle`, `addChronicleEntry`, `getEntriesForEntity`, `ChronicleEntry` |
+| `src/story-arcs.ts` | `detectStoryArcs`, `updateDetectedArcs` — pattern detection across chronicle entries |
+| `src/narrative-render.ts` | `renderEntry`, `renderArcSummary` — template-based prose from chronicle entries |
+| `src/legend.ts` | `createLegendRegistry`, `createLegendFromChronicle`, `applyLegendToDialogueContext` |
+| `src/mythology.ts` | `compressMythsFromHistory`, `stepMythologyYear`, `aggregateFactionMythEffect`, `scaledMythEffect` |
+| `src/narrative.ts` | `narrateCombatTick`, `narrateInjury` — human-readable combat event strings |
+| `src/narrative-stress.ts` | `runNarrativeStressTest`, `scoreNarrativePush` |
+| `src/metrics.ts` | `extractCombatMetrics`, `summariseBattle` — analytics from trace events |
+| `src/arena.ts` | Arena scenario DSL, `runArenaTrial`, `runArenaScenario` |
+
+### Anatomy subsystem
+
+| Module | Key exports |
+|--------|------------|
+| `src/anatomy/index.ts` | Re-export barrel for the full anatomy API |
+| `src/anatomy/anatomy-contracts.ts` | `CompiledAnatomyModel`, `AnatomyContracts`, `AnatomyCapabilities` — core anatomy types |
+| `src/anatomy/anatomy-schema.ts` | `validateExtendedBodyPlan`, `ValidationResult` — validate JSON body plan definitions |
+| `src/anatomy/anatomy-compiler.ts` | `compileAnatomyDefinition`, `compileAnatomyDefinitionOrThrow` — compile a body plan to indexed model |
+| `src/anatomy/anatomy-helpers.ts` | `createAnatomyHelpers`, `summarizeFunctionalHealth`, `sampleProfile` — query compiled anatomy |
+
+### Competence framework
+
+| Module | Key exports |
+|--------|------------|
+| `src/competence/index.ts` | Re-export barrel for the full competence API |
+| `src/competence/framework.ts` | `resolveCompetence(entity, action, ctx)` — unified competence resolution dispatcher |
+| `src/competence/catalogue.ts` | `CompetenceDomain`, `CompetenceTask`, predefined task catalogue entries |
+
+### Crafting subsystem
+
+| Module | Key exports |
+|--------|------------|
+| `src/crafting/index.ts` | `craftItem`, `startManufacturing`, `advanceManufacturing`, `getAvailableRecipes` — main crafting API |
 
 ---
 
@@ -207,16 +298,72 @@ A `CHANGELOG.md` entry will document any breaking change.
 
 These are implementation details.  Do not import them directly; they may change at any time.
 
+### Kernel internals
+
 | Module | Why internal |
 |--------|-------------|
 | `src/rng.ts` | `makeRng`, `eventSeed`, `hashString` — RNG contract is internal; seed structure may change |
+| `src/sim/seeds.ts` | Seed derivation utilities |
 | `src/sim/push.ts` | Pair-based resolution internals |
 | `src/sim/kernel.ts` (non-exported functions) | Step sub-phases, internal accumulators |
-| `src/sim/seeds.ts` | Seed derivation utilities |
-| `src/sim/ai/` | AI decision internals; host applications should use `buildAICommands()` via `src/sim/ai/system.ts` |
+| `src/sim/tick.ts` | Single-tick orchestration called by `stepWorld` |
+| `src/sim/action.ts` | Attack cooldown and swing-momentum state machine |
+| `src/sim/intent.ts` | Movement and defence intent processing |
+| `src/sim/combat.ts` | Hit resolution and skill-contest internals |
+| `src/sim/step/` | All sub-step modules (`push`, `energy`, `injury`, `movement`, etc.) |
+| `src/sim/context.ts` | `KernelContext` type definition (re-exported via `sim/world.ts`) |
+| `src/sim/events.ts` | Internal event emission — consumed by trace and bridge |
+| `src/sim/indexing.ts` | Spatial index internals used by `stepWorld` |
+| `src/sim/tuning.ts` | Physics constant tables — may be retuned in patch releases |
+| `src/sim/impairment.ts` | Functional damage accumulator — called by the kernel step |
+| `src/sim/occlusion.ts` | Internal visibility occlusion used by sensory |
+| `src/sim/systemic-toxicology.ts` | Multi-substance pharmacokinetics internals |
+| `src/sim/formation-unit.ts` | Squad-level unit structure used by `formation-combat.ts` |
+| `src/sim/commandBuilders.ts` | Low-level command construction helpers — prefer `noMove()` from `commands.ts` |
+| `src/sim/team.ts` | Team/side definitions used internally by AI and morale |
+| `src/derive.ts` | Movement-force and geometry derivations used by the kernel |
+| `src/lod.ts` | Level-of-detail helpers for large simulations |
+| `src/debug.ts` | Visual debug extraction (motion vectors, hit traces) |
 
-> `buildAICommands()` from `src/sim/ai/system.ts` is Experimental (Tier 2).
-> The individual sub-modules (`decide.ts`, `perception.ts`, `targeting.ts`) are Tier 3.
+### AI decision internals
+
+| Module | Why internal |
+|--------|-------------|
+| `src/sim/ai/decide.ts` | Decision-tree evaluation — called by `buildAICommands` |
+| `src/sim/ai/perception.ts` | AI sensory processing — called by `buildAICommands` |
+| `src/sim/ai/targeting.ts` | Target selection heuristics — called by `buildAICommands` |
+| `src/sim/ai/personality.ts` | Personality trait modifiers on AI decisions |
+| `src/sim/ai/types.ts` | AI policy and state types used only within `src/sim/ai/` |
+
+> Use `buildAICommands(world, ctx)` from `src/sim/ai/system.ts` (Tier 2) rather than importing AI sub-modules directly.
+
+### Competence domain resolvers
+
+These are called by `resolveCompetence()` and should not be imported directly.
+
+| Module | Domain |
+|--------|--------|
+| `src/competence/crafting.ts` | Crafting and tool use |
+| `src/competence/navigation.ts` | Wayfinding and cartography |
+| `src/competence/naturalist.ts` | Tracking, foraging, taming |
+| `src/competence/interspecies.ts` | Cross-species communication |
+| `src/competence/language.ts` | Linguistics and translation |
+| `src/competence/teaching.ts` | Knowledge transfer |
+| `src/competence/willpower.ts` | Endurance and mental fortitude |
+| `src/competence/engineering.ts` | Siege and structural engineering |
+| `src/competence/performance.ts` | Entertainment and oratory |
+| `src/competence/acoustic.ts` | Formation signalling (drums, horns) |
+
+### Crafting internals
+
+These are called by `craftItem()` / `startManufacturing()` and should not be imported directly.
+
+| Module | Role |
+|--------|------|
+| `src/crafting/materials.ts` | Material definitions and property calculations |
+| `src/crafting/recipes.ts` | Recipe validation and feasibility |
+| `src/crafting/manufacturing.ts` | Batch production mechanics |
+| `src/crafting/workshops.ts` | Workshop facility definitions and output bonuses |
 
 ---
 
