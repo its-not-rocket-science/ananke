@@ -6458,7 +6458,7 @@ use `eventSeed` with the entity id and current tick as salt.
 
 ---
 
-### CE-11 · Network Replication Reference Implementation
+### CE-11 · Network Replication Reference Implementation *(COMPLETE)*
 
 **Problem:** Ananke's deterministic core is ideal for lock-step multiplayer, but there is
 no reference showing how to implement command propagation, state reconciliation, or latency

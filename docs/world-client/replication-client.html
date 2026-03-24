@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Replication Client (CE-11)</title>
+<style>
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3245;
+  --text:#e0e4f0;--muted:#7a81a0;--accent:#6366f1;--warn:#f59e0b;
+  --cyan:#22d3ee;--pass:#22c55e;--fail:#ef4444;--red:#f87171;--blue:#60a5fa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:ui-monospace,"Cascadia Code",Menlo,monospace;font-size:12px;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ── Header ── */
+header{padding:.45rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.75rem;flex-shrink:0;flex-wrap:wrap}
+header h1{font-size:.95rem;font-weight:700}
+.badge{border-radius:3px;padding:.12rem .4rem;font-size:.68rem;font-weight:700;letter-spacing:.04em}
+.badge-ce{background:#312e81;color:#a5b4fc}
+.conn-dot{width:8px;height:8px;border-radius:50%;background:var(--fail);flex-shrink:0}
+.conn-dot.live{background:var(--pass);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.conn-label{font-size:.72rem;color:var(--muted)}
+.stat{font-size:.7rem;color:var(--muted)}
+.stat b{color:var(--text)}
+.ml{margin-left:auto}
+
+/* ── Body ── */
+.body{display:flex;flex:1;overflow:hidden}
+
+/* ── Canvas panel ── */
+.canvas-col{flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--border)}
+.canvas-wrap{flex:1;position:relative;overflow:hidden}
+canvas#battle{width:100%;height:100%;display:block;cursor:crosshair}
+.overlay-label{position:absolute;top:.4rem;left:.5rem;font-size:.65rem;color:var(--muted);pointer-events:none}
+.mode-badge{position:absolute;top:.4rem;right:.5rem;font-size:.65rem;font-weight:700;border-radius:3px;padding:.1rem .4rem;pointer-events:none}
+
+/* ── Controls bar ── */
+.controls{padding:.4rem .75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:.5rem;flex-shrink:0;flex-wrap:wrap}
+.btn{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;font-family:inherit;font-size:.68rem;font-weight:600;padding:.2rem .55rem;transition:border-color .1s}
+.btn:hover{border-color:var(--accent)}
+.btn.active{border-color:var(--accent);color:var(--accent)}
+label.ctrl{color:var(--muted);font-size:.68rem}
+select{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:.68rem;padding:.15rem .35rem}
+
+/* ── Sidebar ── */
+.side{width:270px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+.side-section{flex-shrink:0}
+.sec-head{padding:.35rem .65rem;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--warn);border-bottom:1px solid var(--border)}
+.entity-list{overflow-y:auto;max-height:50vh;flex-shrink:0}
+
+.ent-row{padding:.3rem .65rem;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.ent-row:hover{background:var(--surface)}
+.ent-row.selected{background:#1e1b4b;border-left:2px solid var(--accent)}
+.ent-row.dead{opacity:.35}
+.ent-name{display:flex;align-items:center;gap:.35rem;margin-bottom:.2rem}
+.ent-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ent-id{font-weight:700;font-size:.75rem}
+.ent-tag{font-size:.6rem;color:var(--muted)}
+.bar-row{display:flex;align-items:center;gap:.3rem;margin-bottom:.1rem}
+.bar-label{width:36px;color:var(--muted);font-size:.62rem;flex-shrink:0}
+.bar-bg{flex:1;height:5px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px;transition:width .15s}
+.bar-hp{background:var(--pass)}
+.bar-fatigue{background:var(--warn)}
+.bar-shock{background:var(--fail)}
+
+/* ── Log ── */
+.log-box{flex:1;overflow-y:auto;min-height:0}
+.log-entry{padding:.18rem .65rem;border-bottom:1px solid var(--border);font-size:.65rem;display:flex;gap:.4rem;align-items:flex-start}
+.log-tick{color:var(--muted);flex-shrink:0;min-width:38px}
+.log-msg{word-break:break-word}
+.log-info{color:var(--text)}
+.log-warn{color:var(--warn)}
+.log-error{color:var(--fail)}
+.log-event{color:var(--cyan)}
+.log-cmd{color:#a5f3fc}
+.log-reconcile{color:#c4b5fd}
+.log-reset{color:#f9a8d4}
+
+/* ── Protocol tooltip ── */
+.proto-panel{border-top:1px solid var(--border);padding:.5rem .65rem;flex-shrink:0;font-size:.62rem;color:var(--muted);line-height:1.6}
+.proto-panel b{color:var(--cyan)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Ananke Replication Client</h1>
+  <span class="badge badge-ce">CE-11</span>
+  <div class="conn-dot" id="connDot"></div>
+  <span class="conn-label" id="connLabel">Disconnected</span>
+  <span class="stat ml">tick&nbsp;<b id="statTick">—</b></span>
+  <span class="stat">RTT&nbsp;<b id="statRtt">—</b></span>
+  <span class="stat">diff&nbsp;<b id="statDiff">—</b></span>
+  <span class="stat">reconciles&nbsp;<b id="statReconcile">0</b></span>
+  <span class="stat">entities&nbsp;<b id="statEntities">—</b></span>
+</header>
+
+<div class="body">
+  <!-- Canvas -->
+  <div class="canvas-col">
+    <div class="controls">
+      <label class="ctrl">View:</label>
+      <button class="btn active" id="btnShowHealth" onclick="toggleOverlay('health',this)">Health</button>
+      <button class="btn active" id="btnShowShock"  onclick="toggleOverlay('shock',this)">Shock</button>
+      <button class="btn active" id="btnShowVel"    onclick="toggleOverlay('vel',this)">Velocity</button>
+      <span style="flex:1"></span>
+      <label class="ctrl">Selected entity:</label>
+      <select id="entityPicker" onchange="onEntityPick()"><option value="">— none —</option></select>
+      <button class="btn" id="btnMoveCmd"   onclick="startCommand('move')">Issue Move</button>
+      <button class="btn" id="btnDefend"    onclick="sendDefend()">Defend</button>
+      <span class="stat" id="cmdHint" style="color:var(--warn)"></span>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="battle"></canvas>
+      <div class="overlay-label" id="overlayLabel">Click canvas to issue move command to selected entity</div>
+      <div class="mode-badge" id="modeBadge" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="side">
+    <div class="side-section">
+      <div class="sec-head">Entities</div>
+      <div class="entity-list" id="entityList"></div>
+    </div>
+    <div class="side-section">
+      <div class="sec-head">Log</div>
+    </div>
+    <div class="log-box" id="logBox"></div>
+    <div class="proto-panel">
+      <b>Protocol (CE-11)</b><br>
+      <b>→</b> init: full WorldState on connect<br>
+      <b>→</b> tick: CE-9 binary diff (base64) + commands<br>
+      <b>→</b> snapshot: full state every 20 ticks<br>
+      <b>←</b> command: {entityId, intent, tickHint}<br>
+      Grace window: ±3 ticks for late commands
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+
+const WS_URL = (location.protocol === 'https:' ? 'wss:' : 'ws:') +
+               '//' + (location.hostname || 'localhost') + ':3001/ws';
+const HTTP_URL = (location.protocol || 'http:') + '//' +
+                 (location.hostname || 'localhost') + ':3001';
+
+const FIXED_SCALE = 10000;   // SCALE.m — fixed-point metres
+const Q_SCALE     = 10000;   // SCALE.Q
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let ws            = null;
+let authState     = null;   // last authoritative WorldState
+let predState     = null;   // client-predicted state (from local interpolation)
+let serverTick    = 0;
+let connectTime   = null;
+let lastTickTime  = null;
+let reconcileCount = 0;
+let lastDiffBytes = 0;
+let selectedId    = null;
+let pendingMove   = false;   // waiting for canvas click
+let overlays = { health: true, shock: true, vel: true };
+
+// ── CE-9 binary diff decoder (pure JS, mirrors snapshot.ts) ──────────────────
+
+const TAG = { NULL:1, TRUE:2, FALSE:3, UINT8:4, INT32:5, FLOAT64:6, STRING:7, ARRAY:8, OBJECT:9 };
+const MAGIC = 0x414E4B44;
+
+function base64ToUint8Array(b64) {
+  const bin = atob(b64);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return buf;
+}
+
+function unpackDiff(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let pos = 0;
+
+  function readUint8()  { return view.getUint8(pos++); }
+  function readUint16() { const v = view.getUint16(pos, true); pos += 2; return v; }
+  function readUint32() { const v = view.getUint32(pos, true); pos += 4; return v; }
+  function readInt32()  { const v = view.getInt32(pos, true);  pos += 4; return v; }
+  function readFloat64(){ const v = view.getFloat64(pos, true); pos += 8; return v; }
+  function readString() {
+    const len = readUint16();
+    const b = new Uint8Array(bytes.buffer, bytes.byteOffset + pos, len);
+    pos += len;
+    return new TextDecoder().decode(b);
+  }
+
+  function readValue() {
+    const tag = readUint8();
+    switch (tag) {
+      case TAG.NULL:    return null;
+      case TAG.TRUE:    return true;
+      case TAG.FALSE:   return false;
+      case TAG.UINT8:   return readUint8();
+      case TAG.INT32:   return readInt32();
+      case TAG.FLOAT64: return readFloat64();
+      case TAG.STRING: {
+        const len = readUint16();
+        const b = new Uint8Array(bytes.buffer, bytes.byteOffset + pos, len);
+        pos += len;
+        return new TextDecoder().decode(b);
+      }
+      case TAG.ARRAY: {
+        const count = readUint32();
+        const arr = [];
+        for (let i = 0; i < count; i++) arr.push(readValue());
+        return arr;
+      }
+      case TAG.OBJECT: {
+        const count = readUint32();
+        const obj = {};
+        for (let i = 0; i < count; i++) {
+          readUint8(); // STRING tag
+          const len = readUint16();
+          const b = new Uint8Array(bytes.buffer, bytes.byteOffset + pos, len);
+          pos += len;
+          const key = new TextDecoder().decode(b);
+          obj[key] = readValue();
+        }
+        return obj;
+      }
+      default: throw new Error(`unknown tag 0x${tag.toString(16)}`);
+    }
+  }
+
+  const magic = readUint32();
+  if (magic !== MAGIC) throw new Error(`bad magic 0x${magic.toString(16)}`);
+  const version = readUint8();
+  if (version !== 1) throw new Error(`unsupported version ${version}`);
+  return readValue();
+}
+
+function applyDiff(base, diff) {
+  const next = Object.assign({}, base, diff.worldChanges, { tick: diff.tick });
+
+  const removedSet = new Set(diff.removed);
+  let entities = base.entities.filter(e => !removedSet.has(e.id));
+
+  // Apply patches
+  const patchMap = new Map(diff.modified.map(p => [p.id, p.changes]));
+  entities = entities.map(e => {
+    const patch = patchMap.get(e.id);
+    return patch ? Object.assign({}, e, patch) : e;
+  });
+
+  // Add new entities
+  entities = [...entities, ...diff.added];
+  entities.sort((a, b) => a.id - b.id);
+
+  return Object.assign({}, next, { entities });
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+
+function connect() {
+  log('info', `Connecting to ${WS_URL}…`);
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    connectTime = Date.now();
+    setConnected(true);
+    log('event', 'WebSocket connected');
+  };
+
+  ws.onclose = () => {
+    setConnected(false);
+    log('warn', 'WebSocket disconnected — reconnecting in 3 s');
+    setTimeout(connect, 3000);
+  };
+
+  ws.onerror = () => {
+    log('error', `WebSocket error (server running at ${WS_URL}?)`);
+  };
+
+  ws.onmessage = evt => {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch { return; }
+    onMessage(msg);
+  };
+}
+
+function onMessage(msg) {
+  const now = Date.now();
+  const rtt = lastTickTime ? now - lastTickTime : null;
+  lastTickTime = now;
+
+  switch (msg.type) {
+    case 'init': {
+      authState = msg.state;
+      predState = JSON.parse(JSON.stringify(authState));
+      serverTick = msg.tick;
+      log('event', `init: ${authState.entities.length} entities, tick=${serverTick}`);
+      rebuildEntityPicker();
+      render();
+      break;
+    }
+
+    case 'snapshot': {
+      const prev = authState;
+      authState  = msg.state;
+      serverTick = msg.tick;
+
+      // Reconciliation check: was our predicted state correct?
+      if (predState && prev) {
+        const reconciled = reconcile(predState, authState);
+        if (reconciled) reconcileCount++;
+      }
+      predState = JSON.parse(JSON.stringify(authState));
+
+      updateStats(rtt, null);
+      render();
+      if (msg.tick % 20 === 0) rebuildEntityPicker();
+      break;
+    }
+
+    case 'tick': {
+      if (!authState) break;
+      try {
+        const bytes = base64ToUint8Array(msg.diff);
+        lastDiffBytes = bytes.length;
+        const diff  = unpackDiff(bytes);
+        authState   = applyDiff(authState, diff);
+        serverTick  = msg.tick;
+        predState   = JSON.parse(JSON.stringify(authState));
+
+        updateStats(rtt, bytes.length);
+        render();
+        // Log commands broadcast by server
+        if (msg.commands && msg.commands.length > 0) {
+          const overrides = msg.commands.filter(c => c.entityId <= 16);
+          if (overrides.length > 0)
+            log('cmd', `tick ${serverTick}: ${overrides.length} cmd(s) applied`);
+        }
+      } catch(e) {
+        log('error', `diff decode error: ${e.message}`);
+      }
+      break;
+    }
+
+    case 'reset': {
+      authState  = null;
+      predState  = null;
+      serverTick = 0;
+      const winner = msg.winner;
+      log('reset', `Battle reset! ${winner ? `Team ${winner} wins` : 'Draw'}`);
+      break;
+    }
+
+    case 'command_dropped': {
+      log('warn', `Command dropped (stale): tickHint=${msg.tickHint} serverTick=${msg.serverTick}`);
+      break;
+    }
+  }
+}
+
+/** Check if predicted state diverged from authoritative. Returns true if reconciled. */
+function reconcile(predicted, authoritative) {
+  if (!predicted || !authoritative) return false;
+  // Compare entity positions and health at a coarse level
+  for (const authEnt of authoritative.entities) {
+    const predEnt = predicted.entities.find(e => e.id === authEnt.id);
+    if (!predEnt) return true; // entity appeared/disappeared — reconcile
+    // Check position divergence (> 0.5 m in fixed-point = 5000 units)
+    const dx = Math.abs((predEnt.position_m?.x ?? 0) - (authEnt.position_m?.x ?? 0));
+    const dy = Math.abs((predEnt.position_m?.y ?? 0) - (authEnt.position_m?.y ?? 0));
+    if (dx > 5000 || dy > 5000) {
+      log('reconcile', `Entity ${authEnt.id} reconciled (Δ pos ${Math.round(dx/1000)}m,${Math.round(dy/1000)}m)`);
+      return true;
+    }
+  }
+  return false;
+}
+
+// ── Command sending ───────────────────────────────────────────────────────────
+
+function sendCommand(entityId, intent) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    log('error', 'Not connected'); return;
+  }
+  const msg = JSON.stringify({ type: 'command', entityId, intent, tickHint: serverTick });
+  ws.send(msg);
+  log('cmd', `→ entity ${entityId}: ${intent.verb || JSON.stringify(intent)}`);
+}
+
+function sendDefend() {
+  if (!selectedId) { log('warn', 'Select an entity first'); return; }
+  sendCommand(selectedId, { verb: 'defend' });
+}
+
+function startCommand(type) {
+  if (!selectedId) { log('warn', 'Select an entity first'); return; }
+  if (type === 'move') {
+    pendingMove = true;
+    document.getElementById('cmdHint').textContent = 'Click battle canvas to set move target…';
+    document.getElementById('overlayLabel').textContent = '↳ Click to set move destination';
+  }
+}
+
+// ── Canvas rendering ─────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('battle');
+const ctx2d  = canvas.getContext('2d');
+
+function toggleOverlay(key, btn) {
+  overlays[key] = !overlays[key];
+  btn.classList.toggle('active', overlays[key]);
+  render();
+}
+
+canvas.addEventListener('click', evt => {
+  if (!pendingMove || !selectedId || !authState) return;
+  pendingMove = false;
+  document.getElementById('cmdHint').textContent = '';
+  document.getElementById('overlayLabel').textContent = 'Click canvas to issue move command to selected entity';
+
+  const rect = canvas.getBoundingClientRect();
+  const px   = evt.clientX - rect.left;
+  const py   = evt.clientY - rect.top;
+  const { toWorld } = getTransform();
+  const [wx, wy] = toWorld(px, py);
+
+  sendCommand(selectedId, {
+    verb: 'move',
+    targetPos: { x: Math.round(wx), y: Math.round(wy), z: 0 },
+  });
+});
+
+canvas.addEventListener('click', evt => {
+  if (pendingMove) return; // handled above
+  if (!authState) return;
+  const rect = canvas.getBoundingClientRect();
+  const px   = evt.clientX - rect.left;
+  const py   = evt.clientY - rect.top;
+  const { toWorld } = getTransform();
+  const [wx, wy] = toWorld(px, py);
+
+  // Find nearest entity within 15 px
+  let best = null, bestDist = Infinity;
+  for (const e of authState.entities) {
+    const ex = e.position_m?.x ?? 0;
+    const ey = e.position_m?.y ?? 0;
+    const [sx, sy] = worldToScreen(ex, ey);
+    const d = Math.hypot(sx - px, sy - py);
+    if (d < 15 && d < bestDist) { bestDist = d; best = e.id; }
+  }
+  if (best !== null) selectEntity(best);
+});
+
+let _transform = null;
+function getTransform() {
+  return _transform || computeTransform();
+}
+
+function computeTransform() {
+  if (!authState || authState.entities.length === 0) {
+    return { toScreen: (x,y) => [0,0], toWorld: (sx,sy) => [0,0], scale: 1 };
+  }
+  const w = canvas.width;
+  const h = canvas.height;
+  const PAD = 40;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const e of authState.entities) {
+    const x = e.position_m?.x ?? 0;
+    const y = e.position_m?.y ?? 0;
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+  }
+  // Add some margin beyond entity bounds
+  const rangeX = Math.max(maxX - minX, 50 * FIXED_SCALE);
+  const rangeY = Math.max(maxY - minY, 50 * FIXED_SCALE);
+  const scaleX = (w - PAD*2) / rangeX;
+  const scaleY = (h - PAD*2) / rangeY;
+  const scale  = Math.min(scaleX, scaleY);
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+
+  const toScreen = (wx, wy) => [
+    w/2 + (wx - cx) * scale,
+    h/2 + (wy - cy) * scale,
+  ];
+  const toWorld = (sx, sy) => [
+    cx + (sx - w/2) / scale,
+    cy + (sy - h/2) / scale,
+  ];
+  _transform = { toScreen, toWorld, scale };
+  return _transform;
+}
+
+function worldToScreen(wx, wy) {
+  return getTransform().toScreen(wx, wy);
+}
+
+function render() {
+  if (!authState) return;
+  _transform = null; // recompute
+
+  const w = canvas.width  = canvas.offsetWidth;
+  const h = canvas.height = canvas.offsetHeight;
+
+  ctx2d.fillStyle = '#0f1117';
+  ctx2d.fillRect(0, 0, w, h);
+
+  // Team dividing line
+  if (authState.entities.length > 0) {
+    // Find median Y between teams
+    const team1 = authState.entities.filter(e => e.teamId === 1 && !e.injury?.dead);
+    const team2 = authState.entities.filter(e => e.teamId === 2 && !e.injury?.dead);
+    if (team1.length && team2.length) {
+      const avgY1 = team1.reduce((s,e) => s + (e.position_m?.y??0), 0) / team1.length;
+      const avgY2 = team2.reduce((s,e) => s + (e.position_m?.y??0), 0) / team2.length;
+      const midY = (avgY1 + avgY2) / 2;
+      const [, sy] = worldToScreen(0, midY);
+      ctx2d.strokeStyle = '#2e3245';
+      ctx2d.setLineDash([4, 4]);
+      ctx2d.beginPath();
+      ctx2d.moveTo(0, sy);
+      ctx2d.lineTo(w, sy);
+      ctx2d.stroke();
+      ctx2d.setLineDash([]);
+    }
+  }
+
+  for (const e of authState.entities) {
+    renderEntity(e);
+  }
+
+  // Tick counter overlay
+  ctx2d.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx2d.fillRect(w - 80, h - 22, 78, 20);
+  ctx2d.fillStyle = '#7a81a0';
+  ctx2d.font = '10px monospace';
+  ctx2d.textAlign = 'right';
+  ctx2d.fillText(`tick ${serverTick}`, w - 4, h - 8);
+}
+
+function renderEntity(e) {
+  const dead  = e.injury?.dead ?? false;
+  const x     = e.position_m?.x ?? 0;
+  const y     = e.position_m?.y ?? 0;
+  const [sx, sy] = worldToScreen(x, y);
+  const r     = dead ? 4 : 7;
+  const team  = e.teamId === 1;
+  const isSelected = e.id === selectedId;
+
+  // Shadow / selection ring
+  if (isSelected) {
+    ctx2d.beginPath();
+    ctx2d.arc(sx, sy, r + 4, 0, Math.PI*2);
+    ctx2d.strokeStyle = '#6366f1';
+    ctx2d.lineWidth   = 2;
+    ctx2d.stroke();
+  }
+
+  // Body dot
+  ctx2d.beginPath();
+  ctx2d.arc(sx, sy, r, 0, Math.PI*2);
+  if (dead) {
+    ctx2d.fillStyle = '#374151';
+  } else {
+    const shock = (e.injury?.shock ?? 0) / Q_SCALE;
+    const t     = Math.min(1, shock * 2);
+    if (team) {
+      // Team 1: blue → purple as shock rises
+      ctx2d.fillStyle = `hsl(${210 - t*40}, ${70-t*20}%, ${50-t*15}%)`;
+    } else {
+      // Team 2: red → dark-red
+      ctx2d.fillStyle = `hsl(${0 + t*10}, ${70-t*20}%, ${50-t*15}%)`;
+    }
+  }
+  ctx2d.fill();
+
+  // Velocity arrow
+  if (overlays.vel && !dead) {
+    const vx = e.velocity_mps?.x ?? 0;
+    const vy = e.velocity_mps?.y ?? 0;
+    const speed = Math.hypot(vx, vy);
+    if (speed > 100) {
+      const { scale } = getTransform();
+      const ax = (vx / FIXED_SCALE) * scale * 0.8;
+      const ay = (vy / FIXED_SCALE) * scale * 0.8;
+      ctx2d.beginPath();
+      ctx2d.moveTo(sx, sy);
+      ctx2d.lineTo(sx + ax, sy + ay);
+      ctx2d.strokeStyle = '#22d3ee';
+      ctx2d.lineWidth = 1.5;
+      ctx2d.stroke();
+    }
+  }
+
+  // Health bar above entity
+  if (overlays.health && !dead) {
+    const BAR_W = 18;
+    const BAR_H = 3;
+    const bx = sx - BAR_W/2;
+    const by = sy - r - 7;
+    // background
+    ctx2d.fillStyle = '#1a1d27';
+    ctx2d.fillRect(bx, by, BAR_W, BAR_H);
+    // health (approx: 1 - shock as proxy)
+    const shock = Math.min(1, (e.injury?.shock ?? 0) / Q_SCALE);
+    const hp    = 1 - shock;
+    ctx2d.fillStyle = hp > 0.5 ? '#22c55e' : hp > 0.25 ? '#f59e0b' : '#ef4444';
+    ctx2d.fillRect(bx, by, Math.round(BAR_W * hp), BAR_H);
+  }
+
+  // Shock dot
+  if (overlays.shock && !dead) {
+    const shock = (e.injury?.shock ?? 0) / Q_SCALE;
+    if (shock > 0.3) {
+      ctx2d.beginPath();
+      ctx2d.arc(sx + r + 2, sy - r, 3, 0, Math.PI*2);
+      ctx2d.fillStyle = `rgba(239,68,68,${Math.min(1, shock)})`;
+      ctx2d.fill();
+    }
+  }
+
+  // Entity ID label (small)
+  ctx2d.fillStyle = dead ? '#4b5563' : (team ? '#93c5fd' : '#fca5a5');
+  ctx2d.font = '9px monospace';
+  ctx2d.textAlign = 'center';
+  ctx2d.fillText(String(e.id), sx, sy + r + 10);
+}
+
+// ── Entity list / sidebar ─────────────────────────────────────────────────────
+
+function selectEntity(id) {
+  selectedId = id;
+  document.getElementById('entityPicker').value = String(id);
+  // Highlight row
+  document.querySelectorAll('.ent-row').forEach(r => {
+    r.classList.toggle('selected', parseInt(r.dataset.id) === id);
+  });
+  render();
+}
+
+function onEntityPick() {
+  const val = document.getElementById('entityPicker').value;
+  selectedId = val ? parseInt(val) : null;
+  render();
+}
+
+function rebuildEntityPicker() {
+  if (!authState) return;
+  const picker = document.getElementById('entityPicker');
+  const prev   = picker.value;
+  picker.innerHTML = '<option value="">— none —</option>';
+  for (const e of authState.entities) {
+    const opt = document.createElement('option');
+    opt.value = e.id;
+    opt.textContent = `Entity ${e.id} (team ${e.teamId})${e.injury?.dead ? ' ✕' : ''}`;
+    picker.appendChild(opt);
+  }
+  picker.value = prev;
+  renderEntityList();
+}
+
+function renderEntityList() {
+  if (!authState) return;
+  const list = document.getElementById('entityList');
+  list.innerHTML = '';
+  for (const e of authState.entities) {
+    const dead    = e.injury?.dead ?? false;
+    const shock   = Math.min(1, (e.injury?.shock ?? 0) / Q_SCALE);
+    const fatigue = Math.min(1, (e.energy?.fatigue ?? 0) / Q_SCALE);
+    const hp      = Math.max(0, 1 - shock);
+    const team    = e.teamId === 1;
+    const color   = team ? '#60a5fa' : '#f87171';
+
+    const div = document.createElement('div');
+    div.className = 'ent-row' + (dead ? ' dead' : '') + (e.id === selectedId ? ' selected' : '');
+    div.dataset.id = e.id;
+    div.onclick = () => selectEntity(e.id);
+    div.innerHTML = `
+      <div class="ent-name">
+        <span class="ent-dot" style="background:${color}"></span>
+        <span class="ent-id">Entity ${e.id}</span>
+        <span class="ent-tag">team ${e.teamId}${dead ? ' · dead' : ''}</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">HP</span>
+        <div class="bar-bg"><div class="bar-fill bar-hp" style="width:${Math.round(hp*100)}%"></div></div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">fatigue</span>
+        <div class="bar-bg"><div class="bar-fill bar-fatigue" style="width:${Math.round(fatigue*100)}%"></div></div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">shock</span>
+        <div class="bar-bg"><div class="bar-fill bar-shock" style="width:${Math.round(shock*100)}%"></div></div>
+      </div>`;
+    list.appendChild(div);
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+let _lastRttMs = null;
+function updateStats(rttMs, diffBytes) {
+  document.getElementById('statTick').textContent = serverTick;
+  if (rttMs !== null) {
+    _lastRttMs = rttMs;
+    document.getElementById('statRtt').textContent = rttMs + ' ms';
+  }
+  if (diffBytes !== null) {
+    document.getElementById('statDiff').textContent = diffBytes + ' B';
+  }
+  document.getElementById('statReconcile').textContent = reconcileCount;
+  if (authState) {
+    const live = authState.entities.filter(e => !e.injury?.dead).length;
+    document.getElementById('statEntities').textContent = `${live}/${authState.entities.length}`;
+  }
+  renderEntityList();
+}
+
+function setConnected(live) {
+  document.getElementById('connDot').classList.toggle('live', live);
+  document.getElementById('connLabel').textContent = live ? 'Live' : 'Disconnected';
+}
+
+// ── Log ───────────────────────────────────────────────────────────────────────
+
+const MAX_LOG = 120;
+function log(type, msg) {
+  const box   = document.getElementById('logBox');
+  const entry = document.createElement('div');
+  entry.className = `log-entry`;
+  entry.innerHTML = `<span class="log-tick">${serverTick}</span><span class="log-msg log-${type}">${msg}</span>`;
+  box.appendChild(entry);
+  while (box.children.length > MAX_LOG) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── Resize ────────────────────────────────────────────────────────────────────
+
+const ro = new ResizeObserver(() => { _transform = null; render(); });
+ro.observe(canvas);
+
+// ── Poll for entity list refresh ─────────────────────────────────────────────
+
+setInterval(() => { if (authState) renderEntityList(); }, 500);
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+
+log('info', `Server: ${HTTP_URL}`);
+log('info', `WebSocket: ${WS_URL}`);
+log('info', 'CE-11 protocol: client-side prediction + state reconciliation');
+connect();
+</script>
+</body>
+</html>
