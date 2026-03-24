@@ -98,6 +98,18 @@ Adding new **optional** fields to these interfaces is never a breaking change.
 
 ---
 
+## [0.1.11] — 2026-03-24
+
+  ### Added
+
+  - **Export Presets, Weapons, Channels, Traits, Kinds from Package Root** (`src/parallel.ts`)
+    - Five modules were documented as Tier 1 stable but missing from src/index.ts.
+      mkKnight/mkBoxer/etc., weapon arrays, DamageChannel, TraitId, CommandKinds
+      and related symbols are now importable directly from the package root.
+      Fix STABLE_API.md: WEAPONS was a phantom name; correct to ALL_HISTORICAL_MELEE etc.
+
+---
+
 ## [0.1.10] — 2026-03-24
 
   ### Added

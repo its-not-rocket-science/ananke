@@ -74,7 +74,31 @@ version bump and a migration guide in `CHANGELOG.md`.
 |--------|-------------|
 | `mkKnight`, `mkBoxer`, `mkWrestler`, `mkOctopus`, `mkScubaDiver` | Named entity factories |
 | `AMATEUR_BOXER`, `PRO_BOXER`, `GRECO_WRESTLER`, `KNIGHT_INFANTRY`, `LARGE_PACIFIC_OCTOPUS` | Validated archetypes |
-| `WEAPONS` | Historical weapons database (~70 weapons, six eras) |
+| `ALL_HISTORICAL_MELEE`, `ALL_HISTORICAL_RANGED` | Complete historical weapon arrays |
+| `PREHISTORIC_MELEE` … `CONTEMPORARY_RANGED` | Per-era weapon arrays (six eras × melee/ranged) |
+
+### Damage channels and traits (`src/channels.ts`, `src/traits.ts`)
+
+| Export | Description |
+|--------|-------------|
+| `DamageChannel` | Enum of damage channel types (kinetic, thermal, etc.) |
+| `ChannelMask` | Bitmask type for combining channels |
+| `channelMask(...channels)` | Build a combined channel mask |
+| `hasChannel(mask, ch)` | Test whether a mask includes a channel |
+| `TraitId` | Union type of all valid trait identifiers |
+| `TRAITS` | Record mapping each `TraitId` to its `TraitEffect` |
+| `buildTraitProfile(traits)` | Aggregate trait multipliers from an entity's trait list |
+| `applyTraitsToAttributes(attrs, traits)` | Apply trait effects to an attribute block |
+
+### Command vocabulary (`src/sim/kinds.ts`)
+
+| Export | Description |
+|--------|-------------|
+| `CommandKinds` | Object of command kind string constants (`Move`, `Attack`, `Defend`, …) |
+| `MoveModes` | Walk / sprint / crawl constants |
+| `DefenceModes` | Parry / dodge / block constants |
+| `EngageModes` | Engage / disengage constants |
+| `HitArea` | Union of valid hit area identifiers |
 
 ### Replay and serialization (`src/replay.ts`)
 

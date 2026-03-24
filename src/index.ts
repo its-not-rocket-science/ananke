@@ -12,14 +12,19 @@ export * from "./units.js";          // q(), SCALE, qMul, qDiv, clampQ, mulDiv, 
 export * from "./types.js";          // IndividualAttributes, core scalar types
 export * from "./archetypes.js";     // Archetype, BodyPlan, built-in species presets
 export * from "./generate.js";       // generateIndividual()
-export * from "./equipment.js";      // WEAPONS database, EquipmentCatalogue
+export * from "./equipment.js";      // Weapon, Armour, Gear, WeaponDamageProfile, EquipmentCatalogue
+export * from "./weapons.js";        // ALL_HISTORICAL_MELEE, ALL_HISTORICAL_RANGED, PREHISTORIC_MELEE … CONTEMPORARY_RANGED
+export * from "./presets.js";        // mkKnight(), mkBoxer(), mkWrestler(), mkOctopus(), mkScubaDiver()
+export * from "./channels.js";       // DamageChannel, ChannelMask, channelMask()
+export * from "./traits.js";         // TraitId, TRAITS, buildTraitProfile(), applyTraitsToAttributes()
 export * from "./describe.js";       // describeCharacter(), formatCharacterSheet(), formatOneLine()
 
 export * from "./sim/vec3.js";       // Vec3, lerpVec3, addVec3
 export * from "./sim/condition.js";  // ConditionSnapshot, condition constants
 export * from "./sim/injury.js";     // InjuryRegion, BodyRegion, injury constants
 export * from "./sim/entity.js";     // Entity (stable fields: id, pos, mass_kg, attributes…)
-export * from "./sim/commands.js";   // CommandMap, EntityCommand, action verbs
+export * from "./sim/commands.js";   // CommandMap, Command, noMove()
+export * from "./sim/kinds.js";      // CommandKinds, MoveModes, DefenceModes, EngageModes, HitArea
 export * from "./sim/kernel.js";     // stepWorld(), applyImpactToInjury(), applyExplosion()
 export * from "./sim/body.js";       // BodyPlan, BodySegment, humanoid / quadruped plans
 export * from "./sim/world.js";      // WorldState, KernelContext
