@@ -5080,7 +5080,7 @@ Potential future phases building on the RPG foundation:
 
 **Phase 70: Stratified Political Simulation ✅ COMPLETE** — Vassal/noble layer between individual and polity; seven loyalty types (ideological, transactional, terrified, honor_bound, opportunistic, kin_bound, ideological_rival); command-chain filtering reduces effective military strength by disloyal vassals; deterministic succession crises. See detailed spec below.
 
-**Phase 71: Cultural Generation & Evolution Framework ✅ COMPLETE** — Bottom-up culture derivation from five environmental forces (Environment, Power, Exchange, Legacy, Belief); CYCLES audit extracts values, contradictions, and recurring practices; `stepCultureYear` drifts culture via tech diffusion, military outcomes, and myth formation; `describeCulture` outputs human-readable summaries for writers and game designers. See detailed spec below. `src/sim/hazard.ts`: 5 hazard types (fire, radiation, toxic_gas, acid, extreme_cold) with base-effect profiles; 5 sample zones (CAMPFIRE 3 m/1 h, RADIATION_ZONE 50 m/permanent, MUSTARD_GAS 20 m/30 min, ACID_POOL 2 m/2 h, BLIZZARD_ZONE 100 m/6 h). Linear exposure falloff: `exposureQ = (radius − dist) × intensity / radius`. `computeDistToHazard` — Euclidean float√ truncated to integer. `isInsideHazard` — integer squared-distance comparison (no float). `computeHazardExposure(dist_Sm, hazard)` → Q ∈ [0, intensity_Q]. `deriveHazardEffect(hazard, exposureQ)` → `HazardEffect { fatigueInc_Q, thermalDelta_Q, radiationDose_Q, surfaceDamageInc_Q, diseaseExposureId? }` — each rate scaled by exposureQ/SCALE.Q; toxic_gas sets diseaseExposureId "marsh_fever"; extreme_cold produces negative thermalDelta (cooling). `stepHazardZone(hazard, elapsedSeconds)` — decrements duration, clamps to 0; permanent (-1) is a no-op. `isHazardExpired(hazard)` — duration ≥ 0 && duration === 0. No Entity field needed — hazards are world-level objects. 56 tests; clean build.
+**Phase 71: Cultural Generation & Evolution Framework ✅ COMPLETE** — Bottom-up culture derivation from five environmental forces (Environment, Power, Exchange, Legacy, Belief); CYCLES audit extracts values, contradictions, and recurring practices; `stepCultureYear` drifts culture via tech diffusion, military outcomes, and myth formation; `describeCulture` outputs human-readable summaries for writers and game designers. See detailed spec below.
 
 ---
 
@@ -5263,39 +5263,48 @@ Items 6–8 lower the integration barrier.  Items 9–11 deepen validation and i
 turning a technically excellent engine into a platform people can confidently build on.
 
 > **⚠ Outstanding work (as of March 2026):**
-> Two roadmap items remain incomplete.  Everything else — all 67 simulation phases, all five
+> One roadmap item remains in progress.  Everything else — all 67 simulation phases, all five
 > integration milestones, Items 7–16, all Platform Hardening items, CE-1–4 and CE-6 — is
 > delivered.
 >
-> - **Item 6 · Reference Renderer** — the single highest-leverage unstarted task; a runnable
->   Godot or Unity plugin would cut integration time from weeks to hours for visual projects.
-> - **CE-5 · WebAssembly Kernel** — long-lead; explicitly depends on Item 6 existing first.
->   Once the renderer plugin exists, CE-5 eliminates the Node.js sidecar it currently requires.
+> - **Item 6 · Reference Renderer** — **In progress.** Both companion repos exist and run:
+>   `ananke-godot-reference` (GDScript + HTTP sidecar) and `ananke-unity-reference` (C# + HTTP
+>   sidecar), each with Knight vs. Brawler demo scene.  Outstanding: full skeleton bone mapping
+>   (M2), AnimationTree wiring (M3), and FABRIK/IK grapple constraints (M4).
+> - **CE-5 · WebAssembly Kernel** — long-lead; explicitly depends on Item 6 M2–M4 being
+>   complete first.  Once the renderer plugin covers bone mapping and IK, CE-5 eliminates the
+>   Node.js sidecar it currently requires.
 
 ---
 
-### 6 · Reference Renderer Implementation *(OUTSTANDING — not yet started)*
+### 6 · Reference Renderer Implementation *(IN PROGRESS — M1 complete, M2–M4 outstanding)*
 
-**The gap:** `src/model3d.ts` / `src/bridge/` provide pure data-extraction functions and
-documented output formats, but every adopter must independently solve the mapping of Ananke's
-abstract segment IDs to a specific engine's skeleton, the 20 Hz → 60+ Hz interpolation, and
-the animation state machine wiring.  The bridge sketches in `docs/ecosystem.md` are
-pseudocode, not runnable code.
+**Status (March 2026):** Both companion repos ship and run end-to-end.  M1 acceptance criteria
+met for both engines.  Remaining work is M2 (bone mapping), M3 (AnimationTree/AnimatorController
+wiring), and M4 (grapple IK constraints).
 
-**What is needed:** A minimal, runnable plugin in a real engine — Godot 4 or Unity 6 — living
-in a separate companion repository.  The scope is deliberately narrow:
+| Repo | Engine | Sidecar | Demo scene | Status |
+|------|--------|---------|------------|--------|
+| [`ananke-godot-reference`](https://github.com/its-not-rocket-science/ananke-godot-reference) | Godot 4.2+ | HTTP (`GET /state` at port 3000) | Knight vs. Brawler — procedural capsule rig | M1 ✅ |
+| [`ananke-unity-reference`](https://github.com/its-not-rocket-science/ananke-unity-reference) | Unity 6 (6000.0 LTS) | HTTP (`GET /frame` at port 7374) | Knight vs. Brawler — placeholder capsules | M1 ✅ |
 
-- A single humanoid character rig driven by `extractRigSnapshots` each tick
-- Tick-rate interpolation (20 Hz sim → renderer frame rate) handled by the plugin
-- `AnimationHints` mapped to a simple animation state machine (idle / walk / attack / prone / dead)
-- `GrapplePoseConstraint` used to lock relative pose for a two-character grapple pair
-- A self-contained demo scene: Knight vs. Brawler, same as `tools/vertical-slice.ts`, but visual
+Both repos also include `tools/renderer-bridge.ts` in the ananke repo as a WebSocket-based
+alternative bridge server (`ws://localhost:3001/bridge`, `npm run run:renderer-bridge`).
 
-**Deliverable:** A tagged companion repository (`ananke-godot-reference` or
-`ananke-unity-reference`) with a README explaining how to connect it to any Ananke build.
+**The gap (resolved for M1):** `src/model3d.ts` / `src/bridge/` provide pure data-extraction
+functions and documented output formats.  The companion repos wire those outputs to Godot's
+`Skeleton3D` / Unity's `Animator` via a Node.js sidecar process.
 
-**Why this matters:** Until this exists, the integration barrier is high.  A working plugin
-makes the project credible to engine integrators within minutes rather than weeks.
+**Deliverable milestones:**
+
+- **M1** ✅ Entity positions + animation state flags over HTTP at 20 Hz.  Two procedural
+  capsule rigs move in the engine viewport, driven by `extractRigSnapshots`.
+- **M2** ⬜ Skeleton bone mapping: `RigSnapshot.pose[].segmentId` → engine bone names via
+  `mappings/humanoid.json` (Godot) or `AnankeSkeletonConfig` ScriptableObject (Unity).
+- **M3** ⬜ AnimationTree / AnimatorController: `AnimationHints` fields drive locomotion
+  blend trees and combat overlay layers.
+- **M4** ⬜ Grapple IK: `GrapplePoseConstraint` drives `SkeletonIK3D` (Godot) /
+  `RigConstraint` (Unity Animation Rigging) for two-character holds.
 
 ---
 

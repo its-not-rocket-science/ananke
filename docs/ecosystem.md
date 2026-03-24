@@ -230,12 +230,19 @@ If you build one, open a PR to add it to the "Community links" section below.
 
 ### Renderer bridges
 
-| Bridge | Engine | Status |
-|--------|--------|--------|
-| `ananke-unity-bridge` | Unity 6 | Wanted |
-| `ananke-unreal-bridge` | Unreal Engine 5 | Wanted |
-| `ananke-godot-bridge` | Godot 4 | Wanted |
-| `ananke-threejs-bridge` | Three.js / WebGL | Wanted |
+| Bridge | Engine | Status | GitHub |
+|--------|--------|--------|--------|
+| `ananke-godot-reference` | Godot 4.2+ | ✅ M1 complete (HTTP sidecar + procedural rig) | [its-not-rocket-science/ananke-godot-reference](https://github.com/its-not-rocket-science/ananke-godot-reference) |
+| `ananke-unity-reference` | Unity 6 (6000.0 LTS) | ✅ M1 complete (HTTP sidecar + capsule rig) | [its-not-rocket-science/ananke-unity-reference](https://github.com/its-not-rocket-science/ananke-unity-reference) |
+| `ananke-unreal-bridge` | Unreal Engine 5 | Wanted | — |
+| `ananke-threejs-bridge` | Three.js / WebGL | Wanted | — |
+
+**M1** means: entity positions and animation state flags drive placeholder geometry in the engine viewport.
+**M2–M4** (bone mapping, AnimationTree wiring, grapple IK) are outstanding in both reference repos.
+
+The ananke repo also ships `tools/renderer-bridge.ts` — a zero-dependency WebSocket bridge server
+(`npm run run:renderer-bridge`) that broadcasts Knight vs. Brawler tick data on `ws://localhost:3001/bridge`
+in a flat SI-unit JSON format suitable for any renderer.
 
 ### Scenario and content packs
 
