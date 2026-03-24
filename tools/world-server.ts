@@ -174,7 +174,7 @@ function getSnapshot() {
 
 // ── WebSocket server (zero external deps — Node built-ins only) ───────────────
 
-const WS_MAGIC = "258EAFA5-E914-4789-ABBA-C4952A17A1B1";
+const WS_MAGIC = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 interface WsClient {
   socket:         Socket;
