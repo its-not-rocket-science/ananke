@@ -10,6 +10,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Phase 71 · Cultural Generation & Evolution Framework** (`src/culture.ts`)
+  - Reverse WOAC method: derives culture bottom-up from five forces (`environment`,
+    `power`, `exchange`, `legacy`, `belief`) scored from simulation state.
+  - `generateCulture(polity, registry, myths, vassals?, biome?)` → `CultureProfile`
+    with 10 possible `CulturalValue` types, `CulturalContradiction` pairs, and
+    `CulturalCycle` practices (CYCLES audit).
+  - `stepCultureYear(profile, techPressure_Q, militaryOutcome_Q, myths, worldSeed, tick)`
+    → `CultureYearResult { profile, schism? }`: tech diffusion pulls exchange force
+    upward; military outcomes shift power; new myths update legacy/belief; conservative
+    cultures with high tension fire deterministic `SchismEvent` (reform_movement,
+    heresy, or civil_unrest).
+  - `describeCulture(profile)` → `{ summary, values, contradictions, cycles }`:
+    human-readable output for writers and game designers.
+  - Query helpers: `getCulturalValue`, `getDominantValues`, `getSignificantContradictions`.
+  - Integrates with Phase 70 (vassal count → power force), Phase 66 (myths → legacy/belief),
+    Phase 68 (BiomeContext → environment harshness), Phase 23 dialogue and Phase 24
+    faction standing via exported profile queries.
+  - 45 tests in `test/culture.test.ts`; exported via `ananke/campaign` subpath.
+
 - **Phase 70 · Stratified Political Simulation ("Vassal Web" Layer)** (`src/polity-vassals.ts`)
   - `VassalNode` — intermediate layer between Entity and Polity with `territory_Q`,
     `military_Q`, `treasury_cu`, and a `VassalLoyalty` block.
