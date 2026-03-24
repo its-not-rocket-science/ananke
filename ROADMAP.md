@@ -5076,7 +5076,11 @@ Potential future phases building on the RPG foundation:
 
 **Phase 59: Mounted Combat & Riding (COMPLETE)** — Physics-grounded rider/mount pair model. `src/sim/mount.ts`: 5 mount profiles (pony, horse, warhorse, camel, war_elephant) with mass, rider seat height, gait speeds (walk/trot/gallop/charge), stability, and fear threshold. `computeChargeBonus(profile, speed_Smps)` → `ChargeBonus { bonusEnergy_J, strikeMass_kg }` — `bonusEnergy_J = ½ × (mass × CHARGE_MASS_FRAC/8%) × v²` (horse at gallop ≈ 3500 J; elephant charge ≈ 7700 J). `deriveRiderHeightBonus(profile)` → Q — aim/accuracy bonus from elevation (q(0.12)/m, capped at q(0.30)). `deriveRiderStabilityBonus(profile)` → Q — 15% of mount stability transfers to rider. `computeFallEnergy_J(profile, riderMass_Skg)` → J — fall injury energy = m×g×h. `deriveMountFearPressure(mountShockQ, fearThreshold_Q)` → Q — 40% of excess shock propagates to rider when mount panics. `checkMountStep(riderShockQ, mountShockQ, mountDead, profile, riderMass_Skg)` → `MountStepResult { shouldDismount, dismountCause, fallEnergy_J, fearPressure_Q }` — evaluates rider_shock/mount_dead/mount_bolt triggers in priority order. `entityIsMounted` / `entityIsMount` convenience helpers. `MountState { mountId, riderId, gait }` added to `Entity`. 42 tests; clean build.
 
-**Phase 60: Environmental Hazard Zones (COMPLETE)** — Persistent 2-D circular hazard zones that inflict per-second effects on entities within their radius. `src/sim/hazard.ts`: 5 hazard types (fire, radiation, toxic_gas, acid, extreme_cold) with base-effect profiles; 5 sample zones (CAMPFIRE 3 m/1 h, RADIATION_ZONE 50 m/permanent, MUSTARD_GAS 20 m/30 min, ACID_POOL 2 m/2 h, BLIZZARD_ZONE 100 m/6 h). Linear exposure falloff: `exposureQ = (radius − dist) × intensity / radius`. `computeDistToHazard` — Euclidean float√ truncated to integer. `isInsideHazard` — integer squared-distance comparison (no float). `computeHazardExposure(dist_Sm, hazard)` → Q ∈ [0, intensity_Q]. `deriveHazardEffect(hazard, exposureQ)` → `HazardEffect { fatigueInc_Q, thermalDelta_Q, radiationDose_Q, surfaceDamageInc_Q, diseaseExposureId? }` — each rate scaled by exposureQ/SCALE.Q; toxic_gas sets diseaseExposureId "marsh_fever"; extreme_cold produces negative thermalDelta (cooling). `stepHazardZone(hazard, elapsedSeconds)` — decrements duration, clamps to 0; permanent (-1) is a no-op. `isHazardExpired(hazard)` — duration ≥ 0 && duration === 0. No Entity field needed — hazards are world-level objects. 56 tests; clean build.
+**Phase 60: Environmental Hazard Zones (COMPLETE)** — Persistent 2-D circular hazard zones that inflict per-second effects on entities within their radius.
+
+**Phase 70: Stratified Political Simulation** — Vassal/noble layer between individual and polity; seven loyalty types (ideological, transactional, terrified, honor_bound, opportunistic, kin_bound, ideological_rival); command-chain filtering reduces effective military strength by disloyal vassals; deterministic succession crises. See detailed spec below.
+
+**Phase 71: Cultural Generation & Evolution Framework** — Bottom-up culture derivation from five environmental forces (Environment, Power, Exchange, Legacy, Belief); CYCLES audit extracts values, contradictions, and recurring practices; `stepCultureYear` drifts culture via tech diffusion, military outcomes, and myth formation; `describeCulture` outputs human-readable summaries for writers and game designers. See detailed spec below. `src/sim/hazard.ts`: 5 hazard types (fire, radiation, toxic_gas, acid, extreme_cold) with base-effect profiles; 5 sample zones (CAMPFIRE 3 m/1 h, RADIATION_ZONE 50 m/permanent, MUSTARD_GAS 20 m/30 min, ACID_POOL 2 m/2 h, BLIZZARD_ZONE 100 m/6 h). Linear exposure falloff: `exposureQ = (radius − dist) × intensity / radius`. `computeDistToHazard` — Euclidean float√ truncated to integer. `isInsideHazard` — integer squared-distance comparison (no float). `computeHazardExposure(dist_Sm, hazard)` → Q ∈ [0, intensity_Q]. `deriveHazardEffect(hazard, exposureQ)` → `HazardEffect { fatigueInc_Q, thermalDelta_Q, radiationDose_Q, surfaceDamageInc_Q, diseaseExposureId? }` — each rate scaled by exposureQ/SCALE.Q; toxic_gas sets diseaseExposureId "marsh_fever"; extreme_cold produces negative thermalDelta (cooling). `stepHazardZone(hazard, elapsedSeconds)` — decrements duration, clamps to 0; permanent (-1) is a no-op. `isHazardExpired(hazard)` — duration ≥ 0 && duration === 0. No Entity field needed — hazards are world-level objects. 56 tests; clean build.
 
 ---
 
@@ -5884,6 +5888,217 @@ multiplier table + tests validating Lanchester square law at 2:1 and 3:1 force r
 
 **Depends on:** Phase 32D (formation morale), Phase 61 (PolityRegistry), Phase 67 (military
 strength aggregation), `generateIndividual` (for archetype draws on decisive engagements).
+
+---
+
+### Phase 70 — Stratified Political Simulation ("Vassal Web" Layer)
+
+**The gap:** Phase 61 (Polity) models kingdoms and factions as atomic units with population,
+treasury, tech era, and morale.  It has no intermediate relational layer — the vassals, landed
+knights, barons, guilds, and semi-autonomous city-states whose shifting loyalties are the actual
+engine of historical political conflict.  Political crises (succession disputes, noble rebellions,
+mercenary defections) can only emerge from simulation if the actors who cause them exist in the
+model.
+
+**Core design:**
+
+A `VassalNode` sits between the `Entity` (individual) and the `Polity` (state):
+
+```typescript
+interface VassalNode {
+  id:            string;        // "house_harlow", "guild_weavers"
+  polityId:      string;        // the liege polity
+  territory_Q:   Q;             // fractional share of polity territory controlled
+  military_Q:    Q;             // fractional share of polity military strength contributed
+  treasury_Q:    Q;             // own reserves (independent of polity)
+  loyalty:       VassalLoyalty; // see below
+}
+
+type LoyaltyType =
+  | "ideological"   // committed to the liege's cause; hard to sway, slow to break
+  | "transactional" // follows economic incentives; defects if rival offer exceeds liege's
+  | "terrified"     // held by fear of the liege; breaks instantly if liege appears weak
+  | "honor_bound"   // bound by oath; resists material incentives but breaks on perceived betrayal
+  | "opportunistic" // neutral until outcome is clear; backs the likely winner
+  | "kin_bound"     // family ties to liege; resilient but triggers catastrophic betrayal if kin die
+  | "ideological_rival"; // formally loyal but actively undermining; double-agent archetype
+
+interface VassalLoyalty {
+  type:          LoyaltyType;
+  loyaltyQ:      Q;   // current loyalty level; q(0)=open rebellion, q(1)=unconditional
+  grievance_Q:   Q;   // accumulated grievances; drains loyaltyQ over time
+}
+```
+
+**Loyalty dynamics (`src/polity-vassals.ts`):**
+
+- `stepVassalLoyalty(node, liege, rivals, worldSeed, tick)` — applies loyalty-type rules each
+  campaign tick:
+  - `transactional`: loyalty tracks `(liege.treasury_Q - max(rival.treasury_Q)) / SCALE.Q`
+  - `terrified`: loyalty collapses to q(0.0) if `liege.militaryStrength_Q < node.military_Q`
+    (liege weaker than the vassal)
+  - `honor_bound`: grievance spikes on broken promises (host-supplied event); otherwise stable
+  - `opportunistic`: mirrors the current strongest polity's morale
+  - `ideological_rival`: loyalty decays at a constant rate regardless of incentives
+
+- `computeVassalContribution(node)` → `{ troops_Q, treasury_Q }`:
+  - Full loyalty = full contracted contribution; loyaltyQ below q(0.50) → proportional
+    reduction; loyaltyQ below q(0.20) → zero contribution (passive defiance)
+
+- `detectRebellionRisk(node)` → Q: aggregated risk score for AI/host queries
+
+- `resolveSuccessionCrisis(polity, vassals, heirId, worldSeed, tick)` → `SuccessionResult`:
+  - Triggered when the polity's designated heir dies or is absent
+  - Each vassal rolls a loyalty-type-weighted claim-support decision
+  - Returns winning claimant id + loyalty deltas for all vassals (winners gain, losers lose)
+
+**Command-chain filtering:**
+
+When a polity issues a campaign-level command (declare war, mobilise troops), the effective
+military strength passed to Phase 69 `resolveTacticalEngagement` is reduced by disloyal
+vassals:
+
+```typescript
+effectiveMilitary_Q = sum(
+  vassals.map(v => v.military_Q * computeVassalContribution(v).troops_Q / SCALE.Q)
+);
+```
+
+**Deterministic political events:**
+
+Using `eventSeed(worldSeed, tick, vassalIdHash, liegePolicyHash, salt)`, grievance events
+(tax hike, military loss, kin death) are deterministic and reproducible.  Political crises
+emerge from simulation state rather than scripted triggers — the same structural setup will
+always produce the same crisis trajectory from the same seed.
+
+**Deliverable:** `src/polity-vassals.ts` — `VassalNode`, `VassalLoyalty`, `LoyaltyType`,
+`stepVassalLoyalty`, `computeVassalContribution`, `detectRebellionRisk`,
+`resolveSuccessionCrisis`.  Tests validating all seven loyalty types across at least two
+loyalty trajectory scenarios each; command-chain filtering test against Phase 69 force ratio.
+
+**Depends on:** Phase 61 (PolityRegistry, polity morale/military fields), Phase 67 (military
+strength aggregation), Phase 69 (formation combat for effective-strength pass-through),
+`eventSeed` / `makeRng`.
+
+---
+
+### Phase 71 — Cultural Generation & Evolution Framework
+
+**The gap:** Ananke generates physically plausible individuals (Phases 0–8, archetype system)
+and can model political and economic polities (Phase 61), but it has no system for the
+*cultural layer* — the shared beliefs, values, recurring practices, and internal contradictions
+that make societies feel coherent and alive.  Without culture, all factions behave as rational
+economic actors; with culture, an honour-bound society chooses a ruinous war it could have
+avoided, a fatalist society underinvests in medicine, a mercantile culture produces explorers
+the simulation's geography never asked for.
+
+**Design principle — Reverse WOAC:**
+
+Rather than defining culture top-down (assign traits to factions), the framework derives
+culture bottom-up from five environmental forces:
+
+```
+Environment  →  what physical and geographic pressures the polity faces
+Power        →  how authority is legitimised and contested
+Exchange     →  dominant economic mode (gift, barter, market, tribute, raid)
+Legacy       →  accumulated myths, Phase 66 mythology entries, historical events
+Belief       →  supernatural model: animist, polytheist, monotheist, philosophical
+```
+
+The five forces are inputs; the outputs are testable cultural properties — values,
+contradictions, and recurring patterns (CYCLES: Celebration, Yes-or-no rules, Conflict
+resolution, Lifecycle rites, Exchange norms, Status markers).
+
+**Core data structures (`src/culture.ts`):**
+
+```typescript
+type CultureForce = "environment" | "power" | "exchange" | "legacy" | "belief";
+type CycleType = "celebration" | "taboo" | "conflict_resolution" | "lifecycle" | "exchange_norm" | "status_marker";
+
+interface CultureProfile {
+  id:              string;
+  polityId:        string;
+  forces:          Record<CultureForce, Q>;  // strength of each force driver
+  values:          CulturalValue[];          // derived core values
+  contradictions:  CulturalContradiction[];  // value tensions (e.g. "honour" vs "survival")
+  cycles:          CulturalCycle[];          // recurring practices
+  driftTendency_Q: Q;                        // openness to cultural change (low = conservative)
+}
+
+interface CulturalValue {
+  id:    string;  // "honour", "commerce", "fatalism", "martial_virtue", "hospitality" …
+  strength_Q: Q;
+}
+
+interface CulturalContradiction {
+  valueA: string;
+  valueB: string;
+  tension_Q: Q;   // high tension = more likely to produce internal conflict events
+}
+```
+
+**Generation (`generateCulture`):**
+
+Given a `Polity` + `PolityRegistry` (for neighbour context) + mythology entries + biome:
+
+1. Score each force from simulation state:
+   - `environment`: derived from `BiomeType` (Phase 68) — harsh biomes → fatalism + martial virtue
+   - `power`: derived from `polity.techEra` + `VassalNode` distribution (Phase 70) — feudal
+     structure → honour/hierarchy values
+   - `exchange`: derived from `polity.treasury_Q` growth rate + trade-route count
+   - `legacy`: derived from Phase 66 mythology entries — hero myths → martial virtue; plague
+     myths → fatalism; golden-age myths → optimism/commerce
+   - `belief`: derived from myth archetype distribution
+
+2. Map force scores to values and contradictions via a weighted lookup table
+
+3. Identify CYCLES: practices that resolve the dominant tensions
+   (high `honour` + high `commerce` tension → elaborate gift-exchange ceremonies that
+   preserve face while enabling trade)
+
+**Evolution (`stepCultureYear`):**
+
+Each simulated year, culture drifts based on:
+
+- **Tech diffusion pressure** (Phase 67): adjacent polities with higher tech era pull the
+  `exchange` force toward market economy
+- **Military outcome**: repeated defeats weaken martial-virtue values; sustained victories
+  reinforce them
+- **Myth formation** (Phase 66): new myth entries shift `legacy` force, which shifts values
+  over decades
+- **Internal contradictions**: high-tension contradictions have a probability each year of
+  triggering a schism event (reform movement, heresy, civil war) proportional to `tension_Q`
+  and inversely proportional to `driftTendency_Q`
+
+**Integration with other systems:**
+
+| System | Hook |
+|--------|------|
+| Dialogue (Phase 23) | `CulturalValue` modifiers on `persuadeBase` — hospitality cultures easier to negotiate with; honour cultures respond to reputation appeals |
+| Faction standing (Phase 24) | `exchange` force affects trade-offer acceptance thresholds |
+| Mythology (Phase 66) | Myth archetypes feed `legacy` force; generated culture feeds back into myth plausibility |
+| Phase 70 vassal loyalty | `honor_bound` loyalty type is more common in high-`honour` cultures; `transactional` more common in high-`commerce` cultures |
+| `generateIndividual` (Phase 0) | Species archetypes get a `culturalDrift` tendency but actual culture emerges from simulation — prevents "planet of hats" trope where all members of a species share identical values |
+
+**Human-readable output:**
+
+`describeCulture(profile)` → structured object with:
+- A one-paragraph cultural summary (for writers and game designers)
+- Bullet list of core values with plain-English descriptions
+- Key contradictions and what conflicts they tend to generate
+- Sample CYCLES with narrative descriptions
+
+This output feeds directly into character creation (what taboos might an NPC raised in this
+culture have?), quest generation (Phase 41), and dialogue (Phase 23).
+
+**Deliverable:** `src/culture.ts` — `CultureProfile`, `CulturalValue`, `CulturalContradiction`,
+`CulturalCycle`, `generateCulture(polity, registry, myths, biome)`, `stepCultureYear(profile, ...)`,
+`describeCulture(profile)`.  Tests covering all five force drivers, contradiction detection,
+drift mechanics, and `describeCulture` output shape.
+
+**Depends on:** Phase 61 (Polity), Phase 66 (Mythology entries), Phase 67 (tech diffusion for
+drift pressure), Phase 68 (BiomeType for environment force), Phase 70 (vassal distribution for
+power force — optional; can stub with `q(0.50)` if Phase 70 not yet implemented).
 
 ---
 
