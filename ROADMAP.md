@@ -5078,7 +5078,7 @@ Potential future phases building on the RPG foundation:
 
 **Phase 60: Environmental Hazard Zones (COMPLETE)** — Persistent 2-D circular hazard zones that inflict per-second effects on entities within their radius.
 
-**Phase 70: Stratified Political Simulation** — Vassal/noble layer between individual and polity; seven loyalty types (ideological, transactional, terrified, honor_bound, opportunistic, kin_bound, ideological_rival); command-chain filtering reduces effective military strength by disloyal vassals; deterministic succession crises. See detailed spec below.
+**Phase 70: Stratified Political Simulation ✅ COMPLETE** — Vassal/noble layer between individual and polity; seven loyalty types (ideological, transactional, terrified, honor_bound, opportunistic, kin_bound, ideological_rival); command-chain filtering reduces effective military strength by disloyal vassals; deterministic succession crises. See detailed spec below.
 
 **Phase 71: Cultural Generation & Evolution Framework** — Bottom-up culture derivation from five environmental forces (Environment, Power, Exchange, Legacy, Belief); CYCLES audit extracts values, contradictions, and recurring practices; `stepCultureYear` drifts culture via tech diffusion, military outcomes, and myth formation; `describeCulture` outputs human-readable summaries for writers and game designers. See detailed spec below. `src/sim/hazard.ts`: 5 hazard types (fire, radiation, toxic_gas, acid, extreme_cold) with base-effect profiles; 5 sample zones (CAMPFIRE 3 m/1 h, RADIATION_ZONE 50 m/permanent, MUSTARD_GAS 20 m/30 min, ACID_POOL 2 m/2 h, BLIZZARD_ZONE 100 m/6 h). Linear exposure falloff: `exposureQ = (radius − dist) × intensity / radius`. `computeDistToHazard` — Euclidean float√ truncated to integer. `isInsideHazard` — integer squared-distance comparison (no float). `computeHazardExposure(dist_Sm, hazard)` → Q ∈ [0, intensity_Q]. `deriveHazardEffect(hazard, exposureQ)` → `HazardEffect { fatigueInc_Q, thermalDelta_Q, radiationDose_Q, surfaceDamageInc_Q, diseaseExposureId? }` — each rate scaled by exposureQ/SCALE.Q; toxic_gas sets diseaseExposureId "marsh_fever"; extreme_cold produces negative thermalDelta (cooling). `stepHazardZone(hazard, elapsedSeconds)` — decrements duration, clamps to 0; permanent (-1) is a no-op. `isHazardExpired(hazard)` — duration ≥ 0 && duration === 0. No Entity field needed — hazards are world-level objects. 56 tests; clean build.
 
@@ -5891,7 +5891,7 @@ strength aggregation), `generateIndividual` (for archetype draws on decisive eng
 
 ---
 
-### Phase 70 — Stratified Political Simulation ("Vassal Web" Layer)
+### Phase 70 — Stratified Political Simulation ("Vassal Web" Layer) ✅ COMPLETE
 
 **The gap:** Phase 61 (Polity) models kingdoms and factions as atomic units with population,
 treasury, tech era, and morale.  It has no intermediate relational layer — the vassals, landed

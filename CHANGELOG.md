@@ -10,6 +10,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Phase 70 · Stratified Political Simulation ("Vassal Web" Layer)** (`src/polity-vassals.ts`)
+  - `VassalNode` — intermediate layer between Entity and Polity with `territory_Q`,
+    `military_Q`, `treasury_cu`, and a `VassalLoyalty` block.
+  - Seven `LoyaltyType` variants with distinct `stepVassalLoyalty` dynamics:
+    `ideological` (slow, conviction-driven), `transactional` (treasury comparison),
+    `terrified` (instant collapse if liege appears weak), `honor_bound` (oath + grievance
+    spike), `opportunistic` (tracks liege/rival morale ratio), `kin_bound` (stable family
+    ties), `ideological_rival` (constant decay, cannot recover).
+  - `applyGrievanceEvent` — immutable grievance accumulation (host applies broken-promise,
+    tax-hike, kin-death events).
+  - `computeVassalContribution` — loyalty-scaled troop and treasury output; zero below
+    `CONTRIBUTION_FLOOR_Q` (q(0.20)), full above `CONTRIBUTION_FULL_Q` (q(0.50)).
+  - `computeEffectiveMilitary` — sums contributions for command-chain filtering before
+    passing force ratio to Phase 69 `resolveTacticalEngagement`.
+  - `detectRebellionRisk` — Q score (70% low-loyalty + 30% high-grievance) for AI queries.
+  - `resolveSuccessionCrisis` — deterministic heir-support rolls weighted by `military_Q`;
+    winners gain +q(0.05) loyalty, losers −q(0.08); `SuccessionResult` with `supportQ`
+    and per-vassal `loyaltyDeltas`.
+  - 40 tests in `test/polity-vassals.test.ts`; exported via `ananke/campaign` subpath.
+
 - **Option B · Tier 2 subpath exports** — eight new named import subpaths for all
   Tier 2 module groupings; deep imports remain supported as a fallback:
   - `ananke/character` → aging, sleep, disease, wound-aging, thermoregulation, nutrition,

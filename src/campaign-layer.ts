@@ -21,3 +21,4 @@ export * from "./world-generation.js";
 export * from "./inheritance.js";
 export * from "./economy.js";
 export * from "./polity.js";
+export * from "./polity-vassals.js";
