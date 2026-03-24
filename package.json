@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -22,6 +22,38 @@
     "./catalog": {
       "import": "./dist/src/catalog.js",
       "types": "./dist/src/catalog.d.ts"
+    },
+    "./character": {
+      "import": "./dist/src/character.js",
+      "types": "./dist/src/character.d.ts"
+    },
+    "./combat": {
+      "import": "./dist/src/combat.js",
+      "types": "./dist/src/combat.d.ts"
+    },
+    "./campaign": {
+      "import": "./dist/src/campaign-layer.js",
+      "types": "./dist/src/campaign-layer.d.ts"
+    },
+    "./social": {
+      "import": "./dist/src/social.js",
+      "types": "./dist/src/social.d.ts"
+    },
+    "./narrative": {
+      "import": "./dist/src/narrative-layer.js",
+      "types": "./dist/src/narrative-layer.d.ts"
+    },
+    "./anatomy": {
+      "import": "./dist/src/anatomy/index.js",
+      "types": "./dist/src/anatomy/index.d.ts"
+    },
+    "./crafting": {
+      "import": "./dist/src/crafting/index.js",
+      "types": "./dist/src/crafting/index.d.ts"
+    },
+    "./competence": {
+      "import": "./dist/src/competence/index.js",
+      "types": "./dist/src/competence/index.d.ts"
     }
   },
   "files": [

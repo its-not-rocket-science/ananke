@@ -185,8 +185,20 @@ version bump; renames require a major bump and migration guide.
 These exports are usable and tested but may change across minor versions.
 A `CHANGELOG.md` entry will document any breaking change.
 
-All Tier 2 modules are accessible via deep imports:
+Tier 2 modules are accessible via **named subpath exports** (preferred) or deep imports:
+
 ```typescript
+// Preferred — named subpath (stable grouping, no internal path coupling)
+import { stepAging, applyAgingToAttributes } from "@its-not-rocket-science/ananke/character";
+import { resolveRangedAttack, stepGrapple }  from "@its-not-rocket-science/ananke/combat";
+import { stepCampaignDay, createSettlement }  from "@its-not-rocket-science/ananke/campaign";
+import { dialogueProbability, effectiveStanding } from "@its-not-rocket-science/ananke/social";
+import { addChronicleEntry, detectStoryArcs } from "@its-not-rocket-science/ananke/narrative";
+import { compileAnatomyDefinition }           from "@its-not-rocket-science/ananke/anatomy";
+import { craftItem, getAvailableRecipes }     from "@its-not-rocket-science/ananke/crafting";
+import { resolveCompetence }                  from "@its-not-rocket-science/ananke/competence";
+
+// Deep import (fallback — internal paths may change)
 import { stepAging } from "@its-not-rocket-science/ananke/dist/src/sim/aging.js";
 ```
 

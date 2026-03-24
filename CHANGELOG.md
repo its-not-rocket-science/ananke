@@ -10,6 +10,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Option B · Tier 2 subpath exports** — eight new named import subpaths for all
+  Tier 2 module groupings; deep imports remain supported as a fallback:
+  - `ananke/character` → aging, sleep, disease, wound-aging, thermoregulation, nutrition,
+    medical, toxicology, progression
+  - `ananke/combat` → ranged, grapple, formation-combat, mount, hazard, morale, sensory,
+    sensory-extended, weather, terrain, skills, biome
+  - `ananke/campaign` → campaign, downtime, collective-activities, settlement,
+    settlement-services, inventory, item-durability, world-generation, inheritance,
+    economy, polity (campaign layer barrel)
+  - `ananke/social` → dialogue, faction, relationships, relationships-effects, party,
+    quest, quest-generators
+  - `ananke/narrative` → chronicle, story-arcs, narrative-render, legend, mythology,
+    narrative, narrative-stress, metrics, arena
+  - `ananke/anatomy` → existing `src/anatomy/index.ts` barrel
+  - `ananke/crafting` → existing `src/crafting/index.ts` barrel
+  - `ananke/competence` → existing `src/competence/index.ts` barrel
+  - `STABLE_API.md` updated to document preferred subpath import patterns.
+
 - **CE-16 · Modding Support** (`src/modding.ts`)
   - Layer 1 — `hashMod(json)`: deterministic FNV-1a fingerprint (8-char hex) for any
     parsed JSON mod file; canonical key-sorted serialisation ensures order-independence.
