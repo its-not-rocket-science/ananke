@@ -10,6 +10,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **CE-16 · Modding Support** (`src/modding.ts`)
+  - Layer 1 — `hashMod(json)`: deterministic FNV-1a fingerprint (8-char hex) for any
+    parsed JSON mod file; canonical key-sorted serialisation ensures order-independence.
+  - Layer 2 — Post-tick behavior hooks: `registerPostTickHook / unregisterPostTickHook /
+    runPostTickHooks / listPostTickHooks / clearPostTickHooks`; hooks fire after
+    `stepWorld`, are purely observational (logging, analytics, renderer updates).
+  - Layer 3 — AI behavior node registry: `registerBehaviorNode / unregisterBehaviorNode /
+    getBehaviorNode / listBehaviorNodes / clearBehaviorNodes`; custom `BehaviorNode`
+    factories registered by id for scenario and behavior-tree composition.
+  - Session fingerprint: `computeModManifest(catalogIds)` returns sorted id lists and a
+    single fingerprint covering all three layers for multiplayer client validation.
+  - `clearAllMods()` resets hooks and behavior nodes (catalog unchanged).
+  - 42 tests in `test/modding.test.ts`; exported via `src/index.ts`.
+
 - **CE-14 · Socio-Economic Campaign Layer → Stable Promotion**
   - Promote `stepPolityDay`, `declareWar`, `makePeace`, `areAtWar`,
     `createPolity`, `createPolityRegistry`, `Polity`, `PolityRegistry`,
@@ -81,6 +95,18 @@ Adding new **optional** fields to these interfaces is never a breaking change.
     - Re-export tech-diffusion and emotional-contagion from src/polity.ts so
       ananke/polity is a single-import campaign layer entry point.
     - Add v0.1.x -> v0.2.0 migration guide to CHANGELOG.md.
+
+---
+
+## [0.1.10] — 2026-03-24
+
+  ### Added
+
+  - **CE-16 · Modding Support — HashMod, Post-tick Hooks, Behaviour Node Registry** (`src/parallel.ts`)
+    - Three-layer modding contract: FNV-1a data fingerprinting, observational
+      post-tick hooks, and named AI behavior node factories. computeModManifest()
+      provides a single session fingerprint for multiplayer client validation.
+    - exported via src/index.ts.
 
 ---
 

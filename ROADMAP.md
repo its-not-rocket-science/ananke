@@ -6599,7 +6599,7 @@ cover that reduces incoming damage, and terrain that changes state during a simu
 
 ---
 
-### CE-16 · Modding Support
+### CE-16 · Modding Support *(COMPLETE)*
 
 **Problem:** Power users want to define custom species, weapons, AI behaviours, and event
 hooks without forking the library.  Deterministic multiplayer requires that all clients

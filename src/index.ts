@@ -36,3 +36,4 @@ export * from "./sim/cover.js";            // CE-15: CoverSegment, computeCoverP
 export * from "./sim/ai/behavior-trees.js"; // CE-10: BehaviorNode, FlankTarget, RetreatTo, ProtectAlly, GuardPosition, HealTarget, Sequence, Fallback
 export * from "./snapshot.js";              // CE-9: diffWorldState(), applyDiff(), packDiff(), unpackDiff(), WorldStateDiff
 export * from "./parallel.js";             // CE-7: partitionWorld(), mergePartitions(), detectBoundaryPairs(), assignEntitiesToPartitions()
+export * from "./modding.js";              // CE-16: hashMod(), registerPostTickHook(), runPostTickHooks(), registerBehaviorNode(), computeModManifest()
