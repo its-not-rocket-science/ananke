@@ -6346,7 +6346,7 @@ high entity counts.  Production use of `ananke-world-ui` requires push-based sta
 
 ---
 
-### CE-7 · Multi-threading / WebWorker Support
+### CE-7 · Multi-threading / WebWorker Support *(COMPLETE)*
 
 **Problem:** `stepWorld` is single-threaded.  At 1 000+ entities the 20 Hz real-time budget
 is broken (Item 9 benchmarks: 64 ms/tick at 1 000 entities vs. 50 ms budget).  Official

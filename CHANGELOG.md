@@ -10,6 +10,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.8] — 2026-03-24
+
+  ### Added
+
+  - **CE-7 · Spatial Partitioning API for WebWorker Support** (`src/parallel.ts`)
+    - Add partitionWorld / mergePartitions / detectBoundaryPairs /
+      assignEntitiesToPartitions / canonicaliseBoundaryPairs.  Boundary pairs
+      are sorted in canonical (min-id first) order to preserve determinism
+      across partitions.
+    - Export via src/index.ts
+
+---
+
 ## [0.1.7] — 2026-03-23
 
   ### Added
@@ -25,8 +38,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
     - isDiffEmpty(), diffStats() — helpers for logging and network budgeting
     - 30 tests; verified binary size < full JSON for single-entity changes
     - Export via src/index.ts
-
----
 
 ---
 

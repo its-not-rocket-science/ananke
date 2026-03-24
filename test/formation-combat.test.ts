@@ -28,22 +28,20 @@ import {
   ROUT_THRESHOLD,
   TERRAIN_DEFENDER_MUL,
   NAMED_ENTITY_THRESHOLD,
-  LANCHESTER_K,
 } from "../src/sim/formation-combat.js";
 
-import { q, SCALE, to } from "../src/units.js";
+import { q } from "../src/units.js";
 import { HUMAN_BASE }   from "../src/archetypes.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Clone units for read-only checks (resolveTacticalEngagement mutates). */
-function cloneUnits(units: ReturnType<typeof createFormationUnit>[]) {
+function _cloneUnits(units: ReturnType<typeof createFormationUnit>[]) {
   return units.map(u => ({ ...u }));
 }
 
 const HIGH_MORALE  = q(0.90);
 const LOW_MORALE   = q(0.30);
-const EVEN_MORALE  = q(0.70);
 
 // ── 1 · createFormationUnit ───────────────────────────────────────────────────
 

@@ -35,3 +35,4 @@ export * from "./sim/formation-combat.js"; // Phase 69: FormationUnit, TacticalE
 export * from "./sim/cover.js";            // CE-15: CoverSegment, computeCoverProtection(), isLineOfSightBlocked(), applyExplosionToTerrain()
 export * from "./sim/ai/behavior-trees.js"; // CE-10: BehaviorNode, FlankTarget, RetreatTo, ProtectAlly, GuardPosition, HealTarget, Sequence, Fallback
 export * from "./snapshot.js";              // CE-9: diffWorldState(), applyDiff(), packDiff(), unpackDiff(), WorldStateDiff
+export * from "./parallel.js";             // CE-7: partitionWorld(), mergePartitions(), detectBoundaryPairs(), assignEntitiesToPartitions()
