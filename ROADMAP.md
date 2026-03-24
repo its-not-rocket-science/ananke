@@ -6554,7 +6554,7 @@ after death — that no specific test exercises.
 
 ---
 
-### CE-14 · Socio-Economic Campaign Layer → Stable Promotion
+### CE-14 · Socio-Economic Campaign Layer → Stable Promotion *(COMPLETE)*
 
 **Problem:** The polity, tech-diffusion, and emotional-contagion systems (Phases 61, 67, 65)
 are currently Tier 2 (Experimental).  Their API can change between minor versions.  This

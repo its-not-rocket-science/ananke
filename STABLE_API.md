@@ -112,6 +112,48 @@ including `AnimationHints`, `GrapplePoseConstraint`, and `InterpolatedState`.
 | `formatOneLine(desc)` | One-line summary |
 | `CharacterDescription`, `AttributeRating` | Types |
 
+### Socio-Economic Campaign Layer (`ananke/polity` subpath — CE-14)
+
+All of the following are available via `import { … } from "ananke/polity"` as a single
+entry point.  The frozen interfaces (`Polity`, `PolityRegistry`, `PolityPair`,
+`EmotionalWave`) will not gain required fields or lose existing fields without a minor
+version bump; renames require a major bump and migration guide.
+
+#### Polity system (`src/polity.ts`)
+
+| Export | Description |
+|--------|-------------|
+| `Polity` _(frozen)_ | Geopolitical entity: city, nation, or empire |
+| `PolityRegistry` _(frozen)_ | Container for all polities and active wars/alliances |
+| `PolityPair` _(frozen)_ | Trade/proximity link between two polities |
+| `createPolity(spec)` | Construct a `Polity` with sensible defaults |
+| `createPolityRegistry(polities)` | Construct an empty registry |
+| `stepPolityDay(registry, pairs, worldSeed, tick)` | Advance all polities by one simulated day |
+| `declareWar(registry, aId, bId)` | Record a war between two polities |
+| `makePeace(registry, aId, bId)` | End a war between two polities |
+| `areAtWar(registry, aId, bId)` | Query war status |
+
+#### Technology diffusion (`src/tech-diffusion.ts`)
+
+| Export | Description |
+|--------|-------------|
+| `stepTechDiffusion(registry, pairs, worldSeed, tick)` | Spread technology between polities for one day |
+| `computeDiffusionPressure(source, target, pair)` | Per-pair pressure score |
+| `totalInboundPressure(registry, pairs, targetId)` | Sum of all inbound pressure toward a polity |
+| `techEraName(era)` | Human-readable era label |
+
+#### Emotional contagion (`src/emotional-contagion.ts`)
+
+| Export | Description |
+|--------|-------------|
+| `EmotionalWave` _(frozen)_ | Active emotional event propagating across polities |
+| `applyEmotionalContagion(registry, waves, worldSeed, tick)` | Apply all active waves to polity morale |
+| `stepEmotionalWaves(waves, worldSeed, tick)` | Advance wave intensities by one day |
+| `computeEmotionalSpread(source, target, wave, profile)` | Spread probability for one polity pair |
+| `triggerMilitaryRout(sourcePolityId)` | Emit a fear wave from a battlefield loss |
+| `triggerVictoryRally(sourcePolityId, leaderId?)` | Emit a hope wave from a victory |
+| `netEmotionalPressure(registry, waves, polityId)` | Net morale pressure on a polity |
+
 ---
 
 ## Tier 2 — Experimental extension API
@@ -121,9 +163,6 @@ A `CHANGELOG.md` entry will document any breaking change.
 
 | Module | Key exports |
 |--------|------------|
-| `src/polity.ts` | `createPolity`, `createPolityRegistry`, `stepPolityDay`, `declareWar`, `areAtWar`, `Polity`, `PolityRegistry`, `PolityPair` |
-| `src/tech-diffusion.ts` | `computeDiffusionPressure`, `stepTechDiffusion`, `totalInboundPressure`, `techEraName` |
-| `src/emotional-contagion.ts` | `applyEmotionalContagion`, `stepEmotionalWaves`, `computeEmotionalSpread`, `triggerMilitaryRout`, `triggerVictoryRally`, `netEmotionalPressure` |
 | `src/mythology.ts` | `compressMythsFromHistory`, `stepMythologyYear`, `aggregateFactionMythEffect`, `scaledMythEffect` |
 | `src/narrative-stress.ts` | `runNarrativeStressTest`, `scoreNarrativePush` |
 | `src/campaign.ts` | `Campaign`, `stepCampaignDay`, `advanceCampaignClock`, `serializeCampaign`, `deserializeCampaign` |

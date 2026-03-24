@@ -8,6 +8,80 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **CE-14 · Socio-Economic Campaign Layer → Stable Promotion**
+  - Promote `stepPolityDay`, `declareWar`, `makePeace`, `areAtWar`,
+    `createPolity`, `createPolityRegistry`, `Polity`, `PolityRegistry`,
+    `PolityPair` (`src/polity.ts`), `stepTechDiffusion`, `computeDiffusionPressure`,
+    `totalInboundPressure`, `techEraName` (`src/tech-diffusion.ts`), and
+    `applyEmotionalContagion`, `stepEmotionalWaves`, `computeEmotionalSpread`,
+    `triggerMilitaryRout`, `triggerVictoryRally`, `netEmotionalPressure`,
+    `EmotionalWave` (`src/emotional-contagion.ts`) from Tier 2 (Experimental)
+    to Tier 1 (Stable) in `STABLE_API.md`.
+  - Add `export *` re-exports to `src/polity.ts` so the `ananke/polity` subpath
+    delivers the complete Socio-Economic Campaign Layer in one import.
+  - Freeze `Polity`, `PolityRegistry`, `PolityPair` and `EmotionalWave` interfaces
+    with `@stable CE-14` JSDoc annotations — no required-field additions without a
+    minor bump, no renames without a major bump.
+
+### Migration guide — v0.1.x → v0.2.0
+
+This is a **non-breaking promotion**.  No existing code needs to change.
+
+#### What is new
+
+The Socio-Economic Campaign Layer (`polity`, `tech-diffusion`, `emotional-contagion`)
+is now Tier 1 (Stable).  You can depend on it without fear of silent API churn.
+
+#### Import change (optional)
+
+Instead of importing from the package root:
+
+```typescript
+import { stepPolityDay }       from "@its-not-rocket-science/ananke";
+import { stepTechDiffusion }   from "@its-not-rocket-science/ananke";
+import { applyEmotionalContagion } from "@its-not-rocket-science/ananke";
+```
+
+You may now import from the dedicated subpath (recommended for tree-shaking):
+
+```typescript
+import {
+  stepPolityDay,
+  stepTechDiffusion,
+  applyEmotionalContagion,
+  EmotionalWave,
+} from "@its-not-rocket-science/ananke/polity";
+```
+
+Both forms remain supported indefinitely.
+
+#### Interface freeze guarantees (from v0.2.0)
+
+| Interface | Guarantee |
+|-----------|-----------|
+| `Polity` | Existing fields never renamed/removed without major bump |
+| `PolityRegistry` | `polities`, `activeWars`, `alliances` fields frozen |
+| `PolityPair` | `polityAId`, `polityBId`, `sharedLocations`, `routeQuality_Q` frozen |
+| `EmotionalWave` | `profileId`, `sourcePolityId`, `intensity_Q`, `daysActive` frozen |
+
+Adding new **optional** fields to these interfaces is never a breaking change.
+
+---
+
+## [0.1.9] — 2026-03-24
+
+  ### Added
+
+  - **CE-14 · Promote Socio-economic Campaign Layer to Tier 1 Stable** (`src/parallel.ts`)
+    - Freeze Polity, PolityRegistry, PolityPair, EmotionalWave interfaces.
+    - Promote stepPolityDay, stepTechDiffusion, applyEmotionalContagion,
+      declareWar, makePeace to Tier 1 in STABLE_API.md.
+    - Re-export tech-diffusion and emotional-contagion from src/polity.ts so
+      ananke/polity is a single-import campaign layer entry point.
+    - Add v0.1.x -> v0.2.0 migration guide to CHANGELOG.md.
+
 ---
 
 ## [0.1.8] — 2026-03-24

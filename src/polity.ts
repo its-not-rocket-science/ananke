@@ -26,6 +26,9 @@ import { makeRng }              from "./rng.js";
  *
  * Operates at 1 tick per simulated day.  All Q fields are fixed-point
  * fractions in [0, SCALE.Q] unless documented otherwise.
+ *
+ * @stable CE-14 — fields are frozen from v0.2.0.  New fields require a minor
+ * version bump; removals or renames require a major bump and migration guide.
  */
 export interface Polity {
   id:                 string;
@@ -51,7 +54,11 @@ export interface Polity {
   moraleQ:            Q;
 }
 
-/** Registry of all active polities and their geopolitical relationships. */
+/**
+ * Registry of all active polities and their geopolitical relationships.
+ *
+ * @stable CE-14 — frozen from v0.2.0.
+ */
 export interface PolityRegistry {
   polities:   Map<string, Polity>;
   /**
@@ -63,7 +70,11 @@ export interface PolityRegistry {
   alliances:  Map<string, Set<string>>;
 }
 
-/** A trade/proximity link between two polities in the Campaign graph. */
+/**
+ * A trade/proximity link between two polities in the Campaign graph.
+ *
+ * @stable CE-14 — frozen from v0.2.0.
+ */
 export interface PolityPair {
   polityAId:        string;
   polityBId:        string;
@@ -596,3 +607,16 @@ export function polityFactionStanding(
   return factionRegistry.globalStanding
     .get(polityA.factionId)?.get(polityB.factionId) ?? STANDING_NEUTRAL;
 }
+
+// ── Campaign Layer barrel (CE-14) ──────────────────────────────────────────────
+//
+// The `ananke/polity` subpath re-exports the full Socio-Economic Campaign Layer
+// so that a host can import everything from one entry point:
+//
+//   import { stepPolityDay, stepTechDiffusion, applyEmotionalContagion }
+//     from "ananke/polity";
+//
+// Both modules are Tier 1 (Stable) from v0.2.0.
+
+export * from "./tech-diffusion.js";
+export * from "./emotional-contagion.js";

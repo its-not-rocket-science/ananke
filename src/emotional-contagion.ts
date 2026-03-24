@@ -71,6 +71,9 @@ export interface EmotionalContagionProfile {
 /**
  * An active emotional event originating from one polity.
  * Decays each day; removed when intensity_Q reaches 0.
+ *
+ * @stable CE-14 — frozen from v0.2.0.  Also exported as the nominal
+ * `ContagionWave` type referenced in the Campaign Layer documentation.
  */
 export interface EmotionalWave {
   profileId:       string;
