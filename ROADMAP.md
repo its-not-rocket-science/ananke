@@ -5264,8 +5264,8 @@ turning a technically excellent engine into a platform people can confidently bu
 
 > **✅ All roadmap items delivered (March 2026).**
 > All 67 simulation phases, all five integration milestones, Items 6–16, all Platform
-> Hardening items, and CE-1–4 and CE-6 are complete.  CE-5 (WebAssembly Kernel) Phase 1
-> scaffold is complete — `as/units.ts` compiles to WASM, 31 tests pass.
+> Hardening items, and CE-1–4 and CE-6 are complete.  CE-5 (WebAssembly Kernel) Phases 1–3
+> complete — `as/units.ts`, `as/push.ts`, `as/injury.ts` compile to WASM; 61 tests pass.
 
 ---
 
@@ -6537,10 +6537,42 @@ complexity from "two processes" to "one binary."  Unlocks mobile deployment.
   (`SCALE`, `to`, `from`) replaced by individual named exports; default parameters removed
   (WASM calling convention doesn't carry `$~argumentsLength`).
 
-**Phase 2 — kernel hot path (outstanding):** Port `src/sim/push.ts` (pair resolution),
-`src/sim/step/push.ts`, and `src/sim/step/energy.ts` so that a single `stepPair()` call
-compiles to WASM.  This is the dependency-heavy part requiring stub implementations of
-`Entity`, `WorldState`, and all step sub-modules.
+**Phase 2 — pair repulsion kernel (complete, March 2026):**
+
+- `as/push.ts` — AssemblyScript port of the N² pair repulsion loop from
+  `src/sim/step/push.ts`.  Flat-memory API: caller writes entity positions/alive flags
+  via `writeEntity(slot, posX, posY, alive)`; calls `stepRepulsionPairs(n, radius_m, repelAccel_mps2)`;
+  reads velocity deltas via `readDvX(slot)` / `readDvY(slot)`.
+- `MAX_ENTITIES = 64`; memory layout: 5 × 64 × i32 = 1280 bytes (1 WASM page).
+- `approxDist(dx, dy)` — octagonal integer distance approximation (max 3.5% error).
+- `stepRepulsionPairs` mirrors the pair loop exactly: i64 for d² / ax / ay to avoid
+  i32 overflow; equal-and-opposite velocity deltas; dead entities skipped.
+- `npm run build:wasm:push` compiles to `dist/as/push.wasm`; `--initialMemory 1` declares
+  the required linear memory page.
+- `test/as/push.wasm.test.ts` — 15 Vitest tests: `approxDist`, two-entity horizontal/
+  diagonal/near-overlap/outside-radius/dead cases, three-entity symmetry, dv clear.
+  All 15 pass after `npm run build:wasm:push`.
+
+**Phase 3 — injury accumulation inner loop (complete, March 2026):**
+
+- `as/injury.ts` — AssemblyScript port of the per-entity core of `stepInjuryProgression`:
+  clotting, bleed→fluid-loss, shock accumulation, consciousness loss, death check.
+- Flat memory layout: 64 entity slots × 120 bytes (6 vitals + 6 regions × 4 fields).
+- API: `writeVitals`, `writeRegion`, `stepBleedAndShock(n)`, `readFluidLoss`, `readShock`,
+  `readConsciousness`, `readDead`, `readBleedingRate`.
+- Omitted (stay in TypeScript): armour, traits, body plans, infection timer, molting,
+  wing regen, thermoregulation — all require the full entity model.
+- `npm run build:wasm:injury` → `dist/as/injury.wasm`.
+- `test/as/injury.wasm.test.ts` — 15 Vitest tests: constants, clotting (intact vs damaged
+  tissue), bleed accumulation, multi-region bleed, shock from internal damage, consciousness
+  from suffocation, death triggers, dead-entity skip, batch, 10-tick consistency vs TS.
+  All 15 pass after `npm run build:wasm:injury`.
+
+**Phase 4 — WASM host integration (outstanding):** Wire `as/push.ts` + `as/injury.ts`
+into the Godot/Unity sidecars as drop-in replacements for the TypeScript push and injury
+steps.  Add a marshaling layer that copies entity positions/vitals into WASM memory before
+each tick and reads velocity deltas and updated vitals back out.  This removes ~30% of the
+per-tick TypeScript computation from the hot path.
 
 **Note:** This is the highest-impact but longest-lead-time item.  CE-1 through CE-4 should
 ship first — they unblock companion projects immediately with no WASM required.

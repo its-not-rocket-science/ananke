@@ -121,7 +121,10 @@
     "benchmark:parallel": "node dist/tools/benchmark-parallel.js",
     "run:renderer-bridge": "node dist/tools/renderer-bridge.js",
     "build:wasm": "asc as/units.ts --outFile dist/as/units.wasm --textFile dist/as/units.wat --runtime stub --optimize",
-    "test:wasm": "npm run build:wasm && vitest run test/as/"
+    "build:wasm:push": "asc as/push.ts --outFile dist/as/push.wasm --textFile dist/as/push.wat --runtime stub --optimize --initialMemory 1",
+    "build:wasm:injury": "asc as/injury.ts --outFile dist/as/injury.wasm --textFile dist/as/injury.wat --runtime stub --optimize --initialMemory 1",
+    "build:wasm:all": "npm run build:wasm && npm run build:wasm:push && npm run build:wasm:injury",
+    "test:wasm": "npm run build:wasm:all && vitest run test/as/"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
