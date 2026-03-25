@@ -54,10 +54,15 @@
     "./competence": {
       "import": "./dist/src/competence/index.js",
       "types": "./dist/src/competence/index.d.ts"
+    },
+    "./wasm-kernel": {
+      "import": "./dist/src/wasm-kernel.js",
+      "types": "./dist/src/wasm-kernel.d.ts"
     }
   },
   "files": [
     "dist/src",
+    "dist/as",
     "docs/project-overview.md",
     "docs/host-contract.md",
     "docs/integration-primer.md",

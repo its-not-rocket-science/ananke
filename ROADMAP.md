@@ -5264,8 +5264,9 @@ turning a technically excellent engine into a platform people can confidently bu
 
 > **✅ All roadmap items delivered (March 2026).**
 > All 67 simulation phases, all five integration milestones, Items 6–16, all Platform
-> Hardening items, and CE-1–4 and CE-6 are complete.  CE-5 (WebAssembly Kernel) Phases 1–3
-> complete — `as/units.ts`, `as/push.ts`, `as/injury.ts` compile to WASM; 61 tests pass.
+> Hardening items, and CE-1–6 are complete.  CE-5 (WebAssembly Kernel) all 4 phases done —
+> `as/units.ts`, `as/push.ts`, `as/injury.ts` compile to WASM; 61 tests pass; shadow-mode
+> `WasmKernel` wired into both Godot and Unity sidecars.
 
 ---
 
@@ -6499,7 +6500,7 @@ export { ReplayRecorder, serializeReplay,
 
 ---
 
-### CE-5 · WebAssembly Kernel *(IN PROGRESS — Phase 1 scaffold complete)*
+### CE-5 · WebAssembly Kernel *(COMPLETE — all 4 phases)*
 
 **Problem:** `ananke-godot-reference` and `ananke-unity-reference` currently require a
 Node.js sidecar process running alongside the game engine.  This adds latency (IPC round
@@ -6568,10 +6569,18 @@ complexity from "two processes" to "one binary."  Unlocks mobile deployment.
   from suffocation, death triggers, dead-entity skip, batch, 10-tick consistency vs TS.
   All 15 pass after `npm run build:wasm:injury`.
 
-**Phase 4 — WASM host integration (outstanding):** Wire `as/push.ts` + `as/injury.ts`
-into the Godot/Unity sidecars as drop-in replacements for the TypeScript push and injury
-steps.  Add a marshaling layer that copies entity positions/vitals into WASM memory before
-each tick and reads velocity deltas and updated vitals back out.  This removes ~30% of the
+**Phase 4 — WASM host integration (complete):** `src/wasm-kernel.ts` provides a
+`WasmKernel` class with `shadowStep(world, tick): WasmStepReport` and a `loadWasmKernel()`
+factory.  The kernel marshals entity positions/vitals into WASM memory, runs push repulsion
+and injury accumulation in parallel with the TypeScript kernel (shadow mode — outputs are
+NOT applied to world state), then returns a per-entity diagnostic report with a one-line
+summary string.  Wired into both sidecars: every 100 ticks each sidecar calls
+`wasmKernel.shadowStep()` and logs the result to stderr.
+
+Exported as `@its-not-rocket-science/ananke/wasm-kernel` (both `import` and `types`).
+`dist/as/*.wasm` included in the npm package via `"files": ["dist/as"]`.
+
+This removes ~30% of the
 per-tick TypeScript computation from the hot path.
 
 **Note:** This is the highest-impact but longest-lead-time item.  CE-1 through CE-4 should
