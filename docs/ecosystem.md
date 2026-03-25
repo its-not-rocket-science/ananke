@@ -232,13 +232,16 @@ If you build one, open a PR to add it to the "Community links" section below.
 
 | Bridge | Engine | Status | GitHub |
 |--------|--------|--------|--------|
-| `ananke-godot-reference` | Godot 4.2+ | ✅ M1 complete (HTTP sidecar + procedural rig) | [its-not-rocket-science/ananke-godot-reference](https://github.com/its-not-rocket-science/ananke-godot-reference) |
-| `ananke-unity-reference` | Unity 6 (6000.0 LTS) | ✅ M1 complete (HTTP sidecar + capsule rig) | [its-not-rocket-science/ananke-unity-reference](https://github.com/its-not-rocket-science/ananke-unity-reference) |
+| `ananke-godot-reference` | Godot 4.2+ | ✅ M1–M4 complete (WebSocket sidecar, bone mapping, AnimationTree, grapple IK) | [its-not-rocket-science/ananke-godot-reference](https://github.com/its-not-rocket-science/ananke-godot-reference) |
+| `ananke-unity-reference` | Unity 6 (6000.0 LTS) | ✅ M1–M4 complete (WebSocket sidecar, HumanBodyBones, AnimatorController, grapple constraint) | [its-not-rocket-science/ananke-unity-reference](https://github.com/its-not-rocket-science/ananke-unity-reference) |
 | `ananke-unreal-bridge` | Unreal Engine 5 | Wanted | — |
 | `ananke-threejs-bridge` | Three.js / WebGL | Wanted | — |
 
-**M1** means: entity positions and animation state flags drive placeholder geometry in the engine viewport.
-**M2–M4** (bone mapping, AnimationTree wiring, grapple IK) are outstanding in both reference repos.
+Both reference repos cover the full M1–M4 bridge contract:
+- **M1** entity positions + animation state flags over WebSocket at 20 Hz
+- **M2** `RigSnapshot.pose[].segmentId` → engine bone names (Godot `SkeletonMapper.gd` / Unity `AnankeSkeletonConfig`)
+- **M3** `AnimationHints` drives locomotion blend, combat override, and shock additive layers
+- **M4** `GrapplePoseConstraint` constrains held entity to holder anchor; `GripWeight` drives hand-close animation
 
 The ananke repo also ships `tools/renderer-bridge.ts` — a zero-dependency WebSocket bridge server
 (`npm run run:renderer-bridge`) that broadcasts Knight vs. Brawler tick data on `ws://localhost:3001/bridge`

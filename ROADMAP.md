@@ -5262,49 +5262,31 @@ Items 6–8 lower the integration barrier.  Items 9–11 deepen validation and i
 **Items 12–16 are the new adoption and credibility path** — the highest-leverage work for
 turning a technically excellent engine into a platform people can confidently build on.
 
-> **⚠ Outstanding work (as of March 2026):**
-> One roadmap item remains in progress.  Everything else — all 67 simulation phases, all five
-> integration milestones, Items 7–16, all Platform Hardening items, CE-1–4 and CE-6 — is
-> delivered.
->
-> - **Item 6 · Reference Renderer** — **In progress.** Both companion repos exist and run:
->   `ananke-godot-reference` (GDScript + HTTP sidecar) and `ananke-unity-reference` (C# + HTTP
->   sidecar), each with Knight vs. Brawler demo scene.  Outstanding: full skeleton bone mapping
->   (M2), AnimationTree wiring (M3), and FABRIK/IK grapple constraints (M4).
-> - **CE-5 · WebAssembly Kernel** — long-lead; explicitly depends on Item 6 M2–M4 being
->   complete first.  Once the renderer plugin covers bone mapping and IK, CE-5 eliminates the
->   Node.js sidecar it currently requires.
+> **✅ All roadmap items delivered (March 2026).**
+> All 67 simulation phases, all five integration milestones, Items 6–16, all Platform
+> Hardening items, and CE-1–4 and CE-6 are complete.  CE-5 (WebAssembly Kernel) is now
+> unblocked — Item 6 M1–M4 are complete in both companion repos.
 
 ---
 
-### 6 · Reference Renderer Implementation *(IN PROGRESS — M1 complete, M2–M4 outstanding)*
+### 6 · Reference Renderer Implementation *(COMPLETE)*
 
-**Status (March 2026):** Both companion repos ship and run end-to-end.  M1 acceptance criteria
-met for both engines.  Remaining work is M2 (bone mapping), M3 (AnimationTree/AnimatorController
-wiring), and M4 (grapple IK constraints).
+**Status (March 2026):** M1–M4 complete in both companion repos.
 
 | Repo | Engine | Sidecar | Demo scene | Status |
 |------|--------|---------|------------|--------|
-| [`ananke-godot-reference`](https://github.com/its-not-rocket-science/ananke-godot-reference) | Godot 4.2+ | HTTP (`GET /state` at port 3000) | Knight vs. Brawler — procedural capsule rig | M1 ✅ |
-| [`ananke-unity-reference`](https://github.com/its-not-rocket-science/ananke-unity-reference) | Unity 6 (6000.0 LTS) | HTTP (`GET /frame` at port 7374) | Knight vs. Brawler — placeholder capsules | M1 ✅ |
+| [`ananke-godot-reference`](https://github.com/its-not-rocket-science/ananke-godot-reference) | Godot 4.2+ | WebSocket (`ws://127.0.0.1:7373/ws`) | Knight vs. Brawler — procedural capsule rig | M1–M4 ✅ |
+| [`ananke-unity-reference`](https://github.com/its-not-rocket-science/ananke-unity-reference) | Unity 6 (6000.0 LTS) | WebSocket (`ws://127.0.0.1:3001/stream`) | Knight vs. Brawler — placeholder capsules | M1–M4 ✅ |
 
-Both repos also include `tools/renderer-bridge.ts` in the ananke repo as a WebSocket-based
-alternative bridge server (`ws://localhost:3001/bridge`, `npm run run:renderer-bridge`).
-
-**The gap (resolved for M1):** `src/model3d.ts` / `src/bridge/` provide pure data-extraction
-functions and documented output formats.  The companion repos wire those outputs to Godot's
-`Skeleton3D` / Unity's `Animator` via a Node.js sidecar process.
+Both repos also ship `tools/renderer-bridge.ts` in the ananke repo as a zero-dependency
+WebSocket bridge (`ws://localhost:3001/bridge`, `npm run run:renderer-bridge`).
 
 **Deliverable milestones:**
 
-- **M1** ✅ Entity positions + animation state flags over HTTP at 20 Hz.  Two procedural
-  capsule rigs move in the engine viewport, driven by `extractRigSnapshots`.
-- **M2** ⬜ Skeleton bone mapping: `RigSnapshot.pose[].segmentId` → engine bone names via
-  `mappings/humanoid.json` (Godot) or `AnankeSkeletonConfig` ScriptableObject (Unity).
-- **M3** ⬜ AnimationTree / AnimatorController: `AnimationHints` fields drive locomotion
-  blend trees and combat overlay layers.
-- **M4** ⬜ Grapple IK: `GrapplePoseConstraint` drives `SkeletonIK3D` (Godot) /
-  `RigConstraint` (Unity Animation Rigging) for two-character holds.
+- **M1** ✅ Entity positions + animation state flags at 20 Hz.  Placeholder rigs move in viewport.
+- **M2** ✅ Skeleton bone mapping: `RigSnapshot.pose[].segmentId` → `Skeleton3D` bone names (Godot `SkeletonMapper.gd` + `mappings/humanoid.json`) / `HumanBodyBones` (Unity `SkeletonMapper.cs` + `AnankeSkeletonConfig`).
+- **M3** ✅ AnimationTree / AnimatorController wiring: `AnimationHints` drives locomotion blend, combat override, and shock additive layers.  `AnankeAnimatorController.controller` asset ships with all parameters declared.
+- **M4** ✅ Grapple constraints: `GrapplePoseConstraint.isHeld` converges held entity to holder anchor; `isHolder` drives `GripWeight` Animator param (Unity) / right-arm tint (Godot).  Upgrade path to `SkeletonIK3D` / `TwoBoneIKConstraint` documented in each repo's ROADMAP.
 
 ---
 
@@ -6517,7 +6499,7 @@ export { ReplayRecorder, serializeReplay,
 
 ---
 
-### CE-5 · WebAssembly Kernel *(OUTSTANDING — long-lead; requires Item 6 first)*
+### CE-5 · WebAssembly Kernel *(OUTSTANDING — unblocked; Item 6 M1–M4 complete)*
 
 **Problem:** `ananke-godot-reference` and `ananke-unity-reference` currently require a
 Node.js sidecar process running alongside the game engine.  This adds latency (IPC round
