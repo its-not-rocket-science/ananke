@@ -6318,9 +6318,10 @@ pattern as Species Forge.
 
 ---
 
-### Persistent World Server — COMPLETE (reference implementation)
+### Persistent World Server — COMPLETE (reference implementation + battle-bridge integration)
 
-**Delivered:** `tools/world-server.ts` + `docs/world-client/index.html`
+**Delivered:** `tools/world-server.ts` + `docs/world-client/index.html` (polity-only server);
+`tools/persistent-world.ts` + `src/battle-bridge.ts` (battle-bridge integration, 2026-03-25).
 
 **What the server does (`npm run world-server`):**
 - Minimal Node.js HTTP server — zero external dependencies (built-in `http`, `fs` only)
@@ -6348,6 +6349,21 @@ pattern as Species Forge.
 
 **Ananke hooks:** `stepPolityDay`, `stepTechDiffusion`, `declareWar`, `makePeace`, `createPolityRegistry`.
 
+**Battle-bridge enhancement (`tools/persistent-world.ts`):**
+Extends the polity-only server with tactical combat resolution.  Every 7 simulated days, each
+active war triggers a synchronous burst-step battle (up to `maxTicks` ticks of `stepWorld`).
+`src/battle-bridge.ts` provides pure translation functions:
+
+- `techEraToLoadout(era)` — era → `{ weaponId, armourId, archetype }`
+- `militaryStrengthToTeamSize(q)` — Q ∈ [0, SCALE.Q] → [MIN\_TEAM\_SIZE, MAX\_TEAM\_SIZE]
+- `battleSeed(worldSeed, day, polityAId, polityBId)` — deterministic uint32
+- `battleConfigFromPolities(polityA, polityB, worldSeed, day)` → `BattleConfig`
+- `polityImpactFromBattle(outcome, config)` → `PolityImpact[]`
+- `applyPolityImpact(polity, impact)` — mutates polity; clamps morale/stability to [0, SCALE.Q]
+
+WebSocket push (`ws://localhost:3000/ws`) delivers `{ type: "init"|"tick"|"battle" }` events.
+27 tests in `test/battle-bridge.test.ts`.
+
 ---
 
 *Ideas not included — companion projects instead:*
@@ -6364,6 +6380,47 @@ pattern as Species Forge.
 
 - **Body-plan and scenario content packs** — `ananke-fantasy-species`,
   `ananke-historical-battles`, and template packs; see `docs/companion-projects/`.
+
+---
+
+### Documentation & Outreach *(Long-Term Vision)*
+
+These two items emerged from external feedback (batch 2, 2026-03-25).  Neither requires
+simulation code; both require sustained investment in community infrastructure.
+
+**Documentation overhaul**
+
+The current docs are comprehensive for technical adopters but assume familiarity with
+fixed-point arithmetic and deterministic simulation design.  A full overhaul would add:
+
+- A **hosted docs site** (e.g. Docusaurus or VitePress) at `ananke.dev` with full API
+  reference, concept guides, and search — replacing `docs/*.md` browsed on GitHub.
+- **Step-by-step tutorials** for the three canonical use cases: RPG combat, survival
+  simulation, and 4X campaign layer.
+- A **video series** showing a complete "build a game with Ananke" walkthrough.
+- **Translations** of the integration primer and quickstarts into at least French, German,
+  and Japanese.
+
+This is a content and community infrastructure project, not a code project.  When the
+first external adopter ships a game built on Ananke, the translation effort becomes worth
+scheduling.
+
+**Academic & research outreach**
+
+Ananke's physics-first, fixed-point approach and empirical validation corpus make it an
+unusual artifact — most game physics engines are validation-free.  Outreach opportunities:
+
+- A **white paper** describing the design rationale, fixed-point model, and emergent
+  validation methodology — targeting game-AI and simulation conferences (AIIDE, FDG, IEEE
+  CIG).
+- **Curriculum integration** — Ananke as a teaching substrate for simulation courses (the
+  determinism guarantees make it easier to reason about than stochastic environments).
+- **Preprint / arXiv submission** of the emergent validation report as a reproducible
+  simulation benchmark.
+
+Prerequisite: the emergent validation report (`docs/emergent-validation-report.md`) is
+already published as a first-class artifact (PH-8 COMPLETE).  The white paper is the
+natural next step.
 
 ---
 
@@ -6894,9 +6951,42 @@ overrides require explicit opt-in and manual review.
 
 ---
 
+### CE-17 · Browser-Based Simulation Playground
+
+**Problem (external feedback, 2026-03-25):** Potential adopters want to evaluate Ananke's
+physics depth *before* writing any code.  The existing Species Forge / Culture Forge editors
+let you design entities but do not run a simulation or show outcomes.  A playground lowers
+the evaluation barrier from "set up a Node.js project" to "open a URL."
+
+**Deliverable:** `docs/playground/index.html` — a single-file, zero-dependency browser
+application that runs `stepWorld` directly via the `ananke-threejs-bridge` (or a compiled
+WASM bundle) without any server.
+
+**Scope:**
+- **Scenario selector** — 4–6 pre-built scenarios (1v1 duel, squad battle, epidemic,
+  mounted charge) loaded from the existing `docs/zoo/` data or inline JSON
+- **Slider panel** — strength, speed, armour, weapon, team size; re-seeds and re-runs on change
+- **Outcome viewer** — health tracks identical to `docs/zoo/index.html`; entity event log;
+  tick counter and elapsed-time display
+- **Export** — "Copy scenario JSON" button that outputs a CE-3 `ArenaScenario` compatible
+  with `loadScenario()`
+
+**Why companion project instead of in-library:** The playground requires a bundler step
+(ESM → IIFE) and a live Ananke build; it belongs in `ananke-world-ui` long-term.  The
+short-term deliverable is a standalone `docs/playground/` page that reuses the already-
+compiled `docs/zoo/` data without requiring a build step.
+
+**Ananke hooks:** CE-3 (`loadScenario`), `stepWorld`, `buildSpatialIndex`, bridge module.
+
+**Success criterion:** A user with no Node.js tooling can open `docs/playground/index.html`
+from a GitHub Pages URL, choose a scenario, drag a slider, and see a different outcome
+within 2 seconds.
+
+---
+
 ### Feedback evaluated but not added
 
-Two items from external feedback were reviewed and rejected as redundant:
+Two items from external feedback (batch 1) were reviewed and rejected as redundant:
 
 - **Performance regression CI** — already delivered as Item 15 (`tools/benchmark-check.ts`
   + `benchmarks/baseline.json` + `.github/workflows/nightly.yml`).  The nightly CI catches
@@ -6905,6 +6995,19 @@ Two items from external feedback were reviewed and rejected as redundant:
   repos `ananke-godot-reference` / `ananke-unity-reference`), CE-5 (WASM for native C#/GDScript),
   and the existing `ananke-threejs-bridge` companion project (Three.js / Babylon.js in-browser
   renderer with no sidecar process required).
+
+**External feedback batch 2 (2026-03-25) — item-by-item evaluation:**
+
+| Item | Feedback proposal | Disposition |
+|------|------------------|-------------|
+| 69 | Godot/Unity downloadable plugin + demo scene | **Companion scope** — `ananke-godot-reference` and `ananke-unity-reference` cover this; CE-5 Phase 4 added shadow-mode WASM diagnostics to both sidecars.  Demo scene is the companion repos' next milestone, not an Ananke-core item. |
+| 70 | Browser simulation playground | **Added as CE-17** above. |
+| 71 | Ananke Archive — REST API + community scenarios | **Already covered** — `ananke-archive` companion project (see index below) + `tools/generate-zoo.ts` + `docs/zoo/index.html` deliver a local version; full REST API is companion scope. |
+| 72 | Formal governance model | **Already complete** — Item 16 (`CONTRIBUTING.md`, DCO, issue templates, branch-protection policy). |
+| 73 | Documentation overhaul (wiki, tutorials, video, translations) | **Added to Long-Term Vision** — see "Documentation & Outreach" below. |
+| 74 | Persistent World Server | **Already complete** — `tools/world-server.ts` (polity-only) + `tools/persistent-world.ts` + `src/battle-bridge.ts` (battle-bridge integration, 2026-03-25). |
+| 75 | Academic & research outreach | **Added to Long-Term Vision** — see "Documentation & Outreach" below. |
+| 76 | Culture Forge + linguistic evolution | **Already complete** — Culture Forge (`docs/editors/culture-forge.html`) done; linguistic evolution is companion scope (`ananke-language-forge`). |
 
 ---
 
