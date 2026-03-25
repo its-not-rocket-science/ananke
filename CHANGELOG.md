@@ -6,6 +6,33 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.15] — 2026-03-25
+
+### Added
+
+- **CE-5 · WebAssembly Kernel** — shadow-mode WASM acceleration for push repulsion and
+  injury accumulation:
+  - `as/units.ts` — AssemblyScript port of `src/units.ts` (all 13 exports: SCALE constants,
+    `q()`, `clampQ()`, `qMul()`, `qDiv()`, `mulDiv()`, `sqrtQ()`, `cbrtQ()`, unit
+    converters).  Compiled to `dist/as/units.wasm`.
+  - `as/push.ts` — pair-wise position repulsion kernel in flat WASM memory (64-entity
+    capacity, octagonal distance approximation, overflow-safe i64 arithmetic).
+    Compiled to `dist/as/push.wasm`.
+  - `as/injury.ts` — per-entity injury accumulation inner loop (clotting, bleed→fluid,
+    shock, consciousness, death check) matching `src/sim/step/injury.ts` constants exactly.
+    Compiled to `dist/as/injury.wasm`.
+  - `src/wasm-kernel.ts` — Node.js host bridge.  `WasmKernel.shadowStep(world, tick)`
+    marshals entity state into WASM memory, runs both kernels, and returns a
+    `WasmStepReport` with per-entity velocity deltas and projected vitals.  Shadow mode:
+    outputs are never applied to world state — used for validation and diagnostics only.
+  - `loadWasmKernel()` factory loads `push.wasm` + `injury.wasm` from `dist/as/` at
+    runtime via `import.meta.url` + `readFileSync`.
+  - Exported as `@its-not-rocket-science/ananke/wasm-kernel`.
+  - `dist/as/` (compiled WASM binaries) included in the published package.
+  - 61 WASM unit tests (`test/as/`) covering units, push repulsion, and injury
+    accumulation parity with the TypeScript reference implementation.
+  - Build scripts: `npm run build:wasm:all`, `npm run test:wasm`.
+
 ## [Unreleased]
 
 ### Added
