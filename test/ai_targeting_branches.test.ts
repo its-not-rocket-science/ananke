@@ -10,6 +10,7 @@ import { q, SCALE } from "../src/units";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { buildWorldIndex } from "../src/sim/indexing";
 import { buildSpatialIndex } from "../src/sim/spatial";
+import { stepWorld } from "../src/sim/kernel";
 import { pickTarget, updateFocus } from "../src/sim/ai/targeting";
 import type { AIPolicy } from "../src/sim/ai/types";
 
@@ -190,11 +191,7 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
   // These tests cover the large uncovered block around lines 720-814 of kernel.ts
   // by running stepWorld with hazard conditions set.
 
-  test("onFire increases surface damage and shock after one tick", async () => {
-    const { mkHumanoidEntity, mkWorld } = await import("../src/sim/testing");
-    const { stepWorld } = await import("../src/sim/kernel");
-    const { q } = await import("../src/units");
-
+  test("onFire increases surface damage and shock after one tick", () => {
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.condition.onFire = q(1.0);
     const world = mkWorld(1, [entity]);
@@ -207,11 +204,7 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
     expect(e.injury.shock).toBeGreaterThan(0);
   });
 
-  test("corrosiveExposure increases surface and internal damage after one tick", async () => {
-    const { mkHumanoidEntity, mkWorld } = await import("../src/sim/testing");
-    const { stepWorld } = await import("../src/sim/kernel");
-    const { q } = await import("../src/units");
-
+  test("corrosiveExposure increases surface and internal damage after one tick", () => {
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.condition.corrosiveExposure = q(1.0);
     const world = mkWorld(1, [entity]);
@@ -223,11 +216,7 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
     expect(e.injury.byRegion.torso!.internalDamage).toBeGreaterThan(0);
   });
 
-  test("electricalOverload increases internal damage and stun after one tick", async () => {
-    const { mkHumanoidEntity, mkWorld } = await import("../src/sim/testing");
-    const { stepWorld } = await import("../src/sim/kernel");
-    const { q } = await import("../src/units");
-
+  test("electricalOverload increases internal damage and stun after one tick", () => {
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.condition.electricalOverload = q(1.0);
     const world = mkWorld(1, [entity]);
@@ -239,11 +228,7 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
     expect(e.condition.stunned).toBeGreaterThan(0);
   });
 
-  test("radiation increases internal damage and shock after one tick", async () => {
-    const { mkHumanoidEntity, mkWorld } = await import("../src/sim/testing");
-    const { stepWorld } = await import("../src/sim/kernel");
-    const { q } = await import("../src/units");
-
+  test("radiation increases internal damage and shock after one tick", () => {
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.condition.radiation = q(1.0);
     const world = mkWorld(1, [entity]);
@@ -255,11 +240,7 @@ describe("environmental hazard application (kernel stepConditionsToInjury)", () 
     expect(e.injury.shock).toBeGreaterThan(0);
   });
 
-  test("suffocation decreases consciousness over time", async () => {
-    const { mkHumanoidEntity, mkWorld } = await import("../src/sim/testing");
-    const { stepWorld } = await import("../src/sim/kernel");
-    const { q } = await import("../src/units");
-
+  test("suffocation decreases consciousness over time", () => {
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.condition.suffocation = q(1.0);
     const world = mkWorld(1, [entity]);
