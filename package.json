@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -118,6 +118,7 @@
     "generate-zoo": "node dist/tools/generate-zoo.js",
     "generate-map": "node dist/tools/generate-map.js",
     "world-server": "node dist/tools/world-server.js",
+    "persistent-world": "node dist/tools/persistent-world.js",
     "replication-server": "node dist/tools/replication-server.js",
     "benchmark-check": "node dist/tools/benchmark-check.js",
     "benchmark-check:strict": "node dist/tools/benchmark-check.js --threshold=0.10",

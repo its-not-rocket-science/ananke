@@ -6,6 +6,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.16] — 2026-03-25
+
+### Added
+
+- **CE-5 · Persistent World Server** — campaign ↔ combat battle bridge:
+  - src/battle-bridge.ts: pure functions translating polity state to
+    BattleConfig and BattleOutcome back to PolityImpact[]. Covers
+    tech-era→loadout mapping, military-strength→team-size scaling,
+    deterministic battle seed, morale/stability/population impact.
+    27 tests in test/battle-bridge.test.ts.
+  - tools/persistent-world.ts: integrated server running polity tick +
+    synchronous tactical battles every 7 days per active war. Battle
+    outcomes mutate polity morale, stability, and population. Full
+    checkpoint/resume, WebSocket push, HTTP war/peace/save/reset/battles
+    endpoints. Run with: npm run persistent-world
+
+---
+
 ## [0.1.15] — 2026-03-25
 
 ### Added
@@ -32,8 +50,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   - 61 WASM unit tests (`test/as/`) covering units, push repulsion, and injury
     accumulation parity with the TypeScript reference implementation.
   - Build scripts: `npm run build:wasm:all`, `npm run test:wasm`.
-
-## [Unreleased]
 
 ### Added
 
