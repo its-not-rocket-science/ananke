@@ -5264,8 +5264,8 @@ turning a technically excellent engine into a platform people can confidently bu
 
 > **✅ All roadmap items delivered (March 2026).**
 > All 67 simulation phases, all five integration milestones, Items 6–16, all Platform
-> Hardening items, and CE-1–4 and CE-6 are complete.  CE-5 (WebAssembly Kernel) is now
-> unblocked — Item 6 M1–M4 are complete in both companion repos.
+> Hardening items, and CE-1–4 and CE-6 are complete.  CE-5 (WebAssembly Kernel) Phase 1
+> scaffold is complete — `as/units.ts` compiles to WASM, 31 tests pass.
 
 ---
 
@@ -6499,7 +6499,7 @@ export { ReplayRecorder, serializeReplay,
 
 ---
 
-### CE-5 · WebAssembly Kernel *(OUTSTANDING — unblocked; Item 6 M1–M4 complete)*
+### CE-5 · WebAssembly Kernel *(IN PROGRESS — Phase 1 scaffold complete)*
 
 **Problem:** `ananke-godot-reference` and `ananke-unity-reference` currently require a
 Node.js sidecar process running alongside the game engine.  This adds latency (IPC round
@@ -6524,6 +6524,23 @@ that Godot 4 can call via `JavaScriptBridge` or a native GDExtension wrapper.
 
 **Impact:** Eliminates the sidecar process for all renderer plugins; reduces integration
 complexity from "two processes" to "one binary."  Unlocks mobile deployment.
+
+**Phase 1 — AssemblyScript scaffold (complete, March 2026):**
+
+- `as/units.ts` — AssemblyScript port of all 13 exports from `src/units.ts` (SCALE constants,
+  `q`, `clampQ`, `qMul`, `qDiv`, `mulDiv`, `to_*`, `from_*`, `sqrtQ`, `cbrtQ`).
+- `as/asconfig.json` — build config (release + debug targets, `--runtime stub`).
+- `npm run build:wasm` — compiles to `dist/as/units.wasm` + `dist/as/units.wat`.
+- `test/as/units.wasm.test.ts` — 31 Vitest tests comparing WASM outputs against the TS reference;
+  auto-skipped when `dist/as/units.wasm` is absent.  All 31 pass after `npm run build:wasm`.
+- Key adaptations from TS → AS: `BigInt` replaced by `i64` intrinsics; object-grouped exports
+  (`SCALE`, `to`, `from`) replaced by individual named exports; default parameters removed
+  (WASM calling convention doesn't carry `$~argumentsLength`).
+
+**Phase 2 — kernel hot path (outstanding):** Port `src/sim/push.ts` (pair resolution),
+`src/sim/step/push.ts`, and `src/sim/step/energy.ts` so that a single `stepPair()` call
+compiles to WASM.  This is the dependency-heavy part requiring stub implementations of
+`Entity`, `WorldState`, and all step sub-modules.
 
 **Note:** This is the highest-impact but longest-lead-time item.  CE-1 through CE-4 should
 ship first — they unblock companion projects immediately with no WASM required.

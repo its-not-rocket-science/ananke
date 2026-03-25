@@ -1,0 +1,21 @@
+{
+  "$schema": "https://raw.githubusercontent.com/AssemblyScript/assemblyscript/main/std/assembly/asconfig.schema.json",
+  "targets": {
+    "release": {
+      "outFile": "dist/as/units.wasm",
+      "textFile": "dist/as/units.wat",
+      "sourceMap": false,
+      "optimize": true,
+      "noAssert": true
+    },
+    "debug": {
+      "outFile": "dist/as/units-debug.wasm",
+      "textFile": "dist/as/units-debug.wat",
+      "sourceMap": true,
+      "debug": true
+    }
+  },
+  "options": {
+    "runtime": "stub"
+  }
+}
