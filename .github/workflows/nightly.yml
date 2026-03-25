@@ -41,6 +41,34 @@ jobs:
           path: benchmarks/baseline.json
           retention-days: 90
 
+  wasm-kernel:
+    name: WASM kernel build + tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Build WASM modules
+        run: npm run build:wasm:all
+
+      - name: Run WASM + host-bridge tests
+        # Runs test/as/ (61 low-level WASM unit tests) and
+        # test/wasm-kernel.test.ts (8 end-to-end WasmKernel.shadowStep() tests).
+        run: npx vitest run test/as/ test/wasm-kernel.test.ts
+
   golden-fixtures:
     name: Golden fixture determinism check
     runs-on: ubuntu-latest
