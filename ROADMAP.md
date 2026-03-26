@@ -6500,6 +6500,35 @@ natural next step.
 
 ---
 
+### Phase 92 — Taxation & Treasury Revenue *(COMPLETE — 2026-03-26)*
+
+**The gap:** The polity `treasury_cu` field is drained by infrastructure investment, research
+investment, siege costs, and rebellion raids — but no passive income mechanism exists beyond
+`computeMarketplaceIncome` from Phase 89.  Real polities derive the bulk of their income from
+taxing population and trade.
+
+**Design:** Pure data layer.  `TaxPolicy` is stored externally by the host, parallel to
+`ResearchState` and `GranaryState`.  Uses numeric TechEra keys.  Stability modulates
+collection efficiency (fracture → less collected).  `computeTaxUnrestPressure` returns a
+Q value that can be passed directly as an extra factor into Phase-90 `computeUnrestLevel`.
+
+**Scope:**
+- `TaxPolicy { polityId, taxRate_Q, exemptFraction_Q? }`.
+- `TAX_REVENUE_PER_CAPITA_ANNUAL: Record<number, number>` — Prehistoric 0 → DeepSpace 20 k cu/person/year.
+- `computeAnnualTaxRevenue(polity, policy)` → cu/year: `taxablePop × perCapita × taxRate × stabilityMul`; `stabilityMul ∈ [q(0.50), q(1.00)]`.
+- `computeDailyTaxRevenue(polity, policy)` → cu/day.
+- `computeTaxUnrestPressure(policy)` → Q: 0 at/below `OPTIMAL_TAX_RATE_Q = q(0.15)`; linear ramp to `MAX_TAX_UNREST_Q = q(0.30)` at `MAX_TAX_RATE_Q = q(0.50)`.
+- `stepTaxCollection(polity, policy, elapsedDays)` → `TaxCollectionResult`: mutates `treasury_cu`; returns `{ revenue_cu, unrestPressure_Q }`.
+- `estimateDaysToTreasuryTarget(polity, policy, targetAmount)` → ceiling days; Infinity at zero rate.
+- `computeRequiredTaxRate(polity, desiredAnnual)` → Q: reverse-solve for required rate; clamped to MAX_TAX_RATE_Q.
+- Subpath export `./taxation` added to `package.json`.
+
+**Depends on:** Phase 11 (TechEra), Phase 61 (Polity — population/stability/treasury). Integrates with Phase-90 (Unrest — `unrestPressure_Q` as extra factor), Phase-89 (Infrastructure — marketplace income is additive, not included here).
+
+**Success criterion:** Prehistoric yields zero; stability q(0.0) gives half revenue vs q(1.0); rate above OPTIMAL generates increasing unrest pressure; full exemption gives zero revenue; `computeRequiredTaxRate` reverse-solves correctly; treasury never goes below its pre-step value minus injected amount; all 49 tests pass; 100% statement/function/line coverage.
+
+---
+
 ### Phase 91 — Technology Research *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polities have a `techEra` field and `advanceTechEra` exists, but there is no

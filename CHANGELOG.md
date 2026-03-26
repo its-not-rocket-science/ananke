@@ -6,6 +6,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.37] — 2026-03-26
+
+### Added
+
+- **Phase 92 · Taxation & Treasury Revenue** (`src/taxation.ts`)
+  - `TaxPolicy { polityId, taxRate_Q, exemptFraction_Q? }` — per-polity config stored externally by the host.
+  - `TAX_REVENUE_PER_CAPITA_ANNUAL: Record<number, number>` — numeric TechEra keys; Prehistoric 0 → DeepSpace 20 k cu/person/year.
+  - `computeAnnualTaxRevenue(polity, policy)` → cu/year: `taxablePop × perCapita × taxRate × stabilityMul / SCALE.Q`; `stabilityMul ∈ [q(0.50), q(1.00)]` models collection efficiency; zero at Prehistoric era.
+  - `computeDailyTaxRevenue(polity, policy)` → cu/day: annual ÷ 365 with rounding.
+  - `computeTaxUnrestPressure(policy)` → Q [0, `MAX_TAX_UNREST_Q = q(0.30)`]: zero at/below `OPTIMAL_TAX_RATE_Q = q(0.15)`; linear ramp to max at `MAX_TAX_RATE_Q = q(0.50)`; passes directly into Phase-90 `computeUnrestLevel` as an additional factor.
+  - `stepTaxCollection(polity, policy, elapsedDays)` → `TaxCollectionResult`: adds `round(annual × days / 365)` to `polity.treasury_cu`; returns revenue and unrest pressure.
+  - `estimateDaysToTreasuryTarget(polity, policy, targetAmount)` → ceiling days; Infinity at zero daily rate.
+  - `computeRequiredTaxRate(polity, desiredAnnual)` → Q: reverse-solves for the rate needed to meet a target; clamped to MAX_TAX_RATE_Q.
+  - Added `./taxation` subpath export to `package.json`.
+  - 49 new tests; 4,828 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.36] — 2026-03-26
 
 ### Added
