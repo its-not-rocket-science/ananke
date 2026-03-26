@@ -6,6 +6,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.24] — 2026-03-26
+
+### Added
+
+- **Phase 79 · Feudal Bonds & Vassal Tribute** (`src/feudal.ts`)
+  - `LoyaltyType`: `"kin_bound" | "oath_sworn" | "conquered" | "voluntary"` — governs base strength and daily decay rate.
+  - `VassalBond { vassalPolityId, liegePolityId, loyaltyType, tributeRate_Q, levyRate_Q, strength_Q, establishedTick }` — directed lord-vassal record.
+  - `FeudalRegistry { bonds: Map<string, VassalBond> }` keyed by `"vassalId:liegeId"`.
+  - `LOYALTY_BASE_STRENGTH`: kin_bound q(0.90) → oath_sworn q(0.70) → voluntary q(0.65) → conquered q(0.40).
+  - `LOYALTY_DECAY_PER_DAY`: kin_bound q(0.001)/day → conquered q(0.005)/day.
+  - `REBELLION_THRESHOLD = q(0.25)` — `isRebellionRisk(bond)` returns true below this.
+  - `computeDailyTribute` / `applyDailyTribute` — floor-based tribute scaled by `tributeRate_Q / SCALE.Q / 365`.
+  - `computeLevyStrength(vassal, bond)` — effective levy reduced proportionally by bond weakness (`strength_Q`).
+  - `stepBondStrength(bond, boostDelta_Q?)` — daily decay with optional event boost.
+  - `reinforceBond(bond, deltaQ)` — clamped-to-SCALE.Q reinforcement for kinship events and tribute.
+  - `breakVassalBond(registry, vassalId, liegeId, vassalRulerId?, renownRegistry?)` — removes bond; adds `OATH_BREAK_INFAMY_Q = q(0.15)` infamy to the vassal ruler for `oath_sworn` breaks (Phase 75 integration).
+  - Added `./feudal` subpath export to `package.json`.
+  - 58 new tests; 4,247 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.23] — 2026-03-26
 
 ### Added

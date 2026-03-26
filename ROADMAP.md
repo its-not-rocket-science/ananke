@@ -6500,6 +6500,40 @@ natural next step.
 
 ---
 
+### Phase 79 — Feudal Bonds & Vassal Tribute *(COMPLETE — 2026-03-26)*
+
+**The gap:** The simulation has polities (Phase 61) and renown (Phase 75) but no mechanism for
+lord-vassal relationships. There is no way to model tribute flows, military levies, or the
+loyalty dynamics that govern medieval and feudal societies.
+
+**Design:** A pure data layer external to `PolityRegistry`. `FeudalRegistry` hosts a directed
+graph of `VassalBond` records. Bond strength decays over time and recovers via positive events;
+`isRebellionRisk` provides a clear boolean hook for AI and event triggers. No Entity fields;
+no kernel changes.
+
+**Scope:**
+- `LoyaltyType`: `"kin_bound" | "oath_sworn" | "conquered" | "voluntary"` — affects base strength and decay rate.
+- `VassalBond { vassalPolityId, liegePolityId, loyaltyType, tributeRate_Q, levyRate_Q, strength_Q, establishedTick }`.
+- `FeudalRegistry { bonds: Map<string, VassalBond> }` keyed by `"vassalId:liegeId"`.
+- `LOYALTY_BASE_STRENGTH`: kin_bound q(0.90) → conquered q(0.40).
+- `LOYALTY_DECAY_PER_DAY`: kin_bound q(0.001)/day → conquered q(0.005)/day.
+- `REBELLION_THRESHOLD = q(0.25)` — below this, `isRebellionRisk` returns true.
+- `computeDailyTribute(vassal, bond)` — `floor(treasury × rate / SCALE.Q / 365)`.
+- `applyDailyTribute(vassal, liege, bond)` — mutates both polities.
+- `computeLevyStrength(vassal, bond)` — effective levy reduced by bond weakness.
+- `stepBondStrength(bond, boostDelta_Q?)` — daily decay ± event delta.
+- `reinforceBond(bond, deltaQ)` — positive reinforcement (kinship event, tribute payment).
+- `breakVassalBond(registry, vassalId, liegeId, vassalRulerId?, renownRegistry?)` — adds `OATH_BREAK_INFAMY_Q = q(0.15)` for `oath_sworn` breaks.
+- Subpath export `./feudal` added to package.json.
+
+**Depends on:** Phase 61 (Polity), Phase 75 (Renown).
+
+**Success criterion:** A `conquered` bond (q(0.40)) decays to rebellion risk after 31 daily steps
+without reinforcement; an `oath_sworn` break adds q(0.15) infamy to the vassal ruler's renown
+record; `computeDailyTribute` with treasury 365 000 and rate q(0.10) returns 100/day.
+
+---
+
 ### Phase 78 — Seasonal Calendar & Agricultural Cycle *(COMPLETE — 2026-03-26)*
 
 **The gap:** The simulation has weather (Phase 18), disease spread (Phase 56/73), and polity
