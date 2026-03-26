@@ -6500,6 +6500,38 @@ natural next step.
 
 ---
 
+### Phase 85 — Religion & Faith Systems *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polities have politics, economics, espionage, and war, but no mechanism for
+religious identity or faith-driven events. Named faiths, conversion pressure, heresy risk,
+and faith-influenced diplomacy are absent.
+
+**Design:** Pure data layer. `FaithRegistry` stores faith definitions and per-polity adherent
+fractions as Q values (population share). Exclusive faiths (monotheistic) compete: gaining
+adherents displaces other exclusive faiths proportionally. Syncretic faiths stack additively.
+Conversion pressure integrates with Phase-81 (migration drives faith spread) and Phase-80
+(shared faith boosts treaty strength). Heresy risk integrates with Phase-82 (espionage can
+incite religious unrest). No Entity fields; no kernel changes.
+
+**Scope:**
+- `Faith { faithId, name, fervor_Q, tolerance_Q, exclusive }` — exclusive = monotheistic competition; syncretic = additive.
+- `PolityFaith { polityId, faithId, adherents_Q }` — population share [0, SCALE.Q].
+- `FaithRegistry { faiths: Map<FaithId, Faith>, polityFaiths: Map<string, PolityFaith[]> }`.
+- Built-in: `SOLAR_CHURCH` (exclusive, fervor q(0.80)), `EARTH_SPIRITS` (syncretic), `MERCHANT_CULT` (syncretic).
+- `CONVERSION_BASE_RATE_Q = q(0.002)`, `HERESY_THRESHOLD_Q = q(0.15)`, `FAITH_DIPLOMATIC_BONUS_Q = q(0.10)`, `FAITH_DIPLOMATIC_PENALTY_Q = q(0.10)`.
+- `computeConversionPressure(faith, missionaryPresence_Q)` → Q: `fervor × presence × BASE_RATE / SCALE.Q²`.
+- `stepFaithConversion(registry, polityId, faithId, delta_Q)` — proportional displacement for exclusive faiths.
+- `computeHeresyRisk(registry, polityId)` → Q: dominant exclusive × low tolerance × minority above threshold.
+- `computeFaithDiplomaticModifier(registry, polityAId, polityBId)` → signed number: ±q(0.10).
+- `getDominantFaith`, `sharesDominantFaith`, `setPolityFaith`, `getPolityFaiths`.
+- Subpath export `./faith` added to package.json.
+
+**Depends on:** Phase 61 (Polity — polityId). Integrates with Phase-80 (Diplomacy — faith modifier on treaty strength), Phase-81 (Migration — faith spread via population movement), Phase-82 (Espionage — heresy risk as unrest vector).
+
+**Success criterion:** Exclusive conversion displaces competing exclusive faiths proportionally; syncretic conversion does not displace any faith; heresy risk is non-zero only when dominant exclusive faith has low tolerance and minority exclusive exceeds threshold; diplomatic modifier is +bonus for shared dominants, −penalty for exclusive conflict, 0 otherwise.
+
+---
+
 ### Phase 84 — Siege Warfare *(COMPLETE — 2026-03-26)*
 
 **The gap:** Phase 69 resolves open-field battles between formations, but there is no mechanism

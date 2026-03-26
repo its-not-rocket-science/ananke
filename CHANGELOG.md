@@ -6,6 +6,28 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.30] — 2026-03-26
+
+### Added
+
+- **Phase 85 · Religion & Faith Systems** (`src/faith.ts`)
+  - `Faith { faithId, name, fervor_Q, tolerance_Q, exclusive }` — faith definition; exclusive faiths (monotheistic) compete; syncretic faiths stack additively.
+  - `PolityFaith { polityId, faithId, adherents_Q }` — fraction of polity population following a faith [0, SCALE.Q].
+  - `FaithRegistry { faiths: Map<FaithId, Faith>, polityFaiths: Map<string, PolityFaith[]> }` — central registry; pure data layer with no Entity fields or kernel changes.
+  - Built-in sample faiths: `SOLAR_CHURCH` (exclusive, fervor q(0.80), tolerance q(0.20)), `EARTH_SPIRITS` (syncretic, tolerance q(0.90)), `MERCHANT_CULT` (syncretic, moderate).
+  - `registerFaith` / `getFaith` — faith definition management.
+  - `setPolityFaith` / `getPolityFaiths` — per-polity adherent records; creates or updates records; clamps to [0, SCALE.Q].
+  - `getDominantFaith(registry, polityId)` → highest-adherent `PolityFaith | undefined`.
+  - `sharesDominantFaith(registry, polityAId, polityBId)` → boolean.
+  - `computeConversionPressure(faith, missionaryPresence_Q)` → Q: `fervor_Q × missionaryPresence_Q × CONVERSION_BASE_RATE_Q / SCALE.Q²`; `CONVERSION_BASE_RATE_Q = q(0.002)`.
+  - `stepFaithConversion(registry, polityId, faithId, delta_Q)` — exclusive faith gains displace other exclusive faiths proportionally; syncretic faiths unaffected.
+  - `computeHeresyRisk(registry, polityId)` → Q: fires when dominant exclusive faith has low tolerance and a minority exclusive faith exceeds `HERESY_THRESHOLD_Q = q(0.15)`; integrates with Phase-82 espionage religious unrest.
+  - `computeFaithDiplomaticModifier(registry, polityAId, polityBId)` → signed number: `+FAITH_DIPLOMATIC_BONUS_Q = q(0.10)` for shared dominant faith; `−FAITH_DIPLOMATIC_PENALTY_Q = q(0.10)` for exclusive vs exclusive conflict; 0 for syncretic or no dominant faith. Integrates with Phase-80 treaty strength.
+  - Added `./faith` subpath export to `package.json`.
+  - 45 new tests; 4,510 total. Coverage: statements 96.96%, branches 87.53%, functions 95.2%, lines 96.96% — all thresholds maintained.
+
+---
+
 ## [0.1.29] — 2026-03-26
 
 ### Added

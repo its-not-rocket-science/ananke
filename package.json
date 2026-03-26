@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.29",
+  "version": "0.1.30",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -102,6 +102,10 @@
     "./siege": {
       "import": "./dist/src/siege.js",
       "types": "./dist/src/siege.d.ts"
+    },
+    "./faith": {
+      "import": "./dist/src/faith.js",
+      "types": "./dist/src/faith.d.ts"
     }
   },
   "files": [
