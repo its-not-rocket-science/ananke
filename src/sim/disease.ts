@@ -48,6 +48,46 @@ export interface DiseaseProfile {
    * -1 = permanent; 0 = no immunity (can be reinfected immediately).
    */
   immunityDuration_s:    number;
+  /**
+   * Phase 73: opt-in to SEIR compartment tracking via `stepSEIR`.
+   * No effect on `stepDiseaseForEntity` — backward-compatible.
+   */
+  useSeir?:              boolean;
+}
+
+// ── Phase 73: Enhanced Epidemiology Types ─────────────────────────────────────
+
+/**
+ * Vaccination record granting partial-efficacy protection.
+ * Stored on `entity.vaccinations?`.
+ */
+export interface VaccinationRecord {
+  diseaseId:  string;
+  /** Fraction of transmission risk blocked [Q]. q(0.95) = 95 % efficacy. */
+  efficacy_Q: Q;
+  /** Number of doses received. Informational; efficacy reflects total dose schedule. */
+  doseCount:  number;
+}
+
+/** Non-pharmaceutical intervention type. */
+export type NPIType = "quarantine" | "mask_mandate";
+
+/** An active NPI for a polity. */
+export interface NPIRecord { polityId: string; npiType: NPIType }
+
+/**
+ * Registry of active NPIs per polity.
+ * Key format: `"${polityId}:${npiType}"`.
+ */
+export type NPIRegistry = Map<string, NPIRecord>;
+
+/** Options for the extended `computeTransmissionRisk`. */
+export interface TransmissionOptions {
+  /**
+   * Mask mandate NPI active for this pair's polity.
+   * Reduces airborne transmission by `NPI_MASK_REDUCTION_Q` (60 %).
+   */
+  maskMandate?: boolean;
 }
 
 /** One active disease infection on an entity. */
@@ -102,6 +142,23 @@ const FEVER_AIRBORNE_Sm = 100_000;  // 10 m
 
 /** Plague airborne range [SCALE.m]. */
 const PLAGUE_AIRBORNE_Sm = 50_000;  // 5 m
+
+// Phase 73 constants ───────────────────────────────────────────────────────────
+
+/**
+ * Airborne transmission reduction from mask mandate NPI [Q].
+ * Risk is multiplied by (SCALE.Q − NPI_MASK_REDUCTION_Q) / SCALE.Q → ×0.40 remaining.
+ */
+export const NPI_MASK_REDUCTION_Q = q(0.60);
+
+/**
+ * Daily contacts-per-entity estimate for `computeR0`.
+ * Community-setting assumption; capped by actual population size.
+ */
+export const DAILY_CONTACTS_ESTIMATE = 15;
+
+/** Seconds per year — mirrored from aging.ts to avoid circular import. */
+const _SECS_PER_YEAR = 365 * 86_400;
 
 // ── Disease Catalogue ─────────────────────────────────────────────────────────
 
@@ -223,6 +280,42 @@ const _PROFILE_MAP = new Map(DISEASE_PROFILES.map(p => [p.id, p]));
 export function getDiseaseProfile(id: string): DiseaseProfile | undefined {
   return _PROFILE_MAP.get(id);
 }
+
+/**
+ * Register a custom disease profile so it can be used with
+ * `exposeToDisease`, `spreadDisease`, and `stepDiseaseForEntity`.
+ *
+ * Does not modify `DISEASE_PROFILES`. Use this to add `MEASLES` or other
+ * Phase 73 / host-defined profiles to the lookup map.
+ */
+export function registerDiseaseProfile(profile: DiseaseProfile): void {
+  _PROFILE_MAP.set(profile.id, profile);
+}
+
+// ── Phase 73: MEASLES profile ─────────────────────────────────────────────────
+
+/**
+ * Measles — highly contagious SEIR airborne disease.
+ *
+ * R0 ≈ 12–18 in populations of 15+ (DAILY_CONTACTS_ESTIMATE × 14 days × baseRate).
+ * Use with `registerDiseaseProfile(MEASLES)` before calling `exposeToDisease`.
+ *
+ * Validation target: epidemic curve peaks days 10–20, burns out by day 60,
+ * matching standard SIR model output within ±15 % for 95 % susceptible population.
+ */
+export const MEASLES: DiseaseProfile = {
+  id:                     "measles",
+  name:                   "Measles",
+  transmissionRoute:      "airborne",
+  baseTransmissionRate_Q: q(0.072),       // R0 ≈ 15.1 with 15 daily contacts, 14-day duration
+  incubationPeriod_s:     14 * 86_400,    // 14-day latent period
+  symptomaticDuration_s:  14 * 86_400,    // 14-day infectious period
+  mortalityRate_Q:        q(0.002),       // 0.2 % IFR (developed world)
+  symptomSeverity_Q:      q(0.15),
+  airborneRange_Sm:       100_000,        // 10 m
+  immunityDuration_s:     -1,             // permanent lifelong immunity
+  useSeir:                true,
+};
 
 // ── Entity-level API ──────────────────────────────────────────────────────────
 
@@ -380,16 +473,23 @@ export function stepDiseaseForEntity(
  * Returns q(0) if the carrier has no symptomatic instance of this disease,
  * or if target already has immunity / active infection for this disease.
  *
+ * **Phase 73 extensions (backward-compatible):**
+ * - If `target.age` is set, applies age-stratified susceptibility multiplier.
+ * - If `target.vaccinations` contains a record for this disease, reduces risk by efficacy.
+ * - If `options.maskMandate` is true and disease is airborne, reduces risk by `NPI_MASK_REDUCTION_Q`.
+ *
  * @param carrier    The potentially infectious entity.
  * @param target     The potentially susceptible entity.
  * @param dist_Sm    Distance between them [SCALE.m].
  * @param disease    The disease profile to evaluate.
+ * @param options    Phase 73 optional NPI modifiers.
  */
 export function computeTransmissionRisk(
   carrier:  Entity,
   target:   Entity,
   dist_Sm:  number,
   disease:  DiseaseProfile,
+  options?: TransmissionOptions,
 ): Q {
   // Carrier must be symptomatic with this disease
   const carrierState = carrier.activeDiseases?.find(
@@ -406,17 +506,40 @@ export function computeTransmissionRisk(
   );
   if (immune) return q(0) as Q;
 
+  // ── Compute distance-based base risk ───────────────────────────────────────
+  let risk: Q;
   if (disease.transmissionRoute === "airborne") {
     if (disease.airborneRange_Sm <= 0 || dist_Sm >= disease.airborneRange_Sm) return q(0) as Q;
     const proximity_Q = Math.round(
       (disease.airborneRange_Sm - dist_Sm) * SCALE.Q / disease.airborneRange_Sm,
     );
-    return Math.round(disease.baseTransmissionRate_Q * proximity_Q / SCALE.Q) as Q;
+    risk = Math.round(disease.baseTransmissionRate_Q * proximity_Q / SCALE.Q) as Q;
+  } else {
+    // contact / vector / waterborne: flat risk within CONTACT_RANGE
+    if (dist_Sm > CONTACT_RANGE_Sm) return q(0) as Q;
+    risk = disease.baseTransmissionRate_Q;
   }
 
-  // contact / vector / waterborne: flat risk within CONTACT_RANGE
-  if (dist_Sm > CONTACT_RANGE_Sm) return q(0) as Q;
-  return disease.baseTransmissionRate_Q;
+  // ── Phase 73: age-stratified susceptibility ────────────────────────────────
+  if (target.age) {
+    const ageYears = target.age.ageSeconds / _SECS_PER_YEAR;
+    const ageMultiplier = ageSusceptibility_Q(ageYears);
+    risk = clampQ(Math.round(risk * ageMultiplier / SCALE.Q) as Q, 0, SCALE.Q) as Q;
+  }
+
+  // ── Phase 73: vaccination efficacy reduction ───────────────────────────────
+  const vacc = target.vaccinations?.find(v => v.diseaseId === disease.id);
+  if (vacc && vacc.efficacy_Q > 0) {
+    const blocked = Math.round(risk * vacc.efficacy_Q / SCALE.Q);
+    risk = Math.max(0, risk - blocked) as Q;
+  }
+
+  // ── Phase 73: NPI mask mandate (airborne only) ─────────────────────────────
+  if (options?.maskMandate && disease.transmissionRoute === "airborne") {
+    risk = Math.round(risk * (SCALE.Q - NPI_MASK_REDUCTION_Q) / SCALE.Q) as Q;
+  }
+
+  return risk;
 }
 
 /**
@@ -478,4 +601,153 @@ function diseaseIdSalt(id: string): number {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h + id.charCodeAt(i)) & 0xFFFFFF;
   return h;
+}
+
+// ── Phase 73: Enhanced Epidemiology Functions ─────────────────────────────────
+
+/**
+ * Age-stratified susceptibility multiplier [Q].
+ *
+ * Returns a value that may exceed SCALE.Q (increased susceptibility) or fall
+ * below it (relative protection).  Applied in `computeTransmissionRisk` when
+ * `target.age` is set.
+ *
+ * | Age range | Multiplier | Notes                         |
+ * |-----------|-----------|-------------------------------|
+ * | 0–4 yrs   | ×1.30     | High infant susceptibility    |
+ * | 5–14 yrs  | ×0.80     | Children — lower risk         |
+ * | 15–59 yrs | ×1.00     | Adult baseline                |
+ * | 60–74 yrs | ×1.20     | Early elderly                 |
+ * | 75 + yrs  | ×1.50     | Late elderly / ancient        |
+ */
+export function ageSusceptibility_Q(ageYears: number): Q {
+  if (ageYears < 5)  return 13_000 as Q;   // ×1.30
+  if (ageYears < 15) return  8_000 as Q;   // ×0.80
+  if (ageYears < 60) return 10_000 as Q;   // ×1.00 baseline
+  if (ageYears < 75) return 12_000 as Q;   // ×1.20
+  return                     15_000 as Q;   // ×1.50
+}
+
+/**
+ * Add or update a vaccination record on an entity.
+ *
+ * If the entity already has a record for this disease, updates `efficacy_Q`
+ * and increments `doseCount` (booster model).  Otherwise creates a new record.
+ *
+ * @param entity       Target entity to vaccinate.
+ * @param diseaseId    Disease being vaccinated against.
+ * @param efficacy_Q   Protection level [Q]; q(0.95) = 95 % efficacy.
+ */
+export function vaccinate(entity: Entity, diseaseId: string, efficacy_Q: Q): void {
+  if (!entity.vaccinations) entity.vaccinations = [];
+  const existing = entity.vaccinations.find(v => v.diseaseId === diseaseId);
+  if (existing) {
+    existing.efficacy_Q = efficacy_Q;
+    existing.doseCount++;
+  } else {
+    entity.vaccinations.push({ diseaseId, efficacy_Q, doseCount: 1 });
+  }
+}
+
+// ── NPI registry helpers ───────────────────────────────────────────────────────
+
+function _npiKey(polityId: string, npiType: NPIType): string {
+  return `${polityId}:${npiType}`;
+}
+
+/**
+ * Activate an NPI for a polity.
+ *
+ * `"mask_mandate"` — reduces airborne transmission in `computeTransmissionRisk`
+ *   by `NPI_MASK_REDUCTION_Q` when the caller passes `options.maskMandate = true`.
+ *
+ * `"quarantine"` — recorded in the registry; the host is responsible for halving
+ *   the contact-range pairs passed to `spreadDisease` (spatial filtering).
+ */
+export function applyNPI(npiRegistry: NPIRegistry, npiType: NPIType, polityId: string): void {
+  npiRegistry.set(_npiKey(polityId, npiType), { polityId, npiType });
+}
+
+/** Remove an NPI from a polity's registry entry. */
+export function removeNPI(npiRegistry: NPIRegistry, npiType: NPIType, polityId: string): void {
+  npiRegistry.delete(_npiKey(polityId, npiType));
+}
+
+/** Returns true if the specified NPI is currently active for the polity. */
+export function hasNPI(npiRegistry: NPIRegistry, npiType: NPIType, polityId: string): boolean {
+  return npiRegistry.has(_npiKey(polityId, npiType));
+}
+
+/**
+ * Estimate the basic reproductive number R0 for a disease profile.
+ *
+ * Formula: R0 = beta × D × c
+ *   - beta = baseTransmissionRate_Q / SCALE.Q (per-contact daily probability)
+ *   - D    = symptomaticDuration_s / 86400 (infectious period in days)
+ *   - c    = min(DAILY_CONTACTS_ESTIMATE, entityMap.size − 1) (daily contacts)
+ *
+ * Used for validation — not a simulation path value.
+ *
+ * @param profile    Disease profile to evaluate.
+ * @param entityMap  Population map (size determines contact estimate).
+ * @returns          Estimated R0 (float; not fixed-point).
+ */
+export function computeR0(
+  profile:   DiseaseProfile,
+  entityMap: Map<number, Entity>,
+): number {
+  const infectiousDays = profile.symptomaticDuration_s / 86_400;
+  const beta = profile.baseTransmissionRate_Q / SCALE.Q;
+  const contacts = Math.min(DAILY_CONTACTS_ESTIMATE, Math.max(1, entityMap.size - 1));
+  return beta * infectiousDays * contacts;
+}
+
+/**
+ * Advance a single SEIR-enabled disease on an entity by `delta_s` seconds.
+ *
+ * Functionally equivalent to `stepDiseaseForEntity` for this profile only —
+ * isolates the target disease so other active diseases are not advanced.
+ * Backward-compatible: calls through to the Phase 56 step function.
+ *
+ * Intended for use with `profile.useSeir === true` diseases, but works with
+ * any profile registered via `registerDiseaseProfile`.
+ *
+ * @param entity     Entity to advance.
+ * @param delta_s    Elapsed seconds.
+ * @param profile    Disease profile to process.
+ * @param worldSeed  World seed for deterministic mortality roll.
+ * @param tick       Current tick for deterministic mortality roll.
+ */
+export function stepSEIR(
+  entity:    Entity,
+  delta_s:   number,
+  profile:   DiseaseProfile,
+  worldSeed: number,
+  tick:      number,
+): EntityDiseaseResult {
+  const empty: EntityDiseaseResult = {
+    advancedToSymptomatic: [],
+    recovered:             [],
+    died:                  false,
+    fatigueApplied:        0,
+  };
+  if (entity.injury.dead) return empty;
+
+  const diseaseState = entity.activeDiseases?.find(d => d.diseaseId === profile.id);
+  if (!diseaseState) return empty;
+
+  // Isolate this disease so stepDiseaseForEntity only processes it
+  const others = entity.activeDiseases!.filter(d => d.diseaseId !== profile.id);
+  entity.activeDiseases = [diseaseState];
+
+  const result = stepDiseaseForEntity(entity, delta_s, worldSeed, tick);
+
+  // Reattach other diseases (preserving any mutations stepDiseaseForEntity made)
+  const remaining = entity.activeDiseases ?? [];
+  entity.activeDiseases = [...others, ...remaining];
+  if (entity.activeDiseases.length === 0) {
+    delete entity.activeDiseases;
+  }
+
+  return result;
 }

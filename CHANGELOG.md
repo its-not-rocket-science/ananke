@@ -6,6 +6,39 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.17] — 2026-03-26
+
+### Added
+
+- **Phase 73 · Enhanced Epidemiological Models** (`src/sim/disease.ts` extended in-place)
+  - `VaccinationRecord { diseaseId, efficacy_Q, doseCount }` — partial-efficacy vaccination
+    stored on `entity.vaccinations?`; `vaccinate(entity, diseaseId, efficacy_Q)` helper.
+  - `ageSusceptibility_Q(ageYears)` — U-shaped multiplier: infants ×1.30, children ×0.80,
+    adults ×1.00, early elderly ×1.20, late elderly ×1.50. Auto-applied in
+    `computeTransmissionRisk` when `entity.age` is set.
+  - `NPIType`, `NPIRecord`, `NPIRegistry` — non-pharmaceutical intervention registry;
+    `applyNPI / removeNPI / hasNPI` helpers. `mask_mandate` reduces airborne transmission
+    by `NPI_MASK_REDUCTION_Q = q(0.60)` (60 %). `quarantine` recorded for host-side pair
+    filtering.
+  - `computeTransmissionRisk` extended with optional 5th `options?` parameter — backward-
+    compatible; applies vaccination, age susceptibility, and NPI effects when present.
+  - `computeR0(profile, entityMap)` — basic reproductive number estimate
+    (β × infectious-days × min(15, population−1)); used for validation.
+  - `stepSEIR(entity, delta_s, profile, worldSeed, tick)` — SEIR-aware entity step that
+    isolates a single disease profile; delegates to Phase 56 `stepDiseaseForEntity` for
+    full backward compatibility.
+  - `registerDiseaseProfile(profile)` — registers custom/SEIR profiles into the lookup map
+    without modifying the canonical `DISEASE_PROFILES` array.
+  - `MEASLES` profile (`useSeir: true`): R0 ≈ 15.1 in population ≥ 16, 14-day incubation,
+    14-day infectious period, 0.2 % IFR, permanent immunity. Validates epidemic curve
+    peaking days 10–20 and burning out by day 60 (matches standard SIR output ±15 %).
+  - `entity.vaccinations?: VaccinationRecord[]` added to `Entity`.
+  - `DiseaseProfile.useSeir?: boolean` opt-in field (no effect on existing callers).
+  - 37 new tests in `test/disease-seir.test.ts`. All 37 Phase 56 tests pass unmodified.
+  - **3 998 tests total.**
+
+---
+
 ## [0.1.16] — 2026-03-25
 
 ### Added

@@ -18,7 +18,7 @@ import type { LimbState } from "./limb.js";
 import type { ExtendedSenses } from "./sensory-extended.js";
 import type { ActiveIngestedToxin, CumulativeExposureRecord, WithdrawalState } from "./systemic-toxicology.js";
 import type { TraumaState } from "./wound-aging.js";
-import type { DiseaseState, ImmunityRecord } from "./disease.js";
+import type { DiseaseState, ImmunityRecord, VaccinationRecord } from "./disease.js";
 import type { AgeState } from "./aging.js";
 import type { SleepState } from "./sleep.js";
 import type { MountState } from "./mount.js";
@@ -255,6 +255,12 @@ export interface Entity {
    * Consumed by `src/sim/disease.ts`.
    */
   immunity?: ImmunityRecord[];
+
+  /**
+   * @subsystem(disease/seir) Phase 73: vaccination records granting partial-efficacy protection.
+   * Consumed by `computeTransmissionRisk` in `src/sim/disease.ts`.
+   */
+  vaccinations?: VaccinationRecord[];
 
   /**
    * @subsystem(aging) Elapsed life-seconds for aging calculations.

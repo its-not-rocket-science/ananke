@@ -6131,7 +6131,7 @@ to neighbouring polities via Phase 65.
 
 ---
 
-### Phase 73 — Enhanced Epidemiological Models *(planned)*
+### Phase 73 — Enhanced Epidemiological Models *(COMPLETE — 2026-03-26)*
 
 **The gap:** Phase 56 disease models use a simplified contagion loop — fixed incubation times,
 binary immune states, uniform susceptibility.  This is sufficient for tactical/campaign
