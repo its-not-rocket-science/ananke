@@ -6,6 +6,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.32] — 2026-03-26
+
+### Added
+
+- **Phase 87 · Granary & Food Supply** (`src/granary.ts`)
+  - `GranaryState { polityId, grain_su }` — grain reserves in supply units (1 su = food for 1 person for 1 day); capacity derived dynamically from `polity.population × GRANARY_CAPACITY_DAYS = 730`.
+  - `createGranary(polity)` — initialises with one year of consumption.
+  - `computeCapacity(polity)` → integer; `computeFoodSupply_Q(polity, granary)` → Q [0, SCALE.Q] — feeds directly into Phase-86 `stepPolityPopulation(foodSupply_Q)`.
+  - **Harvest yield**: `HARVEST_BASE_SU_PER_CAPITA = 250` su/person/harvest; `HARVEST_YIELD_BASE_Q = q(0.70)` floor; `HARVEST_STABILITY_BONUS_Q = q(0.30)` max bonus from stability. `deriveHarvestYieldFactor(polity, season_Q?)` integrates Phase-78 seasonal multiplier.
+  - `computeHarvestYield(polity, yieldFactor_Q?)` → su; `triggerHarvest(polity, granary, yieldFactor_Q?)` → added su (clamped to capacity).
+  - `stepGranaryConsumption(polity, granary, elapsedDays)` → consumed su; drains `population × elapsedDays` su per step; floors at 0.
+  - `tradeFoodSupply(fromGranary, toGranary, toPolity, amount_su)` → transferred su; limited by source grain, destination capacity. Integrates with Phase-83 trade routes.
+  - `raidGranary(granary, raidFraction_Q?)` → plundered su; defaults to `RAID_FRACTION_Q = q(0.40)`. Integrates with Phase-84 siege attacker victory.
+  - Added `./granary` subpath export to `package.json`.
+  - 47 new tests; 4,608 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.31] — 2026-03-26
 
 ### Added

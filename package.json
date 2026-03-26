@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -110,6 +110,10 @@
     "./demography": {
       "import": "./dist/src/demography.js",
       "types": "./dist/src/demography.d.ts"
+    },
+    "./granary": {
+      "import": "./dist/src/granary.js",
+      "types": "./dist/src/granary.d.ts"
     }
   },
   "files": [

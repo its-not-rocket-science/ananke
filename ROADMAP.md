@@ -6500,6 +6500,39 @@ natural next step.
 
 ---
 
+### Phase 87 — Granary & Food Supply *(COMPLETE — 2026-03-26)*
+
+**The gap:** Phase 86 accepts a `foodSupply_Q` parameter that activates famine mechanics,
+but there is no module that actually tracks grain reserves or computes this value.  Polities
+produce food through harvests and consume it daily; wars, sieges, and bad seasons deplete
+reserves; trade routes can carry grain between polities.
+
+**Design:** Pure data layer.  `GranaryState` stores only `grain_su` (an integer count of
+supply units, 1 su = food for 1 person for 1 day).  Capacity is derived from
+`polity.population × GRANARY_CAPACITY_DAYS` rather than stored, so it automatically
+scales with demographic change.  The host calls `triggerHarvest` each season, calls
+`stepGranaryConsumption` each tick, and passes `computeFoodSupply_Q` to Phase-86
+`stepPolityPopulation`.
+
+**Scope:**
+- `GranaryState { polityId, grain_su }` — per-polity grain counter.
+- `GRANARY_CAPACITY_DAYS = 730` — 2-year food storage per capita.
+- `HARVEST_BASE_SU_PER_CAPITA = 250` — su/person/harvest at full yield (biannual → ~37% surplus).
+- `HARVEST_YIELD_BASE_Q = q(0.70)`, `HARVEST_STABILITY_BONUS_Q = q(0.30)`.
+- `createGranary`, `computeCapacity`, `computeFoodSupply_Q` → Q for Phase-86.
+- `deriveHarvestYieldFactor(polity, season_Q?)` — Phase-78 seasonal hook.
+- `computeHarvestYield`, `triggerHarvest` — harvest mechanics.
+- `stepGranaryConsumption(polity, granary, elapsedDays)` — daily drain.
+- `tradeFoodSupply(from, to, toPolity, amount_su)` — Phase-83 food trade.
+- `raidGranary(granary, raidFraction_Q?)` — Phase-84 siege plunder (`RAID_FRACTION_Q = q(0.40)`).
+- Subpath export `./granary` added to package.json.
+
+**Depends on:** Phase 61 (Polity — population/stability). Integrates with Phase-78 (Calendar — seasonal yield), Phase-83 (Trade Routes — food transfer), Phase-84 (Siege — granary raid on attacker victory), Phase-86 (Demography — `computeFoodSupply_Q` → `foodSupply_Q`).
+
+**Success criterion:** Annual consumption with no harvest depletes a 1-year starting reserve to zero; two biannual good harvests restore supply above famine threshold; raid at q(1.0) empties the granary; `tradeFoodSupply` is bounded by source grain and destination space; `computeFoodSupply_Q` returns values that correctly bracket `FAMINE_THRESHOLD_Q`.
+
+---
+
 ### Phase 86 — Population Dynamics & Demographics *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polities have a static `population` integer. Phase-81 migration moves people
