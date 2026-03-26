@@ -6,6 +6,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.27] — 2026-03-26
+
+### Added
+
+- **Phase 82 · Espionage & Intelligence Networks** (`src/espionage.ts`)
+  - `OperationType`: `"intelligence_gather" | "treaty_sabotage" | "bond_subversion" | "treasury_theft" | "incite_migration"`.
+  - `AgentStatus`: `"active" | "compromised" | "captured"`.
+  - `SpyAgent { agentId, ownerPolityId, targetPolityId, operation, status, deployedTick, skill_Q }`.
+  - `EspionageRegistry { agents: Map<number, SpyAgent> }` — keyed by entity ID.
+  - `OperationResult { success, detected, effectDelta_Q }`.
+  - `OPERATION_BASE_SUCCESS_Q`: intelligence_gather q(0.70) → treasury_theft q(0.35).
+  - `OPERATION_DETECTION_RISK_Q`: treasury_theft q(0.40) → intelligence_gather q(0.10).
+  - `OPERATION_EFFECT_Q`: incite_migration q(0.15) → intelligence_gather q(0.00).
+  - `COVER_DECAY_PER_DAY = q(0.005)` — daily base cover-loss risk, mitigated by skill.
+  - `resolveOperation(agent, worldSeed, tick)` → `OperationResult` — deterministic via `eventSeed`; idempotent for same inputs; no-op for non-active agents.
+  - `stepAgentCover(agent, worldSeed, tick)` — daily cover check; may flip status to `"compromised"` or `"captured"` (50/50 split via secondary seed).
+  - `deployAgent`, `recallAgent`, `getAgentsByOwner`, `getAgentsByTarget`.
+  - `computeCounterIntelligence(registry, targetPolityId)` → Q — `compromised` agent count × `COUNTER_INTEL_PER_AGENT = q(0.05)`, clamped to SCALE.Q.
+  - Added `./espionage` subpath export to `package.json`.
+  - 34 new tests; 4,377 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.26] — 2026-03-26
 
 ### Added

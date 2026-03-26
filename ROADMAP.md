@@ -6500,6 +6500,35 @@ natural next step.
 
 ---
 
+### Phase 82 — Espionage & Intelligence Networks *(COMPLETE — 2026-03-26)*
+
+**The gap:** All polity-to-polity interaction is open and explicit. There is no mechanism for
+covert operations — infiltrating rivals, stealing intelligence, weakening treaties from the
+inside, subverting feudal bonds, or inciting population flight. Real medieval and early-modern
+states ran extensive intelligence networks.
+
+**Design:** Pure data layer. `EspionageRegistry` tracks deployed agents by entity ID.
+Operation outcomes are deterministic via `eventSeed` — idempotent for the same `(worldSeed, tick)`
+so replay and lockstep are preserved. Callers apply `effectDelta_Q` to Phase-79/80 registries.
+No Entity fields; no kernel changes.
+
+**Scope:**
+- `OperationType`: `"intelligence_gather" | "treaty_sabotage" | "bond_subversion" | "treasury_theft" | "incite_migration"`.
+- `SpyAgent { agentId, ownerPolityId, targetPolityId, operation, status, deployedTick, skill_Q }`.
+- `AgentStatus`: `"active" | "compromised" | "captured"`.
+- `resolveOperation(agent, worldSeed, tick)` → `OperationResult { success, detected, effectDelta_Q }`.
+- Success threshold = `skill_Q × BASE_SUCCESS_Q[op] / SCALE.Q`; detection = independent roll on failure.
+- `stepAgentCover(agent, worldSeed, tick)` — daily cover decay = `COVER_DECAY_PER_DAY × (1 - skill/SCALE.Q)`.
+- `computeCounterIntelligence(registry, targetPolityId)` → Q — per-compromised-agent boost of q(0.05).
+- `deployAgent`, `recallAgent`, `getAgentsByOwner`, `getAgentsByTarget`.
+- Subpath export `./espionage` added to package.json.
+
+**Depends on:** Phase 61 (Polity), Phase 75 (Renown), Phase 79 (Feudal), Phase 80 (Diplomacy) — via caller, not direct import.
+
+**Success criterion:** `resolveOperation` is idempotent (same seed/tick = same result); high-skill agents succeed more often than low-skill over 50 ticks; `stepAgentCover` eventually blows cover for low-skill agents; both "compromised" and "captured" outcomes are reachable.
+
+---
+
 ### Phase 81 — Migration & Displacement *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polity populations are static. Despite famine (Phase 78), plague (Phases 56/73),
