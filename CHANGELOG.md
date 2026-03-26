@@ -6,6 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.43] — 2026-03-26
+
+### Added
+
+- **Phase 98 · Plague Containment & Quarantine** (`src/containment.ts`)
+  - `QuarantinePolicy`: `"none" | "voluntary" | "enforced" | "total_lockdown"`.
+  - `ContainmentState { polityId, policy, daysActive, complianceDecay_Q }` — per-polity mutable tracker stored externally.
+  - Compliance decay models population resistance to prolonged enforcement: voluntary decays 2/day, enforced 8/day, total_lockdown 18/day (out of SCALE.Q=10000). `changeQuarantinePolicy` resets decay.
+  - `QUARANTINE_TRANSMISSION_REDUCTION_Q`: voluntary q(0.20) → enforced q(0.55) → total_lockdown q(0.85) — base transmission cut fed to Phase-88 `spreadEpidemic`.
+  - `QUARANTINE_HEALTH_BONUS_Q`: voluntary q(0.05) → total_lockdown q(0.25) — stacks with Phase-88 `deriveHealthCapacity` as additive `healthCapacity_Q` bonus.
+  - `QUARANTINE_UNREST_Q`: q(0.02) → q(0.28); grows further as compliance decays.
+  - `QUARANTINE_DAILY_COST_PER_1000`: 1 → 5 → 15 cu/1000 pop/day.
+  - `computeEffectiveTransmissionReduction(state)` — base reduction × compliance factor.
+  - `computeContainmentHealthBonus(state)` — health bonus scaled by compliance.
+  - `computeContainmentUnrest(state)` — base unrest + decay-driven bonus.
+  - `computeContainmentCost_cu(polity, state, elapsedDays)` — treasury drain.
+  - `stepContainment(state, elapsedDays)` — increments daysActive; accrues complianceDecay_Q.
+  - `applyQuarantineToContact(contactIntensity_Q, state)` — scales Phase-88 contact parameter by effective reduction; returns reduced value for `computeSpreadToPolity`.
+  - `isQuarantineActive(state)` / `isTotalLockdown(state)` — convenience predicates.
+  - Added `./containment` subpath export to `package.json`.
+  - 47 new tests; 5,129 total. Coverage: 100% statements/branches/functions/lines on `containment.ts`.
+
+---
+
 ## [0.1.42] — 2026-03-26
 
 ### Added

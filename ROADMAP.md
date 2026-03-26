@@ -6500,6 +6500,44 @@ natural next step.
 
 ---
 
+### Phase 98 — Plague Containment & Quarantine *(COMPLETE — 2026-03-26)*
+
+**The gap:** Phase-88 (Epidemic) models disease spread and death pressure, and Phase-96
+(Climate) can trigger plague seasons, but polities have no active response mechanism.
+Real epidemic management involves policy choices with trade-offs — stricter containment
+reduces spread but costs treasury, generates unrest, and erodes compliance over time.
+
+**Design:** Pure data layer sitting above Phase-88.  `ContainmentState` tracks policy tier
+and compliance decay (population resistance to prolonged enforcement).  All outputs are
+advisory: transmission reduction feeds Phase-88 spread calculations; health bonus stacks
+with `deriveHealthCapacity`; unrest feeds Phase-90; cost feeds Phase-92 treasury.
+
+**Key exports (`src/containment.ts`):**
+
+| Export | Purpose |
+|--------|---------|
+| `QuarantinePolicy` | `"none" \| "voluntary" \| "enforced" \| "total_lockdown"` |
+| `ContainmentState` | Per-polity tracker (policy, daysActive, complianceDecay_Q) |
+| `computeEffectiveTransmissionReduction` | Base reduction × compliance factor |
+| `computeContainmentHealthBonus` | Health bonus for Phase-88 `stepEpidemic` |
+| `computeContainmentUnrest` | Unrest + decay-driven bonus for Phase-90 |
+| `computeContainmentCost_cu` | Daily treasury drain for Phase-92 |
+| `stepContainment` | Advance daysActive and complianceDecay_Q |
+| `applyQuarantineToContact` | Scale Phase-88 `contactIntensity_Q` |
+| `changeQuarantinePolicy` | Change policy and reset compliance decay |
+
+**Compliance decay mechanic:** strict lockdowns erode over time (18/day for total_lockdown
+vs 2/day for voluntary out of SCALE.Q=10000), reducing effective transmission reduction.
+A fresh voluntary advisory can eventually outperform a decayed total lockdown.
+
+**Integration targets:** Phase-88 spread/health, Phase-90 unrest, Phase-92 treasury.
+
+**Subpath export:** `@its-not-rocket-science/ananke/containment`
+
+**Tests:** 47 new · 5,129 total · 100% statement/branch/function/line coverage on `containment.ts`.
+
+---
+
 ### Phase 97 — Famine Relief & Rationing *(COMPLETE — 2026-03-26)*
 
 **The gap:** Phase-87 (Granary) tracks food reserves and emits a binary famine flag to
