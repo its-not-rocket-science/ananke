@@ -6,6 +6,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.21] — 2026-03-26
+
+### Added
+
+- **Phase 76 · Kinship & Lineage** (`src/kinship.ts`)
+  - `LineageNode { entityId, parentIds, childIds, partnerIds }` — family links per entity.
+  - `LineageRegistry { nodes: Map<number, LineageNode> }` — flat registry, no Entity field changes.
+  - `createLineageRegistry()` / `getLineageNode(registry, entityId)` — factory and lazy-init accessor.
+  - `recordBirth(registry, childId, parentAId, parentBId?)` — links child to 1–2 parents; idempotent.
+  - `recordPartnership(registry, entityAId, entityBId)` — mutual partner link; idempotent.
+  - `getParents / getChildren / getSiblings` — direct family queries; siblings deduplicated.
+  - `findAncestors(registry, entityId, maxDepth?)` — BFS upward through parent links (default depth 4).
+  - `computeKinshipDegree(registry, entityA, entityB)` — BFS on undirected family graph (parents + children + partners); returns 0–4 or `null` beyond `MAX_KINSHIP_DEPTH = 4`.
+  - `isKin(registry, entityA, entityB, maxDegree?)` — convenience boolean.
+  - `getKinshipLabel(degree)` → `"self" | "immediate" | "close" | "extended" | "distant" | "unrelated"`.
+  - `computeInheritedRenown(lineage, entityId, renownRegistry, maxDepth?)` — sums ancestor `renown_Q` with geometric decay (`RENOWN_DEPTH_DECAY_Q = q(0.50)` per generation); clamped to SCALE.Q.
+  - Added `./kinship` subpath export to `package.json`.
+  - 42 new tests; 4,121 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.20] — 2026-03-26
 
 ### Added

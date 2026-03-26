@@ -6500,6 +6500,37 @@ natural next step.
 
 ---
 
+### Phase 76 — Kinship & Lineage *(COMPLETE — 2026-03-26)*
+
+**The gap:** No mechanism links entities by birth, parentage, or marriage. The relationship
+graph (Phase 42) supports a "family" bond label but has no structured parent/child hierarchy,
+no ancestry queries, and no way to compute degree of kinship.
+
+**Design:** A pure data layer — a `LineageRegistry` keyed by entityId, separate from `Entity`
+fields. BFS over the undirected family graph (parents + children + partners) gives the degree.
+Integrates with Phase 75 (Renown) via `computeInheritedRenown`.
+
+**Scope:**
+- `LineageNode { entityId, parentIds, childIds, partnerIds }` — no Entity changes.
+- `LineageRegistry { nodes: Map<number, LineageNode> }` — flat external store.
+- `recordBirth(registry, childId, parentAId, parentBId?)` / `recordPartnership` — mutators, idempotent.
+- `getParents / getChildren / getSiblings` — direct family queries.
+- `findAncestors(registry, entityId, maxDepth?)` — BFS upward through parent links.
+- `computeKinshipDegree(registry, entityA, entityB)` → `0–MAX_KINSHIP_DEPTH | null`.
+  BFS on undirected graph; `MAX_KINSHIP_DEPTH = 4`.
+- `getKinshipLabel(degree)` — `"self" | "immediate" | "close" | "extended" | "distant" | "unrelated"`.
+- `computeInheritedRenown(lineage, entityId, renownRegistry, maxDepth?)` — geometric depth-decay;
+  `RENOWN_DEPTH_DECAY_Q = q(0.50)` per generation; capped at SCALE.Q.
+- Subpath export `./kinship` added to package.json.
+
+**Depends on:** Phase 42 (Relationships context), Phase 75 (Renown).
+
+**Success criterion:** A child born to a legendary-renown parent inherits ≈ q(0.50) of that
+parent's renown; a grandchild inherits ≈ q(0.25). `computeKinshipDegree` returns 4 for first
+cousins (shared grandparent, two-sibling branches) and `null` for unrelated entities.
+
+---
+
 ### Phase 75 — Entity Renown & Legend Registry *(COMPLETE — 2026-03-26)*
 
 **The gap:** The Chronicle (Phase 45) records what happened; Phase 74 renders those events as
