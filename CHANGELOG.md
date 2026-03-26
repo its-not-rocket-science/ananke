@@ -6,6 +6,46 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.34] — 2026-03-26
+
+### Added
+
+- **Phase 89 · Infrastructure & Development** (`src/infrastructure.ts`)
+  - `InfraType`: `"road" | "wall" | "granary" | "marketplace" | "apothecary"`.
+  - `InfraProject { projectId, polityId, type, targetLevel, investedCost, totalCost, completedTick? }` — in-progress construction.
+  - `InfraStructure { structureId, polityId, type, level, builtTick }` — completed building; level [1, `MAX_INFRA_LEVEL = 5`].
+  - `INFRA_BASE_COST` — treasury cost per level per type (wall 20 k → granary 8 k per level).
+  - `INFRA_BONUS_PER_LEVEL_Q` — Q bonus per level (road q(0.05), wall q(0.08), granary q(0.10), marketplace q(0.02), apothecary q(0.06)).
+  - `createInfraProject`, `createInfraStructure` — factories; level clamped to [1, 5].
+  - `investInProject(polity, project, amount, tick)` — drains `polity.treasury_cu`, advances `investedCost`, stamps `completedTick` when fully funded; no-ops if complete or treasury insufficient.
+  - `isProjectComplete`, `completeProject` → `InfraStructure | undefined`.
+  - `computeInfraBonus(structures, type)` → Q: sums `BONUS_PER_LEVEL × level` across all matching structures; clamped to SCALE.Q.
+  - **Typed bonus helpers**: `computeRoadTradeBonus` (Phase-83 efficiency boost), `computeWallSiegeBonus` (Phase-84 attacker strength reduction), `computeGranaryCapacityBonus` (Phase-87 capacity multiplier), `computeApothecaryHealthBonus` (Phase-88 health capacity), `computeMarketplaceIncome` (daily treasury income = `floor(treasury × bonus / SCALE.Q)`).
+  - Max-level wall: −q(0.40) siege strength; max-level granary: +q(0.50) capacity.
+  - Added `./infrastructure` subpath export to `package.json`.
+  - 36 new tests; 4,687 total. Coverage maintained above all thresholds.
+
+---
+
+## [0.1.33] — 2026-03-26
+
+### Added
+
+- **Phase 88 · Epidemic Spread at Polity Scale** (`src/epidemic.ts`)
+  - `PolityEpidemicState { polityId, diseaseId, prevalence_Q }` — infected fraction of polity population [0, SCALE.Q]. Reuses Phase-56 `DiseaseProfile` for disease properties.
+  - `createEpidemicState(polityId, diseaseId, initialPrevalence_Q?)` — factory; default prevalence `q(0.01)`.
+  - `deriveHealthCapacity(polity)` → Q: tech-era health infrastructure (`HEALTH_CAPACITY_BY_ERA`: Stone q(0.05) → Modern q(0.99)).
+  - `computeEpidemicDeathPressure(state, profile)` → Q: annual death rate = `prevalence × mortalityRate / SCALE.Q`; feeds Phase-86 `deathPressure_Q` parameter.
+  - `stepEpidemic(state, profile, elapsedDays, healthCapacity_Q?)` — **discrete logistic model**: growth proportional to `prevalence × (SCALE.Q − prevalence) × GROWTH_RATE × transmissionRate`; recovery proportional to `prevalence × (RECOVERY_RATE + healthBonus)`; higher `healthCapacity_Q` accelerates recovery.
+  - `computeSpreadToPolity(sourceState, profile, contactIntensity_Q)` → Q: prevalence exported to a target polity; zero when source is contained.
+  - `spreadEpidemic(source, profile, targetPolityId, contactIntensity_Q, existingState?)` — creates or updates target epidemic state; returns `undefined` below `EPIDEMIC_CONTAINED_Q`.
+  - `computeEpidemicMigrationPush(state, profile)` → Q [0, `EPIDEMIC_MIGRATION_PUSH_MAX_Q = q(0.20)`]: flight pressure proportional to prevalence × severity; zero when `symptomSeverity_Q < EPIDEMIC_SEVERITY_THRESHOLD_Q = q(0.30)`. Integrates with Phase-81 push pressure.
+  - `EPIDEMIC_CONTAINED_Q = q(0.01)`, `EPIDEMIC_BASE_GROWTH_RATE_Q = q(0.05)`, `EPIDEMIC_BASE_RECOVERY_RATE_Q = q(0.02)`, `EPIDEMIC_HEALTH_RECOVERY_BONUS_Q = q(0.04)`.
+  - Added `./epidemic` subpath export to `package.json`.
+  - 43 new tests; 4,651 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.32] — 2026-03-26
 
 ### Added

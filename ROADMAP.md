@@ -6500,6 +6500,67 @@ natural next step.
 
 ---
 
+### Phase 89 — Infrastructure & Development *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polities accumulate treasury but have no way to invest it permanently.
+All system bonuses (trade route efficiency, siege defence, granary capacity, health capacity)
+are fixed by polity stats.  Real polities invest in roads, walls, granaries, markets, and
+hospitals to gain lasting structural advantages.
+
+**Design:** Pure data layer.  `InfraProject` tracks construction in progress; hosts call
+`investInProject` each tick to drain treasury incrementally.  Completed projects convert to
+`InfraStructure` records with an integer level.  Bonus functions return Q modifiers that the
+host passes into existing Phase-83/84/87/88 calls — no hard dependencies in either direction.
+
+**Scope:**
+- `InfraType`: `"road" | "wall" | "granary" | "marketplace" | "apothecary"`.
+- `InfraProject` — in-progress construction tracking invested vs. total cost.
+- `InfraStructure` — completed building; level [1, `MAX_INFRA_LEVEL = 5`].
+- `INFRA_BASE_COST` per type (wall 20 k → granary 8 k per level).
+- `INFRA_BONUS_PER_LEVEL_Q` (road q(0.05), wall q(0.08), granary q(0.10), marketplace q(0.02), apothecary q(0.06)).
+- `investInProject(polity, project, amount, tick)` — treasury drain with treasury cap.
+- `computeInfraBonus(structures, type)` → Q: sum × level, clamped to SCALE.Q.
+- `computeRoadTradeBonus`, `computeWallSiegeBonus`, `computeGranaryCapacityBonus`, `computeApothecaryHealthBonus`, `computeMarketplaceIncome`.
+- Subpath export `./infrastructure` added to package.json.
+
+**Depends on:** Phase 61 (Polity — treasury_cu). Integrates with Phase-83 (Trade Routes — road efficiency bonus), Phase-84 (Siege — wall defence reduction), Phase-87 (Granary — expanded capacity), Phase-88 (Epidemic — apothecary health bonus).
+
+**Success criterion:** `investInProject` stamps `completedTick` when fully funded; treasury cannot go below zero; max-level wall yields q(0.40) siege reduction; max-level granary yields q(0.50) capacity bonus; multiple structures of the same type sum their bonuses; clamped to SCALE.Q.
+
+---
+
+### Phase 88 — Epidemic Spread at Polity Scale *(COMPLETE — 2026-03-26)*
+
+**The gap:** Phase 56 models disease at entity-to-entity level with individual infection states.
+There is no polity-level mechanism for tracking epidemic prevalence across populations,
+deriving annual death pressure, or spreading disease along trade routes and migration corridors.
+Phase 86 accepts `deathPressure_Q` but nothing produces it automatically.
+
+**Design:** Pure data layer.  `PolityEpidemicState` tracks infected fraction as a Q value.
+A discrete logistic growth model drives prevalence: fast spread at low prevalence,
+saturation as susceptibles diminish, offset by health-capacity-modulated recovery.
+Phase-56 `DiseaseProfile` is reused without modification.  Inter-polity spread is
+caller-driven (host provides `contactIntensity_Q` from Phase-83 trade volume or Phase-81
+migration flow).
+
+**Scope:**
+- `PolityEpidemicState { polityId, diseaseId, prevalence_Q }`.
+- `EPIDEMIC_CONTAINED_Q = q(0.01)`, `EPIDEMIC_BASE_GROWTH_RATE_Q = q(0.05)`, `EPIDEMIC_BASE_RECOVERY_RATE_Q = q(0.02)`.
+- `deriveHealthCapacity(polity)` → Q: Stone q(0.05) → Modern q(0.99).
+- `computeEpidemicDeathPressure(state, profile)` → Q: annual death pressure for Phase-86.
+- `stepEpidemic(state, profile, elapsedDays, healthCapacity_Q?)` — logistic model; `healthCapacity_Q` scales recovery bonus.
+- `computeSpreadToPolity(source, profile, contactIntensity_Q)` → Q: export prevalence to target.
+- `spreadEpidemic(source, profile, targetPolityId, contactIntensity_Q, existingState?)` → state or `undefined`.
+- `computeEpidemicMigrationPush(state, profile)` → Q [0, q(0.20)]: Phase-81 additive push bonus.
+- `EPIDEMIC_MIGRATION_PUSH_MAX_Q = q(0.20)`, `EPIDEMIC_SEVERITY_THRESHOLD_Q = q(0.30)`.
+- Subpath export `./epidemic` added to package.json.
+
+**Depends on:** Phase 56 (Disease — DiseaseProfile), Phase 61 (Polity — techEra). Integrates with Phase-81 (Migration — epidemic flight push), Phase-83 (Trade Routes — contact intensity), Phase-86 (Demography — death pressure input).
+
+**Success criterion:** High-transmission disease grows from low prevalence; logistic ceiling prevents prevalence exceeding SCALE.Q; higher health capacity reduces net growth; contained source produces zero spread; death pressure at 5% plague prevalence is significant (>2%/year); mild disease generates no migration push.
+
+---
+
 ### Phase 87 — Granary & Food Supply *(COMPLETE — 2026-03-26)*
 
 **The gap:** Phase 86 accepts a `foodSupply_Q` parameter that activates famine mechanics,
