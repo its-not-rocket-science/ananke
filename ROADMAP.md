@@ -6500,6 +6500,38 @@ natural next step.
 
 ---
 
+### Phase 93 — Military Campaigns & War Resolution *(COMPLETE — 2026-03-26)*
+
+**The gap:** Phase 84 handles siege warfare against fortified positions.  There is no mechanism
+for field army mobilization, campaign marches, or open-battle resolution between polities.
+Treasury, population, stability, tech era, and infrastructure all have bearing on military
+capability but are not synthesized into a polity-vs-polity conflict model.
+
+**Design:** Pure data layer.  `CampaignState` is the mutable live state stored externally per
+conflict.  Lifecycle: `mobilization → march → battle → resolved`.  Strength derives from
+`militaryStrength_Q × armySize × techSoldierMul × stabilityMul`.  Phase-89 road bonus
+accelerates march; wall bonus increases defender strength.  `resolveBattle` uses `eventSeed`
+for determinism; outcome weighted by relative strength.  Phase-90 unrest receives a war
+pressure signal during active campaigns.  Siege warfare remains Phase 84's domain.
+
+**Scope:**
+- `CampaignState` — phase, march progress, army sizes, strength values, outcome.
+- `computeArmySize(polity, mobilizationFrac_Q?)` — default q(0.05); capped at MAX q(0.15).
+- `computeBattleStrength(polity, armySize)` → Q: military × tech × stability multiplier.
+- `mobilizeCampaign` — drains 5 cu/soldier; transitions to march.
+- `prepareDefender(campaign, defender, wallBonus_Q?)` — Phase-89 wall integration.
+- `stepCampaignMarch(campaign, attacker, elapsedDays, roadBonus_Q?)` — upkeep drain; battle trigger at SCALE.Q.
+- `resolveBattle(campaign, attacker, defender, worldSeed, tick)` → `BattleResult`: `eventSeed`-deterministic; tribute on victory.
+- `applyBattleConsequences(result, attacker, defender)` — morale/stability deltas for both sides.
+- `computeWarUnrestPressure(campaign)` → Q for Phase-90; 0 when resolved.
+- Subpath export `./military-campaign` added to `package.json`.
+
+**Depends on:** Phase 11 (TechEra), Phase 61 (Polity), Phase 84 (Siege — complementary, not overlapping). Integrates with Phase-89 (road/wall bonuses), Phase-90 (war unrest pressure), Phase-92 (treasury upkeep drain).
+
+**Success criterion:** Army size is 5% of population by default; strength scales with military/tech/stability; march triggers battle at full progress; `resolveBattle` is deterministic by seed+tick; victory transfers VICTORY_TRIBUTE_Q of defender treasury; all morale/stability values clamp at [0, SCALE.Q]; `computeWarUnrestPressure` returns 0 after resolution; all 56 tests pass.
+
+---
+
 ### Phase 92 — Taxation & Treasury Revenue *(COMPLETE — 2026-03-26)*
 
 **The gap:** The polity `treasury_cu` field is drained by infrastructure investment, research

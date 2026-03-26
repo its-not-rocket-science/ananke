@@ -6,6 +6,28 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.38] — 2026-03-26
+
+### Added
+
+- **Phase 93 · Military Campaigns & War Resolution** (`src/military-campaign.ts`)
+  - `CampaignState { campaignId, attackerPolityId, defenderPolityId, phase, startTick, daysElapsed, marchProgress_Q, attackerArmySize, attackerStrength_Q, defenderStrength_Q, outcome? }` — mutable live state stored externally per conflict.
+  - `CampaignPhase`: `"mobilization" | "march" | "battle" | "resolved"`.
+  - `BattleOutcome`: `"attacker_victory" | "defender_holds" | "stalemate"`.
+  - `computeArmySize(polity, mobilizationFrac_Q?)` — default q(0.05); clamped to `MAX_MOBILIZATION_Q = q(0.15)`.
+  - `computeBattleStrength(polity, armySize)` → Q: `militaryStrength_Q × armySize / REFERENCE_ARMY_SIZE × TECH_SOLDIER_MUL[techEra] × stabilityMul`; clamped to SCALE.Q.
+  - `mobilizeCampaign(campaign, attacker, mobilizationFrac_Q?)` — drains `MOBILIZATION_COST_PER_SOLDIER = 5` cu per soldier (capped at treasury); transitions to `"march"`.
+  - `prepareDefender(campaign, defender, wallBonus_Q?)` — sets defender strength; Phase-89 wall bonus increases effective defence.
+  - `stepCampaignMarch(campaign, attacker, elapsedDays, roadBonus_Q?)` — advances march at `BASE_MARCH_RATE_Q = q(0.05)` + road bonus; drains `CAMPAIGN_UPKEEP_PER_SOLDIER = 1` cu/soldier/day; triggers battle when progress reaches SCALE.Q.
+  - `resolveBattle(campaign, attacker, defender, worldSeed, tick)` → `BattleResult` — `eventSeed`-deterministic; outcome weighted by strength ratio; `VICTORY_TRIBUTE_Q = q(0.20)` of defender treasury on victory; reduces both sides' strength by casualty rates.
+  - `applyBattleConsequences(result, attacker, defender)` — applies morale/stability deltas; winner gains `VICTORY_MORALE_BONUS_Q = q(0.10)`; loser loses `DEFEAT_MORALE_HIT_Q = q(0.20)` + `DEFEAT_STABILITY_HIT_Q = q(0.15)`; both pay `COMBAT_STABILITY_DRAIN_Q = q(0.05)`.
+  - `computeWarUnrestPressure(campaign)` → Q: `WAR_UNREST_PRESSURE_Q = q(0.15)` during active campaign; 0 when resolved — feeds Phase-90 `computeUnrestLevel`.
+  - `computeDailyUpkeep(campaign)` → cu/day.
+  - Added `./military-campaign` subpath export to `package.json`.
+  - 56 new tests; 4,884 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.37] — 2026-03-26
 
 ### Added
