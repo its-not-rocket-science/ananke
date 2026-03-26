@@ -6,6 +6,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.22] — 2026-03-26
+
+### Added
+
+- **Phase 77 · Dynasty & Succession** (`src/succession.ts`)
+  - `SuccessionRuleType`: `"primogeniture" | "renown_based" | "election"`.
+  - `SuccessionCandidate { entityId, kinshipDegree, renown_Q, inheritedRenown_Q, claimStrength_Q }`.
+  - `SuccessionResult { heirId, candidates, rule, stabilityImpact_Q }` — signed Q stability delta.
+  - `findSuccessionCandidates(lineage, deceasedId, renownRegistry, maxDegree?)` — BFS over family graph (Phase 76), computes `renown_Q` and `inheritedRenown_Q` per candidate.
+  - `resolveSuccession(lineage, deceasedId, renownRegistry, rule, worldSeed, tick)` → `SuccessionResult`:
+    - **primogeniture**: first-born child (lowest entityId) gets SCALE.Q claim; others by distance.
+    - **renown_based**: claim = 70% own renown + 30% inherited renown.
+    - **election**: renown-weighted deterministic lottery via `eventSeed`.
+    - Stability: `+STABILITY_CLEAN_SUCCESSION_Q` for uncontested direct heir; `−STABILITY_DISTANT_HEIR_Q` per extra degree; `−STABILITY_CONTESTED_Q` when top-two gap < q(0.10); `−STABILITY_NO_HEIR_Q` if no candidates.
+  - `applySuccessionToPolity(polity, result)` — applies `stabilityImpact_Q` to `polity.stabilityQ` (clamped).
+  - Added `./succession` subpath export to `package.json`.
+  - 21 new tests; 4,142 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.21] — 2026-03-26
 
 ### Added

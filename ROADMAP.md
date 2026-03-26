@@ -6500,6 +6500,34 @@ natural next step.
 
 ---
 
+### Phase 77 — Dynasty & Succession *(COMPLETE — 2026-03-26)*
+
+**The gap:** When a ruler or faction leader dies, there is no mechanism to determine who
+inherits their position. Kinship (Phase 76) tracks family structure and Renown (Phase 75)
+measures reputation, but no module combines them into an actionable succession resolution.
+
+**Design:** A pure computation layer over Phase 75 + 76. No kernel changes. Integrates with
+Phase 61 (Polity) via `applySuccessionToPolity`.
+
+**Scope:**
+- `SuccessionRuleType`: `"primogeniture" | "renown_based" | "election"`.
+- `SuccessionCandidate { entityId, kinshipDegree, renown_Q, inheritedRenown_Q, claimStrength_Q }`.
+- `SuccessionResult { heirId, candidates, rule, stabilityImpact_Q }`.
+- `findSuccessionCandidates(lineage, deceasedId, renownRegistry, maxDegree?)` — BFS over family graph.
+- `resolveSuccession(lineage, deceasedId, renownRegistry, rule, worldSeed, tick)`:
+  - **primogeniture**: first-born child (lowest entityId); others scored by proximity.
+  - **renown_based**: claim = 70% own renown + 30% inherited renown.
+  - **election**: renown-weighted deterministic lottery via `eventSeed`.
+  - Stability: `+STABILITY_CLEAN_SUCCESSION_Q` (sole direct heir); `−STABILITY_DISTANT_HEIR_Q` per extra degree; `−STABILITY_CONTESTED_Q` when gap < `CONTESTED_THRESHOLD_Q = q(0.10)`; `−STABILITY_NO_HEIR_Q` if no candidates.
+- `applySuccessionToPolity(polity, result)` — applies `stabilityImpact_Q` to `polity.stabilityQ`.
+- Subpath export `./succession` added to package.json.
+
+**Depends on:** Phase 61 (Polity), Phase 75 (Renown), Phase 76 (Kinship).
+
+**Success criterion:** Three succession scenarios (primogeniture selecting eldest child, renown_based selecting highest-renown grandchild, election varying across seeds) all produce correct heirs with matching stability impacts (positive for clean succession, negative for contested or distant heirs).
+
+---
+
 ### Phase 76 — Kinship & Lineage *(COMPLETE — 2026-03-26)*
 
 **The gap:** No mechanism links entities by birth, parentage, or marriage. The relationship
