@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.19",
+  "version": "0.1.20",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -58,6 +58,14 @@
     "./wasm-kernel": {
       "import": "./dist/src/wasm-kernel.js",
       "types": "./dist/src/wasm-kernel.d.ts"
+    },
+    "./narrative-prose": {
+      "import": "./dist/src/narrative-prose.js",
+      "types": "./dist/src/narrative-prose.d.ts"
+    },
+    "./renown": {
+      "import": "./dist/src/renown.js",
+      "types": "./dist/src/renown.d.ts"
     }
   },
   "files": [

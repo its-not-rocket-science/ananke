@@ -6,6 +6,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.20] — 2026-03-26
+
+### Added
+
+- **Phase 75 · Entity Renown & Legend Registry** (`src/renown.ts`)
+  - `RenownRecord { entityId, renown_Q, infamy_Q, entries: LegendEntry[] }` — per-entity reputation on two orthogonal axes.
+  - `LegendEntry { entryId, tick, eventType, significance }` — lightweight reference to a significant `ChronicleEntry`.
+  - `RenownRegistry { records: Map<number, RenownRecord> }` — flat registry, one record per entity.
+  - `createRenownRegistry()` / `getRenownRecord(registry, entityId)` — factory and lazy-init accessor.
+  - `updateRenownFromChronicle(registry, chronicle, entityId, minSignificance?)` — idempotent scan; renown events (legendary_deed, quest_completed, combat_victory, masterwork_crafted, rank_promotion, settlement_founded, first_contact) add to `renown_Q`; infamy events (relationship_betrayal, settlement_raided, settlement_destroyed, quest_failed) add to `infamy_Q`; both capped at SCALE.Q.
+  - `getRenownLabel(renown_Q)` → `"unknown" | "noted" | "known" | "renowned" | "legendary" | "mythic"` (6 tiers at q(0.10) boundaries).
+  - `getInfamyLabel(infamy_Q)` → `"innocent" | "suspect" | "notorious" | "infamous" | "reviled" | "condemned"`.
+  - `deriveFactionStandingAdjustment(renown_Q, infamy_Q, allianceBias)` — signed Q adjustment; heroic factions (bias=1.0) reward renown and punish infamy; criminal factions (bias=0.0) the reverse; clamped to [-SCALE.Q, SCALE.Q].
+  - `getTopLegendEntries(record, n)` — top N entries by significance (tick-descending tie-break).
+  - `renderLegendWithTone(record, entryMap, ctx, maxEntries?)` — renders top entries as prose via Phase 74's `renderEntryWithTone`.
+  - Added `./narrative-prose` and `./renown` subpath exports to `package.json`.
+  - 42 new tests; 4,079 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.19] — 2026-03-26
 
 ### Added

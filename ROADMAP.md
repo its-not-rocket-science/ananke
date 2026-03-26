@@ -6500,6 +6500,41 @@ natural next step.
 
 ---
 
+### Phase 75 — Entity Renown & Legend Registry *(COMPLETE — 2026-03-26)*
+
+**The gap:** The Chronicle (Phase 45) records what happened; Phase 74 renders those events as
+cultural prose. But there is no persistent *reputation score* — no way for the simulation to
+know that entity 1 is a celebrated hero and entity 2 is a feared traitor, and no mechanism for
+that standing to influence NPC behaviour.
+
+**Design:** A pure reputation layer on top of Phase 45. No kernel changes. No new Entity fields.
+Reads Chronicle history to accumulate a two-axis score (renown / infamy) and exposes helpers for
+faction standing adjustment and prose legend rendering.
+
+**Scope:**
+- `LegendEntry { entryId, tick, eventType, significance }` — lightweight chronicle reference.
+- `RenownRecord { entityId, renown_Q, infamy_Q, entries }` — two-axis reputation accumulator.
+- `RenownRegistry { records: Map<number, RenownRecord> }` — flat per-entity store.
+- `updateRenownFromChronicle(registry, chronicle, entityId, minSignificance?)` — idempotent scan.
+  Renown events: legendary_deed, quest_completed, combat_victory, masterwork_crafted,
+  rank_promotion, settlement_founded, first_contact. Infamy events: relationship_betrayal,
+  settlement_raided, settlement_destroyed, quest_failed. Each contributes
+  `round(significance × RENOWN_SCALE_Q / 100)`; both axes capped at SCALE.Q.
+- `getRenownLabel / getInfamyLabel` — 6-tier label at q(0.10) boundaries.
+- `deriveFactionStandingAdjustment(renown, infamy, allianceBias)` — signed Q delta; heroic
+  factions (bias=1.0) reward renown, criminal factions (bias=0.0) reward infamy.
+- `getTopLegendEntries(record, n)` — top N entries by significance.
+- `renderLegendWithTone(record, entryMap, ctx)` — delegates to Phase 74's `renderEntryWithTone`.
+- Subpath exports: `./narrative-prose` (Phase 74) and `./renown` (Phase 75) added to package.json.
+
+**Depends on:** Phase 45 (Chronicle), Phase 24 (Faction Standing), Phase 74 (Narrative Prose).
+
+**Success criterion:** After a chronicle containing legendary deeds and a betrayal is processed,
+`getRenownLabel` and `getInfamyLabel` return distinct non-trivial tiers; `deriveFactionStandingAdjustment`
+returns a positive delta for a heroic faction and a negative delta for the same infamy in a lawful context.
+
+---
+
 ### Phase 74 — Simulation Trace → Narrative Prose *(COMPLETE — 2026-03-26)*
 
 **The gap:** `narrative-render.ts` (Phase 45) renders `ChronicleEntry` events to neutral
