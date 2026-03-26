@@ -6,6 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.41] — 2026-03-26
+
+### Added
+
+- **Phase 96 · Climate Events & Natural Disasters** (`src/climate.ts`)
+  - `ClimateEventType`: `"drought" | "flood" | "harsh_winter" | "earthquake" | "plague_season" | "locust_swarm"`.
+  - `ClimateEvent { eventId, type, severity_Q, durationDays }` — immutable descriptor.
+  - `ActiveClimateEvent { event, remainingDays, elapsedDays }` — mutable progress tracker stored externally by host.
+  - `ClimateEffects { deathPressure_Q, harvestYieldPenalty_Q, epidemicGrowthBonus_Q, infrastructureDamage_Q, unrestPressure_Q, marchPenalty_Q }` — advisory bundle passed to Phases 86–93.
+  - `BASE_EFFECTS: Record<ClimateEventType, ClimateEffects>` — full-severity baselines: locust_swarm has highest harvest penalty (q(0.80)), plague_season highest epidemic growth (q(0.40)), earthquake highest infrastructure damage (q(0.20)), harsh_winter highest march penalty (q(0.40)).
+  - `EVENT_DAILY_PROBABILITY_Q: Record<ClimateEventType, number>` — direct daily integer probabilities out of SCALE.Q=10000: harsh_winter 50, flood 40, drought 30, plague_season 20, locust_swarm 10, earthquake 5.
+  - `EVENT_DURATION_RANGE: Record<ClimateEventType, [number, number]>` — duration ranges in days: drought 60–180, plague_season 30–120, harsh_winter 30–90, flood 7–30, locust_swarm 7–21, earthquake 1–3.
+  - `createClimateEvent(eventId, type, severity_Q, durationDays)` — factory; clamps severity and enforces minimum duration of 1.
+  - `activateClimateEvent(event)` → `ActiveClimateEvent` with `remainingDays = durationDays`, `elapsedDays = 0`.
+  - `computeClimateEffects(active)` → `ClimateEffects`; each field = `round(base × severity / SCALE.Q)`; returns zero bundle when expired.
+  - `stepClimateEvent(active, elapsedDays)` — decrements `remainingDays` (floor 0), increments `elapsedDays`; returns `true` when event expires.
+  - `isClimateEventExpired(active)` → `remainingDays <= 0`.
+  - `generateClimateEvent(polityHash, worldSeed, tick)` → `ClimateEvent | undefined` — deterministic random generation via `eventSeed`; rolls each type independently; severity ∈ [q(0.20), q(0.90)]; duration interpolated within type range.
+  - `aggregateClimateEffects(actives)` → combined `ClimateEffects` — sums per-field across all active events and clamps to SCALE.Q; expired events contribute zero.
+  - Added `./climate` subpath export to `package.json`.
+  - 41 new tests; 5,022 total. Coverage: 100% statements/branches/functions/lines on `climate.ts`.
+
+---
+
 ## [0.1.40] — 2026-03-26
 
 ### Added

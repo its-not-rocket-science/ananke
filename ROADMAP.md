@@ -6500,6 +6500,44 @@ natural next step.
 
 ---
 
+### Phase 96 — Climate Events & Natural Disasters *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polity simulation handles population, economy, military, and governance but has
+no mechanism for the multi-week climate shocks — droughts, floods, harsh winters, earthquakes,
+plagues, and locust swarms — that historically devastated civilisations.  Without climate
+events the simulation produces smooth, predictable growth curves with no catastrophic
+disruption.
+
+**Design:** Pure data layer operating at the polity/campaign timescale (weeks to seasons).
+`ClimateEvent` is an immutable descriptor; `ActiveClimateEvent` tracks per-polity progress.
+`computeClimateEffects` returns an advisory `ClimateEffects` bundle; callers pass individual
+fields into Phases 86–93 as needed.  All randomness via `eventSeed` for determinism.
+
+**Key exports (`src/climate.ts`):**
+
+| Export | Purpose |
+|--------|---------|
+| `ClimateEventType` | `"drought" \| "flood" \| "harsh_winter" \| "earthquake" \| "plague_season" \| "locust_swarm"` |
+| `ClimateEvent` | Immutable descriptor (eventId, type, severity_Q, durationDays) |
+| `ActiveClimateEvent` | Mutable tracker (event, remainingDays, elapsedDays) — host-owned |
+| `ClimateEffects` | Advisory bundle: deathPressure, harvestYieldPenalty, epidemicGrowthBonus, infrastructureDamage, unrestPressure, marchPenalty |
+| `BASE_EFFECTS` | Full-severity baselines per event type |
+| `EVENT_DAILY_PROBABILITY_Q` | Daily integer probabilities out of SCALE.Q (harsh_winter=50 … earthquake=5) |
+| `EVENT_DURATION_RANGE` | Duration ranges in days per type |
+| `computeClimateEffects` | Scale effects by severity; zero bundle when expired |
+| `stepClimateEvent` | Advance remaining/elapsed days; returns true on expiry |
+| `generateClimateEvent` | Deterministic random generation; severity ∈ [q(0.20), q(0.90)] |
+| `aggregateClimateEffects` | Sum + clamp effects across multiple simultaneous events |
+
+**Integration targets:** Phase-86 deathPressure, Phase-87 harvestYieldPenalty, Phase-88
+epidemicGrowthBonus, Phase-89 infrastructureDamage, Phase-90 unrestPressure, Phase-93 marchPenalty.
+
+**Subpath export:** `@its-not-rocket-science/ananke/climate`
+
+**Tests:** 41 new · 5,022 total · 100% statement/branch/function/line coverage on `climate.ts`.
+
+---
+
 ### Phase 95 — Natural Resources & Extraction *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polity income comes from population taxation (Phase 92) and marketplace
