@@ -6500,6 +6500,34 @@ natural next step.
 
 ---
 
+### Phase 83 — Trade Routes & Inter-Polity Commerce *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polities have treasuries and Phase-72 generative economics, but no world-scale
+mechanism for wealth to flow between them along physical routes. Phase-80 trade pacts exist
+but have no concrete economic effect. Phase-55 caravan logistics operates at individual
+character scale without a polity-level route network.
+
+**Design:** Pure data layer. `TradeRegistry` stores bilateral `TradeRoute` records keyed by
+canonical sorted pair. Trade is mutually beneficial — both parties earn daily income. Route
+efficiency decays without maintenance and is disrupted by war or espionage; a Phase-80 trade
+pact multiplies income by `TREATY_TRADE_BONUS_Q`. No Entity fields; no kernel changes.
+
+**Scope:**
+- `TradeRoute { routeId, polityAId, polityBId, baseVolume_cu, efficiency_Q, establishedTick }`.
+- `TradeRegistry { routes: Map<string, TradeRoute> }` — canonical sorted key.
+- `ROUTE_VIABLE_THRESHOLD = q(0.10)`, `ROUTE_DECAY_PER_DAY = q(0.001)`, `TREATY_TRADE_BONUS_Q = q(0.20)`.
+- `computeDailyTradeIncome(route, hasTradePact?, seasonalMul_Q?)` → `TradeIncome`.
+- `applyDailyTrade(polityA, polityB, route, ...)` — mutates treasuries.
+- `stepRouteEfficiency`, `reinforceRoute`, `disruptRoute` (integrates with Phase 82).
+- `abandonRoute`, `getRoutesForPolity`, `computeAnnualTradeVolume`.
+- Subpath export `./trade-routes` added to package.json.
+
+**Depends on:** Phase 61 (Polity), Phase 78 (Calendar — seasonal multiplier), Phase 80 (Diplomacy — trade pact bonus), Phase 82 (Espionage — disruption source).
+
+**Success criterion:** 365 days of trade at full efficiency earns each polity `baseVolume_cu` total; a route decays to non-viable after ~900 days without maintenance; `disruptRoute` with a large delta renders it non-viable immediately.
+
+---
+
 ### Phase 82 — Espionage & Intelligence Networks *(COMPLETE — 2026-03-26)*
 
 **The gap:** All polity-to-polity interaction is open and explicit. There is no mechanism for

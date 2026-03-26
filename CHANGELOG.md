@@ -6,6 +6,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.28] — 2026-03-26
+
+### Added
+
+- **Phase 83 · Trade Routes & Inter-Polity Commerce** (`src/trade-routes.ts`)
+  - `TradeRoute { routeId, polityAId, polityBId, baseVolume_cu, efficiency_Q, establishedTick }` — bilateral route; both polities earn income.
+  - `TradeRegistry { routes: Map<string, TradeRoute> }` — canonical sorted-pair key; symmetric lookup.
+  - `ROUTE_VIABLE_THRESHOLD = q(0.10)` — below this `isRouteViable` returns false.
+  - `ROUTE_DECAY_PER_DAY = q(0.001)` — slow natural decay without maintenance.
+  - `TREATY_TRADE_BONUS_Q = q(0.20)` — Phase-80 trade pact adds 20% income multiplier.
+  - `computeDailyTradeIncome(route, hasTradePact?, seasonalMul_Q?)` → `TradeIncome { incomeA_cu, incomeB_cu }` — zero for non-viable routes.
+  - `applyDailyTrade(polityA, polityB, route, ...)` — mutates both treasuries.
+  - `stepRouteEfficiency(route, boostDelta_Q?)` — daily decay with optional maintenance boost.
+  - `reinforceRoute(route, deltaQ)` / `disruptRoute(route, disruption_Q)` — clamped efficiency adjustments; `disruptRoute` integrates with Phase-82 espionage results.
+  - `abandonRoute(registry, A, B)` — removes route, returns boolean.
+  - `computeAnnualTradeVolume(registry, polityId)` → integer — sum of viable route volumes at current efficiency.
+  - Added `./trade-routes` subpath export to `package.json`.
+  - 50 new tests; 4,427 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.27] — 2026-03-26
 
 ### Added
