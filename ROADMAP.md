@@ -6500,6 +6500,40 @@ natural next step.
 
 ---
 
+### Phase 80 — Diplomacy & Treaties *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polities can be at war or in alliance (Phase 61), but these are simple flags. There
+is no mechanism for formal bilateral agreements — non-aggression pacts, trade deals, peace
+treaties ending hostilities, military alliances with mutual-defence obligations, or royal
+marriages as political instruments.
+
+**Design:** A pure data layer external to `PolityRegistry`. `TreatyRegistry` stores `Treaty`
+records keyed by canonical sorted polity-pair + type so lookup order is irrelevant. Treaty
+strength decays over time and recovers via `reinforceTreaty`; breaking a treaty adds infamy
+via Phase 75 renown. No Entity fields; no kernel changes.
+
+**Scope:**
+- `TreatyType`: `"non_aggression" | "trade_pact" | "peace" | "military_alliance" | "royal_marriage"`.
+- `Treaty { treatyId, polityAId, polityBId, type, strength_Q, signedTick, expiryTick, tributeFromA_Q, tributeFromB_Q }`.
+- `TreatyRegistry { treaties: Map<string, Treaty> }` — canonical key = sorted polity IDs + type.
+- `TREATY_BASE_STRENGTH`: military_alliance q(0.80) → trade_pact q(0.50).
+- `TREATY_DECAY_PER_DAY`: military_alliance q(0.001)/day (loyal) → non_aggression q(0.003)/day (fragile).
+- `TREATY_BREAK_INFAMY`: military_alliance q(0.25) → trade_pact q(0.05).
+- `TREATY_FRAGILE_THRESHOLD = q(0.20)` — below this `isTreatyFragile` fires.
+- `signTreaty`, `getTreaty`, `getActiveTreaties`, `isTreatyExpired`, `stepTreatyStrength`, `reinforceTreaty`, `isTreatyFragile`.
+- `breakTreaty(registry, A, B, type, breakerRulerId?, renownRegistry?)` — removes treaty + infamy.
+- `computeDiplomaticPrestige(registry, polityId)` → Q (sum of treaty strengths, clamped).
+- `areInAnyTreaty(registry, A, B)` → boolean.
+- Subpath export `./diplomacy` added to package.json.
+
+**Depends on:** Phase 61 (Polity), Phase 75 (Renown).
+
+**Success criterion:** Breaking a `military_alliance` adds q(0.25) infamy; `getTreaty(r, "A", "B", type)`
+returns the same treaty as `getTreaty(r, "B", "A", type)`; a `non_aggression` treaty decays to fragile
+after ~117 daily steps without reinforcement.
+
+---
+
 ### Phase 79 — Feudal Bonds & Vassal Tribute *(COMPLETE — 2026-03-26)*
 
 **The gap:** The simulation has polities (Phase 61) and renown (Phase 75) but no mechanism for

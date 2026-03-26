@@ -6,6 +6,32 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.25] — 2026-03-26
+
+### Added
+
+- **Phase 80 · Diplomacy & Treaties** (`src/diplomacy.ts`)
+  - `TreatyType`: `"non_aggression" | "trade_pact" | "peace" | "military_alliance" | "royal_marriage"`.
+  - `Treaty { treatyId, polityAId, polityBId, type, strength_Q, signedTick, expiryTick, tributeFromA_Q, tributeFromB_Q }` — bilateral agreement with optional tribute clause and finite or permanent duration.
+  - `TreatyRegistry { treaties: Map<string, Treaty> }` — keyed by canonical sorted pair + type; order-independent.
+  - `TREATY_BASE_STRENGTH`: military_alliance q(0.80) → trade_pact q(0.50).
+  - `TREATY_DECAY_PER_DAY`: military_alliance q(0.001)/day → non_aggression q(0.003)/day.
+  - `TREATY_BREAK_INFAMY`: military_alliance q(0.25) → trade_pact q(0.05) — Phase 75 integration.
+  - `TREATY_FRAGILE_THRESHOLD = q(0.20)` — `isTreatyFragile(treaty)` returns true below this.
+  - `signTreaty(registry, polityAId, polityBId, type, tick?, duration?, tributeFromA?, tributeFromB?)` — creates or replaces a treaty.
+  - `getTreaty(registry, polityAId, polityBId, type)` — symmetric lookup.
+  - `getActiveTreaties(registry, polityId)` — all treaties for a given polity.
+  - `isTreatyExpired(treaty, currentTick)` — true at/after `expiryTick`; permanent (`-1`) never expires.
+  - `stepTreatyStrength(treaty, boostDelta_Q?)` — daily decay with optional event boost.
+  - `reinforceTreaty(treaty, deltaQ)` — clamped reinforcement.
+  - `breakTreaty(registry, polityAId, polityBId, type, breakerRulerId?, renownRegistry?)` — removes treaty; adds `TREATY_BREAK_INFAMY[type]` infamy to breaker.
+  - `computeDiplomaticPrestige(registry, polityId)` → Q — sum of active treaty strengths, clamped to SCALE.Q.
+  - `areInAnyTreaty(registry, polityAId, polityBId)` → boolean.
+  - Added `./diplomacy` subpath export to `package.json`.
+  - 55 new tests; 4,302 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.24] — 2026-03-26
 
 ### Added
