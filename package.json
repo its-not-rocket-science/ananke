@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.39",
+  "version": "0.1.40",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -142,6 +142,10 @@
     "./governance": {
       "import": "./dist/src/governance.js",
       "types": "./dist/src/governance.d.ts"
+    },
+    "./resources": {
+      "import": "./dist/src/resources.js",
+      "types": "./dist/src/resources.d.ts"
     }
   },
   "files": [
@@ -162,7 +166,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/its-not-rocket-science/ananke.git"
+    "url": "git+https://github.com/its-not-rocket-science/ananke.git"
   },
   "keywords": [
     "simulation",

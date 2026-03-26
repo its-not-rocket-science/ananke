@@ -6500,6 +6500,38 @@ natural next step.
 
 ---
 
+### Phase 95 — Natural Resources & Extraction *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polity income comes from population taxation (Phase 92) and marketplace
+infrastructure (Phase 89), but real economies are heavily resource-driven.  Mines, forests,
+quarries, and stud farms provide income that is largely independent of population size and
+creates strategic differentiation between polities.
+
+**Design:** Pure data layer.  `ResourceDeposit` is an immutable site descriptor; hosts assign
+it to a polity and store one `ExtractionState` per deposit.  Yield is linear in workers,
+multiplied by tech era efficiency and a richness scale that floors at q(0.50) to ensure
+partially-depleted deposits remain productive.  Treasury is the common output currency.
+Secondary bonus flags (`MILITARY_BONUS_RESOURCES` etc.) are advisory — no direct imports of
+Phase-61/89/93 within this module.
+
+**Scope:**
+- `ResourceType`: `"iron" | "silver" | "timber" | "stone" | "horses"`.
+- `BASE_YIELD_PER_WORKER` — silver highest (8 cu), timber/stone lowest (2 cu).
+- `TECH_EXTRACTION_MUL` — Prehistoric q(0.40) → DeepSpace q(4.00).
+- `computeDailyYield(deposit, state, techEra)` → cu/day; 0 when exhausted or no workers.
+- `depleteDeposit(deposit, yield_cu)` — richness drain at `DEPLETION_RATE_PER_1000_CU = q(0.005)`.
+- `stepExtraction(deposit, state, polity, elapsedDays)` → `ExtractionStepResult`.
+- `computeTotalDailyResourceIncome(deposits, states, techEra)` — portfolio summary.
+- Advisory bonus sets: `MILITARY_BONUS_RESOURCES`, `CONSTRUCTION_BONUS_RESOURCES`, `MOBILITY_BONUS_RESOURCES`.
+- `estimateDaysToExhaustion` — planning utility.
+- Subpath export `./resources` added to `package.json`.
+
+**Depends on:** Phase 11 (TechEra), Phase 61 (Polity — treasury_cu). Advisory output feeds Phase-61 (military), Phase-89 (construction discount), Phase-93 (mobility).
+
+**Success criterion:** Silver yields more than timber per worker; industrial tech earns more than medieval with equal workers; richness floor ensures partially-depleted deposits still produce; `depleteDeposit` never drives richness below zero; `estimateDaysToExhaustion` returns Infinity with no workers and 0 when already exhausted; all 49 tests pass.
+
+---
+
 ### Phase 94 — Laws & Governance Codes *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polities vary in their governance structures but there is no mechanism for

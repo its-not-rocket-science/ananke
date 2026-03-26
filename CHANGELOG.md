@@ -6,6 +6,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.40] — 2026-03-26
+
+### Added
+
+- **Phase 95 · Natural Resources & Extraction** (`src/resources.ts`)
+  - `ResourceType`: `"iron" | "silver" | "timber" | "stone" | "horses"`.
+  - `ResourceDeposit { depositId, polityId, type, richness_Q, maxWorkers }` — immutable site descriptor.
+  - `ExtractionState { depositId, assignedWorkers, cumulativeYield_cu }` — mutable accumulator stored externally.
+  - `BASE_YIELD_PER_WORKER: Record<ResourceType, number>` — silver 8, horses 5, iron 3, timber/stone 2 cu/worker/day at base.
+  - `TECH_EXTRACTION_MUL: Record<number, Q>` — numeric TechEra keys; Prehistoric q(0.40) → DeepSpace q(4.00).
+  - `computeDailyYield(deposit, state, techEra)` → cu/day: `workers × baseRate × techMul × richnessMul`; `richnessMul ∈ [q(0.50), q(1.00)]`; 0 when exhausted or no workers.
+  - `assignWorkers(deposit, state, workers)` — clamps to `[0, deposit.maxWorkers]`.
+  - `depleteDeposit(deposit, yield_cu)` — reduces `richness_Q` by `DEPLETION_RATE_PER_1000_CU = q(0.005)` per 1000 cu extracted.
+  - `stepExtraction(deposit, state, polity, elapsedDays)` → `ExtractionStepResult`: adds yield to `polity.treasury_cu`; depletes richness; returns `{ yield_cu, richness_Q, exhausted }`.
+  - `computeTotalDailyResourceIncome(deposits, states, techEra)` → cu/day total across all deposits.
+  - Secondary bonus sets: `MILITARY_BONUS_RESOURCES` (iron, horses), `CONSTRUCTION_BONUS_RESOURCES` (timber, stone), `MOBILITY_BONUS_RESOURCES` (horses) — advisory flags for Phase-61/89/93.
+  - `hasMilitaryBonus / hasConstructionBonus / hasMobilityBonus` helpers.
+  - `estimateDaysToExhaustion(deposit, state, techEra)` → ceiling days; Infinity with no workers; 0 when already exhausted.
+  - Added `./resources` subpath export to `package.json`.
+  - 49 new tests; 4,981 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.39] — 2026-03-26
 
 ### Added
