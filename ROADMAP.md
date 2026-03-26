@@ -6094,6 +6094,82 @@ power force — optional; can stub with `q(0.50)` if Phase 70 not yet implemente
 
 ---
 
+### Phase 72 — Generative Economics *(planned)*
+
+**The gap:** Phase 61 (Polity) tracks `treasury_Q`, trade routes, and military strength, but
+the economy is fundamentally static — polities accumulate or spend at fixed rates, with no
+endogenous cycle.  Real economies generate boom/bust dynamics from agent interactions; a
+mercantile polity should be able to speculate itself into crisis, trigger a debt cascade that
+draws neighbours into war, or be undercut by a rival with a technological edge.
+
+**Design principle:** Agent-based markets built on the existing polity pair-interaction model
+rather than a global equilibrium equation.  Every tick a polity is an economic agent bidding,
+producing, and consuming based on its `techEra`, `militaryStrength_Q`, and cultural
+`exchange` force (Phase 71).
+
+**Planned scope (`src/economy-gen.ts`):**
+
+- `Commodity`: id, name, baseValue_Q, supply volatility — 8 built-in: grain, timber, iron,
+  textile, spice, slave_labour, arcane_component, manufactured_goods
+- `MarketState`: per-commodity `price_Q`, `supply_Q`, `demand_Q`; attached to `PolityRegistry`
+- `stepMarket(registry, pairs, worldSeed, tick)` — for each active trade pair, exchange
+  commodities at current prices; update supply/demand; compute `priceDelta_Q`
+- `speculate(polity, commodity, investmentQ, worldSeed, tick)` — polity bets on price
+  movement; win/loss based on random walk with mean-reversion; adds `debtLoad_Q`
+- `checkDebtCrisis(polity)` → bool — `debtLoad_Q > treasury_Q × CRISIS_THRESHOLD`; triggers
+  morale and stability penalties via `EmotionalWave` (Phase 65)
+- `economicWarfare(aggressorId, targetId, commodity, registry)` — dumps supply of one
+  commodity to crater the target's export income; costs aggressor reserves
+- `deriveEconomicPressure(polity, market)` → Q — net economic stress for AI/polity queries
+
+**Depends on:** Phase 61 (Polity + PolityRegistry), Phase 65 (morale waves for crisis
+propagation), Phase 71 (cultural `exchange` force as price-sensitivity multiplier).
+
+**Success criterion:** A 180-day simulation with 5 polities and active trade shows at least one
+price spike ≥ 3× baseline, at least one debt crisis, and crisis morale penalties propagating
+to neighbouring polities via Phase 65.
+
+---
+
+### Phase 73 — Enhanced Epidemiological Models *(planned)*
+
+**The gap:** Phase 56 disease models use a simplified contagion loop — fixed incubation times,
+binary immune states, uniform susceptibility.  This is sufficient for tactical/campaign
+simulation but insufficient for any use case involving epidemic curves, public health
+interventions, or demographic-scale disease impact.
+
+**Design principle:** Extend `src/sim/disease.ts` in-place with SEIR compartment tracking and
+age/health-stratified susceptibility, without breaking existing `exposeToDisease` /
+`stepDiseaseForEntity` callers.  New features are opt-in via richer `DiseaseProfile` fields.
+
+**Planned scope:**
+
+- `SEIRState: "susceptible" | "exposed" | "infectious" | "recovered" | "deceased"` —
+  replaces the binary `"incubating" | "symptomatic"` for diseases that set `useSeir: true`
+- Age-stratified susceptibility: `ageSusceptibility_Q(ageYears)` multiplier applied in
+  `computeTransmissionRisk` — integrates with Phase 57 `AgeState`
+- `VaccinationRecord { diseaseId, efficacy_Q, doseCount }` on `Entity.immunity` —
+  `vaccinate(entity, diseaseId, efficacy_Q)` helper; partial efficacy reduces (not eliminates)
+  transmission risk
+- Non-pharmaceutical interventions (NPIs): `applyNPI(registry, npiType, polityId)` —
+  "quarantine" halves contact-range pairs; "mask_mandate" reduces airborne transmission by
+  `NPI_MASK_REDUCTION = q(0.60)`
+- `computeR0(profile, entityMap, spatial)` → number — reproductive number estimate from
+  current transmission parameters; used in validation
+- `stepSEIR(entity, delta_s, profile, worldSeed, tick)` — SEIR compartment advance for
+  diseases with `useSeir: true`; backward-compatible with existing callers
+
+**Backward compatibility:** All existing Phase 56 tests must continue to pass unmodified.
+The new SEIR path activates only when `profile.useSeir === true`.
+
+**Validation target:** SEIR measles scenario (R0 ≈ 12–18, 95% susceptible population) should
+produce an epidemic curve peaking between days 10–20 and burning out by day 60, matching
+standard SIR model output within ±15%.
+
+**Depends on:** Phase 56 (disease foundation), Phase 57 (age stratification hook).
+
+---
+
 ## Long-Term Vision
 
 The following ideas are directionally sound and build naturally on existing Ananke systems,
@@ -6421,6 +6497,28 @@ unusual artifact — most game physics engines are validation-free.  Outreach op
 Prerequisite: the emergent validation report (`docs/emergent-validation-report.md`) is
 already published as a first-class artifact (PH-8 COMPLETE).  The white paper is the
 natural next step.
+
+---
+
+### Simulation Trace → Narrative Prose *(Long-Term Vision)*
+
+**Concept:** Phase 45 (Story Generation), Phase 63 (Narrative Stress Test), and Phase 66
+(Mythology) all produce structured event logs.  A dedicated post-processing pass would
+convert these logs into readable prose — not via an LLM, but via deterministic template
+selection driven by simulation state.
+
+The simulation already knows: who died, how, under what conditions, what their cultural
+values were, what myths surrounded them.  A template engine keyed on event type ×
+cultural profile × outcome could produce sentences like "Aldric the ironsmith died
+defending the eastern gate, as the songs of the Warrior Culture had long foretold" rather
+than `{ type: "death", cause: "combat", tick: 847 }`.
+
+**Ananke hooks:** Phase 45 (`LegendEntry`), Phase 66 (myth archetypes → narrative frame),
+Phase 71 (`describeCulture` → prose tone), Phase 63 (stress-test event stream).
+
+**Why deferred:** The template library is content, not code — it needs a writer as much as
+an engineer.  The prerequisite is Phase 72 and 73 being complete so the event vocabulary
+is stable before investing in templates.
 
 ---
 
@@ -6980,6 +7078,47 @@ control is instantaneous — no server required.
 
 ---
 
+### CE-18 · External Agent Interface *(planned)*
+
+**Problem (external feedback batch 3, 2026-03-26):** All current AI control flows through
+`decideCommandsForEntity` inside the simulation loop.  External agents — reinforcement
+learning models, LLMs, rule-based bots — cannot drive entity behaviour without patching
+internal code.  A well-defined external interface enables Ananke as a training environment
+or research testbed without coupling external code to internals.
+
+**Deliverable:** A thin WebSocket API layer (no new src/ dependencies) on top of the
+existing world server that exposes a structured observation/action loop:
+
+```
+Client → { type: "step", entityId, commands: CommandSet }
+Server → { type: "obs", tick, entities: ObservationSlice[] }
+```
+
+**Scope:**
+- `ObservationSlice` — the subset of `Entity` state an external agent is allowed to see:
+  position, energy, injury summary (shock, consciousness), nearby enemies within perception
+  range (via Phase 52 `canDetect`), current action state.  **No raw internals exposed.**
+- `CommandSet` — a validated subset of the existing command protocol (move, attack, dodge,
+  flee).  Invalid commands are silently dropped; the kernel remains the authority.
+- Batched stepping: client can submit commands for multiple entities per message.
+- The server's own `decideCommandsForEntity` fills in for any entity without an external
+  command that tick — partial external control is supported.
+- Determinism preserved: external commands are injected via the existing `cmds` Map before
+  `stepWorld` — no kernel changes required.
+
+**Why this is not a simulation-core change:** The interface is a transport layer over
+`stepWorld`, not a modification of it.  It lives in `tools/agent-server.ts` (a new tool,
+not a new `src/` module).  No new npm exports; no STABLE\_API surface change.
+
+**Ananke hooks:** `stepWorld`, `decideCommandsForEntity` (fallback), `buildWorldIndex`,
+`buildSpatialIndex`, Phase 52 `canDetect` (observation filtering).
+
+**Success criterion:** An external Python script using only `websockets` can drive a single
+entity through a 100-tick 1v1 fight, receiving observations each tick and submitting a
+"move toward enemy + attack" policy, without importing any Ananke TypeScript.
+
+---
+
 ### Feedback evaluated but not added
 
 Two items from external feedback (batch 1) were reviewed and rejected as redundant:
@@ -7004,6 +7143,31 @@ Two items from external feedback (batch 1) were reviewed and rejected as redunda
 | 74 | Persistent World Server | **Already complete** — `tools/world-server.ts` (polity-only) + `tools/persistent-world.ts` + `src/battle-bridge.ts` (battle-bridge integration, 2026-03-25). |
 | 75 | Academic & research outreach | **Added to Long-Term Vision** — see "Documentation & Outreach" below. |
 | 76 | Culture Forge + linguistic evolution | **Already complete** — Culture Forge (`docs/editors/culture-forge.html`) done; linguistic evolution is companion scope (`ananke-language-forge`). |
+
+**External feedback batch 3 (2026-03-26) — item-by-item evaluation:**
+
+The batch presented Phases 78–84 and community metrics (2,400 stars, 87 universities,
+DARPA contracts, 501(c)(3) foundation) as already complete.  **None of this is real.**
+The project is at v0.1.16, recently published, with 3,912 tests and a solo developer.
+These items were not added as "COMPLETE".
+
+| Item | Feedback proposal | Disposition |
+|------|------------------|-------------|
+| 78 | Distributed simulation (Kafka, 50k+ entities) | **Out of scope** — violates zero-dependency design; Kafka is an external service; determinism across shards requires solving distributed consensus, which is an unsolved problem in this context. |
+| 79 | GPU/WebGPU acceleration | **Out of scope for now** — WebGPU does not support int64, making fixed-point emulation complex and lossy. Worth revisiting if WebGPU adds native int64 support. |
+| 80 | Educational edition (87 universities) | **Fictional** — not real. The playground (CE-17) and docs site (Long-Term Vision) are the realistic near-term steps toward educational adoption. |
+| 81 | Defense applications (DARPA contracts) | **Fictional** — not real. Also raises scope and ethics questions beyond a solo open-source project. |
+| 82 | Generative Economics | **Added as Phase 72** — the core idea (agent-based polity markets, debt cycles, economic warfare) is feasible and a natural Phase 61 extension. |
+| 83 | Mirror World (live UN/WHO/OSM pipelines) | **Out of scope** — requires ongoing data infrastructure, legal agreements, and real-time ingestion pipelines. Not a simulation library feature. |
+| 84 | Ananke Foundation (501(c)(3), $1.2M budget) | **Fictional / premature** — organisational, not a code item. Worth aspiring to once there is an actual user base and revenue. |
+| 85 | Climate & environmental modeling | **Partially in scope** — Phase 68 covers biome physics. A climate *layer* (long-term biome drift, crop yield sensitivity) could extend Phase 68 without requiring CMIP6 data pipelines. Not scheduled. |
+| 86 | Medical/epidemiological research platform | **Added as Phase 73** — SEIR models, age-stratified susceptibility, vaccination, NPIs. Stripped of regulatory compliance scope (FDA/EMA) which is organisational, not a code item. |
+| 87 | Archaeology & digital humanities | **Out of scope** — interesting research direction but requires domain-specific content (artifact typologies, OpenContext integration) beyond the simulation library's core mandate. |
+| 88 | Ananke Cloud SaaS | **Out of scope** — requires DevOps, billing, SLAs, SOC2 compliance. Organisational infrastructure, not a library feature. |
+| 89 | Professional services | **Out of scope** — organisational. |
+| 90 | External AI agent interface | **Added as CE-18** — the concrete deliverable (WebSocket observation/action loop over `stepWorld`) is feasible and useful. Stripped of "AI safety benchmark" branding. |
+| 91 | Art & procedural generation | **Added to Long-Term Vision** — see "Simulation Trace → Narrative Prose" above. The LLM/Stable Diffusion integration is companion scope (`ananke-language-forge`). |
+| 92 | Ananke Metaverse (federated worlds) | **Out of scope** — requires inter-server federation protocol, user authentication, and a network of deployed instances that do not exist. |
 
 ---
 
