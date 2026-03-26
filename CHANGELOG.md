@@ -6,6 +6,33 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.18] — 2026-03-26
+
+### Added
+
+- **CE-18 · External Agent Interface** (`tools/agent-server.ts`)
+  - WebSocket server (default port 3001) implementing an agent observation/action loop
+    over the existing `stepWorld` kernel — no src/ changes, no new npm exports.
+  - **Protocol:**
+    - Client → `{ type: "step", commands?: AgentCommand[] }` or `{ type: "reset" }`
+    - Server → `{ type: "obs", tick, entities: ObservationSlice[], done, winner? }`
+    - On connect → `{ type: "init", config, obs }`
+  - **`ObservationSlice`** — safe subset: position, velocity, fatigue, shock/consciousness/dead,
+    detected nearby enemies (filtered via Phase 52 `canDetect`). No raw internals exposed.
+  - **`AgentCommand`** — validated high-level actions: `attack | move | dodge | flee | idle`.
+    Invalid team targeting silently dropped; `decideCommandsForEntity` fills in missing commands.
+  - Configurable scenario: `TEAM1_SIZE` / `TEAM2_SIZE` (1–4 each), `SEED`, `MAX_TICKS` via env vars.
+    Default: 1v1, Knight (longsword + mail) vs Brawler (club).
+  - Agent-driven stepping: server advances only when client sends `step` — agent controls tick rate.
+  - Determinism preserved: external commands injected via existing `CommandMap` before `stepWorld`.
+  - HTTP endpoints: `GET /config`, `GET /status`, `POST /reset`.
+  - Run: `npm run agent-server`
+  - **Success criterion met:** An external Python script using only `websockets` can drive a single
+    entity through a 1v1 fight, receiving `ObservationSlice` observations each tick and submitting
+    `attack` / `move` commands, without importing any Ananke TypeScript.
+
+---
+
 ## [0.1.17] — 2026-03-26
 
 ### Added

@@ -7078,7 +7078,7 @@ control is instantaneous — no server required.
 
 ---
 
-### CE-18 · External Agent Interface *(planned)*
+### CE-18 · External Agent Interface *(COMPLETE — 2026-03-26)*
 
 **Problem (external feedback batch 3, 2026-03-26):** All current AI control flows through
 `decideCommandsForEntity` inside the simulation loop.  External agents — reinforcement
