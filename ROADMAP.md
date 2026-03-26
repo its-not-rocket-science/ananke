@@ -6500,6 +6500,43 @@ natural next step.
 
 ---
 
+### Phase 97 — Famine Relief & Rationing *(COMPLETE — 2026-03-26)*
+
+**The gap:** Phase-87 (Granary) tracks food reserves and emits a binary famine flag to
+Phase-86 (Demography).  But real polity responses to food crises are active, graduated, and
+consequential — rationing, emergency imports, prolonged severity accumulation — none of which
+the granary module models.
+
+**Design:** Pure data layer sitting above Phase-87.  `FamineState` tracks graduated phase and
+cumulative long-term damage.  `computeFaminePressures` returns an advisory bundle for Phases
+86/81/90.  `stepRationedGranary` replaces Phase-87's normal consumption step when rationing
+is active.  `computeReliefImport` converts treasury directly into grain, bounded by budget and
+granary capacity.
+
+**Key exports (`src/famine.ts`):**
+
+| Export | Purpose |
+|--------|---------|
+| `FaminePhase` | `"none" \| "shortage" \| "famine" \| "catastrophe"` |
+| `RationingPolicy` | `"none" \| "tight" \| "emergency" \| "starvation_rations"` |
+| `FamineState` | Per-polity mutable tracker (phase, daysInPhase, cumulativeSeverity_Q) |
+| `FaminePressures` | Advisory: deathBonus_Q, migrationPush_Q, unrestPressure_Q |
+| `computeFaminePhase` | Classify severity from Phase-87 `computeFoodSupply_Q` |
+| `computeFaminePressures` | Combined famine + rationing advisory pressures |
+| `stepFamine` | Advance state; returns true when phase changes |
+| `computeRationedConsumption` | Reduced su demand per policy |
+| `stepRationedGranary` | Drain granary with rationing applied |
+| `computeReliefImport` | Spend treasury to buy emergency grain |
+
+**Integration targets:** Phase-86 deathBonus, Phase-81 migrationPush, Phase-90 unrestPressure,
+Phase-87 granary consumption, Phase-92 treasury.
+
+**Subpath export:** `@its-not-rocket-science/ananke/famine`
+
+**Tests:** 60 new · 5,082 total · 100% statement/branch/function/line coverage on `famine.ts`.
+
+---
+
 ### Phase 96 — Climate Events & Natural Disasters *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polity simulation handles population, economy, military, and governance but has

@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.41",
+  "version": "0.1.42",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -150,6 +150,10 @@
     "./climate": {
       "import": "./dist/src/climate.js",
       "types": "./dist/src/climate.d.ts"
+    },
+    "./famine": {
+      "import": "./dist/src/famine.js",
+      "types": "./dist/src/famine.d.ts"
     }
   },
   "files": [

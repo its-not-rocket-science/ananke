@@ -6,6 +6,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.42] — 2026-03-26
+
+### Added
+
+- **Phase 97 · Famine Relief & Rationing** (`src/famine.ts`)
+  - `FaminePhase`: `"none" | "shortage" | "famine" | "catastrophe"` — graduated severity above Phase-87 Granary's binary famine flag.
+  - `RationingPolicy`: `"none" | "tight" | "emergency" | "starvation_rations"` — active polity response.
+  - `FamineState { polityId, phase, daysInPhase, cumulativeSeverity_Q }` — per-polity mutable tracker stored externally.
+  - `FaminePressures { deathBonus_Q, migrationPush_Q, unrestPressure_Q }` — advisory bundle; callers pass fields into Phases 86/81/90.
+  - Phase thresholds: shortage < q(0.50), famine < q(0.20), catastrophe < q(0.05) of `computeFoodSupply_Q`.
+  - `FAMINE_PHASE_DEATH_Q`: +1%/year (shortage) → +3%/year (famine) → +7%/year (catastrophe); stacks with Phase-86 base famine death.
+  - `FAMINE_PHASE_MIGRATION_Q`: q(0.08) → q(0.25) → q(0.50) — feeds Phase-81.
+  - `RATIONING_REDUCTION_Q`: tight 20%, emergency 40%, starvation_rations 60% consumption cut.
+  - `RATIONING_UNREST_Q`: q(0.04) → q(0.12) → q(0.25) — rationing itself generates unrest.
+  - `SEVERITY_DELTA_PER_DAY`: none −5 (decay), shortage +2, famine +10, catastrophe +25 per day; `cumulativeSeverity_Q` models long-term famine damage.
+  - `createFamineState(polityId)` — factory.
+  - `computeFaminePhase(foodSupply_Q)` — classifies severity from granary output.
+  - `computeFaminePressures(state, policy?)` — combined famine + rationing advisory pressures.
+  - `stepFamine(state, foodSupply_Q, elapsedDays)` → `boolean` — advances state; returns `true` when phase changes.
+  - `computeRationedConsumption(polity, policy, elapsedDays)` — rationed su demand.
+  - `stepRationedGranary(polity, granary, policy, elapsedDays)` — replaces Phase-87 `stepGranaryConsumption` when rationing is active.
+  - `computeReliefImport(polity, granary, budget_cu, capacityCap_su)` — converts treasury into grain; mutates both in-place; capped by treasury, budget, and granary space.
+  - `isFamineActive(state)` / `isCatastrophicFamine(state)` — convenience predicates.
+  - Added `./famine` subpath export to `package.json`.
+  - 60 new tests; 5,082 total. Coverage: 100% statements/branches/functions/lines on `famine.ts`.
+
+---
+
 ## [0.1.41] — 2026-03-26
 
 ### Added
