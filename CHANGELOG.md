@@ -6,6 +6,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.29] — 2026-03-26
+
+### Added
+
+- **Phase 84 · Siege Warfare** (`src/siege.ts`)
+  - `SiegePhase`: `"investment" | "active" | "resolved"`.
+  - `SiegeOutcome`: `"attacker_victory" | "defender_holds" | "surrender"`.
+  - `SiegeState { siegeId, attackerPolityId, defenderPolityId, phase, startTick, phaseDay, wallIntegrity_Q, supplyLevel_Q, defenderMorale_Q, siegeStrength_Q, outcome? }`.
+  - `SiegeAttrition { attackerLoss_Q, defenderLoss_Q }` — daily fractional losses per phase.
+  - `createSiege(attackerPolity, defenderPolity, tick?)` — seeds from `militaryStrength_Q` and `stabilityQ`.
+  - **Investment phase** (`INVESTMENT_DAYS = 14`): encirclement; no bombardment or starvation yet.
+  - **Active phase**: wall decay = `siegeStrength_Q × WALL_DECAY_BASE_Q / SCALE.Q` per day; supply drains at `SUPPLY_DRAIN_PER_DAY_Q = q(0.004)`; morale tracks combined wall/supply weakness.
+  - **Assault**: fires when `wallIntegrity_Q < ASSAULT_WALL_THRESHOLD_Q = q(0.30)`; resolved by `eventSeed` roll weighted by siege strength and defender morale deficit.
+  - **Surrender**: fires when `supplyLevel_Q ≤ SURRENDER_SUPPLY_THRESHOLD_Q = q(0.05)` and daily probabilistic roll succeeds based on morale deficit.
+  - `stepSiege(siege, worldSeed, tick, supplyPressureBonus_Q?, siegeStrengthMul_Q?)` — Phase-83 (severed trade) and Phase-78 (winter penalty) integration via optional parameters.
+  - `computeSiegeAttrition(siege)` → `SiegeAttrition` — daily losses by phase.
+  - `runSiegeToResolution(siege, worldSeed, startTick, maxDays?)` — convenience runner.
+  - All outcomes deterministic and idempotent via `eventSeed`.
+  - Added `./siege` subpath export to `package.json`.
+  - 38 new tests; 4,465 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.28] — 2026-03-26
 
 ### Added

@@ -6500,6 +6500,37 @@ natural next step.
 
 ---
 
+### Phase 84 — Siege Warfare *(COMPLETE — 2026-03-26)*
+
+**The gap:** Phase 69 resolves open-field battles between formations, but there is no mechanism
+for sieges — prolonged operations against fortified polities where the attacker encircles,
+starves, and eventually breaches or storms the defences. Medieval and early-modern warfare was
+dominated by sieges.
+
+**Design:** Pure state machine. `SiegeState` advances one day at a time via `stepSiege`.
+All random outcomes use `eventSeed` for full determinism and replay compatibility.
+Supply pressure and siege strength accept optional multipliers so Phase-83 (severed trade
+routes) and Phase-78 (winter penalties) can be injected by the host without direct imports.
+
+**Scope:**
+- `SiegePhase`: `"investment" | "active" | "resolved"`.
+- `SiegeOutcome`: `"attacker_victory" | "defender_holds" | "surrender"`.
+- `SiegeState` — wall integrity, supply level, defender morale, siege strength.
+- `INVESTMENT_DAYS = 14` — encirclement period; no bombardment or starvation.
+- **Active phase**: `wallDecay = siegeStrength × WALL_DECAY_BASE_Q / SCALE.Q` per day; supply drains at `q(0.004)/day`; morale tracks combined weakness.
+- **Assault**: triggered at `ASSAULT_WALL_THRESHOLD_Q = q(0.30)`; `eventSeed` roll weighted by siege strength + morale deficit bonus.
+- **Surrender**: triggered when supply ≤ `SURRENDER_SUPPLY_THRESHOLD_Q = q(0.05)` + daily probabilistic roll based on morale deficit.
+- `stepSiege(siege, worldSeed, tick, supplyPressureBonus_Q?, siegeStrengthMul_Q?)`.
+- `computeSiegeAttrition(siege)` → `SiegeAttrition`.
+- `runSiegeToResolution(siege, worldSeed, startTick, maxDays?)`.
+- Subpath export `./siege` added to package.json.
+
+**Depends on:** Phase 61 (Polity — attacker/defender stats). Integrates with Phase 78 (Calendar — winter strength penalty) and Phase 83 (Trade Routes — severed supply) via optional parameters.
+
+**Success criterion:** Investment phase lasts exactly `INVESTMENT_DAYS` before transitioning; high siege-strength vs low morale defender regularly produces `attacker_victory`; low siege strength allows `surrender` via supply exhaustion; `defender_holds` is reachable against a high-morale garrison; all outcomes deterministic across seeds.
+
+---
+
 ### Phase 83 — Trade Routes & Inter-Polity Commerce *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polities have treasuries and Phase-72 generative economics, but no world-scale
