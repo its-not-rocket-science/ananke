@@ -6951,36 +6951,32 @@ overrides require explicit opt-in and manual review.
 
 ---
 
-### CE-17 · Browser-Based Simulation Playground
+### CE-17 · Browser-Based Simulation Playground *(COMPLETE — 2026-03-25)*
 
 **Problem (external feedback, 2026-03-25):** Potential adopters want to evaluate Ananke's
 physics depth *before* writing any code.  The existing Species Forge / Culture Forge editors
 let you design entities but do not run a simulation or show outcomes.  A playground lowers
 the evaluation barrier from "set up a Node.js project" to "open a URL."
 
-**Deliverable:** `docs/playground/index.html` — a single-file, zero-dependency browser
-application that runs `stepWorld` directly via the `ananke-threejs-bridge` (or a compiled
-WASM bundle) without any server.
+**Delivered:** `docs/playground/index.html` (293 KB, self-contained) — regenerate with
+`npm run generate-playground` after physics changes.
 
-**Scope:**
-- **Scenario selector** — 4–6 pre-built scenarios (1v1 duel, squad battle, epidemic,
-  mounted charge) loaded from the existing `docs/zoo/` data or inline JSON
-- **Slider panel** — strength, speed, armour, weapon, team size; re-seeds and re-runs on change
-- **Outcome viewer** — health tracks identical to `docs/zoo/index.html`; entity event log;
-  tick counter and elapsed-time display
-- **Export** — "Copy scenario JSON" button that outputs a CE-3 `ArenaScenario` compatible
-  with `loadScenario()`
+**What it does:**
+- **Archetype selector** — Brawler (HUMAN\_BASE), Knight (KNIGHT\_INFANTRY), Pro Boxer; each
+  faces a fixed opponent (Brawler + club, no armour)
+- **Weapon selector** — Club · Knife · Longsword
+- **Armour selector** — None · Leather · Mail
+- **Seed selector** — Seeds 1 / 42 / 99 (demonstrates outcome variance)
+- **Outcome box** — winner + tick count, colour-coded (green win / red loss / amber draw)
+- **Health tracks** — consciousness colour gradient across all snapshots, same as Simulation Zoo
+- **Event log** — every significant hit (shock +300) and death
+- **"Copy scenario JSON"** — clipboard export compatible with `loadScenario()` (CE-3)
 
-**Why companion project instead of in-library:** The playground requires a bundler step
-(ESM → IIFE) and a live Ananke build; it belongs in `ananke-world-ui` long-term.  The
-short-term deliverable is a standalone `docs/playground/` page that reuses the already-
-compiled `docs/zoo/` data without requiring a build step.
+81 pre-computed variants (3 archetypes × 3 weapons × 3 armours × 3 seeds); switching any
+control is instantaneous — no server required.
 
-**Ananke hooks:** CE-3 (`loadScenario`), `stepWorld`, `buildSpatialIndex`, bridge module.
-
-**Success criterion:** A user with no Node.js tooling can open `docs/playground/index.html`
-from a GitHub Pages URL, choose a scenario, drag a slider, and see a different outcome
-within 2 seconds.
+**Ananke hooks:** `stepWorld`, `decideCommandsForEntity`, `buildWorldIndex`,
+`buildSpatialIndex`, `generateIndividual`, `STARTER_WEAPONS`, `STARTER_ARMOUR`.
 
 ---
 

@@ -116,6 +116,7 @@
     "example:species": "node dist/examples/quickstart-species.js",
     "generate-fixtures": "node dist/tools/generate-fixtures.js",
     "generate-zoo": "node dist/tools/generate-zoo.js",
+    "generate-playground": "node dist/tools/generate-playground.js",
     "generate-map": "node dist/tools/generate-map.js",
     "world-server": "node dist/tools/world-server.js",
     "persistent-world": "node dist/tools/persistent-world.js",
