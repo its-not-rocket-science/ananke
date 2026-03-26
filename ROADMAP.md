@@ -6094,7 +6094,7 @@ power force — optional; can stub with `q(0.50)` if Phase 70 not yet implemente
 
 ---
 
-### Phase 72 — Generative Economics *(planned)*
+### Phase 72 — Generative Economics *(COMPLETE — 2026-03-26)*
 
 **The gap:** Phase 61 (Polity) tracks `treasury_Q`, trade routes, and military strength, but
 the economy is fundamentally static — polities accumulate or spend at fixed rates, with no
@@ -6497,6 +6497,42 @@ unusual artifact — most game physics engines are validation-free.  Outreach op
 Prerequisite: the emergent validation report (`docs/emergent-validation-report.md`) is
 already published as a first-class artifact (PH-8 COMPLETE).  The white paper is the
 natural next step.
+
+---
+
+### Phase 74 — Simulation Trace → Narrative Prose *(COMPLETE — 2026-03-26)*
+
+**The gap:** `narrative-render.ts` (Phase 45) renders `ChronicleEntry` events to neutral
+prose.  There is no cultural-tone variation: every culture produces identical sentences.
+The simulation already knows a culture's dominant values and the myth archetypes surrounding
+key actors — this knowledge should colour the voice of the history.
+
+**Design:** A pure rendering extension on top of Phase 45.  No kernel changes.  No new
+entity fields.  Reads `CultureProfile` (Phase 71) and `MythArchetype` (Phase 66) to select
+tone-appropriate sentence variants from a template bank.
+
+**Planned scope:**
+- `ProseTone: "neutral" | "heroic" | "tragic" | "martial" | "spiritual" | "mercantile"` —
+  6 tones, each with its own sentence variant for every `ChronicleEventType`.
+- `deriveNarrativeTone(culture: CultureProfile) → ProseTone` — maps dominant cultural
+  values to the closest prose tone (martial_virtue → martial, spiritual_devotion → spiritual,
+  etc.).
+- `mythArchetypeFrame(archetype: MythArchetype) → string` — returns a closing phrase
+  appropriate to the myth archetype ("as heroes are destined to do", "fulfilling the dark
+  prophecy", etc.).
+- `createNarrativeContext(entityNames, culture?, myth?) → NarrativeContext` — bundles
+  the name map, tone, and optional myth frame for a rendering pass.
+- `renderEntryWithTone(entry, ctx) → string` — tone-aware rendering with `{name}` /
+  `{target}` / `{var}` substitution; falls back to neutral for missing tone variants.
+- `renderChronicleWithTone(chronicle, ctx, minSignificance?) → string[]` — renders
+  all entries above a significance threshold, ordered chronologically.
+
+**Depends on:** Phase 45 (ChronicleEntry), Phase 66 (MythArchetype), Phase 71 (CultureProfile).
+
+**Success criterion:** Given a Chronicle from a Warrior Culture world containing 10 events
+(deaths, victories, legendary deeds), `renderChronicleWithTone` with a martial-tone context
+produces prose clearly distinguishable from the same events rendered with spiritual or
+mercantile tone — verified by test assertions on specific phrases.
 
 ---
 

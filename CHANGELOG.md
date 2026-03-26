@@ -6,6 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.19] — 2026-03-26
+
+### Added
+
+- **Phase 74 · Simulation Trace → Narrative Prose** (`src/narrative-prose.ts`)
+  - 6 prose tones: `neutral | heroic | tragic | martial | spiritual | mercantile`
+  - Tone-varied templates for all 19 `ChronicleEventType` values.
+  - `deriveNarrativeTone(culture)` — maps dominant `CultureProfile` value → `ProseTone`
+    via `VALUE_TONE_MAP` (martial_virtue→martial, spiritual_devotion→spiritual,
+    commerce→mercantile, honour→heroic, fatalism→tragic; others fall back to neutral).
+  - `mythArchetypeFrame(archetype)` — returns a culturally-flavoured closing phrase for
+    each `MythArchetype` (hero, monster, trickster, great_plague, divine_wrath, golden_age).
+  - `createNarrativeContext(entityNames, culture?, myth?)` — bundles tone + name map + myth frame.
+  - `renderEntryWithTone(entry, ctx)` — picks the tone variant for each event, substitutes
+    `{name}`, `{target}`, computed helper strings (`{cause_str}`, `{location_str}`, etc.),
+    raw `entry.variables`, and appends the myth frame (replacing terminal period).
+  - `renderChronicleWithTone(chronicle, ctx, minSignificance?)` — filters by significance,
+    sorts chronologically, maps via `renderEntryWithTone`.
+  - **Success criterion met:** martial, spiritual, and mercantile tones produce clearly
+    distinguishable prose from the same chronicle events.
+  - 39 new tests; 4,037 total. Coverage: statements 96.81%, branches 86.87%, functions 94.80%.
+
+---
+
 ## [0.1.18] — 2026-03-26
 
 ### Added
