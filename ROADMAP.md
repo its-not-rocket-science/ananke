@@ -6500,6 +6500,36 @@ natural next step.
 
 ---
 
+### Phase 91 — Technology Research *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polities have a `techEra` field and `advanceTechEra` exists, but there is no
+passive research accumulation mechanism.  There is no model for how population size and
+polity stability drive daily research output, how treasury investment can accelerate progress,
+or how contact with more-advanced polities diffuses knowledge.
+
+**Design:** Pure data layer; no Entity fields.  `ResearchState` is stored externally per polity
+by the host — parallel to the pattern used by `GranaryState` and `PolityEpidemicState`.
+Uses numeric TechEra keys (correct for real hosts using `TechEra.Medieval` = 2, unlike the
+string-keyed records in Phases 86–90).  `stepResearch` increments `polity.techEra` directly
+and calls `deriveMilitaryStrength` — it does not use `advanceTechEra` which also charges treasury.
+
+**Scope:**
+- `ResearchState { polityId, progress }`.
+- `RESEARCH_POINTS_REQUIRED: Record<number, number>` — numeric TechEra keys; Prehistoric 2 k → FarFuture 5 M; DeepSpace absent.
+- `RESEARCH_POP_DIVISOR = 5_000`, `RESEARCH_COST_PER_POINT = 10`, `KNOWLEDGE_DIFFUSION_RATE_Q = q(0.10)`.
+- `computeDailyResearchPoints(polity, bonusPoints?)` → integer: `baseUnits × stabilityFactor / SCALE.Q`; stability ∈ [q(0.50), q(1.00)] of base.
+- `stepResearch(polity, state, elapsedDays, bonusPoints?)` → `ResearchStepResult`: accumulates points; on threshold: increments `techEra`, carries surplus, calls `deriveMilitaryStrength`; no-op at DeepSpace.
+- `investInResearch(polity, state, amount)` — 10 cu = 1 research point; capped at treasury.
+- `computeKnowledgeDiffusion(source, target, contactIntensity_Q)` → bonus points/day: `sourceDaily × eraDiff × DIFFUSION_RATE × contactIntensity / SCALE.Q²`; zero when source ≤ target era.
+- `computeResearchProgress_Q(polity, state)` → Q [0, SCALE.Q]; `estimateDaysToNextEra(polity, state, bonusPoints?)` → ceiling days.
+- Subpath export `./research` added to `package.json`.
+
+**Depends on:** Phase 11 (TechEra), Phase 61 (Polity — population/stability/treasury/techEra), Phase 83 (Trade Routes — contactIntensity_Q for diffusion).
+
+**Success criterion:** Daily rate doubles between stability q(0.0) and q(1.0) for same population; era advancement fires exactly at threshold with surplus carried over; DeepSpace is a permanent no-op; treasury investment adds floor(amount/10) points and drains treasury; diffusion returns 0 when source ≤ target era, scales with era gap and contact intensity; `estimateDaysToNextEra` returns correct ceiling division; all 57 tests pass; 100% statement/function/line coverage.
+
+---
+
 ### Phase 90 — Civil Unrest & Rebellion *(COMPLETE — 2026-03-26)*
 
 **The gap:** Each pressure system (famine, epidemic, heresy, weak feudal bonds) produces

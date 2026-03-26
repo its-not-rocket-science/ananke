@@ -6,6 +6,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.36] — 2026-03-26
+
+### Added
+
+- **Phase 91 · Technology Research** (`src/research.ts`)
+  - `ResearchState { polityId, progress }` — per-polity accumulator stored externally by the host.
+  - `RESEARCH_POINTS_REQUIRED: Record<number, number>` — numeric TechEra keys; Prehistoric 2 k → FarFuture 5 M; DeepSpace absent (no advancement).
+  - `computeDailyResearchPoints(polity, bonusPoints?)` → integer points/day: `baseUnits = max(1, floor(pop / RESEARCH_POP_DIVISOR=5000))`; `stabilityFactor ∈ [5000, 10000]`; `max(1, round(baseUnits × stabilityFactor / SCALE.Q)) + bonusPoints`.
+  - `stepResearch(polity, state, elapsedDays, bonusPoints?)` → `ResearchStepResult`: accumulates `daily × elapsedDays`; on threshold: increments `polity.techEra`, calls `deriveMilitaryStrength`, carries surplus; no-op at DeepSpace.
+  - `investInResearch(polity, state, amount)` — drains treasury at `RESEARCH_COST_PER_POINT = 10` cu/point; capped at available treasury; returns points added.
+  - `computeKnowledgeDiffusion(sourcePolity, targetPolity, contactIntensity_Q)` → bonus points/day: fires when `source.techEra > target.techEra`; `sourceDaily × eraDiff × KNOWLEDGE_DIFFUSION_RATE_Q(q(0.10)) × contactIntensity / SCALE.Q²`.
+  - `computeResearchProgress_Q(polity, state)` → Q [0, SCALE.Q]: fraction toward next era; SCALE.Q at DeepSpace.
+  - `estimateDaysToNextEra(polity, state, bonusPoints?)` → ceiling days; Infinity at DeepSpace or zero rate.
+  - Added `./research` subpath export to `package.json`.
+  - 57 new tests; 4,779 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.35] — 2026-03-26
 
 ### Added
