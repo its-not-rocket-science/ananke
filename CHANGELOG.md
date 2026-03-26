@@ -6,6 +6,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.39] — 2026-03-26
+
+### Added
+
+- **Phase 94 · Laws & Governance Codes** (`src/governance.ts`)
+  - `GovernanceType`: `"tribal" | "monarchy" | "oligarchy" | "republic" | "empire" | "theocracy"`.
+  - `GovernanceModifiers { taxEfficiencyMul_Q, mobilizationMax_Q, researchBonus, unrestMitigation_Q, stabilityIncrement_Q }` — aggregate modifier bundle applied to downstream phases.
+  - `GOVERNANCE_BASE: Record<GovernanceType, GovernanceModifiers>` — baseline modifiers per type; tribal maximises mobilisation (q(0.20)) but has lowest tax efficiency (q(0.60)); oligarchy and empire share highest tax efficiency (q(1.00)); theocracy has highest unrest mitigation (q(0.18)); republic has highest research bonus (+3).
+  - `LawCode { lawId, name, taxBonus_Q, researchBonus, mobilizationBonus_Q, unrestBonus_Q, stabilityCostPerDay_Q }` — discrete enacted policies.
+  - Five preset laws: `LAW_CONSCRIPTION` (+mobilisation, stability cost), `LAW_TAX_REFORM` (+tax), `LAW_SCHOLAR_PATRONAGE` (+5 research), `LAW_RULE_OF_LAW` (+tax +unrest mitigation), `LAW_MARTIAL_LAW` (+unrest mitigation, heavy stability drain).
+  - `GovernanceState { polityId, governanceType, activeLawIds, changeCooldown }`.
+  - `computeGovernanceModifiers(state, lawRegistry?)` — stacks law bonuses on governance baseline; clamps all outputs.
+  - `enactLaw(state, lawId)` / `repealLaw(state, lawId)` — add/remove laws; enforces `MAX_ACTIVE_LAWS = 5`.
+  - `changeGovernance(polity, state, newType)` — hits `polity.stabilityQ` by q(0.20); sets 365-day cooldown; no-op on same type or during cooldown.
+  - `stepGovernanceCooldown(state, elapsedDays)` — ticks down cooldown.
+  - `stepGovernanceStability(polity, state, elapsedDays, lawRegistry?)` — applies net `stabilityIncrement_Q` per day to `polity.stabilityQ`; no-op when law costs cancel the baseline.
+  - Added `./governance` subpath export to `package.json`.
+  - 48 new tests; 4,932 total. 100% statement/branch/function/line coverage. All thresholds met.
+
+---
+
 ## [0.1.38] — 2026-03-26
 
 ### Added

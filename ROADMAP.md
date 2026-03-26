@@ -6500,6 +6500,37 @@ natural next step.
 
 ---
 
+### Phase 94 — Laws & Governance Codes *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polities vary in their governance structures but there is no mechanism for
+governance type to affect taxation efficiency, military mobilisation caps, research output,
+or unrest thresholds.  Discrete policy choices (conscription, tax reform, martial law) have
+no representation.
+
+**Design:** Pure data layer.  `GovernanceState` is stored externally per polity.
+`GOVERNANCE_BASE` provides per-type modifier baselines; `LawCode` records are additive
+overlays computed by `computeGovernanceModifiers`.  Callers apply the resulting
+`GovernanceModifiers` bundle to the appropriate downstream phases — no direct imports of
+Phase-92, 91, 93, or 90 from within this module.  Governance changes are gated by a
+stability hit and cooldown.
+
+**Scope:**
+- `GovernanceType`: `"tribal" | "monarchy" | "oligarchy" | "republic" | "empire" | "theocracy"`.
+- `GOVERNANCE_BASE` — baseline `GovernanceModifiers` per type.
+- `LawCode { lawId, taxBonus_Q, researchBonus, mobilizationBonus_Q, unrestBonus_Q, stabilityCostPerDay_Q }`.
+- Five preset laws: conscription, tax_reform, scholar_patronage, rule_of_law, martial_law.
+- `computeGovernanceModifiers(state, lawRegistry?)` — stacked modifiers, all outputs clamped.
+- `enactLaw` / `repealLaw` — max `MAX_ACTIVE_LAWS = 5`.
+- `changeGovernance(polity, state, newType)` — q(0.20) stability hit; 365-day cooldown.
+- `stepGovernanceCooldown` / `stepGovernanceStability`.
+- Subpath export `./governance` added to `package.json`.
+
+**Depends on:** Phase 61 (Polity — stabilityQ). Modifiers feed Phase-90 (unrest mitigation), Phase-91 (research bonus), Phase-92 (tax efficiency), Phase-93 (mobilisation cap).
+
+**Success criterion:** Each governance type has distinct modifier profile; law bonuses stack correctly; empire/oligarchy at tax cap cannot exceed SCALE.Q; changeGovernance is blocked during cooldown; martial law cancels stability increment via law cost; 100% coverage; all 48 tests pass.
+
+---
+
 ### Phase 93 — Military Campaigns & War Resolution *(COMPLETE — 2026-03-26)*
 
 **The gap:** Phase 84 handles siege warfare against fortified positions.  There is no mechanism

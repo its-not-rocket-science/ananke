@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.38",
+  "version": "0.1.39",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -138,6 +138,10 @@
     "./military-campaign": {
       "import": "./dist/src/military-campaign.js",
       "types": "./dist/src/military-campaign.d.ts"
+    },
+    "./governance": {
+      "import": "./dist/src/governance.js",
+      "types": "./dist/src/governance.d.ts"
     }
   },
   "files": [
