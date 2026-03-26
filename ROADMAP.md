@@ -6500,6 +6500,36 @@ natural next step.
 
 ---
 
+### Phase 78 — Seasonal Calendar & Agricultural Cycle *(COMPLETE — 2026-03-26)*
+
+**The gap:** The simulation has weather (Phase 18), disease spread (Phase 56/73), and polity
+economics (Phase 61), but no time axis that drives seasonal variation. Every in-game day is
+climatically identical — harvests, epidemics, and campaign mobility never change with the
+calendar year.
+
+**Design:** A pure campaign-scale time layer. `CalendarState` advances via `stepCalendar` and
+drives `SeasonalModifiers` that serve as advisory inputs to weather, disease, and treasury
+subsystems. No kernel changes; no Entity fields.
+
+**Scope:**
+- `CalendarState { year, dayOfYear }` — immutable value type, 1-based.
+- `computeSeason(dayOfYear)` → Season; 4 equal 91-day quarters.
+- `computeHarvestPhase(dayOfYear)` → `"dormant" | "planting" | "growing" | "harvest"`.
+- `SeasonalModifiers { thermalOffset, precipitationMul_Q, diseaseMul_Q, mobilityMul_Q, harvestYield_Q }`.
+- `SEASONAL_MODIFIERS` table: winter (−10 °C, zero harvest, crowding disease boost), spring (rain, mud, planting), summer (+5 °C, optimal mobility, summer crops), autumn (peak harvest q(1.0)).
+- `applySeasonalHarvest(polity, modifiers, baseDailyIncome)` → Phase-61 treasury integration.
+- `deriveSeasonalWeatherBias(season, intensity?)` → Phase-18 weather advisory.
+- `applySeasonalDiseaseMul(baseRate_Q, modifiers)` → Phase-56/73 transmission scaling.
+- Subpath export `./calendar` added to package.json.
+
+**Depends on:** Phase 18 (Weather), Phase 56 (Disease), Phase 61 (Polity).
+
+**Success criterion:** Over a simulated year, `applySeasonalHarvest` with a fixed daily income
+returns 0 in winter, partial income in spring/summer, and full income in autumn; `computeSeason`
+visits all four seasons exactly once; `deriveSeasonalWeatherBias("winter", 1.0)` returns blizzard.
+
+---
+
 ### Phase 77 — Dynasty & Succession *(COMPLETE — 2026-03-26)*
 
 **The gap:** When a ruler or faction leader dies, there is no mechanism to determine who

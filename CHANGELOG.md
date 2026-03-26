@@ -6,6 +6,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.23] — 2026-03-26
+
+### Added
+
+- **Phase 78 · Seasonal Calendar & Agricultural Cycle** (`src/calendar.ts`)
+  - `CalendarState { year, dayOfYear }` — immutable; advanced via `stepCalendar(state, days)`.
+  - `computeSeason(dayOfYear)` → `"winter" | "spring" | "summer" | "autumn"` (91-day quarters).
+  - `computeHarvestPhase(dayOfYear)` → `"dormant" | "planting" | "growing" | "harvest"`.
+  - `isInHarvestWindow(dayOfYear)` — true for days 274–365 (Autumn).
+  - `SeasonalModifiers { thermalOffset, precipitationMul_Q, diseaseMul_Q, mobilityMul_Q, harvestYield_Q }`.
+  - `SEASONAL_MODIFIERS` table: winter (−10 °C, zero harvest, x1.20 disease, x0.70 mobility), spring (rain, x1.30 precip, planting), summer (+5 °C, optimal mobility), autumn (peak harvest q(1.0), x1.10 disease).
+  - `applySeasonalHarvest(polity, modifiers, baseDailyIncome)` → cost-unit gain for the day.
+  - `deriveSeasonalWeatherBias(season, intensity?)` → `Partial<WeatherState>` — advisory weather for Phase-18 hosts.
+  - `applySeasonalDiseaseMul(baseRate_Q, modifiers)` → scaled transmission rate for Phase-56/73 integration.
+  - Added `./calendar` subpath export to `package.json`.
+  - 47 new tests; 4,189 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.22] — 2026-03-26
 
 ### Added
