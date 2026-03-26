@@ -6,6 +6,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.26] — 2026-03-26
+
+### Added
+
+- **Phase 81 · Migration & Displacement** (`src/migration.ts`)
+  - `MigrationFlow { fromPolityId, toPolityId, population }` — a resolved daily population transfer.
+  - `MigrationContext { polityId, isAtWar?, lowestBondStr_Q? }` — optional per-polity war/feudal context passed by the host.
+  - `computePushPressure(polity, isAtWar?, lowestBondStr_Q?)` → Q — stability deficit + morale deficit + war bonus (`MIGRATION_WAR_PUSH_Q = q(0.20)`) + feudal-bond deficit below `MIGRATION_PUSH_FEUDAL_THRESHOLD = q(0.30)`.
+  - `computePullFactor(polity)` → Q — `stabilityQ × moraleQ / SCALE.Q`; both must be high to attract migrants.
+  - `computeMigrationFlow(from, to, push_Q, pull_Q)` → integer — 0 if push < `MIGRATION_PUSH_MIN_Q = q(0.05)` or pull = 0; floors to integer; max daily rate `MIGRATION_DAILY_RATE_Q = q(0.001)` (0.1% of population at full pressure).
+  - `resolveMigration(polities[], context?)` → `MigrationFlow[]` — collects all directed pair flows above threshold.
+  - `applyMigrationFlows(polityRegistry, flows)` — mutates `population` on sending and receiving polities; clamps to prevent negative populations.
+  - `estimateNetMigrationRate(polityId, flows, population)` → signed fraction — positive = net immigration, negative = net emigration.
+  - Integrates with Phase 61 (Polity), Phase 79 (Feudal bond strength), Phase 80 (Diplomacy) without direct imports — callers supply context.
+  - Added `./migration` subpath export to `package.json`.
+  - 41 new tests; 4,343 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.25] — 2026-03-26
 
 ### Added

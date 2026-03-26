@@ -6500,6 +6500,35 @@ natural next step.
 
 ---
 
+### Phase 81 — Migration & Displacement *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polity populations are static. Despite famine (Phase 78), plague (Phases 56/73),
+war (Phase 61), and feudal oppression (Phase 79), no people ever move between polities.
+There is no mechanism for refugee crises, population drains from failing states, or growth in
+prosperous destinations.
+
+**Design:** A pure computation layer over `Polity` fields. `computePushPressure` and
+`computePullFactor` are the two primitives; callers supply war/feudal context without
+coupling this module to `PolityRegistry` or `FeudalRegistry`. No Entity fields; no kernel changes.
+
+**Scope:**
+- `computePushPressure(polity, isAtWar?, lowestBondStr_Q?)` → Q — stability/morale deficits below thresholds + flat war bonus (`q(0.20)`) + feudal-bond deficit below `q(0.30)`.
+- `computePullFactor(polity)` → Q — `stabilityQ × moraleQ / SCALE.Q`; both must be high.
+- `computeMigrationFlow(from, to, push_Q, pull_Q)` → integer; max `MIGRATION_DAILY_RATE_Q = q(0.001)` (0.1%/day at full pressure).
+- `MIGRATION_PUSH_MIN_Q = q(0.05)` — minimum push before any migration fires.
+- `resolveMigration(polities[], context?)` → `MigrationFlow[]` — all positive directed flows.
+- `applyMigrationFlows(registry, flows)` — mutates populations; clamps to prevent negatives.
+- `estimateNetMigrationRate(polityId, flows, population)` → signed fraction.
+- Subpath export `./migration` added to package.json.
+
+**Depends on:** Phase 61 (Polity). Integrates optionally with Phase 79 (Feudal) and Phase 80 (Diplomacy) via context parameter.
+
+**Success criterion:** An unstable polity (stability q(0.10), morale q(0.10)) loses population
+to a stable neighbour (q(0.85)/q(0.80)) over 30 simulated days; stable polities with no push
+pressure produce zero flows; `applyMigrationFlows` never sets population below zero.
+
+---
+
 ### Phase 80 — Diplomacy & Treaties *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polities can be at war or in alliance (Phase 61), but these are simple flags. There
