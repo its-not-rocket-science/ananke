@@ -6,6 +6,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.31] — 2026-03-26
+
+### Added
+
+- **Phase 86 · Population Dynamics & Demographics** (`src/demography.ts`)
+  - Annual Q rates for birth and death (fraction of population per year) to preserve fixed-point precision.
+  - `BASELINE_BIRTH_RATE_ANNUAL_Q = q(0.035)` (≈ 3.5%/year); `BASELINE_DEATH_RATE_ANNUAL_Q = q(0.030)` (≈ 3.0%/year).
+  - `computeBirthRate(polity)` → Q: morale linearly scales rate between 50% and 150% of baseline.
+  - `computeDeathRate(polity, deathPressure_Q?, foodSupply_Q?)` → Q: baseline reduced by tech era (`TECH_ERA_DEATH_MUL`), plus instability bonus (up to `INSTABILITY_DEATH_ANNUAL_Q = q(0.015)`), optional external pressure, and famine bonus (`FAMINE_DEATH_ANNUAL_Q = q(0.030)`).
+  - `computeNetGrowthRate(polity, ...)` → signed number (may be negative).
+  - `stepPolityPopulation(polity, elapsedDays, deathPressure_Q?, foodSupply_Q?)` → `DemographicsStepResult`: mutates `polity.population`; formula `round(population × netAnnualRate_Q × days / (365 × SCALE.Q))`; clamps to ≥ 0.
+  - **Famine**: `FAMINE_THRESHOLD_Q = q(0.20)` — food below this activates extra mortality and migration push.
+  - `computeFamineMigrationPush(foodSupply_Q)` → Q [0, `FAMINE_MIGRATION_PUSH_Q = q(0.30)`]: linear from zero (at threshold) to peak (at food = 0); integrates with Phase-81 push pressure.
+  - `computeCarryingCapacity(polity)` — soft cap by tech era (Stone 50 k → Modern 200 M); `isOverCapacity(polity)`.
+  - `estimateAnnualBirths` / `estimateAnnualDeaths` — reporting utilities.
+  - Phase-56 (disease) and Phase-84 (siege) integrate via `deathPressure_Q`; Phase-81 (migration) integrates via `computeFamineMigrationPush`; Phase-78 (calendar) via caller-supplied seasonal multipliers.
+  - Added `./demography` subpath export to `package.json`.
+  - 51 new tests; 4,561 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.30] — 2026-03-26
 
 ### Added

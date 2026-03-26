@@ -6500,6 +6500,38 @@ natural next step.
 
 ---
 
+### Phase 86 — Population Dynamics & Demographics *(COMPLETE — 2026-03-26)*
+
+**The gap:** Polities have a static `population` integer. Phase-81 migration moves people
+between polities, but there is no mechanism for natural population growth, disease or famine
+mortality, or carrying capacity limits. Real historical polities expand during prosperity,
+contract during plague, and collapse when famine strikes.
+
+**Design:** Pure data layer. Annual Q rates (fraction of population per year) give fixed-point
+precision while keeping the step formula simple. `stepPolityPopulation` mutates `polity.population`
+directly. External death pressure lets callers inject Phase-56 epidemic mortality or Phase-84
+siege casualty rates without hard dependencies. Famine is triggered by an optional `foodSupply_Q`
+parameter, linking to a future granary system without requiring one.
+
+**Scope:**
+- `BASELINE_BIRTH_RATE_ANNUAL_Q = q(0.035)`, `BASELINE_DEATH_RATE_ANNUAL_Q = q(0.030)`.
+- `BIRTH_RATE_MORALE_FLOOR_Q = q(0.50)` — morale scales birth rate × [0.50, 1.50].
+- `INSTABILITY_DEATH_ANNUAL_Q = q(0.015)` — bonus mortality at zero stability.
+- `TECH_ERA_DEATH_MUL` — Stone (no reduction) → Modern (−50%) via mulDiv.
+- `FAMINE_THRESHOLD_Q = q(0.20)`, `FAMINE_DEATH_ANNUAL_Q = q(0.030)`.
+- `computeBirthRate(polity)`, `computeDeathRate(polity, deathPressure_Q?, foodSupply_Q?)`, `computeNetGrowthRate(...)`.
+- `stepPolityPopulation(polity, elapsedDays, ...)` → `DemographicsStepResult`; clamps to ≥ 0.
+- `computeFamineMigrationPush(foodSupply_Q)` → Q: integrates with Phase-81 push pressure.
+- `computeCarryingCapacity(polity)`, `isOverCapacity(polity)`.
+- `estimateAnnualBirths`, `estimateAnnualDeaths` — reporting utilities.
+- Subpath export `./demography` added to package.json.
+
+**Depends on:** Phase 61 (Polity — population/morale/stability/techEra). Integrates with Phase-56 (Disease — epidemic death pressure), Phase-81 (Migration — famine push), Phase-84 (Siege — siege casualty pressure), Phase-78 (Calendar — seasonal hooks via caller).
+
+**Success criterion:** Annual step grows a stable, prosperous polity; famine plus instability drives population negative; zero-population polity stays at zero; `computeFamineMigrationPush` returns peak value at food=0 and zero at or above threshold; each tech era produces the correct death rate reduction.
+
+---
+
 ### Phase 85 — Religion & Faith Systems *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polities have politics, economics, espionage, and war, but no mechanism for
