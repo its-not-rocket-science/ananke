@@ -6500,6 +6500,34 @@ natural next step.
 
 ---
 
+### Phase 90 — Civil Unrest & Rebellion *(COMPLETE — 2026-03-26)*
+
+**The gap:** Each pressure system (famine, epidemic, heresy, weak feudal bonds) produces
+signals independently.  There is no mechanism that aggregates these signals into a polity-level
+unrest state, drains morale and stability under sustained pressure, or resolves rebellion
+events deterministically.
+
+**Design:** Pure data layer.  `computeUnrestLevel` is a pure aggregator — callers pass
+pre-computed pressure values from existing phases; no direct imports of those modules.
+`stepUnrest` applies consequences to polity stats.  `resolveRebellion` uses `eventSeed` for
+full determinism.
+
+**Scope:**
+- `UnrestFactors { faminePressure_Q?, epidemicPressure_Q?, heresyRisk_Q?, weakestBond_Q? }`.
+- `computeUnrestLevel(polity, factors?)` → Q: weighted composite from morale/stability deficits and external pressures.
+- `UNREST_ACTION_THRESHOLD_Q = q(0.30)`, `REBELLION_THRESHOLD_Q = q(0.65)`.
+- `stepUnrest(polity, unrestLevel_Q, elapsedDays)` → `UnrestStepResult`: drains morale/stability proportional to excess; sets `rebellionRisk` flag.
+- `RebellionOutcome`: `"quelled" | "uprising" | "civil_war"`.
+- `resolveRebellion(polity, worldSeed, tick)` → `RebellionResult`: `eventSeed`-deterministic; outcome weighted by `militaryStrength_Q`; applies morale/stability/treasury penalties.
+- `REBELLION_TREASURY_RAID_Q = q(0.15)` (civil war = 2×).
+- Subpath export `./unrest` added to package.json.
+
+**Depends on:** Phase 61 (Polity — morale/stability/military/treasury). Integrates with Phase-79 (Feudal — weakestBond_Q), Phase-85 (Faith — heresyRisk_Q), Phase-87 (Granary — faminePressure_Q), Phase-88 (Epidemic — epidemicPressure_Q).
+
+**Success criterion:** All-zero-morale/stability with max pressures exceeds rebellion threshold; unrest below action threshold produces zero decay; high military strength shifts outcomes toward "quelled"; same seed+tick always produces identical outcome; treasury and morale clamp at zero.
+
+---
+
 ### Phase 89 — Infrastructure & Development *(COMPLETE — 2026-03-26)*
 
 **The gap:** Polities accumulate treasury but have no way to invest it permanently.

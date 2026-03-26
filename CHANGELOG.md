@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.35] — 2026-03-26
+
+### Added
+
+- **Phase 90 · Civil Unrest & Rebellion** (`src/unrest.ts`)
+  - `UnrestFactors { faminePressure_Q?, epidemicPressure_Q?, heresyRisk_Q?, weakestBond_Q? }` — optional pressure inputs from Phases 85/87/88/79.
+  - `computeUnrestLevel(polity, factors?)` → Q: weighted composite of morale deficit (×q(0.30)), stability deficit (×q(0.25)), famine (×q(0.20)), epidemic (×q(0.10)), heresy (×q(0.10)), feudal bond deficit (×q(0.05)).
+  - `UNREST_ACTION_THRESHOLD_Q = q(0.30)` — excess above this drains morale/stability.
+  - `REBELLION_THRESHOLD_Q = q(0.65)` — above this `rebellionRisk` flag is set.
+  - `stepUnrest(polity, unrestLevel_Q, elapsedDays)` → `UnrestStepResult`: drains morale at `excess × UNREST_MORALE_DRAIN_Q = q(0.005)` per day, stability at `q(0.003)` per day; mutates polity in place; floor at 0.
+  - `resolveRebellion(polity, worldSeed, tick)` → `RebellionResult`: deterministic via `eventSeed`; outcomes `"quelled" | "uprising" | "civil_war"` weighted by polity `militaryStrength_Q` vs. unrest roll; each outcome applies morale/stability penalties and treasury raid (`REBELLION_TREASURY_RAID_Q = q(0.15)`; civil war = 2×).
+  - Added `./unrest` subpath export to `package.json`.
+  - 35 new tests; 4,722 total. Coverage maintained above all thresholds.
+
+---
+
 ## [0.1.34] — 2026-03-26
 
 ### Added
