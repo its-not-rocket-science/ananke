@@ -6500,6 +6500,44 @@ natural next step.
 
 ---
 
+### Phase 99 — Mercenaries & Hired Forces *(COMPLETE — 2026-03-27)*
+
+**The gap:** Phase-93 (Military Campaign) models polity armies raised from population levies,
+but professional mercenaries were historically central to pre-modern warfare — faster to
+mobilise than levies, higher quality, but expensive and dangerously unreliable when unpaid.
+No existing module models hired force dynamics.
+
+**Design:** `MercenaryBand` is an immutable descriptor; `MercenaryContract` is mutable live
+state.  `stepMercenaryContract` pays wages from treasury, accrues arrears when funds run low,
+grows/decays loyalty accordingly, and rolls deterministic desertion via `eventSeed`.
+`computeMercenaryStrengthContribution` returns an advisory Q bonus for Phase-93 battle strength.
+
+**Key exports (`src/mercenaries.ts`):**
+
+| Export | Purpose |
+|--------|---------|
+| `MercenaryBand` | Immutable descriptor (size, quality, daily wage) |
+| `MercenaryContract` | Live state (loyalty_Q, arrears_cu, daysActive) |
+| `hireMercenaries` | Factory; default loyalty q(0.70) |
+| `computeMercenaryWage` | Daily wage × size × days |
+| `computeMercenaryStrengthContribution` | Advisory Q bonus for Phase-93 |
+| `stepMercenaryContract` | Pay → arrears → loyalty → desertion roll |
+| `applyVictoryLoyaltyBonus` | +q(0.10) after campaign victory |
+| `BAND_LIGHT_CAVALRY / BAND_HEAVY_INFANTRY / BAND_SIEGE_ENGINEERS` | Sample bands |
+
+**Loyalty mechanic:** grows 0.2%/day when paid; decays 0.8%/day when in arrears.
+Below `DESERT_LOYALTY_THRESHOLD_Q = q(0.25)`, desertion probability scales linearly
+from 0 at the threshold to 25%/day at zero loyalty — using `eventSeed` for full replay
+determinism.
+
+**Integration targets:** Phase-93 battle strength, Phase-92 treasury drain.
+
+**Subpath export:** `@its-not-rocket-science/ananke/mercenaries`
+
+**Tests:** 44 new · 5,173 total · 100% statement/branch/function/line coverage on `mercenaries.ts`.
+
+---
+
 ### Phase 98 — Plague Containment & Quarantine *(COMPLETE — 2026-03-26)*
 
 **The gap:** Phase-88 (Epidemic) models disease spread and death pressure, and Phase-96

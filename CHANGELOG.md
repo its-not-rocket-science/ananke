@@ -6,6 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.44] — 2026-03-27
+
+### Added
+
+- **Phase 99 · Mercenaries & Hired Forces** (`src/mercenaries.ts`)
+  - `MercenaryBand { bandId, name, size, quality_Q, dailyWagePerSoldier_cu }` — immutable descriptor.
+  - `MercenaryContract { contractId, polityId, bandId, daysActive, loyalty_Q, arrears_cu }` — mutable live state stored externally.
+  - `MercenaryStepResult { wagePaid_cu, arrearsAdded_cu, loyaltyDelta, deserted }` — step outcome.
+  - `DESERT_LOYALTY_THRESHOLD_Q = q(0.25)` — below this, desertion roll fires.
+  - `LOYALTY_DECAY_PER_DAY_UNPAID = 80` — loyalty drops 0.8%/day when wages owed.
+  - `LOYALTY_GROWTH_PER_DAY_PAID = 20` — loyalty grows 0.2%/day when fully paid.
+  - `MAX_MERC_STRENGTH_BONUS_Q = q(0.30)` — caps advisory strength contribution.
+  - `computeMercenaryWage(band, elapsedDays)` — `size × dailyWage × days`.
+  - `computeMercenaryStrengthContribution(band, contract)` → Q — `size × quality × loyalty / SCALE.Q²`; capped at q(0.30); add to Phase-93 battle strength.
+  - `stepMercenaryContract(contract, band, polity, elapsedDays, worldSeed, tick)` — pays wages from treasury, accrues arrears, grows/decays loyalty, rolls desertion via `eventSeed` (deterministic).
+  - `applyVictoryLoyaltyBonus(contract)` — q(0.10) boost after campaign victory.
+  - `hireMercenaries(contractId, polityId, band, initialLoyalty_Q?)` — factory; default loyalty q(0.70).
+  - `isMercenaryReliable(contract)` / `hasMercenaryArrears(contract)` — predicates.
+  - Three sample bands: `BAND_LIGHT_CAVALRY` (400 soldiers, q(0.65), 3 cu/day), `BAND_HEAVY_INFANTRY` (600, q(0.85), 5 cu/day), `BAND_SIEGE_ENGINEERS` (200, q(0.75), 8 cu/day).
+  - Added `./mercenaries` subpath export to `package.json`.
+  - 44 new tests; 5,173 total. Coverage: 100% statements/branches/functions/lines on `mercenaries.ts`.
+
+---
+
 ## [0.1.43] — 2026-03-26
 
 ### Added
