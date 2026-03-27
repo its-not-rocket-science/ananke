@@ -6500,6 +6500,41 @@ natural next step.
 
 ---
 
+### Phase 101 — Currency & Monetary Policy *(COMPLETE — 2026-03-27)*
+
+**The gap:** Every polity tracks `treasury_cu` but there is no model for what that currency
+is worth.  Historically, rulers routinely debased coinage to finance wars and monuments —
+short-term treasury gain at the cost of inflation, trade rejection, and civil unrest.
+
+**Design:** `MonetaryState` stores `coinPurity_Q` (intrinsic metal content, checked by
+trade partners) and `inflationLevel_Q` (accumulated price inflation, felt locally) as
+separate values.  `stepMonetary` mints extra coins, degrades purity, and accrues inflation;
+stable policy slowly restores both.  All derived metrics are advisory.
+
+**Key exports (`src/monetary.ts`):**
+
+| Export | Purpose |
+|--------|---------|
+| `CoinagePolicy` | `"stable"` through `"emergency_printing"` |
+| `MonetaryState` | coinPurity_Q + inflationLevel_Q + monetaryCrisis flag |
+| `computePurchasingPower_Q` | Real value of cu: purity × (1−inflation) |
+| `computeMonetaryTradeMultiplier_Q` | Trade income modifier based on purity → Phase-92 |
+| `computeMonetaryUnrest_Q` | Inflation-driven unrest → Phase-90 |
+| `computeDebasementGain_cu` | Advisory preview of mint gain |
+| `stepMonetary` | Mint, degrade purity, accrue inflation, set crisis flag |
+
+**Trade-off mechanic:** emergency_printing mints +110% treasury per year but inflation
+hits q(0.60) crisis threshold in ~120 days; stable policy recovers −3 inflation and +3
+purity per day.  Debased treasury is nominally larger but real purchasing power collapses.
+
+**Integration targets:** Phase-90 unrest, Phase-92 trade income, Phase-99 mercenary wages, Phase-100 construction costs.
+
+**Subpath export:** `@its-not-rocket-science/ananke/monetary`
+
+**Tests:** 45 new · 5,261 total · 100% statement/branch/function/line coverage on `monetary.ts`.
+
+---
+
 ### Phase 100 — Wonders & Monuments *(COMPLETE — 2026-03-27)*
 
 **The gap:** Great civilisations are defined by their monuments — the pyramids, colosseums,

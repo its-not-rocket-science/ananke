@@ -6,6 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.46] — 2026-03-27
+
+### Added
+
+- **Phase 101 · Currency & Monetary Policy** (`src/monetary.ts`)
+  - `CoinagePolicy`: `"stable" | "slight_debasement" | "heavy_debasement" | "emergency_printing"`.
+  - `MonetaryState { polityId, coinPurity_Q, inflationLevel_Q, monetaryCrisis }` — per-polity mutable tracker stored externally.
+  - `coinPurity_Q` [0, SCALE.Q]: intrinsic metal content; trade partners check this. Starts at SCALE.Q.
+  - `inflationLevel_Q` [0, SCALE.Q]: accumulated price inflation; drives purchasing power loss and unrest. Starts at 0.
+  - `monetaryCrisis`: activates when `inflationLevel_Q >= MONETARY_CRISIS_THRESHOLD_Q = q(0.60)`.
+  - `POLICY_PURITY_DELTA_PER_DAY`: stable +3 (recovery) → emergency_printing −40/day.
+  - `POLICY_INFLATION_DELTA_PER_DAY`: stable −3 (deflation) → emergency_printing +50/day.
+  - `POLICY_DAILY_MINT_FRAC_Q`: stable 0 → emergency_printing 30/SCALE.Q (+110%/year).
+  - `computePurchasingPower_Q(state)` → `coinPurity × (1 − inflation) / SCALE.Q`; floor q(0.05).
+  - `computeMonetaryTradeMultiplier_Q(state)` → `[MONETARY_TRADE_FLOOR_Q, SCALE.Q]`; based on purity; feeds Phase-92.
+  - `computeMonetaryUnrest_Q(state)` → `[0, MONETARY_MAX_UNREST_Q=q(0.25)]`; linear on inflation; feeds Phase-90.
+  - `computeDebasementGain_cu(polity, policy, elapsedDays)` → advisory preview of mint gain.
+  - `stepMonetary(polity, state, policy, elapsedDays)` — mints extra treasury, updates purity/inflation, sets crisis flag.
+  - `isMonetaryCrisis(state)` / `isCoinageSound(state, threshold_Q?)` — predicates.
+  - Added `./monetary` subpath export to `package.json`.
+  - 45 new tests; 5,261 total. Coverage: 100% statements/branches/functions/lines on `monetary.ts`.
+
+---
+
 ## [0.1.45] — 2026-03-27
 
 ### Added
