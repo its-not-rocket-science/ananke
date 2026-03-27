@@ -221,7 +221,7 @@ const entries: CompetenceTask[] = [
     domain: "logicalMathematical",
     difficulty_Q: q(0.55),
     timeBase_s: 1800, // 30 minutes
-    description: "Analyze tactical situation and propose solution",
+    description: "Analyse tactical situation and propose solution",
   },
 
   // ── Musical (performance, signaling) ─────────────────────────────────────────

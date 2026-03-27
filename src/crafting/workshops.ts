@@ -4,7 +4,7 @@
 // Deterministic bonuses applied to crafting resolution.
 
 import type { Q } from "../units.js";
-import { SCALE, q, clampQ, qMul, mulDiv } from "../units.js";
+import { SCALE, q, clampQ } from "../units.js";
 import type { Recipe } from "./recipes.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

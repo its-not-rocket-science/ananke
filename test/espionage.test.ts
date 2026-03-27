@@ -31,13 +31,13 @@ describe("createEspionageRegistry", () => {
 describe("deployAgent", () => {
   it("adds agent to registry", () => {
     const r = createEspionageRegistry();
-    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60) as any);
+    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60));
     expect(r.agents.size).toBe(1);
   });
 
   it("sets all fields correctly", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 42, "X", "Y", "treaty_sabotage", q(0.75) as any, 100);
+    const a = deployAgent(r, 42, "X", "Y", "treaty_sabotage", q(0.75), 100);
     expect(a.agentId).toBe(42);
     expect(a.ownerPolityId).toBe("X");
     expect(a.targetPolityId).toBe("Y");
@@ -49,8 +49,8 @@ describe("deployAgent", () => {
 
   it("replaces existing agent with same ID", () => {
     const r = createEspionageRegistry();
-    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.50) as any);
-    deployAgent(r, 1, "A", "C", "treasury_theft",      q(0.80) as any);
+    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.50));
+    deployAgent(r, 1, "A", "C", "treasury_theft",      q(0.80));
     expect(r.agents.size).toBe(1);
     expect(r.agents.get(1)!.targetPolityId).toBe("C");
   });
@@ -61,7 +61,7 @@ describe("deployAgent", () => {
 describe("recallAgent", () => {
   it("removes the agent", () => {
     const r = createEspionageRegistry();
-    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60) as any);
+    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60));
     expect(recallAgent(r, 1)).toBe(true);
     expect(r.agents.size).toBe(0);
   });
@@ -77,9 +77,9 @@ describe("recallAgent", () => {
 describe("getAgentsByOwner", () => {
   it("returns agents for owner", () => {
     const r = createEspionageRegistry();
-    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60) as any);
-    deployAgent(r, 2, "A", "C", "treasury_theft",      q(0.50) as any);
-    deployAgent(r, 3, "B", "A", "bond_subversion",     q(0.70) as any);
+    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60));
+    deployAgent(r, 2, "A", "C", "treasury_theft",      q(0.50));
+    deployAgent(r, 3, "B", "A", "bond_subversion",     q(0.70));
     expect(getAgentsByOwner(r, "A")).toHaveLength(2);
     expect(getAgentsByOwner(r, "B")).toHaveLength(1);
     expect(getAgentsByOwner(r, "C")).toHaveLength(0);
@@ -89,9 +89,9 @@ describe("getAgentsByOwner", () => {
 describe("getAgentsByTarget", () => {
   it("returns agents targeting a polity", () => {
     const r = createEspionageRegistry();
-    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60) as any);
-    deployAgent(r, 2, "C", "B", "bond_subversion",     q(0.50) as any);
-    deployAgent(r, 3, "A", "C", "treaty_sabotage",     q(0.70) as any);
+    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60));
+    deployAgent(r, 2, "C", "B", "bond_subversion",     q(0.50));
+    deployAgent(r, 3, "A", "C", "treaty_sabotage",     q(0.70));
     expect(getAgentsByTarget(r, "B")).toHaveLength(2);
     expect(getAgentsByTarget(r, "C")).toHaveLength(1);
     expect(getAgentsByTarget(r, "A")).toHaveLength(0);
@@ -103,7 +103,7 @@ describe("getAgentsByTarget", () => {
 describe("resolveOperation", () => {
   it("is deterministic — same inputs yield same result", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.80) as any);
+    const a = deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.80));
     const r1 = resolveOperation(a, 42, 100);
     const r2 = resolveOperation(a, 42, 100);
     expect(r1.success).toBe(r2.success);
@@ -113,7 +113,7 @@ describe("resolveOperation", () => {
 
   it("different ticks can yield different results", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "treasury_theft", q(0.50) as any);
+    const a = deployAgent(r, 1, "A", "B", "treasury_theft", q(0.50));
     const results = new Set<boolean>();
     for (let tick = 0; tick < 20; tick++) {
       results.add(resolveOperation(a, 1, tick).success);
@@ -124,7 +124,7 @@ describe("resolveOperation", () => {
 
   it("returns no-op for compromised agent", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "bond_subversion", q(0.90) as any);
+    const a = deployAgent(r, 1, "A", "B", "bond_subversion", q(0.90));
     a.status = "compromised";
     const result = resolveOperation(a, 1, 1);
     expect(result.success).toBe(false);
@@ -134,14 +134,14 @@ describe("resolveOperation", () => {
 
   it("returns no-op for captured agent", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "treaty_sabotage", q(0.90) as any);
+    const a = deployAgent(r, 1, "A", "B", "treaty_sabotage", q(0.90));
     a.status = "captured";
     expect(resolveOperation(a, 1, 1).success).toBe(false);
   });
 
   it("effectDelta_Q is 0 for intelligence_gather", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "intelligence_gather", q(1.0) as any);
+    const a = deployAgent(r, 1, "A", "B", "intelligence_gather", q(1.0));
     // Force skill to max to maximise success probability
     // Run several ticks and confirm effectDelta always 0
     for (let tick = 0; tick < 10; tick++) {
@@ -151,8 +151,8 @@ describe("resolveOperation", () => {
 
   it("higher skill → higher success rate across many ticks", () => {
     const r = createEspionageRegistry();
-    const aLow  = deployAgent(r, 1, "A", "B", "bond_subversion", q(0.20) as any);
-    const aHigh = deployAgent(r, 2, "A", "B", "bond_subversion", q(0.90) as any);
+    const aLow  = deployAgent(r, 1, "A", "B", "bond_subversion", q(0.20));
+    const aHigh = deployAgent(r, 2, "A", "B", "bond_subversion", q(0.90));
     let lowSucc = 0, highSucc = 0;
     for (let tick = 0; tick < 50; tick++) {
       if (resolveOperation(aLow,  1, tick).success) lowSucc++;
@@ -163,8 +163,8 @@ describe("resolveOperation", () => {
 
   it("effectDelta_Q scales with skill on success", () => {
     const r  = createEspionageRegistry();
-    const aH = deployAgent(r, 1, "A", "B", "treaty_sabotage", q(0.90) as any);
-    const aL = deployAgent(r, 2, "A", "B", "treaty_sabotage", q(0.30) as any);
+    const aH = deployAgent(r, 1, "A", "B", "treaty_sabotage", q(0.90));
+    const aL = deployAgent(r, 2, "A", "B", "treaty_sabotage", q(0.30));
     // Find a tick where both succeed, then compare effectDelta
     for (let tick = 0; tick < 100; tick++) {
       const rH = resolveOperation(aH, 1, tick);
@@ -181,7 +181,7 @@ describe("resolveOperation", () => {
 
   it("detection only fires on failure", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "treasury_theft", q(0.50) as any);
+    const a = deployAgent(r, 1, "A", "B", "treasury_theft", q(0.50));
     for (let tick = 0; tick < 50; tick++) {
       const result = resolveOperation(a, 1, tick);
       if (result.success) {
@@ -192,7 +192,7 @@ describe("resolveOperation", () => {
 
   it("effectDelta_Q is clamped to [0, SCALE.Q]", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "incite_migration", q(1.0) as any);
+    const a = deployAgent(r, 1, "A", "B", "incite_migration", q(1.0));
     for (let tick = 0; tick < 20; tick++) {
       const result = resolveOperation(a, 1, tick);
       expect(result.effectDelta_Q).toBeGreaterThanOrEqual(0);
@@ -206,7 +206,7 @@ describe("resolveOperation", () => {
 describe("stepAgentCover", () => {
   it("active agent may lose cover over many days", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "bond_subversion", q(0.10) as any); // low skill = less mitigation
+    const a = deployAgent(r, 1, "A", "B", "bond_subversion", q(0.10)); // low skill = less mitigation
     let blown = false;
     for (let tick = 0; tick < 500; tick++) {
       stepAgentCover(a, 1, tick);
@@ -217,8 +217,8 @@ describe("stepAgentCover", () => {
 
   it("high-skill agent survives longer than low-skill agent", () => {
     const r  = createEspionageRegistry();
-    const aH = deployAgent(r, 1, "A", "B", "bond_subversion", q(1.0) as any);
-    const aL = deployAgent(r, 2, "A", "B", "bond_subversion", q(0.01) as any);
+    const aH = deployAgent(r, 1, "A", "B", "bond_subversion", q(1.0));
+    const aL = deployAgent(r, 2, "A", "B", "bond_subversion", q(0.01));
     let highBlownAt = Infinity, lowBlownAt = Infinity;
     for (let tick = 1; tick <= 2000; tick++) {
       if (aH.status === "active") stepAgentCover(aH, 1, tick);
@@ -232,7 +232,7 @@ describe("stepAgentCover", () => {
 
   it("no-op for already compromised agent", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.50) as any);
+    const a = deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.50));
     a.status = "compromised";
     stepAgentCover(a, 1, 1);
     expect(a.status).toBe("compromised");
@@ -240,7 +240,7 @@ describe("stepAgentCover", () => {
 
   it("no-op for captured agent", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.50) as any);
+    const a = deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.50));
     a.status = "captured";
     stepAgentCover(a, 1, 1);
     expect(a.status).toBe("captured");
@@ -250,7 +250,7 @@ describe("stepAgentCover", () => {
     const r = createEspionageRegistry();
     let sawCompromised = false, sawCaptured = false;
     for (let seed = 1; seed <= 100; seed++) {
-      const a = deployAgent(r, seed, "A", "B", "treasury_theft", q(0.01) as any);
+      const a = deployAgent(r, seed, "A", "B", "treasury_theft", q(0.01));
       for (let tick = 0; tick < 1000 && a.status === "active"; tick++) {
         stepAgentCover(a, seed, tick);
       }
@@ -273,14 +273,14 @@ describe("computeCounterIntelligence", () => {
 
   it("returns 0 for active agents (not yet known)", () => {
     const r = createEspionageRegistry();
-    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60) as any);
+    deployAgent(r, 1, "A", "B", "intelligence_gather", q(0.60));
     expect(computeCounterIntelligence(r, "B")).toBe(0);
   });
 
   it("increases for each compromised agent", () => {
     const r = createEspionageRegistry();
-    const a1 = deployAgent(r, 1, "A", "B", "bond_subversion", q(0.50) as any);
-    const a2 = deployAgent(r, 2, "C", "B", "treaty_sabotage", q(0.50) as any);
+    const a1 = deployAgent(r, 1, "A", "B", "bond_subversion", q(0.50));
+    const a2 = deployAgent(r, 2, "C", "B", "treaty_sabotage", q(0.50));
     a1.status = "compromised";
     a2.status = "compromised";
     expect(computeCounterIntelligence(r, "B")).toBe(2 * COUNTER_INTEL_PER_AGENT);
@@ -288,7 +288,7 @@ describe("computeCounterIntelligence", () => {
 
   it("captured agents do not count (already neutralised)", () => {
     const r = createEspionageRegistry();
-    const a = deployAgent(r, 1, "A", "B", "treasury_theft", q(0.50) as any);
+    const a = deployAgent(r, 1, "A", "B", "treasury_theft", q(0.50));
     a.status = "captured";
     expect(computeCounterIntelligence(r, "B")).toBe(0);
   });
@@ -296,7 +296,7 @@ describe("computeCounterIntelligence", () => {
   it("clamps to SCALE.Q with many compromised agents", () => {
     const r = createEspionageRegistry();
     for (let i = 1; i <= 300; i++) {
-      const a = deployAgent(r, i, "A", "B", "intelligence_gather", q(0.50) as any);
+      const a = deployAgent(r, i, "A", "B", "intelligence_gather", q(0.50));
       a.status = "compromised";
     }
     expect(computeCounterIntelligence(r, "B")).toBeLessThanOrEqual(SCALE.Q);

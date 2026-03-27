@@ -185,8 +185,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     ctx.tractionCoeff = Math.trunc((ctx.tractionCoeff * wMod.tractionMul_Q) / SCALE.Q) as Q;
 
     // Sensory: fog and precipitation reduce vision range.
-    const baseEnv = (world as any).__sensoryEnv as SensoryEnvironment;
-    (world as any).__sensoryEnv = {
+    const baseEnv = world.__sensoryEnv!;
+    world.__sensoryEnv = {
       ...baseEnv,
       lightMul: Math.trunc((baseEnv.lightMul * wMod.lightMul_Q) / SCALE.Q) as Q,
       smokeMul: Math.trunc((baseEnv.smokeMul * wMod.precipVisionMul_Q) / SCALE.Q) as Q,
@@ -1661,7 +1661,7 @@ export function applyImpactToInjury(
 
   const armourShift = armoured ? q(0.75) : q(1.0);
 
-  // Phase 8C: intrinsic exoskeleton armor — absorbed before damage channels are allocated
+  // Phase 8C: intrinsic exoskeleton armour — absorbed before damage channels are allocated
   if (seg?.intrinsicArmor_J !== undefined && seg.intrinsicArmor_J > 0) {
     energy_J = Math.max(0, energy_J - seg.intrinsicArmor_J);
     if (energy_J === 0) return;

@@ -2,6 +2,7 @@
 
 import { describe, it, expect } from "vitest";
 import { q, SCALE } from "../src/units.js";
+import type { Q } from "../src/units.js";
 import {
   CLAIM_OWN_RENOWN_WEIGHT_Q,
   CLAIM_INHERITED_RENOWN_WEIGHT_Q,
@@ -244,7 +245,7 @@ describe("applySuccessionToPolity", () => {
       heirId: null,
       candidates: [],
       rule: "primogeniture",
-      stabilityImpact_Q: -STABILITY_NO_HEIR_Q as any,
+      stabilityImpact_Q: -STABILITY_NO_HEIR_Q as unknown as Q,
     });
     expect(polity.stabilityQ).toBeLessThan(before);
   });
@@ -256,7 +257,7 @@ describe("applySuccessionToPolity", () => {
       heirId: null,
       candidates: [],
       rule: "primogeniture",
-      stabilityImpact_Q: -SCALE.Q as any,
+      stabilityImpact_Q: -SCALE.Q as unknown as Q,
     });
     expect(polity.stabilityQ).toBeGreaterThanOrEqual(0);
   });

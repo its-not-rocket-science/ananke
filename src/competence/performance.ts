@@ -6,7 +6,7 @@
 // No kernel import — pure resolution module.
 
 import type { Q } from "../units.js";
-import { SCALE, q, clampQ, mulDiv } from "../units.js";
+import { SCALE, q, clampQ } from "../units.js";
 import type { Entity } from "../sim/entity.js";
 import type { WillpowerState } from "./willpower.js";
 

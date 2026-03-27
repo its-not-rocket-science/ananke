@@ -1,10 +1,9 @@
 // src/bridge/interpolation.ts — Deterministic fixed‑point interpolation utilities
 
-import type { Q, I32 } from "../units.js";
+import type { Q } from "../units.js";
 import type { Vec3 } from "../sim/vec3.js";
 import type { PoseModifier } from "../model3d.js";
 import { SCALE, mulDiv, clampQ } from "../units.js";
-import { vAdd, vSub, vScaleQ } from "../sim/vec3.js";
 import { normaliseDirCheapQ } from "../sim/vec3.js";
 
 // ─── Scalar interpolation ──────────────────────────────────────────────────────

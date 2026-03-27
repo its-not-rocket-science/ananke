@@ -24,6 +24,7 @@ import {
 import { createPolity } from "../src/polity.js";
 import { q, SCALE } from "../src/units.js";
 import type { Q } from "../src/units.js";
+import type { TechEra } from "../src/sim/tech.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ function makePolity(
   techEra  = "Medieval",
   pop      = 100_000,
 ) {
-  const p = createPolity("p1", "Test", "f1", [], pop, 500_000, techEra as any);
+  const p = createPolity("p1", "Test", "f1", [], pop, 500_000, techEra as TechEra);
   p.moraleQ    = morale;
   p.stabilityQ = stability;
   return p;

@@ -10,7 +10,6 @@
 import type { Q } from "../units.js";
 import { SCALE, q, clampQ, mulDiv } from "../units.js";
 import type { Entity } from "../sim/entity.js";
-import { makeRng } from "../rng.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,9 +61,6 @@ export interface AcousticDetectionOutcome {
 /** Scale factor for acoustic detection formula. */
 const SCALE_ACOUSTIC = 100; // multiplier to get useful detection ranges
 
-/** Base detection range in metres at average musical intelligence. */
-const BASE_DETECTION_RANGE_m = 50;
-
 /** Maximum effective detection range. */
 const MAX_DETECTION_RANGE_m = 500;
 
@@ -81,11 +77,7 @@ const BASE_SIGNAL_LATENCY_MS = 200;
 const MUSICAL_LATENCY_REDUCTION_FACTOR = 0.5; // up to 50% faster
 
 // Noise level constants
-const NOISE_SILENT = 0;
-const NOISE_VERY_QUIET = 10;
-const NOISE_QUIET = 25;
 const NOISE_NORMAL = 50;
-const NOISE_LOUD = 75;
 const NOISE_VERY_LOUD = 100;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -149,7 +141,7 @@ function calculateEquipmentNoise(entity: Entity): number {
  *   movementNoise = velocity_mps × 10
  *   equipmentNoise = based on armour material and weapon mass
  *
- * @param entity - The entity to analyze.
+ * @param entity - The entity to analyse.
  * @returns Acoustic signature with all noise components.
  */
 export function deriveAcousticSignature(entity: Entity): AcousticSignature {

@@ -5,14 +5,13 @@
 //
 // Run:  npm run build && node dist/examples/quickstart-species.js [seed]
 
-import { q, SCALE, from }            from "../src/units.js";
+import { SCALE, from }               from "../src/units.js";
 import { HUMAN_BASE }                from "../src/archetypes.js";
 import { generateIndividual }        from "../src/generate.js";
 import { applyAgingToAttributes,
          getAgePhase }               from "../src/sim/aging.js";
 import { applySleepToAttributes,
          deriveSleepDeprivationMuls,
-         IMPAIR_THRESHOLD_S,
          type SleepState }           from "../src/sim/sleep.js";
 import { describeCharacter,
          formatCharacterSheet,

@@ -32,7 +32,7 @@ The following external datasets and literature sources have been incorporated in
 | **Calibration: Plate Armour Effectiveness** | HEMA literature on plate armour effectiveness | Expected protection against sword/axe strikes | ✅ PASS (expectations satisfied) | Injury reduction, survival rate | Historical European Martial Arts (HEMA) literature |
 | **One‑Legged Stand Test Balance — Young Adult** | Springer et al. (2007) + PhysioNet OLST Dataset | Predicted OLST from control.stability at age 25 (simulated mean 20.4 s vs. empirical 27.8 s) | ✅ PASS (±30 %; ceiling effect in Springer data noted) | OLST duration (s) via stability→OLST linear mapping | Springer et al. (2007) Arch Phys Med Rehabil 88:443-451; PhysioNet doi:10.13026/46hn‑b25 |
 | **One‑Legged Stand Test Balance — Older Adult** | Springer et al. (2007) + Vellas et al. (1997) + PhysioNet OLST Dataset | Predicted OLST from control.stability at age 70 (simulated mean 14.7 s vs. empirical 15.2 s) | ✅ PASS (±25 %; aging delta validated) | OLST duration (s) via stability→OLST linear mapping | Springer et al. (2007); Vellas et al. (1997) J Am Geriatr Soc 45:735-738; PhysioNet doi:10.13026/46hn‑b25 |
-| **Soft Body Armor Energy Absorption (Kevlar K29)** | BFD Dataset (Mendeley) — Thick15‑9mm series | 15‑layer K29 stops 9 mm FMJ at 323.6 J (sub‑V50, 0 layers penetrated) | ✅ PASS (±10 %) | Energy absorption fraction (armored vs. unarmored) | Mendeley BFD Dataset — Thick15‑9mm_300_2 |
+| **Soft Body Armour Energy Absorption (Kevlar K29)** | BFD Dataset (Mendeley) — Thick15‑9mm series | 15‑layer K29 stops 9 mm FMJ at 323.6 J (sub‑V50, 0 layers penetrated) | ✅ PASS (±10 %) | Energy absorption fraction (armoured vs. unarmoured) | Mendeley BFD Dataset — Thick15‑9mm_300_2 |
 | **Tibia Fracture from FSP (PMHS Dataset)** | PMHS Tibia Fracture Dataset (Supplement_Data.xlsx) | 4.15 g NATO FSP at EF2+ V50 = 356 m/s → 263 J; structuralFrac = q(0.55) calibrated to cross FRACTURE_THRESHOLD | ✅ PASS (±5 %) | Fracture flag (1.0 = fractured at V50 energy) | PMHS Tibia Fracture Dataset (Supplement_Data.xlsx) |
 
 > **Note:** “PASS (±20 %)” indicates the simulated mean falls within ±20 % of the empirical mean. Calibration scenarios are validated against qualitative expectations rather than numeric tolerances.
@@ -101,13 +101,13 @@ Reference materials that provide biomechanical frameworks for interpreting comba
 | Ananke System | Primary Validation Datasets (Current) | Key Metrics Compared | Status |
 |:---|:---|:---|:---|
 | Muscle force/actuation | OpenArm Multisensor 2.0 (scaling exponent, CV) | Scaling exponent (target 0.67), coefficient of variation (target 0.18) | ✅ PASS (exponent 0.6675, CV 0.153) |
-| **Soft armor energy absorption** | **BFD Dataset (Mendeley) — 15‑layer Kevlar K29 vs 9 mm FMJ** | **Sub‑V50 energy absorption fraction (empirical V50 ≈ 370 J)** | **✅ PASS (±10 %)** |
+| **Soft armour energy absorption** | **BFD Dataset (Mendeley) — 15‑layer Kevlar K29 vs 9 mm FMJ** | **Sub‑V50 energy absorption fraction (empirical V50 ≈ 370 J)** | **✅ PASS (±10 %)** |
 | **Long-bone fracture from FSP** | **PMHS Tibia Fracture Dataset (Supplement_Data.xlsx)** | **EF2+ fracture at V50 energy (263 J, 4.15 g NATO FSP, 356 m/s)** | **✅ PASS (±5 %)** |
 | Impact loading & injury | Runner Injury GRF Dataset (2025); Tibial Stress Injury Dataset (2025) | Peak vertical GRF (target 1 580 N), peak positive load rate (target 48 993 N/s) | ✅ PASS (GRF 1 764 N ±11 %; load rate 56 891 N/s ±16 %) |
 | Balance & stability | Springer et al. (2007) + Vellas et al. (1997) + PhysioNet OLST Dataset | OLST duration at age 25 (20.4 s vs. 27.8 s) and age 70 (14.7 s vs. 15.2 s) via stability→OLST mapping | ✅ PASS (young adult ±30 %; older adult ±25 %) |
 | Blast physics | Semi‑confined blast dataset (Mendeley/Kristoffersen 2024) — **now available locally** | Internal confined‑blast peak pressures — different regime from free‑field model | 🔶 Wrong regime (confined vs free‑field; see §5.1) |
-| Armor penetration & hypervelocity impact | pyBLOSSUM Hypervelocity Impact Database — **now available locally** | Hypervelocity (km/s) ballistic limit — different regime from intrinsicArmor_J model | 🔶 Wrong regime (hypervelocity vs energy‑threshold; see §5.2) |
-| Metallic armor penetration (V50 database) | Ballistic Limit V50 Database (REL_v50_database_20230527.csv) — **now available locally** | V50 (m/s) for AP/FSP vs Al/steel plates — hypervelocity regime, incompatible with intrinsicArmor_J | 🔶 Wrong regime (hypervelocity vs energy‑threshold) |
+| Armour penetration & hypervelocity impact | pyBLOSSUM Hypervelocity Impact Database — **now available locally** | Hypervelocity (km/s) ballistic limit — different regime from intrinsicArmor_J model | 🔶 Wrong regime (hypervelocity vs energy‑threshold; see §5.2) |
+| Metallic armour penetration (V50 database) | Ballistic Limit V50 Database (REL_v50_database_20230527.csv) — **now available locally** | V50 (m/s) for AP/FSP vs Al/steel plates — hypervelocity regime, incompatible with intrinsicArmor_J | 🔶 Wrong regime (hypervelocity vs energy‑threshold) |
 | **Circadian alertness nadir** | **Dijk & Czeisler (1994) Sleep; Cajochen et al. (2003) Chronobiol Int** | **03:00 nadir / 17:00 peak alertness ratio (target 0.30)** | **✅ PASS (0.300; ±20 %)** |
 | **Airborne disease transmission** | **Kool (2005) Risk Anal; Wu Lien-teh (1926)** | **Pneumonic plague per-exposure risk at 0 m (target 0.80–0.95)** | **✅ PASS (0.800; ±20 %)** |
 | **Sustained aerobic power (Critical Power)** | **Burnley & Jones (2007) Eur J Appl Physiol; Poole et al. (2016)** | **HUMAN_BASE continuousPower_W vs Critical Power ~200 W** | **✅ PASS (141 W; ±30 % — general population below elite)** |
@@ -162,7 +162,7 @@ The following datasets have been identified but require additional empirical for
 
 **Dataset description:** Contains >1700 collated hypervelocity‑impact experimental data points for various shield types (Whipple shields, honeycomb panels, multi‑shock shields). Includes ballistic‑limit equations validated against test data for aluminum, titanium, steel, CFRP, fiberglass, and transparent materials.
 
-**Ananke simulation capability:** Armor is represented as `intrinsicArmor_J` per body segment – a simple energy threshold. Weapon damage profiles include a `penetrationBias` that shifts damage from surface to internal layers, but there is no material‑specific penetration model or shield‑type‑specific ballistic limit equations.
+**Ananke simulation capability:** Armour is represented as `intrinsicArmor_J` per body segment – a simple energy threshold. Weapon damage profiles include a `penetrationBias` that shifts damage from surface to internal layers, but there is no material‑specific penetration model or shield‑type‑specific ballistic limit equations.
 
 **Missing data needed for validation:**
 

@@ -7,7 +7,6 @@
 import type { Q } from "./units.js";
 import { SCALE, q, clampQ } from "./units.js";
 import type { Entity } from "./sim/entity.js";
-import type { WorldState } from "./sim/world.js";
 import type { Inventory } from "./inventory.js";
 import { createInventory, addContainer, createContainer } from "./inventory.js";
 

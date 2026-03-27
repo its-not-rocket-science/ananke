@@ -6,6 +6,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.47] — 2026-03-27
+
+### Changed
+
+- **Lint clean-up (zero issues)** — eliminated all 574 ESLint errors and warnings across `src/` and `test/`:
+  - Replaced all `as any` casts with proper types (`as Q`, `as TechEra`, `as WonderType`, `as unknown as TypeName`, etc.)
+  - Removed unused imports and prefixed unused locals with `_` across 50+ test files
+  - Fixed `getAvailableMaterials` TODO in `src/crafting/materials.ts` — now accepts `readonly Material[]` and derives per-type totals
+  - Removed `@ts-nocheck` from `as/injury.ts`; applied `const` fixes and removed dead imports throughout `src/`
+- **UK English** — updated all comments, JSDoc, and documentation prose to British spelling (`armour`, `defence`, `behaviour`, `analyse`, `calibre`, `colour`); exported API identifiers unchanged
+- Build: clean. Tests: 5,261 passing. Coverage: statements 97.12 %, branches 87.87 %, functions 95.65 %, lines 97.12 %.
+
+---
+
 ## [0.1.46] — 2026-03-27
 
 ### Added
@@ -41,7 +55,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
   - `WonderEffects { stabilityBonus_Q, moraleBonus_Q, researchPointBonus, unrestReduction_Q, tradeIncomeBonus_Q, defenseBonus_Q, epidemicResistance_Q }` — advisory bundle.
   - `WONDER_BASE_COST_CU`: grand_library 150k → great_pyramid 1,000k cu.
   - `WONDER_TYPICAL_DAYS`: grand_library 180 → great_pyramid 3,650 days (10 years).
-  - `WONDER_BASE_EFFECTS`: distinct niches — great_wall highest defense (q(0.20)), grand_harbour highest trade (q(0.25)), aqueduct_system highest epidemic resistance (q(0.15)), colosseum highest unrest reduction (q(0.12)), grand_library +3 RP/day, great_pyramid highest stability (q(0.08)).
+  - `WONDER_BASE_EFFECTS`: distinct niches — great_wall highest defence (q(0.20)), grand_harbour highest trade (q(0.25)), aqueduct_system highest epidemic resistance (q(0.15)), colosseum highest unrest reduction (q(0.12)), grand_library +3 RP/day, great_pyramid highest stability (q(0.08)).
   - `WONDER_DAMAGED_EFFECT_MUL = q(0.50)` — damaged wonders provide half effects.
   - `WONDER_REPAIR_COST_FRAC = q(0.25)` — repair costs 25% of base construction cost.
   - `createWonderProject(projectId, polityId, type, startTick)` — factory.
@@ -781,15 +795,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **CE-16 · Modding Support** (`src/modding.ts`)
   - Layer 1 — `hashMod(json)`: deterministic FNV-1a fingerprint (8-char hex) for any
     parsed JSON mod file; canonical key-sorted serialisation ensures order-independence.
-  - Layer 2 — Post-tick behavior hooks: `registerPostTickHook / unregisterPostTickHook /
+  - Layer 2 — Post-tick behaviour hooks: `registerPostTickHook / unregisterPostTickHook /
     runPostTickHooks / listPostTickHooks / clearPostTickHooks`; hooks fire after
     `stepWorld`, are purely observational (logging, analytics, renderer updates).
-  - Layer 3 — AI behavior node registry: `registerBehaviorNode / unregisterBehaviorNode /
+  - Layer 3 — AI behaviour node registry: `registerBehaviorNode / unregisterBehaviorNode /
     getBehaviorNode / listBehaviorNodes / clearBehaviorNodes`; custom `BehaviorNode`
-    factories registered by id for scenario and behavior-tree composition.
+    factories registered by id for scenario and behaviour-tree composition.
   - Session fingerprint: `computeModManifest(catalogIds)` returns sorted id lists and a
     single fingerprint covering all three layers for multiplayer client validation.
-  - `clearAllMods()` resets hooks and behavior nodes (catalog unchanged).
+  - `clearAllMods()` resets hooks and behaviour nodes (catalog unchanged).
   - 42 tests in `test/modding.test.ts`; exported via `src/index.ts`.
 
 - **CE-14 · Socio-Economic Campaign Layer → Stable Promotion**
@@ -884,7 +898,7 @@ Adding new **optional** fields to these interfaces is never a breaking change.
 
   - **CE-16 · Modding Support — HashMod, Post-tick Hooks, Behaviour Node Registry** (`src/parallel.ts`)
     - Three-layer modding contract: FNV-1a data fingerprinting, observational
-      post-tick hooks, and named AI behavior node factories. computeModManifest()
+      post-tick hooks, and named AI behaviour node factories. computeModManifest()
       provides a single session fingerprint for multiplayer client validation.
     - exported via src/index.ts.
 

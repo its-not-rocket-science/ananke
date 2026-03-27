@@ -818,7 +818,7 @@ describe("stepHazardEffects_legacy", () => {
     const grid: HazardGrid = new Map();
     const cellSize_m = to.m(4);
     const key = terrainKey(0, 0); // entity at (0,0)
-    grid.set(key, { channel: "fire" as any, intensity: 500, duration_ticks: 10 });
+    grid.set(key, { type: "fire" as const, intensity: 500 as Q, duration_ticks: 10 });
 
     const shockBefore = e.injury.shock;
     stepHazardEffects_legacy([e], grid, cellSize_m);
@@ -831,7 +831,7 @@ describe("stepHazardEffects_legacy", () => {
     e.injury.dead = true;
     const grid: HazardGrid = new Map();
     const key = terrainKey(0, 0);
-    grid.set(key, { channel: "fire" as any, intensity: 5000, duration_ticks: 5 });
+    grid.set(key, { type: "fire" as const, intensity: 5000 as Q, duration_ticks: 5 });
 
     const shockBefore = e.injury.shock;
     stepHazardEffects_legacy([e], grid, to.m(4));
@@ -842,7 +842,7 @@ describe("stepHazardEffects_legacy", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     const grid: HazardGrid = new Map();
     const key = terrainKey(0, 0);
-    grid.set(key, { channel: "fire" as any, intensity: 100, duration_ticks: 1 });
+    grid.set(key, { type: "fire" as const, intensity: 100 as Q, duration_ticks: 1 });
 
     stepHazardEffects_legacy([e], grid, to.m(4));
 
@@ -853,7 +853,7 @@ describe("stepHazardEffects_legacy", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     const grid: HazardGrid = new Map();
     const key = terrainKey(0, 0);
-    grid.set(key, { channel: "fire" as any, intensity: 0, duration_ticks: 0 });
+    grid.set(key, { type: "fire" as const, intensity: 0 as Q, duration_ticks: 0 });
 
     stepHazardEffects_legacy([e], grid, to.m(4));
 
@@ -878,8 +878,8 @@ describe("stepChainEffects array chainPayload", () => {
       duration_ticks: -1,
       placedByEntityId: actor.id,
       chainPayload: [
-        { kind: "impact" as const, spec: { energy_J: 50, channel: "kinetic" as any } },
-        { kind: "impact" as const, spec: { energy_J: 50, channel: "kinetic" as any } },
+        { kind: "impact" as const, spec: { energy_J: 500, channel: DamageChannel.Kinetic } },
+        { kind: "impact" as const, spec: { energy_J: 500, channel: DamageChannel.Kinetic } },
       ],
     }];
 

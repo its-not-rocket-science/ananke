@@ -1,7 +1,7 @@
 // test/settlement.test.ts — Phase 44: Settlement & Base Building tests
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q } from "../src/units.js";
 import {
   createSettlement,
   createSettlementRegistry,
@@ -21,7 +21,6 @@ import {
   deserializeSettlement,
   SETTLEMENT_TIER_NAMES,
 } from "../src/settlement.js";
-import type { Settlement } from "../src/settlement.js";
 
 // ── Settlement Creation ────────────────────────────────────────────────────────
 
@@ -216,10 +215,10 @@ describe("Population Dynamics", () => {
     settlement.foodSurplus_Q = q(0.8);
 
     // Call multiple times to trigger probabilistic growth
-    let growth = 0;
+    let _growth = 0;
     for (let i = 0; i < 1000; i++) {
       const result = updateSettlementPopulation(settlement, 100 + i);
-      if (result.growth > 0) growth += result.growth;
+      if (result.growth > 0) _growth += result.growth;
     }
 
     // With high food surplus, should see some growth over many attempts

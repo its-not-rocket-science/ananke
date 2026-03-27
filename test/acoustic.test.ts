@@ -1,8 +1,10 @@
 // test/acoustic.test.ts — Phase 39: Acoustic Systems tests
 
 import { describe, it, expect } from "vitest";
+import type { Q } from "../src/units.js";
 import { q, SCALE } from "../src/units.js";
 import type { Entity } from "../src/sim/entity.js";
+import type { IndividualAttributes } from "../src/types.js";
 import {
   deriveAcousticSignature,
   detectAcousticSignature,
@@ -19,9 +21,9 @@ function mkEntity(musical: number, velocity: number = 0): Entity {
     teamId: 1,
     attributes: {
       cognition: {
-        musical,
-      } as any,
-    } as any,
+        musical: musical as Q,
+      },
+    } as unknown as IndividualAttributes,
     energy: { reserve_J: 10000, reserveMax_J: 10000 },
     loadout: { armour: [], weapons: [], items: [] },
     traits: [],
@@ -35,7 +37,7 @@ function mkEntity(musical: number, velocity: number = 0): Entity {
   };
 }
 
-function mkEntityWithArmour(musical: number, armour: any[]): Entity {
+function mkEntityWithArmour(musical: number, armour: Record<string, unknown>[]): Entity {
   // Convert armour to items with kind="armour"
   const armourItems = armour.map(a => ({ ...a, kind: "armour" }));
   return {
@@ -43,9 +45,9 @@ function mkEntityWithArmour(musical: number, armour: any[]): Entity {
     teamId: 1,
     attributes: {
       cognition: {
-        musical,
-      } as any,
-    } as any,
+        musical: musical as Q,
+      },
+    } as unknown as IndividualAttributes,
     energy: { reserve_J: 10000, reserveMax_J: 10000 },
     loadout: { items: armourItems },
     traits: [],

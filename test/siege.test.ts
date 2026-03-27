@@ -2,12 +2,12 @@
 
 import { describe, it, expect } from "vitest";
 import { q, SCALE } from "../src/units.js";
+import type { Q } from "../src/units.js";
 import {
   INVESTMENT_DAYS,
   WALL_DECAY_BASE_Q,
   SUPPLY_DRAIN_PER_DAY_Q,
   ASSAULT_WALL_THRESHOLD_Q,
-  SURRENDER_SUPPLY_THRESHOLD_Q,
   createSiege,
   isSiegeResolved,
   computeSiegeAttrition,
@@ -20,13 +20,13 @@ import { createPolity } from "../src/polity.js";
 
 function makeAttacker(militaryStrength: number = q(0.80)) {
   const p = createPolity("att", "Attacker", "f1", [], 50_000, 100_000, "Medieval");
-  p.militaryStrength_Q = militaryStrength as any;
+  p.militaryStrength_Q = militaryStrength as Q;
   return p;
 }
 
 function makeDefender(stabilityQ: number = q(0.70)) {
   const p = createPolity("def", "Defender", "f2", [], 10_000, 50_000, "Medieval");
-  p.stabilityQ = stabilityQ as any;
+  p.stabilityQ = stabilityQ as Q;
   return p;
 }
 
@@ -112,10 +112,10 @@ describe("computeSiegeAttrition", () => {
   it("active phase — weaker walls → higher attacker losses", () => {
     const s1 = createSiege(makeAttacker(), makeDefender());
     s1.phase = "active";
-    s1.wallIntegrity_Q = SCALE.Q as any;
+    s1.wallIntegrity_Q = SCALE.Q as Q;
     const s2 = createSiege(makeAttacker(), makeDefender());
     s2.phase = "active";
-    s2.wallIntegrity_Q = q(0.20) as any;
+    s2.wallIntegrity_Q = q(0.20);
     expect(computeSiegeAttrition(s2).attackerLoss_Q)
       .toBeGreaterThan(computeSiegeAttrition(s1).attackerLoss_Q);
   });
@@ -216,8 +216,8 @@ describe("stepSiege — active phase", () => {
     const s1 = activeState();
     const s2 = activeState();
     for (let d = 0; d < 10; d++) {
-      stepSiege(s1, 1, d, 0 as any);
-      stepSiege(s2, 1, d, q(0.01) as any);
+      stepSiege(s1, 1, d, 0 as Q);
+      stepSiege(s2, 1, d, q(0.01));
     }
     expect(s2.supplyLevel_Q).toBeLessThan(s1.supplyLevel_Q);
   });
@@ -226,8 +226,8 @@ describe("stepSiege — active phase", () => {
     const sWinter = activeState(q(0.80));
     const sFull   = activeState(q(0.80));
     for (let d = 0; d < 30; d++) {
-      stepSiege(sWinter, 1, d, 0 as any, q(0.50) as any);
-      stepSiege(sFull,   1, d, 0 as any, SCALE.Q as any);
+      stepSiege(sWinter, 1, d, 0 as Q, q(0.50));
+      stepSiege(sFull,   1, d, 0 as Q, SCALE.Q as Q);
     }
     expect(sWinter.wallIntegrity_Q).toBeGreaterThan(sFull.wallIntegrity_Q);
   });

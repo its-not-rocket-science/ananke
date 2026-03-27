@@ -7,8 +7,6 @@ import type { Q } from "./units.js";
 import { q, clampQ, SCALE, mulDiv } from "./units.js";
 import type { Inventory } from "./inventory.js";
 import { createInventory } from "./inventory.js";
-import type { Quest } from "./quest.js";
-
 // ── Core Types ────────────────────────────────────────────────────────────────
 
 /** Facility tier levels. */
@@ -579,7 +577,7 @@ function getMedicalCareLevel(level: FacilityLevel): AvailableServices["medicalCa
   }
 }
 
-// ── Settlement Defense ─────────────────────────────────────────────────────────
+// ── Settlement Defence ─────────────────────────────────────────────────────────
 
 /** Record a raid/siege on a settlement. */
 export function recordRaid(
@@ -604,7 +602,7 @@ export function recordRaid(
   }
 }
 
-/** Update settlement defenses. */
+/** Update settlement defences. */
 export function updateDefenses(
   settlement: Settlement,
   hasDefenses: boolean,

@@ -11,7 +11,7 @@ import type { WorldState } from "./sim/world.js";
 import type { CommandMap } from "./sim/commands.js";
 import type { KernelContext } from "./sim/context.js";
 import { stepWorld } from "./sim/kernel.js";
-import { q, SCALE, type Q } from "./units.js";
+import { q, type Q } from "./units.js";
 import { TUNING } from "./sim/tuning.js";
 import { TICK_HZ } from "./sim/tick.js";
 

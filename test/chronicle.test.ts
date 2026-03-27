@@ -1,7 +1,7 @@
 // test/chronicle.test.ts — Phase 45: Chronicle System Tests
 
 import { describe, it, expect, beforeEach } from "vitest";
-import type { Chronicle, ChronicleEntry, ChronicleRegistry } from "../src/chronicle.js";
+import type { Chronicle, ChronicleEntry, ChronicleRegistry, StoryArcType } from "../src/chronicle.js";
 import {
   createChronicle,
   addChronicleEntry,
@@ -949,7 +949,7 @@ describe("Narrative Rendering", () => {
     it("falls back to description for unknown arc type", () => {
       const arc = {
         arcId: "test",
-        arcType: "unknown_type" as any,
+        arcType: "unknown_type" as unknown as StoryArcType,
         entryIds: [],
         primaryActors: [],
         startTick: 10,

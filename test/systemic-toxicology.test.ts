@@ -8,10 +8,10 @@ import {
   ingestToxin,
   stepIngestedToxicology,
   deriveCumulativeToxicity,
-  type IngestedToxinProfile,
 } from "../src/sim/systemic-toxicology.js";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
 import { stepWorld } from "../src/sim/kernel.js";
+import type { KernelContext } from "../src/sim/context.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -178,19 +178,19 @@ describe("stepIngestedToxicology — motor and cognitive effects", () => {
   it("alkaloid_poison increases fearQ after onset", () => {
     const e = freshEntity();
     ingestToxin(e, "alkaloid_poison");  // fearMod_perS = +8
-    const initFear = (e.condition as any).fearQ as number;
+    const initFear = (e.condition as Record<string, unknown>).fearQ as number;
     stepN(e, 1_200 + 60);
-    expect((e.condition as any).fearQ).toBeGreaterThan(initFear);
+    expect((e.condition as Record<string, unknown>).fearQ).toBeGreaterThan(initFear);
   });
 
   it("alcohol fearMod_perS is negative — fearQ does not increase (disinhibition)", () => {
     const e = freshEntity();
     // Pre-set some fear so we can detect a decrease
-    (e.condition as any).fearQ = q(0.50);
+    (e.condition as Record<string, unknown>).fearQ = q(0.50);
     ingestToxin(e, "alcohol");
     stepN(e, 900 + 300);  // past onset; fearMod = -3/s
     // Fear should stay same or decrease (alcohol is disinhibiting)
-    expect((e.condition as any).fearQ).toBeLessThanOrEqual(q(0.50));
+    expect((e.condition as Record<string, unknown>).fearQ).toBeLessThanOrEqual(q(0.50));
   });
 
   it("higher concentration produces stronger effect (more steps at onset → more fatigue)", () => {
@@ -335,9 +335,9 @@ describe("withdrawal states", () => {
       duration_s:     7_200,
       severity_Q:     q(0.80) as ReturnType<typeof q>,
     }];
-    const initFear = (e.condition as any).fearQ as number;
+    const initFear = (e.condition as Record<string, unknown>).fearQ as number;
     stepIngestedToxicology(e, 1.0);
-    expect((e.condition as any).fearQ).toBeGreaterThan(initFear);
+    expect((e.condition as Record<string, unknown>).fearQ).toBeGreaterThan(initFear);
   });
 
   it("withdrawal expires after duration_s", () => {
@@ -362,7 +362,7 @@ describe("kernel integration", () => {
     ingestToxin(entity, "alcohol");
 
     const world = mkWorld(42, [entity]);
-    const ctx = { tractionCoeff: q(0.9) } as any;
+    const ctx = { tractionCoeff: q(0.9) } as unknown as KernelContext;
 
     // Run 20 ticks at TICK_HZ (20 Hz) = 1 nutrition accumulator step → stepIngestedToxicology called
     for (let i = 0; i < 20; i++) {
@@ -384,7 +384,7 @@ describe("kernel integration", () => {
     }];
 
     const world = mkWorld(42, [entity]);
-    const ctx = { tractionCoeff: q(0.9) } as any;
+    const ctx = { tractionCoeff: q(0.9) } as unknown as KernelContext;
 
     for (let i = 0; i < 20; i++) {
       stepWorld(world, new Map(), ctx);

@@ -417,10 +417,10 @@ Resolved deterministically via seeded RNG.
 
 ### Phase 5 enhancements (deferred)
 
-**Caliber-based suppression fear** — `FEAR_PER_SUPPRESSION_TICK` is currently constant.
+**Calibre-based suppression fear** — `FEAR_PER_SUPPRESSION_TICK` is currently constant.
 Add `suppressionFearMul: Q` to `RangedWeapon` (q(1.0) for sling, q(3.0) for musket).
 Store as `condition.suppressionFearMul: Q` alongside `suppressedTicks`; multiply in
-`stepMoraleForEntity`. Requires a weapon data pass to assign caliber-appropriate values.
+`stepMoraleForEntity`. Requires a weapon data pass to assign calibre-appropriate values.
 
 **Fear memory and diminishing returns** — repeated ally deaths in quick succession lose
 psychological impact. Add `condition.recentAllyDeaths: number` and `lastAllyDeathTick: number`.
@@ -838,26 +838,26 @@ All segments `structureType: "exoskeleton"`. `regeneratesViaMolting: true` on le
 
 ---
 
-## Phase 8C — Exoskeleton-Specific Armor *(COMPLETE)*
+## Phase 8C — Exoskeleton-Specific Armour *(COMPLETE)*
 
 **Depends on Phase 8B.**
 
-Adds per-segment intrinsic armor resistance for exoskeleton segments, distinct from worn
-equipment armor. This is a structural property of the shell itself, not a carried item.
+Adds per-segment intrinsic armour resistance for exoskeleton segments, distinct from worn
+equipment armour. This is a structural property of the shell itself, not a carried item.
 
 ### Design
 
 Extend `BodySegment` with:
 
 ```typescript
-/** Intrinsic structural armor resist — energy absorbed before damage channels are allocated. */
+/** Intrinsic structural armour resist — energy absorbed before damage channels are allocated. */
 intrinsicArmor_J?: number;
 ```
 
 ### Engine integration
 
 In `applyImpactToInjury`, immediately before the exoskeleton breach check, apply the
-intrinsic armor absorption:
+intrinsic armour absorption:
 
 ```typescript
 if (seg?.intrinsicArmor_J !== undefined && seg.intrinsicArmor_J > 0) {
@@ -3959,7 +3959,7 @@ entity with no active venoms unaffected; fear increment during symptomatic perio
 
 All items from the **Phase 5 enhancements (deferred)** section, implemented together:
 
-1. **Caliber-based suppression fear** — `suppressionFearMul: Q` on `RangedWeapon`; stored on
+1. **Calibre-based suppression fear** — `suppressionFearMul: Q` on `RangedWeapon`; stored on
    `condition` and multiplied in `stepMoraleForEntity`.
 2. **Fear memory / diminishing returns** — `condition.recentAllyDeaths` + `lastAllyDeathTick`;
    subsequent deaths in the same 5-second window scale by `max(0.4, 1.0 − 0.15 × priorDeaths)`.
@@ -6554,19 +6554,19 @@ Phase-93 sieges — providing half effects until repaired at 25% of base cost.
 | `WonderType` | Seven unique monument types |
 | `WonderProject` | In-progress construction (progress_Q, investedCost_cu) |
 | `Wonder` | Completed monument (damaged flag) |
-| `WonderEffects` | Advisory bundle: stability, morale, research, unrest, trade, defense, epidemic |
+| `WonderEffects` | Advisory bundle: stability, morale, research, unrest, trade, defence, epidemic |
 | `contributeToWonder` | Incremental treasury investment; returns progress_Q |
 | `completeWonder` | Finalise project → Wonder |
 | `damageWonder` / `repairWonder` | Earthquake/siege damage; repair for 25% base cost |
 | `computeWonderEffects` | Full or halved effects by damage state |
 | `aggregateWonderEffects` | Sum across all a polity's wonders |
 
-**Distinct niches:** great_wall = defense (q(0.20)); grand_harbour = trade (q(0.25));
+**Distinct niches:** great_wall = defence (q(0.20)); grand_harbour = trade (q(0.25));
 aqueduct_system = epidemic resistance (q(0.15)); colosseum = unrest reduction (q(0.12));
 grand_library = +3 RP/day; great_pyramid = stability (q(0.08)); grand_temple = morale + stability.
 
 **Integration targets:** Phase-88 health, Phase-90 unrest, Phase-91 research, Phase-92 trade,
-Phase-93 defense, Phase-96 earthquake damage.
+Phase-93 defence, Phase-96 earthquake damage.
 
 **Subpath export:** `@its-not-rocket-science/ananke/wonders`
 
@@ -7754,7 +7754,7 @@ fields per tick instead of full polity snapshot.
 
 ---
 
-### CE-10 · Pre-built AI Behavior Tree Library *(COMPLETE)*
+### CE-10 · Pre-built AI Behaviour Tree Library *(COMPLETE)*
 
 **Problem:** `buildAICommands` / `decideCommandsForEntity` is functional but low-level.
 Every adopter re-implements flank, retreat, and protect-ally logic independently, with no
@@ -7943,7 +7943,7 @@ stable API.
    Checksum-validated: `hashMod(modFile)` produces a deterministic fingerprint that the
    network replication layer (CE-11) can compare across clients.
 
-2. **Behavior hooks:** A callback registration pattern that does NOT execute arbitrary code
+2. **Behaviour hooks:** A callback registration pattern that does NOT execute arbitrary code
    in the kernel path.  Hooks fire *after* each `stepWorld` call, not within it.
    ```typescript
    registerPostTickHook(id: string, fn: (world: WorldState) => void): void;

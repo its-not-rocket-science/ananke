@@ -1,7 +1,7 @@
 // test/settlement-services.test.ts — Phase 44: Settlement Services tests
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q } from "../src/units.js";
 import { createSettlement } from "../src/settlement.js";
 import type { Settlement } from "../src/settlement.js";
 import {
@@ -37,35 +37,35 @@ function mkCamp(): Settlement {
 describe("getRepairPricing", () => {
   it("returns canRepair=true when forge exists", () => {
     const s = mkTownWithForge();
-    const result = getRepairPricing(s, 1000, q(0.50) as any);
+    const result = getRepairPricing(s, 1000, q(0.50));
     expect(result.canRepair).toBe(true);
     expect(result.cost).toBeGreaterThan(0);
   });
 
   it("returns canRepair=false when no forge", () => {
     const s = mkCamp(); // tier 0, no forge
-    const result = getRepairPricing(s, 1000, q(0.50) as any);
+    const result = getRepairPricing(s, 1000, q(0.50));
     expect(result.canRepair).toBe(false);
     expect(result.cost).toBe(0);
   });
 
   it("cost scales with item value", () => {
     const s = mkTownWithForge();
-    const cheap = getRepairPricing(s, 100, q(0.50) as any);
-    const expensive = getRepairPricing(s, 10_000, q(0.50) as any);
+    const cheap = getRepairPricing(s, 100, q(0.50));
+    const expensive = getRepairPricing(s, 10_000, q(0.50));
     expect(expensive.cost).toBeGreaterThan(cheap.cost);
   });
 
   it("cost scales with damage level", () => {
     const s = mkTownWithForge();
-    const light = getRepairPricing(s, 1000, q(0.10) as any);
-    const heavy = getRepairPricing(s, 1000, q(0.90) as any);
+    const light = getRepairPricing(s, 1000, q(0.10));
+    const heavy = getRepairPricing(s, 1000, q(0.90));
     expect(heavy.cost).toBeGreaterThan(light.cost);
   });
 
   it("returns qualityBonus_Q from forge facility", () => {
     const s = mkTownWithForge();
-    const result = getRepairPricing(s, 1000, q(0.50) as any);
+    const result = getRepairPricing(s, 1000, q(0.50));
     expect(result.qualityBonus_Q).toBeGreaterThanOrEqual(0);
   });
 });
@@ -140,7 +140,7 @@ describe("getTrainingPricing", () => {
 describe("generateSettlementNeeds", () => {
   it("returns sorted needs (highest priority first)", () => {
     const s = mkTownWithForge();
-    s.foodSurplus_Q = q(0.1) as any; // food shortage
+    s.foodSurplus_Q = q(0.1); // food shortage
     const needs = generateSettlementNeeds(s);
     for (let i = 1; i < needs.length; i++) {
       expect(needs[i - 1]!.priority).toBeGreaterThanOrEqual(needs[i]!.priority);
@@ -149,7 +149,7 @@ describe("generateSettlementNeeds", () => {
 
   it("includes supply need when food surplus is low", () => {
     const s = mkTownWithForge();
-    s.foodSurplus_Q = q(0.1) as any; // below q(0.3) threshold
+    s.foodSurplus_Q = q(0.1); // below q(0.3) threshold
     const needs = generateSettlementNeeds(s);
     expect(needs.some((n) => n.type === "supply")).toBe(true);
   });
@@ -169,7 +169,7 @@ describe("generateSettlementNeeds", () => {
 
   it("selectQuestNeed returns highest priority need", () => {
     const s = mkTownWithForge();
-    s.foodSurplus_Q = q(0.1) as any;
+    s.foodSurplus_Q = q(0.1);
     const need = selectQuestNeed(s);
     expect(need).toBeDefined();
     expect(need!.priority).toBeGreaterThanOrEqual(4);
@@ -179,7 +179,7 @@ describe("generateSettlementNeeds", () => {
     const s = mkCamp();
     // Camp tier=0 has no patrol/delivery needs check (tier >= 1 required)
     // Force no needs by removing conditions
-    s.foodSurplus_Q = q(0.8) as any;
+    s.foodSurplus_Q = q(0.8);
     s.safetyStatus.ticksSinceLastRaid = 9999;
     // Camp tier=0: no tier>=1 patrol, no tier>=2 facility upgrades
     const need = selectQuestNeed(s);

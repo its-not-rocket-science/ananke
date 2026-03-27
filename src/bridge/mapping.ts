@@ -1,6 +1,6 @@
 // src/bridge/mapping.ts — Segment‑to‑bone mapping resolution
 
-import type { SegmentMapping, BodyPlanMapping, BridgeConfig } from "./types.js";
+import type { BodyPlanMapping, BridgeConfig } from "./types.js";
 import type { PoseModifier } from "../model3d.js";
 
 // ─── Mapping resolution ────────────────────────────────────────────────────────

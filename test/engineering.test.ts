@@ -1,8 +1,10 @@
 // test/engineering.test.ts — Phase 38: Engineering Quality tests
 
 import { describe, it, expect } from "vitest";
+import type { Q } from "../src/units.js";
 import { q, SCALE } from "../src/units.js";
 import type { Entity } from "../src/sim/entity.js";
+import type { IndividualAttributes } from "../src/types.js";
 import {
   resolveEngineering,
   applyEngineeringQuality,
@@ -17,10 +19,8 @@ function mkEntity(logicalMath: number): Entity {
     id: 1,
     teamId: 1,
     attributes: {
-      cognition: {
-        logicalMathematical: logicalMath,
-      } as any,
-    } as any,
+      cognition: { logicalMathematical: logicalMath as Q },
+    } as unknown as IndividualAttributes,
     energy: { reserve_J: 10000, reserveMax_J: 10000 },
     loadout: { armour: [], weapons: [], items: [] },
     traits: [],

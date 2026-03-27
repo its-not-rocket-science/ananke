@@ -16,7 +16,6 @@ import {
   beatEntityFatigued,
   DEFEATED_CONSCIOUSNESS,
   type NarrativeScenario,
-  type StressTestResult,
 } from "../src/narrative-stress.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,7 +63,7 @@ function noBeatScenario(): NarrativeScenario {
 }
 
 const SEEDS_10 = Array.from({ length: 10 }, (_, i) => i + 1);
-const SEEDS_50 = Array.from({ length: 50 }, (_, i) => i + 1);
+const _SEEDS_50 = Array.from({ length: 50 }, (_, i) => i + 1);
 
 // ─── runNarrativeStressTest — basic structure ─────────────────────────────────
 

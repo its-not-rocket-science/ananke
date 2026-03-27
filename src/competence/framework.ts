@@ -8,7 +8,7 @@
 // No kernel import — pure resolution module.
 
 import type { Q } from "../units.js";
-import { SCALE, q, clampQ, qMul, mulDiv } from "../units.js";
+import { SCALE, q, clampQ, mulDiv } from "../units.js";
 import type { Entity } from "../sim/entity.js";
 import type { WorldState } from "../sim/world.js";
 import { makeRng } from "../rng.js";
@@ -28,9 +28,6 @@ import {
   type TamingSpec,
 } from "./naturalist.js";
 import { resolveSignal, type SignalSpec } from "./interspecies.js";
-import {
-  type CommandTransmission,
-} from "./language.js";
 import { resolveTeaching, type TeachingSpec } from "./teaching.js";
 import { resolveEngineering, type EngineeringSpec } from "./engineering.js";
 import { resolveFormationSignal, type FormationSignal } from "./acoustic.js";
@@ -95,8 +92,6 @@ const QUALITY_XP_MULTIPLIERS: Record<CompetenceOutcome["descriptor"], number> = 
 /** Difficulty XP bonus: harder tasks grant more XP. */
 const MAX_DIFFICULTY_BONUS = 15;
 
-/** Tool quality bonus lookup (default if tool not specified). */
-const DEFAULT_TOOL_BONUS: Q = q(1.0) as Q;
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -385,7 +380,6 @@ function resolveInterSpecies(
   actor: Entity,
   task: CompetenceTask,
   action: CompetenceAction,
-  world: WorldState,
 ): Omit<CompetenceOutcome, "domain" | "xpGained" | "narrativeLine"> & {
   details: unknown;
 } {
@@ -814,7 +808,7 @@ export function resolveCompetence(
       result = resolveNaturalist(actor, task, action);
       break;
     case "interSpecies":
-      result = resolveInterSpecies(actor, task, action, world);
+      result = resolveInterSpecies(actor, task, action);
       break;
     case "linguistic":
       result = resolveLinguistic(actor, task, action, world);

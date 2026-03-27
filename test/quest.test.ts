@@ -3,6 +3,7 @@
 import { describe, it, expect } from "vitest";
 import { q } from "../src/units.js";
 import type { ImpactEvent } from "../src/sim/events.js";
+import type { Weapon } from "../src/equipment.js";
 import type { Quest, QuestObjective, QuestContext, QuestTemplate } from "../src/quest.js";
 import {
   createQuestRegistry,
@@ -10,7 +11,6 @@ import {
   registerQuestTemplate,
   offerQuest,
   abandonQuest,
-  getActiveQuests,
   getQuestProgress,
   checkObjectiveComplete,
   checkQuestComplete,
@@ -71,7 +71,7 @@ function mkImpactEvent(attackerId: number, targetId: number): ImpactEvent {
     blocked: false,
     parried: false,
     weaponId: "sword",
-    wpn: {} as any,
+    wpn: {} as unknown as Weapon,
     hitQuality: q(0.5),
     shieldBlocked: false,
   };
@@ -956,7 +956,7 @@ describe("Quest System Integration", () => {
     const offer = offerQuest(registry, 1, "integration_quest", 0);
     expect(offer.accepted).toBe(true);
 
-    let quest = (offer as { accepted: true; quest: Quest }).quest;
+    const quest = (offer as { accepted: true; quest: Quest }).quest;
 
     // Complete first objective
     const locResult = handleLocationReached(quest, 1, { x: 55, y: 52 }, 100);
@@ -1095,7 +1095,7 @@ describe("quest-generators: template objective branches", () => {
 
 describe("quest-generators: selectTemplate edge cases", () => {
   it("returns null when no templates eligible", () => {
-    const ctx = mkCtx({ settlementTier: 1, factionStanding: -100 });
+    const _ctx = mkCtx({ settlementTier: 1, factionStanding: -100 });
     // All templates with factionRange [30, 100] excluded; most still match — use impossibly high tier
     const ctx2 = mkCtx({ settlementTier: 99, factionStanding: 50 });
     // Filter to a template that can't match

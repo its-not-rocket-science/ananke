@@ -13,7 +13,7 @@ import type { Entity } from "./sim/entity.js";
 import { eventSeed } from "./sim/seeds.js";
 import { makeRng }   from "./rng.js";
 import type { NarrativeConfig } from "./narrative.js";
-import { resolveSignal, type SignalOutcome } from "./competence/interspecies.js";
+import { resolveSignal } from "./competence/interspecies.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

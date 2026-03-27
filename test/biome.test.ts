@@ -20,7 +20,6 @@ import { describe, it, expect } from "vitest";
 
 import { q, SCALE, G_mps2 }                  from "../src/units.js";
 import {
-  BiomeContext,
   BIOME_UNDERWATER,
   BIOME_LUNAR,
   BIOME_VACUUM,
@@ -196,7 +195,7 @@ describe("stepWorld biome drag", () => {
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     // Give the entity a non-zero velocity intent
     entity.intent.move = { dir: { x: 1, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" };
-    const world = mkWorld(1, [entity]);
+    const _world = mkWorld(1, [entity]);
 
     // Run one tick without drag
     const worldNoDrag = mkWorld(1, [mkHumanoidEntity(1, 1, 0, 0)]);
@@ -301,7 +300,7 @@ describe("backwards compatibility — no biome", () => {
 
   it("vacuum fatigue does not apply when biome is absent", () => {
     const world = mkWorld(1, [mkHumanoidEntity(1, 1, 0, 0)]);
-    const initialFatigue = world.entities[0]!.energy.fatigue;
+    const _initialFatigue = world.entities[0]!.energy.fatigue;
     const ctx: KernelContext = { tractionCoeff: q(1.0) };
     stepWorld(world, new Map(), ctx);
     // Fatigue may tick up from energy model, but should NOT get the vacuum bonus

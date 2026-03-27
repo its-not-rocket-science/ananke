@@ -21,6 +21,7 @@ import {
 import { q, SCALE } from "../src/units.js";
 import type { Q } from "../src/units.js";
 import type { Polity } from "../src/polity.js";
+import type { TechEra } from "../src/sim/tech.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ function makePolity(population = 10_000, treasury_cu = 100_000): Polity {
     id: "p1", name: "Test",
     factionId: "f1", locationIds: [],
     population, treasury_cu,
-    techEra: 2 as any,
+    techEra: 2 as TechEra,
     militaryStrength_Q: q(0.50) as Q,
     stabilityQ: q(0.70) as Q,
     moraleQ: q(0.60) as Q,
@@ -421,7 +422,7 @@ describe("integration", () => {
     stepContainment(lock, 200);
     stepContainment(vol,  200);
 
-    const lockEff = computeEffectiveTransmissionReduction(lock);
+    const _lockEff = computeEffectiveTransmissionReduction(lock);
     const volEff  = computeEffectiveTransmissionReduction(vol);
 
     // voluntary started at q(0.20) base vs q(0.85); after 200d lockdown might be below voluntary

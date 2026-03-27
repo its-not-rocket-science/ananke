@@ -3,9 +3,6 @@
 // Transforms simulation events into coherent narratives through significance
 // scoring and narrative templates.
 
-import type { Q } from "./units.js";
-import { SCALE } from "./units.js";
-
 // ── Core Types ────────────────────────────────────────────────────────────────
 
 /** A single entry in a chronicle. */

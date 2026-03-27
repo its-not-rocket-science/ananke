@@ -2,9 +2,10 @@
 
 import { describe, it, expect } from "vitest";
 import type { ChronicleEntry, Chronicle } from "../src/chronicle.js";
-import type { CultureProfile } from "../src/culture.js";
-import type { Myth } from "../src/mythology.js";
+import type { CultureProfile, ValueId } from "../src/culture.js";
+import type { Myth, MythEffect } from "../src/mythology.js";
 import { q, SCALE } from "../src/units.js";
+import type { Q } from "../src/units.js";
 import {
   mythArchetypeFrame,
   deriveNarrativeTone,
@@ -53,7 +54,7 @@ function makeCulture(dominantValueId: string, strength: number = SCALE.Q): Cultu
       legacy:      q(0.50),
     },
     values: [
-      { id: dominantValueId as any, strength_Q: strength as any, description: "" },
+      { id: dominantValueId as ValueId, strength_Q: strength as Q, description: "" },
     ],
     contradictions: [],
     cycles:         [],
@@ -153,7 +154,7 @@ describe("createNarrativeContext", () => {
       archetype: "hero",
       polityId: "p1",
       adoptedAtTick: 0,
-      effects: { fearThreshold_Q: 0 as any, moraleDelta_Q: 0 as any, cohesionDelta_Q: 0 as any, culturalDriftResistance_Q: 0 as any },
+      effects: {} as unknown as MythEffect,
     };
     const ctx = createNarrativeContext(NAMES, undefined, myth);
     expect(ctx.mythFrame).toBe(mythArchetypeFrame("hero"));

@@ -13,7 +13,6 @@ import * as crypto from "node:crypto";
 import {
   createReplicationServer,
   wsDecodeFrame,
-  wsEncodeText,
   wsEncodeMaskedText,
   wsAcceptKey,
   worldToJson,
@@ -514,9 +513,9 @@ describe("WebSocket protocol", () => {
 
 describe("ReplicationServer API", () => {
   let srv: ReplicationServer;
-  let port: number;
+  let _port: number;
 
-  beforeEach(async () => { ({ srv, port } = await startServer()); });
+  beforeEach(async () => { ({ srv, port: _port } = await startServer()); });
   afterEach(async () => { await srv.stop(); });
 
   it("getWorld() returns the live world state", () => {
@@ -546,7 +545,7 @@ describe("ReplicationServer API", () => {
 
   it("custom teamSize=4 creates 8 entities total", async () => {
     await srv.stop();
-    ({ srv, port } = await startServer({ teamSize: 4 }));
+    ({ srv, port: _port } = await startServer({ teamSize: 4 }));
     expect(srv.getWorld().entities).toHaveLength(8);
     expect(srv.getStats().entities).toBe(8);
   });

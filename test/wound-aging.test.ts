@@ -9,15 +9,13 @@ import {
   deriveSepsisRisk,
   SECONDS_PER_DAY,
   SURFACE_HEAL_Q_PER_DAY,
-  INTERNAL_HEAL_Q_PER_DAY,
   INFECTION_WORSEN_Q_PER_DAY,
   SEPSIS_THRESHOLD,
   PHANTOM_PAIN_THRESHOLD,
   TRAUMA_TRIGGER_THRESHOLD,
-  CHRONIC_FATIGUE_THRESHOLD,
 } from "../src/sim/wound-aging.js";
 import { mkHumanoidEntity } from "../src/sim/testing.js";
-import { defaultRegionInjury } from "../src/sim/injury.js";
+import { defaultRegionInjury as _defaultRegionInjury } from "../src/sim/injury.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

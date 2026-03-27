@@ -14,8 +14,6 @@ import type { Q }                  from "../../units.js";
 import { SCALE, q, clampQ, mulDiv } from "../../units.js";
 import type { Entity }              from "../entity.js";
 import type { WorldState }          from "../world.js";
-import type { RelationshipGraph } from "../../relationships.js";
-import type { PartyRegistry }     from "../../party.js";
 import { computeCompanionLoyalty } from "../../party.js";
 import type { IndividualAttributes, PersonalityTraits, PersonalityId } from "../../types.js";
 import { eventSeed }                from "../seeds.js";

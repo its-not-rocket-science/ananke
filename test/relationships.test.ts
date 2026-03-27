@@ -1,9 +1,10 @@
 // test/relationships.test.ts — Phase 42: Personal Relationship Graph tests
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q } from "../src/units.js";
 import type { ImpactEvent } from "../src/sim/events.js";
-import type { RelationshipGraph, Relationship } from "../src/relationships.js";
+import type { Weapon } from "../src/equipment.js";
+import type { RelationshipGraph } from "../src/relationships.js";
 import {
   createRelationshipGraph,
   getRelationship,
@@ -27,7 +28,6 @@ import {
 import {
   computeCombatMoraleImpacts,
   computeBetrayalMoraleImpacts,
-  computeTeachingEffectiveness,
   getCombatDecisionFactors,
   shouldProtectAlly,
   getDialogueAvailability,
@@ -55,7 +55,7 @@ function mkImpact(attackerId: number, targetId: number, energy_J: number): Impac
     blocked: false,
     parried: false,
     weaponId: "sword",
-    wpn: {} as any,
+    wpn: {} as unknown as Weapon,
     hitQuality: q(0.5),
     shieldBlocked: false,
   };
@@ -355,7 +355,7 @@ describe("Betrayal Detection", () => {
     establishRelationship(graph, 2, 3, 100, q(0.6)); // 3 is 2's friend
     establishRelationship(graph, 1, 3, 100, q(0.3)); // 3 barely knows 1
 
-    const world = mkWorld([1, 2, 3]);
+    const _world = mkWorld([1, 2, 3]);
     const result = recordBetrayal(graph, 1, 2, 200);
 
     expect(result.isBetrayal).toBe(true);

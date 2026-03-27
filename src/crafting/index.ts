@@ -9,6 +9,7 @@ import { eventSeed, hashString } from "../sim/seeds.js";
 import type { Entity } from "../sim/entity.js";
 import type { Inventory, ItemInstance } from "../inventory.js";
 import { consumeItemsByTemplateId, addItemToInventory } from "../inventory.js";
+import type { ItemBase } from "../equipment.js";
 import type { Recipe } from "./recipes.js";
 import type { Material } from "./materials.js";
 import type { WorkshopInstance } from "./workshops.js";
@@ -171,8 +172,8 @@ export function startManufacturing(
     return { success: false, error: "No worker meets skill requirements" };
   }
 
-  const primaryWorkerId = workers.length > 0 ? workers[0]!.id : 0;
-  const lineSeed = eventSeed(worldSeed, tick, primaryWorkerId, hashString(recipe.id), salt);
+  const _primaryWorkerId = workers.length > 0 ? workers[0]!.id : 0;
+  const _lineSeed = eventSeed(worldSeed, tick, _primaryWorkerId, hashString(recipe.id), salt);
   const orderId = `order_${worldSeed}_${tick}_${recipe.id}_${salt}`;
 
   // Create manufacturing order
@@ -184,7 +185,7 @@ export function startManufacturing(
   };
 
   // Setup production line
-  const line = setupProductionLine(order, workers, lineSeed);
+  const line = setupProductionLine(order, workers);
 
   // TODO: store production line in persistent state
 
@@ -207,7 +208,7 @@ export function advanceManufacturing(
   // Compute deterministic seed from lineId
   let lineIdHash = 0;
   for (let i = 0; i < lineId.length; i++) lineIdHash += lineId.charCodeAt(i);
-  const seed = eventSeed(worldSeed, tick, lineIdHash, 0, salt);
+  const _seed = eventSeed(worldSeed, tick, lineIdHash, 0, salt);
 
   // TODO: retrieve production line by lineId
   const line: ProductionLine = {
@@ -221,7 +222,7 @@ export function advanceManufacturing(
     qualityRange: { min_Q: q(0.30), max_Q: q(0.90), avg_Q: q(0.60) },
   };
 
-  const result = advanceProduction(line, deltaTime_s, workers, workshop, seed);
+  const result = advanceProduction(line, deltaTime_s, workers);
   // TODO: update stored line
 
   return {
@@ -259,7 +260,7 @@ export function getAvailableRecipes(
  * Applies material property modifiers to base item stats.
  */
 export function applyMaterialProperties(
-  baseItem: any, // Placeholder: Item type
+  baseItem: ItemBase,
   material: Material,
 ): MaterialPropertyModifier {
   return calculateMaterialEffect(baseItem, material);

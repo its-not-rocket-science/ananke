@@ -13,8 +13,8 @@ import type { Vec3 } from "../../src/sim/vec3";
 function mockRigSnapshot(
   entityId: number,
   tick: number,
-  position_m = v3(0, 0, 0),
-  facing = v3(SCALE.Q, 0, 0),
+  _position_m = v3(0, 0, 0),
+  _facing = v3(SCALE.Q, 0, 0),
 ): RigSnapshot {
   return {
     entityId,
@@ -47,7 +47,7 @@ function mockMotionVector(entityId: number, position_m: Vec3, facing: Vec3): Mot
   return { entityId, teamId: 1, position_m, velocity_mps: v3(0, 0, 0), facing };
 }
 
-function mockConditionSample(entityId: number, dead = false): ConditionSample {
+function _mockConditionSample(entityId: number, dead = false): ConditionSample {
   return {
     entityId,
     teamId: 1,

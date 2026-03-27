@@ -8,12 +8,12 @@ import { SCALE, q, clampQ, qMul, mulDiv } from "../units.js";
 import type { Entity } from "../sim/entity.js";
 import type { Recipe } from "./recipes.js";
 import type { WorkshopInstance } from "./workshops.js";
-import { makeRng } from "../rng.js";
-import { eventSeed } from "../sim/seeds.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /** Production line state for batch manufacturing. */
+export type ProductQualityRange = { min_Q: Q; max_Q: Q; avg_Q: Q };
+
 export interface ProductionLine {
   lineId: string;
   recipeId: string;
@@ -22,7 +22,7 @@ export interface ProductionLine {
   progress_Q: Q;               // Progress toward next item (0–SCALE.Q)
   assignedWorkers: number[];   // Entity IDs of workers assigned
   priority: number;            // Higher priority gets more resources
-  qualityRange: { min_Q: Q; max_Q: Q; avg_Q: Q }; // Predicted quality range for batch
+  qualityRange: ProductQualityRange; // Predicted quality range for batch
 }
 
 /** Manufacturing order for starting batch production. */
@@ -39,7 +39,7 @@ export interface ProductionAdvanceResult {
   itemsCompleted: number;      // New items finished this step
   totalItemsProduced: number;  // Cumulative items produced
   progress_Q: Q;               // New progress value
-  qualityRange: { min_Q: Q; max_Q: Q; avg_Q: Q }; // Updated quality range
+  qualityRange: ProductQualityRange; // Updated quality range
 }
 
 /** Assembly step for multi-stage crafting. */
@@ -52,9 +52,6 @@ export interface AssemblyStep {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-/** Default progress per worker per second (Q units). */
-const PROGRESS_PER_WORKER_PER_SECOND: Q = q(0.001) as Q;
 
 /** Quality variance factor based on number of workers (more workers → less variance). */
 const WORKER_VARIANCE_REDUCTION: Q = q(0.10) as Q;
@@ -69,11 +66,10 @@ const MIN_QUALITY_VARIANCE: Q = q(0.05) as Q;
  */
 export function setupProductionLine(
   order: ManufacturingOrder,
-  workers: Entity[],
-  seed: number,
+  workers: Entity[]
 ): ProductionLine {
   const workerIds = workers.map(w => w.id);
-  const qualityRange = calculateBatchQualityRange(workers, order.workshop, seed);
+  const qualityRange = calculateBatchQualityRange(workers);
 
   return {
     lineId: `line_${order.orderId}`,
@@ -95,9 +91,7 @@ export function setupProductionLine(
 export function advanceProduction(
   productionLine: ProductionLine,
   deltaTime_s: number,
-  workers: Entity[], // Must match assignedWorkers IDs
-  workshop: WorkshopInstance,
-  seed: number,
+  workers: Entity[],
 ): ProductionAdvanceResult {
   if (productionLine.itemsProduced >= productionLine.batchSize) {
     return {
@@ -134,8 +128,7 @@ export function advanceProduction(
   productionLine.progress_Q = clampQ(newProgress as Q, q(0), SCALE.Q);
 
   // Update quality range based on remaining workers (variance reduces as more items produced)
-  const remainingItems = productionLine.batchSize - productionLine.itemsProduced;
-  const updatedRange = updateQualityRange(productionLine.qualityRange, workers, remainingItems, seed);
+  const updatedRange = updateQualityRange(productionLine.qualityRange);
 
   return {
     itemsCompleted,
@@ -149,11 +142,7 @@ export function advanceProduction(
  * Calculate predicted quality range for a batch based on workers, materials, workshop.
  * Returns min, max, and average expected quality.
  */
-export function calculateBatchQualityRange(
-  workers: Entity[],
-  workshop: WorkshopInstance,
-  seed: number,
-): { min_Q: Q; max_Q: Q; avg_Q: Q } {
+export function calculateBatchQualityRange(workers: Entity[]): { min_Q: Q; max_Q: Q; avg_Q: Q } {
   if (workers.length === 0) {
     return { min_Q: q(0), max_Q: q(0), avg_Q: q(0) };
   }
@@ -184,12 +173,7 @@ export function calculateBatchQualityRange(
 }
 
 /** Update quality range as production progresses (variance may change). */
-function updateQualityRange(
-  currentRange: { min_Q: Q; max_Q: Q; avg_Q: Q },
-  workers: Entity[],
-  remainingItems: number,
-  seed: number,
-): { min_Q: Q; max_Q: Q; avg_Q: Q } {
+function updateQualityRange(currentRange: ProductQualityRange): ProductQualityRange {
   // For simplicity, keep range constant; could adjust based on worker fatigue, etc.
   return currentRange;
 }
@@ -246,7 +230,6 @@ export function advanceAssemblyStep(
 export function estimateBatchCompletionTime(
   batchSize: number,
   workers: Entity[],
-  workshop: WorkshopInstance,
 ): number {
   if (workers.length === 0) return Infinity;
 

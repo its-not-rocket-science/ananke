@@ -249,7 +249,7 @@ export function getLegendsBySubject(registry: LegendRegistry, subjectId: number)
 
 // ── Effects ───────────────────────────────────────────────────────────────────
 
-/** Derive NPC-behavior modifiers from a legend. */
+/** Derive NPC-behaviour modifiers from a legend. */
 export function getLegendEffect(legend: Legend): LegendEffect {
   const f = legend.fame_Q;
 

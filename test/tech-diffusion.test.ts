@@ -3,11 +3,7 @@
 import { describe, it, expect } from "vitest";
 import { q, SCALE, type Q }    from "../src/units.js";
 import {
-  BASE_DIFFUSION_RATE_Q,
-  ERA_GAP_BONUS_Q,
-  ERA_GAP_BONUS_MAX,
   STABILITY_DIFFUSION_THRESHOLD,
-  MAX_TECH_ERA,
   computeDiffusionPressure,
   stepTechDiffusion,
   totalInboundPressure,
@@ -195,7 +191,7 @@ describe("stepTechDiffusion", () => {
 
   it("a polity can only advance once per tick (no double-advance)", () => {
     // lag polity is paired with two advanced polities
-    const reg = mkRegistry([pol("adv1",5), pol("adv2",5), pol("lag",1)]);
+    const _reg = mkRegistry([pol("adv1",5), pol("adv2",5), pol("lag",1)]);
     const pairs = [mkPair("adv1","lag",5,q(1.0) as Q), mkPair("adv2","lag",5,q(1.0) as Q)];
     // Over many seeds, lag should never advance more than once
     for (let seed = 1; seed <= 100; seed++) {

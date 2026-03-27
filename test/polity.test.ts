@@ -20,16 +20,8 @@ import {
   polityFactionStanding,
   POLITY_POP_SCALE,
   TECH_FORCE_MUL,
-  TECH_TRADE_MUL,
   TECH_ADVANCE_COST,
-  DEFENDER_ADVANTAGE_Q,
-  UNREST_THRESHOLD,
-  DENSITY_SPREAD_THRESHOLD,
   DIPLOMACY_MAX_DELTA,
-  MORALE_DRAIN_PER_DAY,
-  MORALE_RECOVERY_PER_DAY,
-  STABILITY_DECAY_PER_DAY,
-  STABILITY_RECOVERY_PER_DAY,
 } from "../src/polity.js";
 import {
   createFactionRegistry,
@@ -89,7 +81,7 @@ describe("createPolity", () => {
   });
 
   it("accepts custom stability and morale", () => {
-    const p = createPolity("a", "A", "f", [], 1000, 0, TechEra.Medieval, q(0.20) as any, q(0.10) as any);
+    const p = createPolity("a", "A", "f", [], 1000, 0, TechEra.Medieval, q(0.20), q(0.10));
     expect(p.stabilityQ).toBe(q(0.20));
     expect(p.moraleQ).toBe(q(0.10));
   });
@@ -122,7 +114,7 @@ describe("createPolityRegistry", () => {
 
 describe("deriveMilitaryStrength", () => {
   it("100 000 pop, q(1.0) morale, Medieval → matches TECH_FORCE_MUL[Medieval]", () => {
-    const p = createPolity("a", "f", "f", [], 100_000, 0, TechEra.Medieval, q(0.70) as any, q(1.0) as any);
+    const p = createPolity("a", "f", "f", [], 100_000, 0, TechEra.Medieval, q(0.70), q(1.0));
     const strength = deriveMilitaryStrength(p);
     // popFrac = q(1.0), morale = q(1.0), techMul = TECH_FORCE_MUL[2]
     expect(strength).toBe(TECH_FORCE_MUL[TechEra.Medieval]);
@@ -135,14 +127,14 @@ describe("deriveMilitaryStrength", () => {
   });
 
   it("higher morale → higher strength", () => {
-    const low  = createPolity("a", "f", "f", [], 50_000, 0, TechEra.Medieval, q(0.70) as any, q(0.30) as any);
-    const high = createPolity("b", "f", "f", [], 50_000, 0, TechEra.Medieval, q(0.70) as any, q(0.90) as any);
+    const low  = createPolity("a", "f", "f", [], 50_000, 0, TechEra.Medieval, q(0.70), q(0.30));
+    const high = createPolity("b", "f", "f", [], 50_000, 0, TechEra.Medieval, q(0.70), q(0.90));
     expect(deriveMilitaryStrength(high)).toBeGreaterThan(deriveMilitaryStrength(low));
   });
 
   it("writes result back to polity.militaryStrength_Q", () => {
     const p = mkMedievalPolity("a", "fa");
-    p.militaryStrength_Q = q(0) as any;
+    p.militaryStrength_Q = q(0);
     deriveMilitaryStrength(p);
     expect(p.militaryStrength_Q).toBeGreaterThan(0);
   });
@@ -487,7 +479,7 @@ describe("stepPolityDay", () => {
   });
 
   it("stability improves when morale > q(0.50)", () => {
-    const p = createPolity("a", "A", "fa", [], 50_000, 0, TechEra.Medieval, q(0.50) as any, q(0.80) as any);
+    const p = createPolity("a", "A", "fa", [], 50_000, 0, TechEra.Medieval, q(0.50), q(0.80));
     const reg = createPolityRegistry([p]);
     const before = p.stabilityQ;
     stepPolityDay(reg, [], 1, 1);
@@ -496,7 +488,7 @@ describe("stepPolityDay", () => {
   });
 
   it("stability declines when morale ≤ q(0.50)", () => {
-    const p = createPolity("a", "A", "fa", [], 50_000, 0, TechEra.Medieval, q(0.50) as any, q(0.40) as any);
+    const p = createPolity("a", "A", "fa", [], 50_000, 0, TechEra.Medieval, q(0.50), q(0.40));
     const reg = createPolityRegistry([p]);
     const before = p.stabilityQ;
     stepPolityDay(reg, [], 1, 1);
@@ -504,7 +496,7 @@ describe("stepPolityDay", () => {
   });
 
   it("morale drains when stability < UNREST_THRESHOLD", () => {
-    const p = createPolity("a", "A", "fa", [], 50_000, 0, TechEra.Medieval, q(0.20) as any, q(0.60) as any);
+    const p = createPolity("a", "A", "fa", [], 50_000, 0, TechEra.Medieval, q(0.20), q(0.60));
     const reg = createPolityRegistry([p]);
     const before = p.moraleQ;
     stepPolityDay(reg, [], 1, 1);
@@ -512,7 +504,7 @@ describe("stepPolityDay", () => {
   });
 
   it("morale recovers when stability ≥ UNREST_THRESHOLD", () => {
-    const p = createPolity("a", "A", "fa", [], 50_000, 0, TechEra.Medieval, q(0.60) as any, q(0.40) as any);
+    const p = createPolity("a", "A", "fa", [], 50_000, 0, TechEra.Medieval, q(0.60), q(0.40));
     const reg = createPolityRegistry([p]);
     const before = p.moraleQ;
     stepPolityDay(reg, [], 1, 1);
@@ -520,7 +512,7 @@ describe("stepPolityDay", () => {
   });
 
   it("stabilityQ and moraleQ are always clamped to [0, SCALE.Q]", () => {
-    const p = createPolity("a", "A", "fa", [], 0, 0, TechEra.Medieval, q(0.0) as any, q(0.0) as any);
+    const p = createPolity("a", "A", "fa", [], 0, 0, TechEra.Medieval, q(0.0), q(0.0));
     const reg = createPolityRegistry([p]);
     for (let t = 0; t < 10; t++) stepPolityDay(reg, [], 1, t);
     expect(p.stabilityQ).toBeGreaterThanOrEqual(0);
@@ -530,7 +522,7 @@ describe("stepPolityDay", () => {
   it("militaryStrength_Q is refreshed each step", () => {
     const p = mkMedievalPolity("a", "fa");
     const reg = createPolityRegistry([p]);
-    p.militaryStrength_Q = q(0) as any;
+    p.militaryStrength_Q = q(0);
     stepPolityDay(reg, [], 1, 1);
     expect(p.militaryStrength_Q).toBeGreaterThan(0);
   });
@@ -617,7 +609,7 @@ describe("applyFactionStanding", () => {
     ]);
     const before = fReg.globalStanding.get("fa")?.get("fb") ?? STANDING_NEUTRAL;
     applyFactionStanding(fReg, "fa", "fb", q(0.10));
-    const after = fReg.globalStanding.get("fa")?.get("fb")!;
+    const after = fReg.globalStanding.get("fa")!.get("fb")!;
     expect(after).toBe(before + q(0.10));
   });
 

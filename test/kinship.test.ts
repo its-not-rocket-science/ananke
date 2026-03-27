@@ -3,7 +3,6 @@
 import { describe, it, expect } from "vitest";
 import { q, SCALE } from "../src/units.js";
 import {
-  MAX_KINSHIP_DEPTH,
   RENOWN_DEPTH_DECAY_Q,
   createLineageRegistry,
   getLineageNode,

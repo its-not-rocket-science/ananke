@@ -17,10 +17,12 @@ import {
   aggregateWonderEffects,
   isWonderIntact,
   computeRepairCost,
+  type WonderType,
 } from "../src/wonders.js";
 import { q, SCALE } from "../src/units.js";
 import type { Q } from "../src/units.js";
 import type { Polity } from "../src/polity.js";
+import type { TechEra } from "../src/sim/tech.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -29,7 +31,7 @@ function makePolity(treasury_cu = 10_000_000): Polity {
     id: "p1", name: "Test",
     factionId: "f1", locationIds: [],
     population: 50_000, treasury_cu,
-    techEra: 2 as any,
+    techEra: 2 as TechEra,
     militaryStrength_Q: q(0.60) as Q,
     stabilityQ: q(0.70) as Q,
     moraleQ: q(0.60) as Q,
@@ -327,7 +329,7 @@ describe("aggregateWonderEffects", () => {
 
   it("Q fields clamped to SCALE.Q when stacking many wonders", () => {
     const wonders = Object.keys(WONDER_BASE_EFFECTS).map(t =>
-      makeCompletedWonder(t as any)
+      makeCompletedWonder(t as WonderType)
     );
     const agg = aggregateWonderEffects(wonders);
     for (const key of ["stabilityBonus_Q", "moraleBonus_Q", "defenseBonus_Q",

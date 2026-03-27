@@ -1,14 +1,13 @@
 // test/calendar.test.ts — Phase 78: Seasonal Calendar & Agricultural Cycle
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q, SCALE, type Q } from "../src/units.js";
 import {
   DAYS_PER_YEAR,
   SPRING_START_DAY,
   SUMMER_START_DAY,
   AUTUMN_START_DAY,
   SEASONAL_MODIFIERS,
-  CALENDAR_Q_PER_DEG_C,
   createCalendar,
   stepCalendar,
   computeSeason,
@@ -255,7 +254,7 @@ describe("applySeasonalDiseaseMul", () => {
   });
 
   it("result is clamped to [0, 2×SCALE.Q]", () => {
-    const extreme = (SCALE.Q * 2) as any;
+    const extreme = (SCALE.Q * 2) as Q;
     const result = applySeasonalDiseaseMul(extreme, SEASONAL_MODIFIERS.winter);
     expect(result).toBeLessThanOrEqual(SCALE.Q * 2);
     expect(result).toBeGreaterThanOrEqual(0);

@@ -1,7 +1,7 @@
 // test/feudal.test.ts — Phase 79: Feudal Bonds & Vassal Tribute
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q, SCALE, type Q } from "../src/units.js";
 import {
   REBELLION_THRESHOLD,
   LOYALTY_DECAY_PER_DAY,
@@ -50,7 +50,7 @@ describe("createVassalBond", () => {
 
   it("creates bond with custom rates", () => {
     const r = createFeudalRegistry();
-    const bond = createVassalBond(r, "v1", "l1", "conquered", q(0.30) as any, q(0.40) as any, 10);
+    const bond = createVassalBond(r, "v1", "l1", "conquered", q(0.30), q(0.40), 10);
     expect(bond.tributeRate_Q).toBe(q(0.30));
     expect(bond.levyRate_Q).toBe(q(0.40));
     expect(bond.establishedTick).toBe(10);
@@ -149,9 +149,9 @@ describe("computeDailyTribute", () => {
   const bond = {
     vassalPolityId: "v1", liegePolityId: "l1",
     loyaltyType: "oath_sworn" as const,
-    tributeRate_Q: q(0.10) as any,
-    levyRate_Q: q(0.20) as any,
-    strength_Q: q(0.70) as any,
+    tributeRate_Q: q(0.10),
+    levyRate_Q: q(0.20),
+    strength_Q: q(0.70),
     establishedTick: 0,
   };
 
@@ -173,7 +173,7 @@ describe("computeDailyTribute", () => {
   });
 
   it("scales with tribute rate", () => {
-    const highRate = { ...bond, tributeRate_Q: q(0.20) as any };
+    const highRate = { ...bond, tributeRate_Q: q(0.20) };
     const low = computeDailyTribute(vassal, bond);
     const high = computeDailyTribute(vassal, highRate);
     expect(high).toBeGreaterThan(low);
@@ -195,9 +195,9 @@ describe("applyDailyTribute", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "oath_sworn" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.70) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.70),
       establishedTick: 0,
     };
     const tribute = applyDailyTribute(vassal, liege, bond);
@@ -212,9 +212,9 @@ describe("applyDailyTribute", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "conquered" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.40) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.40),
       establishedTick: 0,
     };
     expect(applyDailyTribute(vassal, liege, bond)).toBe(0);
@@ -227,9 +227,9 @@ describe("applyDailyTribute", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "conquered" as const,
-      tributeRate_Q: q(0.99) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.40) as any,
+      tributeRate_Q: q(0.99),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.40),
       establishedTick: 0,
     };
     applyDailyTribute(vassal, liege, bond);
@@ -243,13 +243,13 @@ describe("computeLevyStrength", () => {
   const vassal = createPolity("v1", "V", "f1", [], 0, 0, "Medieval");
 
   it("levy at full strength = militaryStrength × levyRate", () => {
-    vassal.militaryStrength_Q = q(1.0) as any;
+    vassal.militaryStrength_Q = q(1.0) as Q;
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "oath_sworn" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(1.0) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(1.0),
       establishedTick: 0,
     };
     const levy = computeLevyStrength(vassal, bond);
@@ -257,40 +257,40 @@ describe("computeLevyStrength", () => {
   });
 
   it("levy is reduced by weakened bond strength", () => {
-    vassal.militaryStrength_Q = q(1.0) as any;
+    vassal.militaryStrength_Q = q(1.0) as Q;
     const full = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "oath_sworn" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(1.0) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(1.0),
       establishedTick: 0,
     };
-    const weak = { ...full, strength_Q: q(0.50) as any };
+    const weak = { ...full, strength_Q: q(0.50) };
     expect(computeLevyStrength(vassal, weak)).toBeLessThan(computeLevyStrength(vassal, full));
   });
 
   it("returns 0 when strength is 0", () => {
-    vassal.militaryStrength_Q = q(1.0) as any;
+    vassal.militaryStrength_Q = q(1.0) as Q;
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "conquered" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: 0 as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: 0,
       establishedTick: 0,
     };
     expect(computeLevyStrength(vassal, bond)).toBe(0);
   });
 
   it("result is clamped to [0, SCALE.Q]", () => {
-    vassal.militaryStrength_Q = SCALE.Q as any;
+    vassal.militaryStrength_Q = SCALE.Q as Q;
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "kin_bound" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: SCALE.Q as any,
-      strength_Q: SCALE.Q as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: SCALE.Q,
+      strength_Q: SCALE.Q,
       establishedTick: 0,
     };
     const levy = computeLevyStrength(vassal, bond);
@@ -306,9 +306,9 @@ describe("stepBondStrength", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "conquered" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.40) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.40),
       establishedTick: 0,
     };
     const before = bond.strength_Q;
@@ -324,14 +324,14 @@ describe("stepBondStrength", () => {
     const bond1 = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "voluntary" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.65) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.65),
       establishedTick: 0,
     };
-    const bond2 = { ...bond1, strength_Q: q(0.65) as any };
-    stepBondStrength(bond1, 0 as any);
-    stepBondStrength(bond2, q(0.01) as any);
+    const bond2 = { ...bond1, strength_Q: q(0.65) };
+    stepBondStrength(bond1, 0);
+    stepBondStrength(bond2, q(0.01));
     expect(bond2.strength_Q).toBeGreaterThan(bond1.strength_Q);
   });
 
@@ -339,9 +339,9 @@ describe("stepBondStrength", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "conquered" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: 0 as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: 0,
       establishedTick: 0,
     };
     stepBondStrength(bond);
@@ -352,12 +352,12 @@ describe("stepBondStrength", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "kin_bound" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.99) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.99),
       establishedTick: 0,
     };
-    stepBondStrength(bond, q(0.10) as any);
+    stepBondStrength(bond, q(0.10));
     expect(bond.strength_Q).toBeLessThanOrEqual(SCALE.Q);
   });
 
@@ -365,9 +365,9 @@ describe("stepBondStrength", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "oath_sworn" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.70) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.70),
       establishedTick: 0,
     };
     const ref = bond;
@@ -383,12 +383,12 @@ describe("reinforceBond", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "conquered" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.40) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.40),
       establishedTick: 0,
     };
-    reinforceBond(bond, q(0.10) as any);
+    reinforceBond(bond, q(0.10));
     expect(bond.strength_Q).toBe(q(0.50));
   });
 
@@ -396,12 +396,12 @@ describe("reinforceBond", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "kin_bound" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.95) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.95),
       establishedTick: 0,
     };
-    reinforceBond(bond, q(0.20) as any);
+    reinforceBond(bond, q(0.20));
     expect(bond.strength_Q).toBe(SCALE.Q);
   });
 
@@ -409,12 +409,12 @@ describe("reinforceBond", () => {
     const bond = {
       vassalPolityId: "v1", liegePolityId: "l1",
       loyaltyType: "conquered" as const,
-      tributeRate_Q: q(0.10) as any,
-      levyRate_Q: q(0.20) as any,
-      strength_Q: q(0.05) as any,
+      tributeRate_Q: q(0.10),
+      levyRate_Q: q(0.20),
+      strength_Q: q(0.05),
       establishedTick: 0,
     };
-    reinforceBond(bond, -q(0.20) as any);
+    reinforceBond(bond, -q(0.20));
     expect(bond.strength_Q).toBe(0);
   });
 });
@@ -425,9 +425,9 @@ describe("isRebellionRisk", () => {
   const makeBond = (strength: number) => ({
     vassalPolityId: "v1", liegePolityId: "l1",
     loyaltyType: "conquered" as const,
-    tributeRate_Q: q(0.10) as any,
-    levyRate_Q: q(0.20) as any,
-    strength_Q: strength as any,
+    tributeRate_Q: q(0.10),
+    levyRate_Q: q(0.20),
+    strength_Q: strength,
     establishedTick: 0,
   });
 
@@ -565,7 +565,7 @@ describe("tribute accumulation", () => {
     const vassal = createPolity("v1", "V", "f1", [], 1000, 36_500_000, "Medieval");
     const liege  = createPolity("l1", "L", "f2", [], 1000, 0, "Medieval");
     const r = createFeudalRegistry();
-    const bond = createVassalBond(r, "v1", "l1", "oath_sworn", q(0.10) as any, q(0.20) as any, 0);
+    const bond = createVassalBond(r, "v1", "l1", "oath_sworn", q(0.10), q(0.20), 0);
     let total = 0;
     for (let day = 0; day < 365; day++) {
       total += applyDailyTribute(vassal, liege, bond);
@@ -603,7 +603,7 @@ describe("bond decay to rebellion", () => {
     const bond = createVassalBond(r, "v1", "l1", "conquered");
     for (let day = 0; day < 30; day++) {
       stepBondStrength(bond);
-      if (day % 5 === 0) reinforceBond(bond, q(0.02) as any);
+      if (day % 5 === 0) reinforceBond(bond, q(0.02));
     }
     expect(isRebellionRisk(bond)).toBe(false);
   });

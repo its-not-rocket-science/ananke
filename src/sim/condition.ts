@@ -30,7 +30,7 @@ export interface ConditionState {
   fearQ?: Q;                    // accumulated fear 0..1; routing when ≥ moraleThreshold
 
   // Phase 5 extensions: morale features
-  suppressionFearMul: Q;       // caliber-based suppression fear multiplier (default SCALE.Q)
+  suppressionFearMul: Q;       // calibre-based suppression fear multiplier (default SCALE.Q)
   recentAllyDeaths: number;    // ally deaths within the last 5s window (fear memory)
   lastAllyDeathTick: number;   // tick of last ally death observation (-1 = none)
   surrendered: boolean;        // entity has surrendered (permanent passive state)

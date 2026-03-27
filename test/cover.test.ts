@@ -2,7 +2,7 @@
  * CE-15 — Dynamic Terrain + Cover System tests
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   MATERIAL_ABSORPTION,
   WOOD_IGNITION_THRESHOLD_J,
@@ -32,7 +32,7 @@ function clone(seg: CoverSegment): CoverSegment {
   return { ...seg };
 }
 
-function cloneAll(segs: CoverSegment[]): CoverSegment[] {
+function _cloneAll(segs: CoverSegment[]): CoverSegment[] {
   return segs.map(clone);
 }
 

@@ -10,10 +10,7 @@ import type { PolityPair }        from "../src/polity";
 import {
   COMMODITIES,
   DEBT_CRISIS_RATIO_Q,
-  MEAN_REVERSION_Q,
   SPECULATE_WAGER_Q,
-  SUPPLY_DUMP_Q,
-  TRADE_BASE_CU,
   availableCommodities,
   checkDebtCrisis,
   createMarket,
@@ -275,8 +272,8 @@ describe("speculate", () => {
   // Empirically determined: worldSeed=42, tick=0 → LOSS; tick=1 → WIN
   test("win path: treasury increases by the wager amount", () => {
     const p = mkPolity("test_polity", TechEra.Ancient, 10_000);
-    const market = createMarket();
-    const wager = Math.trunc(10_000 * SPECULATE_WAGER_Q / SCALE.Q); // 100 cu
+    const _market = createMarket();
+    const _wager = Math.trunc(10_000 * SPECULATE_WAGER_Q / SCALE.Q); // 100 cu
     const result = speculate(p, "grain", 42, 1); // tick 1 = WIN
     expect(result).toBeGreaterThan(0);
     expect(p.treasury_cu).toBe(10_000 + result);
@@ -301,7 +298,7 @@ describe("speculate", () => {
 
   test("no-op when treasury is zero", () => {
     const p = mkPolity("test_polity", TechEra.Ancient, 0);
-    const market = createMarket();
+    const _market = createMarket();
     const result = speculate(p, "grain", 42, 0);
     expect(result).toBe(0);
     expect(p.treasury_cu).toBe(0);
@@ -310,8 +307,8 @@ describe("speculate", () => {
   test("is deterministic — same polity, market, seed, tick", () => {
     const p1 = mkPolity("test_polity", TechEra.Ancient, 10_000);
     const p2 = mkPolity("test_polity", TechEra.Ancient, 10_000);
-    const m1 = createMarket();
-    const m2 = createMarket();
+    const _m1 = createMarket();
+    const _m2 = createMarket();
     const r1 = speculate(p1, "grain", 42, 3);
     const r2 = speculate(p2, "grain", 42, 3);
     expect(r1).toBe(r2);
@@ -321,7 +318,7 @@ describe("speculate", () => {
   test("wager is 10% of treasury", () => {
     const treasury = 10_000;
     const p = mkPolity("test_polity", TechEra.Ancient, treasury);
-    const market = createMarket();
+    const _market = createMarket();
     const expectedWager = Math.trunc(treasury * SPECULATE_WAGER_Q / SCALE.Q);
     const result = speculate(p, "grain", 42, 1); // WIN: treasury + wager
     expect(result).toBe(expectedWager);

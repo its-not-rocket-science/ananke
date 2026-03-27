@@ -7,7 +7,6 @@ import {
   applyDialogueOutcome,
   narrateDialogue,
   dialogueProbability,
-  PERSUADE_BASE,
   PERSUADE_FACTION_BONUS,
   PERSUADE_FAILURE_PENALTY,
   LEADER_INTIMIDATE_REDUCTION,
@@ -186,7 +185,7 @@ describe("deceive", () => {
     const ctx = makeContext();
     ctx.target.attributes.perception!.attentionDepth = 2;  // inattentive
     // Phase 37: interpersonal also affects deception detection
-    ctx.target.attributes.cognition = { ...(ctx.target.attributes.cognition ?? {}), interpersonal: q(0.20) } as any;
+    ctx.target.attributes.cognition = { ...(ctx.target.attributes.cognition ?? {}), interpersonal: q(0.20) };
     const P = dialogueProbability({ kind: "deceive", plausibility_Q: q(0.90) }, ctx);
     expect(P).toBeGreaterThan(q(0.60));
   });

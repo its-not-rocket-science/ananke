@@ -12,7 +12,7 @@
 //     a mythic grandparent grants a modest but real reputation bonus.
 //   - Deterministic: no Math.random(); only pure data queries.
 
-import type { RenownRecord, RenownRegistry } from "./renown.js";
+import type { RenownRegistry } from "./renown.js";
 import { q, SCALE, clampQ } from "./units.js";
 import type { Q } from "./units.js";
 

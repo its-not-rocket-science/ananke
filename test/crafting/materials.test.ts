@@ -20,7 +20,7 @@ describe("Material Catalog", () => {
     expect(iron?.name).toBe("Iron");
     expect(iron?.density_kgPerM3).toBeGreaterThan(0);
     expect(iron?.strength_Q).toBeGreaterThan(0);
-    expect(iron?.baseQualityRange.min_Q).toBeLessThanOrEqual(iron?.baseQualityRange.max_Q!);
+    expect(iron?.baseQualityRange.min_Q).toBeLessThanOrEqual(iron!.baseQualityRange.max_Q);
   });
 
   it("should retrieve material type by ID", () => {
@@ -121,7 +121,7 @@ describe("Material Catalog", () => {
   });
 
   it("should respect material quality in value multiplier", () => {
-    const steel = getMaterialTypeById("steel")!;
+    const _steel = getMaterialTypeById("steel")!;
     // High quality
     const highMat: Material = createMaterialItem("steel", q(0.95), q(1), "high", "High Quality Steel");
     const highMod = calculateMaterialEffect({ id: "x", name: "x", mass_kg: 0, bulk: q(0) }, highMat);

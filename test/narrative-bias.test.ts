@@ -1,6 +1,6 @@
 // test/narrative-bias.test.ts — Phase 62: Narrative Bias Parameter
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q } from "../src/units.js";
 import { HUMAN_BASE } from "../src/archetypes.js";
 import { generateIndividual, type NarrativeBias } from "../src/generate.js";
 

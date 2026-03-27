@@ -1,5 +1,5 @@
 /**
- * CE-10 — Pre-built AI Behavior Tree Library
+ * CE-10 — Pre-built AI Behaviour Tree Library
  *
  * A thin, composable layer over the existing AI decision system.  Each
  * `BehaviorNode` receives the ticking entity, the current world state, and
@@ -37,7 +37,7 @@ import { eventSeed } from "../seeds.js";
 // ── Core interface ────────────────────────────────────────────────────────────
 
 /**
- * A single node in a behavior tree.
+ * A single node in a behaviour tree.
  *
  * `tick` is called once per AI frame (typically once per `stepWorld` tick).
  * Returns a `Command` if this node produces an action, or `null` if the node's
@@ -350,7 +350,7 @@ export function WithProbability(probability_Q: Q, inner: BehaviorNode, salt = 0)
   };
 }
 
-// ── Pre-built behavior tree presets ──────────────────────────────────────────
+// ── Pre-built behaviour tree presets ─────────────────────────────────────────
 
 /**
  * Standard aggressive attacker: attack `targetId` at full intensity.

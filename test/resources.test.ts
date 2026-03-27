@@ -5,7 +5,6 @@ import {
   BASE_YIELD_PER_WORKER,
   TECH_EXTRACTION_MUL,
   RICHNESS_FLOOR_Q,
-  DEPLETION_RATE_PER_1000_CU,
   DEPLETION_EXHAUSTED_Q,
   WORKER_POP_FRACTION_Q,
   MILITARY_BONUS_RESOURCES,
@@ -415,7 +414,7 @@ describe("integration", () => {
   });
 
   it("multi-deposit: two different resources combined income > either alone", () => {
-    const pol = makePolity(TechEra.Medieval, 0);
+    const _pol = makePolity(TechEra.Medieval, 0);
     const d1  = createDeposit("d1", "p1", "silver", q(0.80) as Q, 500);
     const d2  = createDeposit("d2", "p1", "iron",   q(0.80) as Q, 500);
     const s1  = createExtractionState("d1"); s1.assignedWorkers = 200;

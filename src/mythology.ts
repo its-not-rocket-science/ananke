@@ -23,7 +23,7 @@
 //   Phase 47 (Personality): legend tags map to myth personality impact
 
 import { q, clampQ, qMul, SCALE, type Q } from "./units.js";
-import type { Legend, LegendRegistry }     from "./legend.js";
+import type { LegendRegistry }     from "./legend.js";
 import type { ChronicleEntry, ChronicleEventType } from "./chronicle.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

@@ -15,7 +15,7 @@ import { SCALE, q, mulDiv, type Q } from "../src/units";
 import {
   HUMAN_BASE, LARGE_PACIFIC_OCTOPUS, SERVICE_ROBOT,
 } from "../src/archetypes";
-import { ALL_SPECIES, ELF_SPECIES, ORC_SPECIES, OGRE_SPECIES, VULCAN_SPECIES } from "../src/species";
+import { ALL_SPECIES, ELF_SPECIES, ORC_SPECIES } from "../src/species";
 import { generateIndividual } from "../src/generate";
 import { dialogueProbability, PERSUADE_BASE } from "../src/dialogue";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
@@ -46,7 +46,7 @@ describe("data integrity", () => {
       "musical", "interpersonal", "intrapersonal", "naturalist", "interSpecies",
     ];
     for (const f of fields) {
-      expect((cog as any)[f]).toBeGreaterThan(0);
+      expect((cog as Record<string, unknown>)[f]).toBeGreaterThan(0);
     }
   });
 
@@ -238,7 +238,7 @@ describe("morale — intrapersonal → effective distressTolerance", () => {
 
   it("entity without cognition: fearQ evolution unchanged vs baseline", () => {
     const { e: eNo, world: wNo, index: iNo, spatial: sNo } = setupMorale(undefined);
-    const { e: eBase, world: wBase, index: iBase, spatial: sBase } = setupMorale(HUMAN_BASE.cognition!.intrapersonal);
+    const { e: _eBase, world: _wBase, index: _iBase, spatial: _sBase } = setupMorale(HUMAN_BASE.cognition!.intrapersonal);
     // Both start at q(0.30); the HUMAN_BASE entity has intrapersonal=q(0.55)
     // Entity without cognition should not crash
     stepMoraleForEntity(wNo, eNo, iNo, sNo, new Set([1]), new Map(), NULL_TRACE, MORALE_CTX);

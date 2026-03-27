@@ -2,9 +2,9 @@
 
 import { describe, it, expect } from "vitest";
 import { q, SCALE } from "../src/units.js";
+import type { Q } from "../src/units.js";
 import {
   MIGRATION_PUSH_STABILITY_THRESHOLD,
-  MIGRATION_PUSH_MORALE_THRESHOLD,
   MIGRATION_PUSH_FEUDAL_THRESHOLD,
   MIGRATION_WAR_PUSH_Q,
   MIGRATION_DAILY_RATE_Q,
@@ -27,7 +27,7 @@ function makePolity(
   moraleQ:    number,
 ) {
   const p = createPolity(id, id, "f1", [], population, 10_000, "Medieval",
-    stabilityQ as any, moraleQ as any);
+    stabilityQ as Q, moraleQ as Q);
   return p;
 }
 
@@ -60,21 +60,21 @@ describe("computePushPressure", () => {
 
   it("adds feudal deficit for weak bond strength", () => {
     const p = makePolity("A", 1000, q(0.70), q(0.65));
-    const strong = computePushPressure(p, false, q(0.80) as any);
-    const weak   = computePushPressure(p, false, q(0.10) as any);
+    const strong = computePushPressure(p, false, q(0.80));
+    const weak   = computePushPressure(p, false, q(0.10));
     expect(weak).toBeGreaterThan(strong);
   });
 
   it("feudal deficit = 0 at or above feudal threshold", () => {
     const p = makePolity("A", 1000, q(0.70), q(0.65));
     const atThreshold = computePushPressure(p, false, MIGRATION_PUSH_FEUDAL_THRESHOLD);
-    const above       = computePushPressure(p, false, q(0.50) as any);
+    const above       = computePushPressure(p, false, q(0.50));
     expect(atThreshold).toBe(above); // no extra deficit
   });
 
   it("is clamped to [0, SCALE.Q]", () => {
-    const p = makePolity("A", 1000, 0 as any, 0 as any);
-    const push = computePushPressure(p, true, 0 as any);
+    const p = makePolity("A", 1000, 0 as Q, 0 as Q);
+    const push = computePushPressure(p, true, 0 as Q);
     expect(push).toBeGreaterThanOrEqual(0);
     expect(push).toBeLessThanOrEqual(SCALE.Q);
   });
@@ -102,17 +102,17 @@ describe("computePullFactor", () => {
   });
 
   it("zero morale → zero pull", () => {
-    const p = makePolity("A", 1000, q(0.80), 0 as any);
+    const p = makePolity("A", 1000, q(0.80), 0 as Q);
     expect(computePullFactor(p)).toBe(0);
   });
 
   it("zero stability → zero pull", () => {
-    const p = makePolity("A", 1000, 0 as any, q(0.80));
+    const p = makePolity("A", 1000, 0 as Q, q(0.80));
     expect(computePullFactor(p)).toBe(0);
   });
 
   it("is clamped to [0, SCALE.Q]", () => {
-    const p = makePolity("A", 1000, SCALE.Q as any, SCALE.Q as any);
+    const p = makePolity("A", 1000, SCALE.Q as Q, SCALE.Q as Q);
     expect(computePullFactor(p)).toBeLessThanOrEqual(SCALE.Q);
     expect(computePullFactor(p)).toBeGreaterThanOrEqual(0);
   });
@@ -132,13 +132,13 @@ describe("computeMigrationFlow", () => {
 
   it("returns 0 when push < MIGRATION_PUSH_MIN_Q", () => {
     const pull = computePullFactor(to);
-    expect(computeMigrationFlow(from, to, 0 as any, pull)).toBe(0);
-    expect(computeMigrationFlow(from, to, (MIGRATION_PUSH_MIN_Q - 1) as any, pull)).toBe(0);
+    expect(computeMigrationFlow(from, to, 0 as Q, pull)).toBe(0);
+    expect(computeMigrationFlow(from, to, (MIGRATION_PUSH_MIN_Q - 1) as Q, pull)).toBe(0);
   });
 
   it("returns 0 when pull = 0", () => {
     const push = computePushPressure(from);
-    expect(computeMigrationFlow(from, to, push, 0 as any)).toBe(0);
+    expect(computeMigrationFlow(from, to, push, 0 as Q)).toBe(0);
   });
 
   it("returns 0 when from.population = 0", () => {
@@ -155,8 +155,8 @@ describe("computeMigrationFlow", () => {
   });
 
   it("higher push → more migrants", () => {
-    const lowPush  = q(0.10) as any;
-    const highPush = q(0.50) as any;
+    const lowPush  = q(0.10);
+    const highPush = q(0.50);
     const pull     = computePullFactor(to);
     expect(computeMigrationFlow(from, to, highPush, pull))
       .toBeGreaterThan(computeMigrationFlow(from, to, lowPush, pull));
@@ -218,7 +218,7 @@ describe("resolveMigration", () => {
     const s = makePolity("S",  50_000, q(0.80), q(0.75));
     const noFeudal = resolveMigration([p, s]);
     const withWeak = resolveMigration([p, s], new Map([
-      ["V", { polityId: "V", lowestBondStr_Q: q(0.10) as any }],
+      ["V", { polityId: "V", lowestBondStr_Q: q(0.10) }],
     ]));
     const noFlow = noFeudal.find(f => f.fromPolityId === "V")?.population ?? 0;
     const feFlow = withWeak.find(f => f.fromPolityId === "V")?.population ?? 0;

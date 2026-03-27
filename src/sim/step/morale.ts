@@ -80,7 +80,7 @@ export function stepMoraleForEntity(
   let fearQ = e.condition.fearQ!;
   const wasRouting = isRouting(fearQ, distressTol);
 
-  // 1. Suppression ticks add fear per tick — scaled by caliber multiplier (Feature 1)
+  // 1. Suppression ticks add fear per tick — scaled by calibre multiplier (Feature 1)
   if (e.condition.suppressedTicks > 0) {
     const supMul = e.condition.suppressionFearMul ?? (SCALE.Q as Q);
     fearQ = clampQ(fearQ + qMul(FEAR_PER_SUPPRESSION_TICK, supMul), 0, SCALE.Q);

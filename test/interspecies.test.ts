@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { SCALE, q, type Q, to } from "../src/units.js";
+import { SCALE, q, type Q } from "../src/units.js";
 import {
   computeUnfamiliarSpeciesLatencyPenalty,
   resolveSignal,

@@ -3,11 +3,10 @@
 import type { BridgeConfig, TickSnapshot, InterpolatedState, MappedPoseModifier } from "./types.js";
 import type { RigSnapshot } from "../model3d.js";
 import type { MotionVector, ConditionSample } from "../debug.js";
-import type { Vec3 } from "../sim/vec3.js";
 import type { Q } from "../units.js";
 import { SCALE } from "../units.js";
 import { DT_S } from "../sim/tick.js";
-import { lerpQ, lerpVec3, slerpFacing, interpolatePoseModifiers, interpolateAnimationHints, interpolateCondition } from "./interpolation.js";
+import { lerpVec3, slerpFacing, interpolatePoseModifiers, interpolateAnimationHints, interpolateCondition } from "./interpolation.js";
 import { findBodyPlanMapping, mapPoseModifiers } from "./mapping.js";
 
 // ─── Internal storage ──────────────────────────────────────────────────────────
@@ -184,7 +183,6 @@ export class BridgeEngine {
         // Render time at or after current snapshot
         if (this.config.extrapolationAllowed) {
           // Extrapolate forward using velocity
-          const delta = renderTime_s - this.currTime_s;
           t = SCALE.Q;
           fromTick = curr!.tick;
           toTick = curr!.tick;

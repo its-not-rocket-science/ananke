@@ -10,7 +10,6 @@ import {
   CAMEL,
   WAR_ELEPHANT,
   CHARGE_MASS_FRAC,
-  DISMOUNT_SHOCK_Q,
   HEIGHT_AIM_BONUS_MAX,
   getMountGaitSpeed,
   computeChargeBonus,
@@ -212,7 +211,7 @@ describe("computeFallEnergy_J", () => {
 
 describe("deriveMountFearPressure", () => {
   it("returns q(0) when mount shock is below fearThreshold", () => {
-    expect(deriveMountFearPressure(q(0.40) as any, HORSE.fearThreshold_Q)).toBe(q(0));
+    expect(deriveMountFearPressure(q(0.40), HORSE.fearThreshold_Q)).toBe(q(0));
   });
 
   it("returns q(0) at exactly the threshold", () => {
@@ -220,13 +219,13 @@ describe("deriveMountFearPressure", () => {
   });
 
   it("returns > q(0) when mount shock exceeds threshold", () => {
-    const pressure = deriveMountFearPressure(q(0.80) as any, HORSE.fearThreshold_Q);
+    const pressure = deriveMountFearPressure(q(0.80), HORSE.fearThreshold_Q);
     expect(pressure).toBeGreaterThan(q(0));
   });
 
   it("higher excess shock → higher fear pressure (monotone)", () => {
-    const mid  = deriveMountFearPressure(q(0.70) as any, HORSE.fearThreshold_Q);
-    const high = deriveMountFearPressure(q(0.90) as any, HORSE.fearThreshold_Q);
+    const mid  = deriveMountFearPressure(q(0.70), HORSE.fearThreshold_Q);
+    const high = deriveMountFearPressure(q(0.90), HORSE.fearThreshold_Q);
     expect(high).toBeGreaterThan(mid);
   });
 });
@@ -234,7 +233,7 @@ describe("deriveMountFearPressure", () => {
 // ── checkMountStep ────────────────────────────────────────────────────────────
 
 describe("checkMountStep", () => {
-  const healthy_Q   = q(0.10) as any;  // low shock — neither rider nor mount stressed
+  const healthy_Q   = q(0.10);  // low shock — neither rider nor mount stressed
   const rider_Skg   = to.kg(80);
 
   it("no dismount when both healthy and calm", () => {
@@ -245,7 +244,7 @@ describe("checkMountStep", () => {
   });
 
   it("forced dismount with cause 'rider_shock' when rider shock > DISMOUNT_SHOCK_Q", () => {
-    const r = checkMountStep(q(0.80) as any, healthy_Q, false, HORSE, rider_Skg);
+    const r = checkMountStep(q(0.80), healthy_Q, false, HORSE, rider_Skg);
     expect(r.shouldDismount).toBe(true);
     expect(r.dismountCause).toBe("rider_shock");
   });
@@ -257,13 +256,13 @@ describe("checkMountStep", () => {
   });
 
   it("forced dismount with cause 'mount_bolt' when mount shock exceeds fearThreshold", () => {
-    const r = checkMountStep(healthy_Q, q(0.90) as any, false, HORSE, rider_Skg);
+    const r = checkMountStep(healthy_Q, q(0.90), false, HORSE, rider_Skg);
     expect(r.shouldDismount).toBe(true);
     expect(r.dismountCause).toBe("mount_bolt");
   });
 
   it("fallEnergy_J > 0 when dismounted", () => {
-    const r = checkMountStep(q(0.80) as any, healthy_Q, false, HORSE, rider_Skg);
+    const r = checkMountStep(q(0.80), healthy_Q, false, HORSE, rider_Skg);
     expect(r.fallEnergy_J).toBeGreaterThan(0);
   });
 
@@ -275,8 +274,8 @@ describe("checkMountStep", () => {
   it("fear pressure is non-zero when mount panics, even without dismount (warhorse high threshold)", () => {
     // Warhorse fearThreshold = q(0.72); push mount shock above it but below rider shock threshold
     const r = checkMountStep(
-      q(0.20) as any,     // rider is calm
-      q(0.80) as any,     // mount is panicking (> 0.72 warhorse threshold)
+      q(0.20),     // rider is calm
+      q(0.80),     // mount is panicking (> 0.72 warhorse threshold)
       false,
       WARHORSE,
       rider_Skg,

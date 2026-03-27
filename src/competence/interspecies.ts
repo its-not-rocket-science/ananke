@@ -66,8 +66,6 @@ const MAX_LATENCY_PENALTY_MS: I32 = 80 * SCALE.s / 1000; // 80ms in Q-units
 /** Scaling factor: penalty = (1.0 − interSpecies) × MAX_LATENCY_PENALTY_MS. */
 const LATENCY_PENALTY_SCALE: I32 = MAX_LATENCY_PENALTY_MS;
 
-/** Base success probability for signaling without vocabulary. */
-const SIGNAL_BASE_PROBABILITY: Q = q(0.10) as Q;
 
 /** Aggravation threshold: low empathy + high fear → possible hostile reaction. */
 const AGGRAVATION_THRESHOLD: Q = q(0.30) as Q;

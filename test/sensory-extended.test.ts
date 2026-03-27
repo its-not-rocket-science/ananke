@@ -228,7 +228,7 @@ describe("canDetectExtended", () => {
   });
 
   it("primary misses, electroreception hits → DETECT_ELECTRORECEPTION", () => {
-    const obs = withSenses(mkEntity(1, 0, 0), { electroreceptionRange_m: 3 * SCALE.m });
+    const _obs = withSenses(mkEntity(1, 0, 0), { electroreceptionRange_m: 3 * SCALE.m });
     // Sub at 2m — outside hearing range (50m default) but very close, so vision checks…
     // Actually at 2m sub IS within hearing (50m range) and possibly vision.
     // Place sub FAR enough to miss vision/hearing, but give very large electroreception range.
@@ -242,8 +242,8 @@ describe("canDetectExtended", () => {
 
   it("primary misses, olfaction detects → returns q(0.20)–q(0.40)", () => {
     // Sub at 350m — beyond all primary senses; high olfaction + downwind
-    const sub = mkEntity(2, 350 * SCALE.m, 0);
-    const obs = withSenses(mkEntity(1, 0, 0), { olfactionSensitivity_Q: q(1.0) });
+    const _sub = mkEntity(2, 350 * SCALE.m, 0);
+    const _obs = withSenses(mkEntity(1, 0, 0), { olfactionSensitivity_Q: q(1.0) });
     const darkEnv = { lightMul: q(0), smokeMul: q(1.0), noiseMul: q(1.0) };
     // at 350m: strength = 10000 * 50000 / 350000 ≈ 1428 = q(0.14); windMul = q(0.5) no wind
     // combined ≈ 1428 * 5000 / 10000 = 714 — below threshold q(0.20) = 2000
@@ -262,11 +262,11 @@ describe("canDetectExtended", () => {
 
   it("electroreception takes priority over echolocation (higher Q returned)", () => {
     // Both modalities present; electroreception at 5m, echolocation at 50m; target at 3m
-    const obs = withSenses(mkEntity(1, 0, 0), {
+    const _obs = withSenses(mkEntity(1, 0, 0), {
       electroreceptionRange_m: 5 * SCALE.m,
       echolocationRange_m:     50 * SCALE.m,
     });
-    const sub = mkEntity(2, 3 * SCALE.m, 0);
+    const _sub = mkEntity(2, 3 * SCALE.m, 0);
     const darkEnv = { lightMul: q(0), smokeMul: q(1.0), noiseMul: q(1.0) };
     // At 3m → outside hearing (50m? no, 3m << 50m... let's place farther)
     // Actually at 3m, hearing range is 50m → sub IS heard. Need to be outside hearing.

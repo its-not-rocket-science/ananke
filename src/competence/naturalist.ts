@@ -270,7 +270,7 @@ export function resolveTaming(
   // Prior successes bonus: +5% per success, max +25%
   const experienceBonus = Math.min(spec.priorSuccesses * q(0.05), q(0.25));
 
-  let trust_Q = clampQ(
+  const trust_Q = clampQ(
     (baseTrust - fearPenalty + experienceBonus) as Q,
     q(0), q(1.0),
   );

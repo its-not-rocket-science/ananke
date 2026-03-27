@@ -4,6 +4,7 @@ import { describe, it, expect } from "vitest";
 import { q, SCALE } from "../src/units.js";
 import type { Entity } from "../src/sim/entity.js";
 import type { WorldState } from "../src/sim/world.js";
+import type { IndividualAttributes } from "../src/types.js";
 import {
   resolveCompetence,
   calculateXP,
@@ -43,11 +44,11 @@ function mkEntity(cognition: Partial<{
         intrapersonal: cognition.intrapersonal ?? q(0.50),
         naturalist: cognition.naturalist ?? q(0.50),
         interSpecies: cognition.interSpecies ?? q(0.35),
-      } as any,
+      },
       control: {
         fineControl: q(0.50),
       },
-    } as any,
+    } as unknown as IndividualAttributes,
     energy: { reserve_J: 10000, reserveMax_J: 10000 },
     loadout: { items: [] },
     traits: [],
@@ -413,14 +414,14 @@ describe("getDomainIntelligence", () => {
 
   it("returns default q(0.50) when cognition missing", () => {
     const actor = mkEntity({});
-    (actor.attributes as any).cognition = undefined;
+    (actor.attributes as unknown as Record<string, unknown>).cognition = undefined;
 
     expect(getDomainIntelligence(actor, "linguistic")).toBe(q(0.50));
   });
 
   it("returns default q(0.35) for interSpecies when missing", () => {
     const actor = mkEntity({});
-    delete (actor.attributes.cognition as any).interSpecies;
+    delete (actor.attributes.cognition as unknown as Record<string, unknown>).interSpecies;
 
     expect(getDomainIntelligence(actor, "interSpecies")).toBe(q(0.35));
   });

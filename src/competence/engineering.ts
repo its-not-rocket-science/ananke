@@ -6,7 +6,7 @@
 // No kernel import — pure resolution module.
 
 import type { Q } from "../units.js";
-import { SCALE, q, clampQ, qMul, mulDiv } from "../units.js";
+import { SCALE, q, clampQ, mulDiv } from "../units.js";
 import type { Entity } from "../sim/entity.js";
 import { makeRng } from "../rng.js";
 
@@ -43,8 +43,6 @@ const MAX_QUALITY_MUL: Q = q(1.20) as Q;
 /** Minimum quality multiplier for success. */
 const MIN_SUCCESS_QUALITY: Q = q(0.30) as Q;
 
-/** Time factor: rushed work reduces quality. */
-const TIME_FACTOR_BASE = 1.0;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 

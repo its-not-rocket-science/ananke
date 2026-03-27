@@ -3,11 +3,7 @@
 import { describe, it, expect } from "vitest";
 import {
   EPIDEMIC_CONTAINED_Q,
-  EPIDEMIC_BASE_GROWTH_RATE_Q,
-  EPIDEMIC_BASE_RECOVERY_RATE_Q,
-  EPIDEMIC_HEALTH_RECOVERY_BONUS_Q,
   EPIDEMIC_MIGRATION_PUSH_MAX_Q,
-  EPIDEMIC_SEVERITY_THRESHOLD_Q,
   HEALTH_CAPACITY_BY_ERA,
   createEpidemicState,
   deriveHealthCapacity,
@@ -22,6 +18,7 @@ import { getDiseaseProfile } from "../src/sim/disease.js";
 import { q, SCALE, mulDiv } from "../src/units.js";
 import type { Q } from "../src/units.js";
 import type { DiseaseProfile } from "../src/sim/disease.js";
+import type { TechEra } from "../src/sim/tech.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -54,7 +51,7 @@ const MILD_PROFILE: DiseaseProfile = {
 };
 
 function makePolity(techEra = "Medieval", stability = q(0.70) as Q) {
-  const p = createPolity("p1", "Test", "f1", [], 50_000, 500_000, techEra as any);
+  const p = createPolity("p1", "Test", "f1", [], 50_000, 500_000, techEra as TechEra);
   p.stabilityQ = stability;
   return p;
 }
@@ -224,7 +221,7 @@ describe("stepEpidemic", () => {
 
   it("longer step produces larger absolute change", () => {
     const s1 = createEpidemicState("p1", "plague", q(0.10) as Q);
-    const s2 = createEpidemicState("p1", "plague", q(0.10) as Q);
+    const _s2 = createEpidemicState("p1", "plague", q(0.10) as Q);
     const r1 = stepEpidemic(s1, PLAGUE_PROFILE, 7);
     const s3 = createEpidemicState("p1", "plague", q(0.10) as Q);
     const r2 = stepEpidemic(s3, PLAGUE_PROFILE, 30);

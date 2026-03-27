@@ -4,7 +4,7 @@
 // Deterministic quality generation, material property modifiers for crafted items.
 
 import type { Q, I32 } from "../units.js";
-import { SCALE, q, clampQ, qMul, mulDiv } from "../units.js";
+import { SCALE, q, clampQ, mulDiv } from "../units.js";
 import type { ItemBase } from "../equipment.js";
 import { makeRng } from "../rng.js";
 
@@ -123,7 +123,6 @@ export function calculateMaterialEffect(
     return {}; // No effect for unknown material
   }
 
-  const qualityFactor = material.quality_Q / SCALE.Q; // 0–1
   const modifiers: MaterialPropertyModifier = {};
 
   // Strength affects durability and damage
@@ -164,11 +163,21 @@ export function calculateMaterialEffect(
  * Returns map of materialTypeId to total quantity (kg) and average quality.
  */
 export function getAvailableMaterials(
-  inventory: any, // Placeholder: need proper inventory type
+  materials: readonly Material[],
 ): Map<string, { totalKg: number; avgQuality_Q: Q }> {
   const map = new Map<string, { totalKg: number; avgQuality_Q: Q }>();
-  // TODO: iterate through inventory items, filter by kind === "material"
-  // For each material item, accumulate quantity and weighted quality.
+  for (const mat of materials) {
+    const existing = map.get(mat.materialTypeId);
+    if (existing) {
+      const newTotalKg = existing.totalKg + mat.quantity_kg;
+      const avgQuality_Q = Math.round(
+        (existing.avgQuality_Q * existing.totalKg + mat.quality_Q * mat.quantity_kg) / newTotalKg,
+      ) as Q;
+      map.set(mat.materialTypeId, { totalKg: newTotalKg, avgQuality_Q });
+    } else {
+      map.set(mat.materialTypeId, { totalKg: mat.quantity_kg, avgQuality_Q: mat.quality_Q });
+    }
+  }
   return map;
 }
 

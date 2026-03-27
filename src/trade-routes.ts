@@ -12,7 +12,7 @@
 //   - `TREATY_TRADE_BONUS_Q` rewards Phase-80 trade pacts without a direct import.
 
 import type { Polity }    from "./polity.js";
-import { q, SCALE, clampQ, mulDiv } from "./units.js";
+import { q, SCALE, clampQ } from "./units.js";
 import type { Q }         from "./units.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

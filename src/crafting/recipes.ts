@@ -6,7 +6,7 @@
 import type { Q } from "../units.js";
 import { SCALE, q, clampQ, qMul, mulDiv } from "../units.js";
 import type { Entity } from "../sim/entity.js";
-import type { Inventory, ItemInstance } from "../inventory.js";
+import type { Inventory } from "../inventory.js";
 import { getItemCountByTemplateId } from "../inventory.js";
 import { makeRng } from "../rng.js";
 import { eventSeed, hashString } from "../sim/seeds.js";
@@ -197,7 +197,6 @@ export function calculateCraftingCost(
   recipe: Recipe,
   materialQualities: Map<string, Q>, // itemId -> quality_Q
   workshopTimeReduction_Q: Q = q(1.0),
-  workshopQualityBonus_Q: Q = q(0),
 ): { time_s: number; materialQualityAvg_Q: Q } {
   // Average material quality (default q(0.50))
   let totalQuality = 0;

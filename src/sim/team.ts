@@ -1,6 +1,5 @@
 import type { Entity } from "./entity.js";
 import type { WorldState } from "./world.js";
-import type { FactionRegistry } from "../faction.js";
 import { effectiveStanding, STANDING_HOSTILE_THRESHOLD, STANDING_FRIENDLY_THRESHOLD } from "../faction.js";
 import { areEntitiesHostileByParty, areEntitiesFriendlyByParty } from "../party.js";
 

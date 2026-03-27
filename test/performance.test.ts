@@ -2,7 +2,9 @@
 
 import { describe, it, expect } from "vitest";
 import { q, SCALE } from "../src/units.js";
+import type { Q } from "../src/units.js";
 import type { Entity } from "../src/sim/entity.js";
+import type { IndividualAttributes } from "../src/types.js";
 import type { WillpowerState } from "../src/competence/willpower.js";
 import {
   resolvePerformance,
@@ -20,10 +22,8 @@ function mkEntity(musical: number): Entity {
     id: 1,
     teamId: 1,
     attributes: {
-      cognition: {
-        musical,
-      } as any,
-    } as any,
+      cognition: { musical: musical as Q },
+    } as unknown as IndividualAttributes,
     energy: { reserve_J: 10000, reserveMax_J: 10000 },
     loadout: { armour: [], weapons: [], items: [] },
     traits: [],

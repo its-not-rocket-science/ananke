@@ -20,6 +20,7 @@ import {
 import { q, SCALE } from "../src/units.js";
 import type { Q } from "../src/units.js";
 import type { Polity } from "../src/polity.js";
+import type { TechEra } from "../src/sim/tech.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ function makePolity(treasury_cu = 100_000): Polity {
     id: "p1", name: "Test",
     factionId: "f1", locationIds: [],
     population: 10_000, treasury_cu,
-    techEra: 2 as any,
+    techEra: 2 as TechEra,
     militaryStrength_Q: q(0.60) as Q,
     stabilityQ: q(0.70) as Q,
     moraleQ: q(0.60) as Q,

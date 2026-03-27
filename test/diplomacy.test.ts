@@ -1,7 +1,7 @@
 // test/diplomacy.test.ts — Phase 80: Diplomacy & Treaties
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q, SCALE, type Q } from "../src/units.js";
 import {
   TREATY_FRAGILE_THRESHOLD,
   TREATY_BASE_STRENGTH,
@@ -76,7 +76,7 @@ describe("signTreaty", () => {
 
   it("stores tribute clauses", () => {
     const r = createTreatyRegistry();
-    const t = signTreaty(r, "A", "B", "peace", 0, -1, q(0.05) as any, q(0.02) as any);
+    const t = signTreaty(r, "A", "B", "peace", 0, -1, q(0.05), q(0.02));
     expect(t.tributeFromA_Q).toBe(q(0.05));
     expect(t.tributeFromB_Q).toBe(q(0.02));
   });
@@ -192,15 +192,15 @@ describe("stepTreatyStrength", () => {
     const r = createTreatyRegistry();
     const t1 = signTreaty(r, "A", "B", "trade_pact");
     const t2 = signTreaty(r, "A", "C", "trade_pact");
-    stepTreatyStrength(t1, 0 as any);
-    stepTreatyStrength(t2, q(0.01) as any);
+    stepTreatyStrength(t1, 0);
+    stepTreatyStrength(t2, q(0.01));
     expect(t2.strength_Q).toBeGreaterThan(t1.strength_Q);
   });
 
   it("strength cannot go below 0", () => {
     const r = createTreatyRegistry();
     const t = signTreaty(r, "A", "B", "peace");
-    t.strength_Q = 0 as any;
+    t.strength_Q = 0 as Q;
     stepTreatyStrength(t);
     expect(t.strength_Q).toBe(0);
   });
@@ -208,8 +208,8 @@ describe("stepTreatyStrength", () => {
   it("strength cannot exceed SCALE.Q", () => {
     const r = createTreatyRegistry();
     const t = signTreaty(r, "A", "B", "military_alliance");
-    t.strength_Q = q(0.99) as any;
-    stepTreatyStrength(t, q(0.10) as any);
+    t.strength_Q = q(0.99) as Q;
+    stepTreatyStrength(t, q(0.10));
     expect(t.strength_Q).toBeLessThanOrEqual(SCALE.Q);
   });
 
@@ -226,23 +226,23 @@ describe("reinforceTreaty", () => {
     const r = createTreatyRegistry();
     const t = signTreaty(r, "A", "B", "trade_pact");
     const before = t.strength_Q;
-    reinforceTreaty(t, q(0.10) as any);
+    reinforceTreaty(t, q(0.10));
     expect(t.strength_Q).toBe(before + q(0.10));
   });
 
   it("clamps to SCALE.Q", () => {
     const r = createTreatyRegistry();
     const t = signTreaty(r, "A", "B", "military_alliance");
-    t.strength_Q = q(0.95) as any;
-    reinforceTreaty(t, q(0.20) as any);
+    t.strength_Q = q(0.95) as Q;
+    reinforceTreaty(t, q(0.20));
     expect(t.strength_Q).toBe(SCALE.Q);
   });
 
   it("clamps to 0 for negative delta", () => {
     const r = createTreatyRegistry();
     const t = signTreaty(r, "A", "B", "peace");
-    t.strength_Q = q(0.05) as any;
-    reinforceTreaty(t, -q(0.20) as any);
+    t.strength_Q = q(0.05) as Q;
+    reinforceTreaty(t, -q(0.20));
     expect(t.strength_Q).toBe(0);
   });
 });
@@ -266,14 +266,14 @@ describe("isTreatyFragile", () => {
   it("returns true below the threshold", () => {
     const r = createTreatyRegistry();
     const t = signTreaty(r, "A", "B", "trade_pact");
-    t.strength_Q = (TREATY_FRAGILE_THRESHOLD - 1) as any;
+    t.strength_Q = (TREATY_FRAGILE_THRESHOLD - 1) as Q;
     expect(isTreatyFragile(t)).toBe(true);
   });
 
   it("returns true at zero strength", () => {
     const r = createTreatyRegistry();
     const t = signTreaty(r, "A", "B", "non_aggression");
-    t.strength_Q = 0 as any;
+    t.strength_Q = 0 as Q;
     expect(isTreatyFragile(t)).toBe(true);
   });
 });
@@ -450,7 +450,7 @@ describe("treaty decay to fragile", () => {
     const t = signTreaty(r, "A", "B", "non_aggression");
     for (let day = 0; day < 117; day++) {
       stepTreatyStrength(t);
-      if (day % 10 === 0) reinforceTreaty(t, q(0.04) as any);
+      if (day % 10 === 0) reinforceTreaty(t, q(0.04));
     }
     expect(isTreatyFragile(t)).toBe(false);
   });

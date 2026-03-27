@@ -84,7 +84,7 @@ describe("setupProductionLine", () => {
   it("creates a production line with correct lineId", () => {
     const order = mkOrder(10);
     const workers = [mkWorker()];
-    const line = setupProductionLine(order, workers, 1234);
+    const line = setupProductionLine(order, workers);
     expect(line.lineId).toBe(`line_${order.orderId}`);
     expect(line.recipeId).toBe(order.recipeId);
     expect(line.batchSize).toBe(10);
@@ -95,7 +95,7 @@ describe("setupProductionLine", () => {
   it("stores worker IDs correctly", () => {
     const w1 = mkWorker(0.7, 0.6, 11);
     const w2 = mkWorker(0.8, 0.7, 22);
-    const line = setupProductionLine(mkOrder(3), [w1, w2], 999);
+    const line = setupProductionLine(mkOrder(3), [w1, w2]);
     expect(line.assignedWorkers).toContain(11);
     expect(line.assignedWorkers).toContain(22);
     expect(line.assignedWorkers).toHaveLength(2);
@@ -103,7 +103,7 @@ describe("setupProductionLine", () => {
 
   it("calculates quality range based on workers", () => {
     const workers = [mkWorker(0.8, 0.6)];
-    const line = setupProductionLine(mkOrder(5), workers, 42);
+    const line = setupProductionLine(mkOrder(5), workers);
     expect(line.qualityRange.avg_Q).toBeGreaterThan(0);
     expect(line.qualityRange.max_Q).toBeGreaterThanOrEqual(line.qualityRange.avg_Q);
     expect(line.qualityRange.min_Q).toBeLessThanOrEqual(line.qualityRange.avg_Q);
@@ -112,15 +112,15 @@ describe("setupProductionLine", () => {
   it("is deterministic for same inputs", () => {
     const order = mkOrder(5);
     const workers = [mkWorker()];
-    const l1 = setupProductionLine(order, workers, 7777);
-    const l2 = setupProductionLine(order, workers, 7777);
+    const l1 = setupProductionLine(order, workers);
+    const l2 = setupProductionLine(order, workers);
     expect(l1.qualityRange.avg_Q).toBe(l2.qualityRange.avg_Q);
     expect(l1.qualityRange.min_Q).toBe(l2.qualityRange.min_Q);
     expect(l1.qualityRange.max_Q).toBe(l2.qualityRange.max_Q);
   });
 
   it("sets priority to 1 by default", () => {
-    const line = setupProductionLine(mkOrder(2), [mkWorker()], 1);
+    const line = setupProductionLine(mkOrder(2), [mkWorker()]);
     expect(line.priority).toBe(1);
   });
 });
@@ -131,8 +131,7 @@ describe("advanceProduction", () => {
   it("returns zero items completed when batch is already complete", () => {
     const line = mkProductionLine(5, 5); // fully produced
     const workers = [mkWorker()];
-    const workshop = mkForgeWorkshop();
-    const result = advanceProduction(line, 3600, workers, workshop, 1);
+    const result = advanceProduction(line, 3600, workers);
     expect(result.itemsCompleted).toBe(0);
     expect(result.totalItemsProduced).toBe(5);
   });
@@ -140,8 +139,7 @@ describe("advanceProduction", () => {
   it("accumulates progress proportional to elapsed time", () => {
     const line = mkProductionLine(100, 0);
     const workers = [mkWorker()];
-    const workshop = mkForgeWorkshop();
-    const result = advanceProduction(line, 3600, workers, workshop, 1);
+    const result = advanceProduction(line, 3600, workers);
     // Some progress should be made
     expect(result.progress_Q + result.totalItemsProduced * SCALE.Q).toBeGreaterThan(0);
   });
@@ -154,8 +152,7 @@ describe("advanceProduction", () => {
       progress_Q: (SCALE.Q - 1) as ReturnType<typeof q>,
     };
     const workers = [mkWorker(1.0, 1.0)];
-    const workshop = mkForgeWorkshop();
-    const result = advanceProduction(line, 3600, workers, workshop, 1);
+    const result = advanceProduction(line, 3600, workers);
     expect(result.itemsCompleted).toBeGreaterThanOrEqual(1);
     expect(result.totalItemsProduced).toBeGreaterThanOrEqual(1);
   });
@@ -163,17 +160,15 @@ describe("advanceProduction", () => {
   it("does not exceed batchSize in items produced", () => {
     const line = mkProductionLine(2, 0);
     const workers = [mkWorker(), mkWorker(0.9, 0.9, 2), mkWorker(0.9, 0.9, 3)];
-    const workshop = mkForgeWorkshop();
     // Large delta to potentially over-produce
-    const result = advanceProduction(line, 100_000, workers, workshop, 1);
+    const result = advanceProduction(line, 100_000, workers);
     expect(result.totalItemsProduced).toBeLessThanOrEqual(2);
   });
 
   it("progress_Q is clamped to [0, SCALE.Q]", () => {
     const line = mkProductionLine(100, 0);
     const workers = [mkWorker()];
-    const workshop = mkForgeWorkshop();
-    const result = advanceProduction(line, 7200, workers, workshop, 1);
+    const result = advanceProduction(line, 7200, workers);
     expect(result.progress_Q).toBeGreaterThanOrEqual(q(0));
     expect(result.progress_Q).toBeLessThanOrEqual(SCALE.Q);
   });
@@ -181,8 +176,7 @@ describe("advanceProduction", () => {
   it("returns qualityRange in result", () => {
     const line = mkProductionLine(5, 0);
     const workers = [mkWorker()];
-    const workshop = mkForgeWorkshop();
-    const result = advanceProduction(line, 3600, workers, workshop, 1);
+    const result = advanceProduction(line, 3600, workers);
     expect(result.qualityRange).toBeDefined();
     expect(result.qualityRange).toHaveProperty("min_Q");
     expect(result.qualityRange).toHaveProperty("max_Q");
@@ -194,9 +188,8 @@ describe("advanceProduction", () => {
     const line2 = mkProductionLine(50, 0);
     const oneWorker  = [mkWorker(0.70, 0.60, 1)];
     const twoWorkers = [mkWorker(0.70, 0.60, 1), mkWorker(0.70, 0.60, 2)];
-    const workshop = mkForgeWorkshop();
-    const r1 = advanceProduction(line1, 3600, oneWorker,  workshop, 1);
-    const r2 = advanceProduction(line2, 3600, twoWorkers, workshop, 1);
+    const r1 = advanceProduction(line1, 3600, oneWorker);
+    const r2 = advanceProduction(line2, 3600, twoWorkers);
     const progress1 = r1.totalItemsProduced * SCALE.Q + r1.progress_Q;
     const progress2 = r2.totalItemsProduced * SCALE.Q + r2.progress_Q;
     expect(progress2).toBeGreaterThanOrEqual(progress1);
@@ -207,8 +200,7 @@ describe("advanceProduction", () => {
 
 describe("calculateBatchQualityRange", () => {
   it("returns all-zero range when no workers", () => {
-    const workshop = mkForgeWorkshop();
-    const range = calculateBatchQualityRange([], workshop, 1);
+    const range = calculateBatchQualityRange([]);
     expect(range.min_Q).toBe(q(0));
     expect(range.max_Q).toBe(q(0));
     expect(range.avg_Q).toBe(q(0));
@@ -216,8 +208,7 @@ describe("calculateBatchQualityRange", () => {
 
   it("returns valid range for a single worker", () => {
     const worker = mkWorker(0.70);
-    const workshop = mkForgeWorkshop();
-    const range = calculateBatchQualityRange([worker], workshop, 42);
+    const range = calculateBatchQualityRange([worker]);
     expect(range.min_Q).toBeGreaterThanOrEqual(q(0));
     expect(range.max_Q).toBeLessThanOrEqual(SCALE.Q);
     expect(range.max_Q).toBeGreaterThanOrEqual(range.min_Q);
@@ -226,8 +217,7 @@ describe("calculateBatchQualityRange", () => {
 
   it("min_Q <= avg_Q <= max_Q for multiple workers", () => {
     const workers = [mkWorker(0.6, 0.5, 1), mkWorker(0.8, 0.7, 2), mkWorker(0.7, 0.6, 3)];
-    const workshop = mkForgeWorkshop();
-    const range = calculateBatchQualityRange(workers, workshop, 100);
+    const range = calculateBatchQualityRange(workers);
     expect(range.min_Q).toBeLessThanOrEqual(range.avg_Q);
     expect(range.avg_Q).toBeLessThanOrEqual(range.max_Q);
   });
@@ -235,17 +225,15 @@ describe("calculateBatchQualityRange", () => {
   it("higher skill worker gives higher avg_Q", () => {
     const lowWorker  = mkWorker(0.30);
     const highWorker = mkWorker(0.90);
-    const workshop = mkForgeWorkshop();
-    const rangeLow  = calculateBatchQualityRange([lowWorker],  workshop, 1);
-    const rangeHigh = calculateBatchQualityRange([highWorker], workshop, 1);
+    const rangeLow  = calculateBatchQualityRange([lowWorker]);
+    const rangeHigh = calculateBatchQualityRange([highWorker]);
     expect(rangeHigh.avg_Q).toBeGreaterThan(rangeLow.avg_Q);
   });
 
   it("variance reduces as more workers are added", () => {
-    const workshop = mkForgeWorkshop();
     const w = (id: number) => mkWorker(0.70, 0.60, id);
-    const r1 = calculateBatchQualityRange([w(1)], workshop, 1);
-    const r3 = calculateBatchQualityRange([w(1), w(2), w(3)], workshop, 1);
+    const r1 = calculateBatchQualityRange([w(1)]);
+    const r3 = calculateBatchQualityRange([w(1), w(2), w(3)]);
     const spread1 = r1.max_Q - r1.min_Q;
     const spread3 = r3.max_Q - r3.min_Q;
     expect(spread3).toBeLessThanOrEqual(spread1);
@@ -253,9 +241,8 @@ describe("calculateBatchQualityRange", () => {
 
   it("is deterministic for same seed and workers", () => {
     const workers = [mkWorker()];
-    const workshop = mkForgeWorkshop();
-    const r1 = calculateBatchQualityRange(workers, workshop, 5555);
-    const r2 = calculateBatchQualityRange(workers, workshop, 5555);
+    const r1 = calculateBatchQualityRange(workers);
+    const r2 = calculateBatchQualityRange(workers);
     expect(r1.avg_Q).toBe(r2.avg_Q);
     expect(r1.min_Q).toBe(r2.min_Q);
     expect(r1.max_Q).toBe(r2.max_Q);
@@ -385,9 +372,10 @@ describe("advanceAssemblyStep", () => {
     const step = steps[0]!;
     const bareEntity = mkHumanoidEntity(99, 1, 0, 0);
     // Remove cognition
+    const { cognition: _cognition, ...attributesWithoutCognition } = bareEntity.attributes;
     const noCognitionWorker: Entity = {
       ...bareEntity,
-      attributes: { ...bareEntity.attributes, cognition: undefined },
+      attributes: attributesWithoutCognition as Entity["attributes"],
     };
     const tools = new Map<string, number>([["forge", q(0.70)]]);
     const result = advanceAssemblyStep(step, noCognitionWorker, 3600, tools);
@@ -399,51 +387,45 @@ describe("advanceAssemblyStep", () => {
 
 describe("estimateBatchCompletionTime", () => {
   it("returns Infinity when no workers", () => {
-    const workshop = mkForgeWorkshop();
-    const time = estimateBatchCompletionTime(10, [], workshop);
+    const time = estimateBatchCompletionTime(10, []);
     expect(time).toBe(Infinity);
   });
 
   it("returns finite positive number for normal case", () => {
     const workers = [mkWorker()];
-    const workshop = mkForgeWorkshop();
-    const time = estimateBatchCompletionTime(5, workers, workshop);
+    const time = estimateBatchCompletionTime(5, workers);
     expect(isFinite(time)).toBe(true);
     expect(time).toBeGreaterThan(0);
   });
 
   it("scales linearly with batch size", () => {
     const workers = [mkWorker()];
-    const workshop = mkForgeWorkshop();
-    const t5  = estimateBatchCompletionTime(5,  workers, workshop);
-    const t10 = estimateBatchCompletionTime(10, workers, workshop);
+    const t5  = estimateBatchCompletionTime(5,  workers);
+    const t10 = estimateBatchCompletionTime(10, workers);
     expect(t10).toBeCloseTo(t5 * 2, 0);
   });
 
   it("higher average skill among two workers reduces batch time vs one low-skill worker", () => {
     // One low-skill worker; adding a high-skill worker raises the average,
     // reducing effectiveTimePerItem (implementation uses avgSkill).
-    const workshop = mkForgeWorkshop();
     const oneWorker  = [mkWorker(0.20, 0.20, 1)];
     const twoWorkers = [mkWorker(0.20, 0.20, 1), mkWorker(0.90, 0.90, 2)];
-    const t1 = estimateBatchCompletionTime(10, oneWorker,  workshop);
-    const t2 = estimateBatchCompletionTime(10, twoWorkers, workshop);
+    const t1 = estimateBatchCompletionTime(10, oneWorker);
+    const t2 = estimateBatchCompletionTime(10, twoWorkers);
     expect(t2).toBeLessThan(t1);
   });
 
   it("higher skill reduces estimated time", () => {
-    const workshop = mkForgeWorkshop();
     const lowSkill  = [mkWorker(0.30)];
     const highSkill = [mkWorker(0.90)];
-    const tLow  = estimateBatchCompletionTime(5, lowSkill,  workshop);
-    const tHigh = estimateBatchCompletionTime(5, highSkill, workshop);
+    const tLow  = estimateBatchCompletionTime(5, lowSkill);
+    const tHigh = estimateBatchCompletionTime(5, highSkill);
     expect(tHigh).toBeLessThan(tLow);
   });
 
   it("returns 0 for batch size 0", () => {
     const workers = [mkWorker()];
-    const workshop = mkForgeWorkshop();
-    const time = estimateBatchCompletionTime(0, workers, workshop);
+    const time = estimateBatchCompletionTime(0, workers);
     expect(time).toBe(0);
   });
 });

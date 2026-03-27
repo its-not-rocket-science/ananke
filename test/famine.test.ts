@@ -25,6 +25,7 @@ import {
 import { q, SCALE } from "../src/units.js";
 import type { Q } from "../src/units.js";
 import type { Polity } from "../src/polity.js";
+import type { TechEra } from "../src/sim/tech.js";
 import type { GranaryState } from "../src/granary.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ function makePolity(population = 1000, treasury_cu = 10_000): Polity {
     id: "p1", name: "Test",
     factionId: "f1", locationIds: [],
     population, treasury_cu,
-    techEra: 2 as any,
+    techEra: 2 as TechEra,
     militaryStrength_Q: q(0.50) as Q,
     stabilityQ: q(0.70) as Q,
     moraleQ: q(0.60) as Q,

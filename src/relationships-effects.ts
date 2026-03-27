@@ -3,15 +3,12 @@
 // Integration of relationship graph with morale, teaching, and combat systems.
 
 import type { Q } from "./units.js";
-import { q, mulDiv, SCALE } from "./units.js";
-import type { Entity } from "./sim/entity.js";
+import { q, SCALE } from "./units.js";
 import type { WorldState } from "./sim/world.js";
 import type { ImpactEvent } from "./sim/events.js";
 import type { RelationshipGraph } from "./relationships.js";
 import {
   getRelationship,
-  isFriend,
-  isEnemy,
   recordRelationshipEvent,
   recordBetrayal,
   computeTeachingRelationshipMultiplier,

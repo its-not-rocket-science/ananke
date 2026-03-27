@@ -3,7 +3,7 @@
 // Pattern detection across chronicle entries to identify emergent narratives.
 
 import type { Chronicle, ChronicleEntry, StoryArc, StoryArcType } from "./chronicle.js";
-import { getEntriesForEntity, getEntriesByType } from "./chronicle.js";
+import { getEntriesForEntity } from "./chronicle.js";
 
 // ── Arc Detection Entry Points ─────────────────────────────────────────────────
 

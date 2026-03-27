@@ -12,7 +12,7 @@
 //
 // Compile with: npm run build:wasm:injury
 
-import { SCALE_Q, clampQ, qMul, mulDiv } from "./units";
+import { SCALE_Q, clampQ, qMul } from "./units";
 
 // ── Constants (mirror src/sim/step/injury.ts) ────────────────────────────────
 
@@ -59,15 +59,15 @@ const TORSO_IDX: i32 = 1;
 
 // ── Accessors ─────────────────────────────────────────────────────────────────
 
-@inline function entityBase(slot: i32): i32 {
+function entityBase(slot: i32): i32 {
   return slot * ENTITY_STRIDE;
 }
 
-@inline function vitalOff(slot: i32, field: i32): i32 {
+function vitalOff(slot: i32, field: i32): i32 {
   return entityBase(slot) + field * 4;
 }
 
-@inline function regionOff(slot: i32, r: i32, field: i32): i32 {
+function regionOff(slot: i32, r: i32, field: i32): i32 {
   return entityBase(slot) + (VITALS + r * REGION_FIELDS + field) * 4;
 }
 
@@ -159,7 +159,7 @@ export function stepBleedAndShock(n: i32): void {
     // rawBleed = Math.trunc(totalBleed × DT_S / SCALE_s)
     // DT_S and SCALE_s are both in SCALE.s units (10000), so DT_S = 500 (0.05 s)
     const rawBleed: i32 = <i32>((<i64>totalBleed * <i64>DT_S) / <i64>SCALE_Q);
-    let fluidLoss: i32 = clampQ(load<i32>(vitalOff(slot, V_FLUID)) + rawBleed, 0, SCALE_Q);
+    const fluidLoss: i32 = clampQ(load<i32>(vitalOff(slot, V_FLUID)) + rawBleed, 0, SCALE_Q);
     store<i32>(vitalOff(slot, V_FLUID), fluidLoss);
 
     // ── 3. Shock accumulation ─────────────────────────────────────────────
@@ -177,7 +177,7 @@ export function stepBleedAndShock(n: i32): void {
       qMul(shock, CONSC_LOSS_FROM_SHOCK) + qMul(suff, CONSC_LOSS_FROM_SUFF),
       0, SCALE_Q
     );
-    let consc: i32 = clampQ(load<i32>(vitalOff(slot, V_CONSC)) - consciousnessLoss, 0, SCALE_Q);
+    const consc: i32 = clampQ(load<i32>(vitalOff(slot, V_CONSC)) - consciousnessLoss, 0, SCALE_Q);
     store<i32>(vitalOff(slot, V_CONSC), consc);
 
     // ── 5. Death check ────────────────────────────────────────────────────

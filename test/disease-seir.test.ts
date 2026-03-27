@@ -14,7 +14,6 @@ import {
   getDiseaseProfile,
   exposeToDisease,
   computeTransmissionRisk,
-  CONTACT_RANGE_Sm,
   // Phase 73 — new exports
   VaccinationRecord,
   NPIRegistry,

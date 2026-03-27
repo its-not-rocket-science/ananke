@@ -184,7 +184,7 @@ describe("computeHazardExposure", () => {
   });
 
   it("returns q(0) for zero-intensity hazard", () => {
-    const zeroH: HazardZone = { ...CAMPFIRE, intensity_Q: q(0) as any };
+    const zeroH: HazardZone = { ...CAMPFIRE, intensity_Q: q(0) };
     expect(computeHazardExposure(0, zeroH)).toBe(q(0));
   });
 
@@ -203,7 +203,7 @@ describe("computeHazardExposure", () => {
 
 describe("deriveHazardEffect", () => {
   it("returns all-zero effect when exposureQ = 0", () => {
-    const eff = deriveHazardEffect(CAMPFIRE, q(0) as any);
+    const eff = deriveHazardEffect(CAMPFIRE, q(0));
     expect(eff.fatigueInc_Q).toBe(0);
     expect(eff.thermalDelta_Q).toBe(0);
     expect(eff.radiationDose_Q).toBe(0);
@@ -212,58 +212,58 @@ describe("deriveHazardEffect", () => {
   });
 
   it("fire at full exposure: positive thermalDelta and fatigue", () => {
-    const eff = deriveHazardEffect(CAMPFIRE, SCALE.Q as any);
+    const eff = deriveHazardEffect(CAMPFIRE, SCALE.Q);
     expect(eff.thermalDelta_Q).toBeGreaterThan(0);
     expect(eff.fatigueInc_Q).toBeGreaterThan(0);
   });
 
   it("fire at full exposure: no radiation dose", () => {
-    const eff = deriveHazardEffect(CAMPFIRE, SCALE.Q as any);
+    const eff = deriveHazardEffect(CAMPFIRE, SCALE.Q);
     expect(eff.radiationDose_Q).toBe(0);
   });
 
   it("radiation at full exposure: non-zero dose, zero fatigue", () => {
-    const eff = deriveHazardEffect(RADIATION_ZONE, SCALE.Q as any);
+    const eff = deriveHazardEffect(RADIATION_ZONE, SCALE.Q);
     expect(eff.radiationDose_Q).toBeGreaterThan(0);
     expect(eff.fatigueInc_Q).toBe(0);
   });
 
   it("toxic_gas at full exposure: sets diseaseExposureId", () => {
-    const eff = deriveHazardEffect(MUSTARD_GAS, SCALE.Q as any);
+    const eff = deriveHazardEffect(MUSTARD_GAS, SCALE.Q);
     expect(eff.diseaseExposureId).toBe("marsh_fever");
   });
 
   it("acid at full exposure: surface damage > fire surface damage", () => {
-    const acidEff = deriveHazardEffect(ACID_POOL, SCALE.Q as any);
-    const fireEff = deriveHazardEffect(CAMPFIRE, SCALE.Q as any);
+    const acidEff = deriveHazardEffect(ACID_POOL, SCALE.Q);
+    const fireEff = deriveHazardEffect(CAMPFIRE, SCALE.Q);
     expect(acidEff.surfaceDamageInc_Q).toBeGreaterThan(fireEff.surfaceDamageInc_Q);
   });
 
   it("extreme_cold: thermalDelta is negative (cooling)", () => {
-    const eff = deriveHazardEffect(BLIZZARD_ZONE, SCALE.Q as any);
+    const eff = deriveHazardEffect(BLIZZARD_ZONE, SCALE.Q);
     expect(eff.thermalDelta_Q).toBeLessThan(0);
   });
 
   it("extreme_cold: fatigue > 0 (shivering)", () => {
-    const eff = deriveHazardEffect(BLIZZARD_ZONE, SCALE.Q as any);
+    const eff = deriveHazardEffect(BLIZZARD_ZONE, SCALE.Q);
     expect(eff.fatigueInc_Q).toBeGreaterThan(0);
   });
 
   it("higher exposure → higher fatigueInc_Q (monotone)", () => {
-    const lo = deriveHazardEffect(CAMPFIRE, q(0.30) as any);
-    const hi = deriveHazardEffect(CAMPFIRE, q(0.80) as any);
+    const lo = deriveHazardEffect(CAMPFIRE, q(0.30));
+    const hi = deriveHazardEffect(CAMPFIRE, q(0.80));
     expect(hi.fatigueInc_Q).toBeGreaterThan(lo.fatigueInc_Q);
   });
 
   it("higher exposure → higher radiationDose_Q for radiation type", () => {
-    const lo = deriveHazardEffect(RADIATION_ZONE, q(0.20) as any);
-    const hi = deriveHazardEffect(RADIATION_ZONE, q(0.80) as any);
+    const lo = deriveHazardEffect(RADIATION_ZONE, q(0.20));
+    const hi = deriveHazardEffect(RADIATION_ZONE, q(0.80));
     expect(hi.radiationDose_Q).toBeGreaterThan(lo.radiationDose_Q);
   });
 
   it("all effect fields are non-negative except thermalDelta", () => {
     for (const h of ALL_SAMPLE_HAZARDS) {
-      const eff = deriveHazardEffect(h, q(0.50) as any);
+      const eff = deriveHazardEffect(h, q(0.50));
       expect(eff.fatigueInc_Q).toBeGreaterThanOrEqual(0);
       expect(eff.radiationDose_Q).toBeGreaterThanOrEqual(0);
       expect(eff.surfaceDamageInc_Q).toBeGreaterThanOrEqual(0);
@@ -272,7 +272,7 @@ describe("deriveHazardEffect", () => {
 
   it("diseaseExposureId is undefined for non-gas hazards", () => {
     for (const h of [CAMPFIRE, RADIATION_ZONE, ACID_POOL, BLIZZARD_ZONE]) {
-      const eff = deriveHazardEffect(h, q(0.80) as any);
+      const eff = deriveHazardEffect(h, q(0.80));
       expect(eff.diseaseExposureId).toBeUndefined();
     }
   });

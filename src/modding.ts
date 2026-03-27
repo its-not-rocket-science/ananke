@@ -8,13 +8,13 @@
  *   mod file.  The network replication layer (CE-11) compares fingerprints across clients
  *   to guarantee all participants use identical mod definitions.
  *
- * **Layer 2 — Post-tick behavior hooks**
+ * **Layer 2 — Post-tick behaviour hooks**
  *   `registerPostTickHook(id, fn)` registers an observer callback that the host fires
  *   after each `stepWorld` call via `runPostTickHooks(world)`.  Hooks are purely
  *   observational — they MUST NOT mutate `WorldState` during the call.  Because they run
  *   outside the kernel path they cannot break determinism.
  *
- * **Layer 3 — AI behavior node overrides**
+ * **Layer 3 — AI behaviour node overrides**
  *   `registerBehaviorNode(id, factory)` installs a named factory for custom
  *   `BehaviorNode` implementations.  `loadScenario` (CE-3) can reference them by id in
  *   scenario JSON.  AI overrides require explicit host opt-in.
@@ -64,7 +64,7 @@ export function hashMod(json: unknown): string {
   return fnv1a32(canonicalJson(json)).toString(16).padStart(8, "0");
 }
 
-// ── Layer 2: Post-tick behavior hooks ─────────────────────────────────────────
+// ── Layer 2: Post-tick behaviour hooks ────────────────────────────────────────
 
 export type PostTickHook = (world: WorldState) => void;
 
@@ -122,7 +122,7 @@ export function clearPostTickHooks(): void {
   _hooks.clear();
 }
 
-// ── Layer 3: AI behavior node overrides ──────────────────────────────────────
+// ── Layer 3: AI behaviour node overrides ─────────────────────────────────────
 
 export type BehaviorNodeFactory = (...args: unknown[]) => BehaviorNode;
 
@@ -132,7 +132,7 @@ const _behaviorNodes = new Map<string, BehaviorNodeFactory>();
  * Register a named factory for a custom `BehaviorNode` implementation.
  *
  * The factory will be looked up by id when `loadScenario` (CE-3) encounters an
- * `"aiOverride"` reference in scenario JSON, or when a host builds a behavior
+ * `"aiOverride"` reference in scenario JSON, or when a host builds a behaviour
  * tree programmatically:
  *
  * ```typescript
@@ -144,7 +144,7 @@ const _behaviorNodes = new Map<string, BehaviorNodeFactory>();
  * ```
  *
  * **Deterministic multiplayer**: AI overrides affect simulation output.  All
- * clients must register the same behavior nodes (verified via `computeModManifest`)
+ * clients must register the same behaviour nodes (verified via `computeModManifest`)
  * before joining a session.
  *
  * Re-registering an existing id overwrites the previous factory.
@@ -155,7 +155,7 @@ export function registerBehaviorNode(id: string, factory: BehaviorNodeFactory): 
 }
 
 /**
- * Remove a previously registered behavior node factory.
+ * Remove a previously registered behaviour node factory.
  * Returns `true` if the factory existed and was removed.
  */
 export function unregisterBehaviorNode(id: string): boolean {
@@ -163,19 +163,19 @@ export function unregisterBehaviorNode(id: string): boolean {
 }
 
 /**
- * Look up a registered behavior node factory by id.
+ * Look up a registered behaviour node factory by id.
  * Returns `undefined` if not found.
  */
 export function getBehaviorNode(id: string): BehaviorNodeFactory | undefined {
   return _behaviorNodes.get(id);
 }
 
-/** Return the ids of all registered behavior node factories in registration order. */
+/** Return the ids of all registered behaviour node factories in registration order. */
 export function listBehaviorNodes(): string[] {
   return [..._behaviorNodes.keys()];
 }
 
-/** Remove all behavior node factories (useful for testing and hot-reload scenarios). */
+/** Remove all behaviour node factories (useful for testing and hot-reload scenarios). */
 export function clearBehaviorNodes(): void {
   _behaviorNodes.clear();
 }
@@ -187,7 +187,7 @@ export interface ModManifest {
   dataIds:     string[];
   /** Sorted list of all registered post-tick hook ids. */
   hookIds:     string[];
-  /** Sorted list of all registered behavior node ids. */
+  /** Sorted list of all registered behaviour node ids. */
   behaviorIds: string[];
   /**
    * Single fingerprint covering all three id lists.
@@ -198,7 +198,7 @@ export interface ModManifest {
 
 /**
  * Compute a session manifest covering all active mods (CE-12 catalog entries,
- * post-tick hooks, and AI behavior node overrides).
+ * post-tick hooks, and AI behaviour node overrides).
  *
  * The `fingerprint` is a deterministic 8-char hex string suitable for
  * multiplayer session comparison.  Clients are considered mod-compatible iff
@@ -217,7 +217,7 @@ export function computeModManifest(catalogIds: string[] = []): ModManifest {
   return { dataIds, hookIds, behaviorIds, fingerprint };
 }
 
-/** Remove all hooks and behavior node factories. Does not affect the CE-12 catalog. */
+/** Remove all hooks and behaviour node factories. Does not affect the CE-12 catalog. */
 export function clearAllMods(): void {
   _hooks.clear();
   _behaviorNodes.clear();

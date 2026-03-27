@@ -1,13 +1,12 @@
 // test/crafting/recipes.test.ts — Phase 61: Recipe System Tests
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../../src/units";
+import { q } from "../../src/units";
 import {
   validateRecipeFeasibility,
   resolveRecipe,
   getRecipeById,
   SAMPLE_RECIPES,
-  type Recipe,
 } from "../../src/crafting/recipes";
 import { mkHumanoidEntity } from "../../src/sim/testing";
 import type { Entity } from "../../src/sim/entity";

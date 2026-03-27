@@ -12,6 +12,8 @@ import {
 } from "../src/sim/weather.js";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing.js";
 import { stepWorld } from "../src/sim/kernel.js";
+import type { KernelContext } from "../src/sim/context.js";
+import type { ItemBase } from "../src/equipment.js";
 import { DEFAULT_SENSORY_ENV } from "../src/sim/sensory.js";
 import { cToQ } from "../src/sim/thermoregulation.js";
 
@@ -23,18 +25,18 @@ function crosswind(speed_mps: number): WindField {
 }
 
 /** Pure headwind — shot goes East (+x), wind also blows East (+x). */
-function headwind(speed_mps: number): WindField {
+function _headwind(speed_mps: number): WindField {
   return { dx_m: SCALE.m, dy_m: 0, speed_mps };
 }
 
 /** Pure tailwind — shot goes East (+x), wind blows West (−x). */
-function tailwind(speed_mps: number): WindField {
+function _tailwind(speed_mps: number): WindField {
   return { dx_m: -SCALE.m, dy_m: 0, speed_mps };
 }
 
 /** Minimal ctx for stepWorld. */
 function mkCtx(overrides: Record<string, unknown> = {}) {
-  return { tractionCoeff: q(0.9), ...overrides } as any;
+  return { tractionCoeff: q(0.9), ...overrides } as unknown as KernelContext;
 }
 
 // ── deriveWeatherModifiers ─────────────────────────────────────────────────────
@@ -225,7 +227,7 @@ describe("weather kernel integration", () => {
     const w = mkWorld(1, [e]);
     const ctx = mkCtx({ weather: { fogDensity_Q: q(0.50) } as WeatherState });
     stepWorld(w, new Map(), ctx);
-    const env = (w as any).__sensoryEnv;
+    const env = w.__sensoryEnv!;
     expect(env.lightMul).toBeLessThan(DEFAULT_SENSORY_ENV.lightMul);
   });
 
@@ -234,7 +236,7 @@ describe("weather kernel integration", () => {
     const w = mkWorld(1, [e]);
     const ctx = mkCtx({ weather: { precipitation: "heavy_rain" } as WeatherState });
     stepWorld(w, new Map(), ctx);
-    const env = (w as any).__sensoryEnv;
+    const env = w.__sensoryEnv!;
     expect(env.smokeMul).toBeLessThan(DEFAULT_SENSORY_ENV.smokeMul);
   });
 
@@ -256,7 +258,7 @@ describe("weather kernel integration", () => {
     const w = mkWorld(1, [e]);
     const ctx = mkCtx({ tractionCoeff: q(1.0), weather: { precipitation: "blizzard" } as WeatherState });
     stepWorld(w, new Map(), ctx);
-    const env = (w as any).__sensoryEnv;
+    const env = w.__sensoryEnv!;
     expect(ctx.tractionCoeff).toBe(q(0.40));
     expect(env.lightMul).toBe(q(0.30));
   });
@@ -283,7 +285,7 @@ describe("weather kernel integration", () => {
       const w = mkWorld(1, [e]);
       const ctx = mkCtx({ weather });
       stepWorld(w, new Map(), ctx);
-      return (w as any).__sensoryEnv.lightMul as number;
+      return w.__sensoryEnv!.lightMul as number;
     }
     const rainOnly     = runAndGetLightMul({ precipitation: "rain" });
     const fogOnly      = runAndGetLightMul({ fogDensity_Q: q(0.40) });
@@ -312,7 +314,7 @@ describe("weather kernel integration", () => {
       dispersionQ: q(0.10),
       damage: { surfaceFrac: q(0.3), internalFrac: q(0.5), structuralFrac: q(0.2), bleedFactor: q(0.4), penetrationBias: q(0.3) },
     };
-    shooter.loadout.items = [bow as any];
+    shooter.loadout.items = [bow as unknown as ItemBase];
 
     const world = mkWorld(42, [shooter, target]);
 

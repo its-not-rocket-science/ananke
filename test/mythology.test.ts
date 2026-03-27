@@ -1,13 +1,10 @@
 // test/mythology.test.ts — Phase 66: Generative Mythology
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { q, SCALE, type Q }                  from "../src/units.js";
 import {
-  MYTH_MIN_ENTRIES,
-  PLAGUE_MIN_DEATHS,
   GOLDEN_AGE_MIN_EVENTS,
   BELIEF_FLOOR_Q,
-  BELIEF_DECAY_PER_YEAR_Q,
   createMythRegistry,
   registerMyth,
   getMythsByFaction,

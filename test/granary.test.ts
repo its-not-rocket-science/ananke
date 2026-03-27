@@ -21,11 +21,12 @@ import { FAMINE_THRESHOLD_Q } from "../src/demography.js";
 import { createPolity } from "../src/polity.js";
 import { q, SCALE, mulDiv } from "../src/units.js";
 import type { Q } from "../src/units.js";
+import type { TechEra } from "../src/sim/tech.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function makePolity(pop = 10_000, stability = q(0.80) as Q, techEra = "Medieval") {
-  const p = createPolity("p1", "Test", "f1", [], pop, 500_000, techEra as any);
+  const p = createPolity("p1", "Test", "f1", [], pop, 500_000, techEra as TechEra);
   p.stabilityQ = stability;
   p.moraleQ    = q(0.60) as Q;
   return p;
@@ -306,7 +307,7 @@ describe("tradeFoodSupply", () => {
   });
 
   it("cannot transfer more than source has", () => {
-    const pFrom = makePolity(10_000);
+    const _pFrom = makePolity(10_000);
     const pTo   = makePolity(10_000);
     const gFrom = { polityId: "from", grain_su: 500 };
     const gTo   = { polityId: "to",   grain_su: 0 };
@@ -326,7 +327,7 @@ describe("tradeFoodSupply", () => {
   });
 
   it("limited by smallest of: amount, source grain, destination space", () => {
-    const pFrom = makePolity(10_000);
+    const _pFrom = makePolity(10_000);
     const pTo   = makePolity(1_000);
     const cap   = computeCapacity(pTo);
     const gFrom = { polityId: "from", grain_su: 999_999 };

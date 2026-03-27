@@ -6,7 +6,6 @@ import {
   DEFAULT_WORLDGEN_CONFIG,
   getWorldSummary,
   type WorldGenConfig,
-  type WorldInhabitant,
 } from "../src/world-generation.js";
 import { q } from "../src/units.js";
 

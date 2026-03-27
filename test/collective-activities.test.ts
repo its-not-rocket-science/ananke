@@ -14,7 +14,6 @@ import {
   RITUAL_MAX_BONUS,
   RITUAL_FEAR_REDUCTION_FRAC,
   CARAVAN_RATIONS_PER_PERSON_PER_DAY,
-  type CollectiveProject,
   type CaravanWaypoint,
 } from "../src/collective-activities.js";
 import { mkHumanoidEntity } from "../src/sim/testing.js";

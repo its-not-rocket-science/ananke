@@ -4,7 +4,6 @@ import { describe, it, expect } from "vitest";
 import { q } from "../../src/units.ts";
 import {
   WORKSHOP_TYPES,
-  FACILITY_LEVELS,
   getWorkshopBonus,
   validateWorkshopRequirements,
   createWorkshop,

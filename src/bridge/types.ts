@@ -4,7 +4,6 @@ import type { Vec3 } from "../sim/vec3.js";
 import type { Q } from "../units.js";
 import type { AnimationHints, PoseModifier, GrapplePoseConstraint } from "../model3d.js";
 import type { MotionVector, ConditionSample } from "../debug.js";
-import type { BodyPlan } from "../sim/bodyplan.js";
 
 // ─── Mapping configuration ──────────────────────────────────────────────────────
 

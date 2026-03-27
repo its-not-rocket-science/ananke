@@ -55,9 +55,6 @@ export interface LanguageCheckOutcome {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/** Base reception rate at linguistic q(0.50) for formation size 1. */
-const BASE_RECEPTION_RATE: Q = q(0.70) as Q;
-
 /** Maximum formation size before reception penalties apply. */
 const OPTIMAL_FORMATION_SIZE = 10;
 

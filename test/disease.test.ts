@@ -1,7 +1,7 @@
 // test/disease.test.ts — Phase 56: Disease & Epidemic Simulation
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q } from "../src/units.js";
 import {
   DISEASE_PROFILES,
   getDiseaseProfile,

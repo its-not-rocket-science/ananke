@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { SCALE, q, mulDiv, type Q } from "../src/units";
+import { SCALE, q, type Q } from "../src/units";
 import { resolveCrafting, computeSurgicalPrecision } from "../src/competence/crafting";
 import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepDowntime } from "../src/downtime";
@@ -70,12 +70,12 @@ describe("output shape", () => {
   it("success and descriptor are consistent: success=false → ruined", () => {
     const e = mkCrafter(q(0.01) as Q, q(0.01) as Q); // near-zero BK
     // Try many seeds to find a ruined outcome
-    let foundRuined = false;
+    let _foundRuined = false;
     for (let s = 0; s < 50; s++) {
       const out = resolveCrafting(e, { ...BASE_SPEC, materialQ: q(0.05) as Q, minBKQ: q(0.01) as Q }, s);
       if (!out.success) {
         expect(out.descriptor).toBe("ruined");
-        foundRuined = true;
+        _foundRuined = true;
         break;
       }
     }

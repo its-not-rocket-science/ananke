@@ -107,10 +107,10 @@ export interface BodySegment {
    */
   regeneratesViaMolting?: boolean;
 
-  // ── Phase 8C: exoskeleton-specific armor ──────────────────────────────────
+  // ── Phase 8C: exoskeleton-specific armour ─────────────────────────────────
 
   /**
-   * Intrinsic structural armor resist (joules) — energy absorbed by the shell
+   * Intrinsic structural armour resist (joules) — energy absorbed by the shell
    * before damage channels are allocated.  Distinct from worn equipment armour.
    * Absent or 0 = no intrinsic resistance.
    */

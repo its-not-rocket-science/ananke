@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { SCALE, q } from "../src/units.js";
 import { TechEra } from "../src/sim/tech.js";
-import { createPolity, createPolityRegistry } from "../src/polity.js";
+import { createPolity } from "../src/polity.js";
 import {
   techEraToLoadout,
   militaryStrengthToTeamSize,

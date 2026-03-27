@@ -19,9 +19,6 @@ import type { LineageRegistry } from "./kinship.js";
 import type { RenownRegistry }  from "./renown.js";
 import type { Polity }          from "./polity.js";
 import {
-  computeKinshipDegree,
-  getChildren,
-  findAncestors,
   computeInheritedRenown,
   MAX_KINSHIP_DEPTH,
 } from "./kinship.js";

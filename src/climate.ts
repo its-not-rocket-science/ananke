@@ -23,7 +23,7 @@
 //   Phase 93 (Campaign):    marchPenalty_Q reduces daily march progress.
 
 import { eventSeed } from "./sim/seeds.js";
-import { q, SCALE, clampQ, mulDiv } from "./units.js";
+import { q, SCALE, clampQ } from "./units.js";
 import type { Q }                    from "./units.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 import { describe, it, expect } from "vitest";
 import { q, SCALE } from "../src/units.js";
+import type { Q } from "../src/units.js";
 import {
   ROUTE_VIABLE_THRESHOLD,
   ROUTE_DECAY_PER_DAY,
@@ -164,14 +165,14 @@ describe("isRouteViable", () => {
   it("below ROUTE_VIABLE_THRESHOLD → not viable", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    route.efficiency_Q = (ROUTE_VIABLE_THRESHOLD - 1) as any;
+    route.efficiency_Q = (ROUTE_VIABLE_THRESHOLD - 1) as Q;
     expect(isRouteViable(route)).toBe(false);
   });
 
   it("zero efficiency → not viable", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    route.efficiency_Q = 0 as any;
+    route.efficiency_Q = 0 as Q;
     expect(isRouteViable(route)).toBe(false);
   });
 });
@@ -205,22 +206,22 @@ describe("computeDailyTradeIncome", () => {
   it("seasonal multiplier scales income", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 365_000);
-    const full    = computeDailyTradeIncome(route, false, SCALE.Q as any);
-    const halved  = computeDailyTradeIncome(route, false, q(0.50) as any);
+    const full    = computeDailyTradeIncome(route, false, SCALE.Q as Q);
+    const halved  = computeDailyTradeIncome(route, false, q(0.50));
     expect(halved.incomeA_cu).toBeLessThan(full.incomeA_cu);
   });
 
   it("zero seasonal multiplier → zero income", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 365_000);
-    const { incomeA_cu } = computeDailyTradeIncome(route, false, 0 as any);
+    const { incomeA_cu } = computeDailyTradeIncome(route, false, 0 as Q);
     expect(incomeA_cu).toBe(0);
   });
 
   it("returns zeros for non-viable route", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 365_000);
-    route.efficiency_Q = 0 as any;
+    route.efficiency_Q = 0 as Q;
     const { incomeA_cu, incomeB_cu } = computeDailyTradeIncome(route);
     expect(incomeA_cu).toBe(0);
     expect(incomeB_cu).toBe(0);
@@ -230,7 +231,7 @@ describe("computeDailyTradeIncome", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 365_000);
     const full = computeDailyTradeIncome(route);
-    route.efficiency_Q = q(0.50) as any;
+    route.efficiency_Q = q(0.50);
     const half = computeDailyTradeIncome(route);
     expect(half.incomeA_cu).toBeLessThan(full.incomeA_cu);
   });
@@ -253,7 +254,7 @@ describe("applyDailyTrade", () => {
   it("no-op if route not viable", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 365_000);
-    route.efficiency_Q = 0 as any;
+    route.efficiency_Q = 0 as Q;
     const a = makePolity("A", 500);
     const b = makePolity("B", 500);
     applyDailyTrade(a, b, route);
@@ -287,15 +288,15 @@ describe("stepRouteEfficiency", () => {
     const r = createTradeRegistry();
     const r1 = establishRoute(r, "A", "B", 100_000);
     const r2 = { ...r1 };
-    stepRouteEfficiency(r1, 0 as any);
-    stepRouteEfficiency(r2, q(0.005) as any);
+    stepRouteEfficiency(r1, 0 as Q);
+    stepRouteEfficiency(r2, q(0.005));
     expect(r2.efficiency_Q).toBeGreaterThan(r1.efficiency_Q);
   });
 
   it("cannot go below 0", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    route.efficiency_Q = 0 as any;
+    route.efficiency_Q = 0 as Q;
     stepRouteEfficiency(route);
     expect(route.efficiency_Q).toBe(0);
   });
@@ -303,8 +304,8 @@ describe("stepRouteEfficiency", () => {
   it("cannot exceed SCALE.Q", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    route.efficiency_Q = q(0.999) as any;
-    stepRouteEfficiency(route, q(0.10) as any);
+    route.efficiency_Q = q(0.999);
+    stepRouteEfficiency(route, q(0.10));
     expect(route.efficiency_Q).toBeLessThanOrEqual(SCALE.Q);
   });
 });
@@ -315,23 +316,23 @@ describe("reinforceRoute", () => {
   it("increases efficiency", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    route.efficiency_Q = q(0.50) as any;
-    reinforceRoute(route, q(0.20) as any);
+    route.efficiency_Q = q(0.50);
+    reinforceRoute(route, q(0.20));
     expect(route.efficiency_Q).toBe(q(0.70));
   });
 
   it("clamps to SCALE.Q", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    reinforceRoute(route, q(0.50) as any); // already at SCALE.Q
+    reinforceRoute(route, q(0.50)); // already at SCALE.Q
     expect(route.efficiency_Q).toBe(SCALE.Q);
   });
 
   it("clamps to 0 for negative delta", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    route.efficiency_Q = q(0.05) as any;
-    reinforceRoute(route, -q(0.50) as any);
+    route.efficiency_Q = q(0.05);
+    reinforceRoute(route, -q(0.50));
     expect(route.efficiency_Q).toBe(0);
   });
 });
@@ -342,21 +343,21 @@ describe("disruptRoute", () => {
   it("reduces efficiency", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    disruptRoute(route, q(0.30) as any);
+    disruptRoute(route, q(0.30));
     expect(route.efficiency_Q).toBe(q(0.70));
   });
 
   it("can push route below viable threshold (disruption = shutdown)", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    disruptRoute(route, q(0.95) as any);
+    disruptRoute(route, q(0.95));
     expect(isRouteViable(route)).toBe(false);
   });
 
   it("clamps to 0, not negative", () => {
     const r = createTradeRegistry();
     const route = establishRoute(r, "A", "B", 100_000);
-    disruptRoute(route, (SCALE.Q * 2) as any);
+    disruptRoute(route, (SCALE.Q * 2) as Q);
     expect(route.efficiency_Q).toBe(0);
   });
 });
@@ -382,7 +383,7 @@ describe("computeAnnualTradeVolume", () => {
     const r = createTradeRegistry();
     const r1 = establishRoute(r, "A", "B", 100_000);
     establishRoute(r, "A", "C", 200_000);
-    r1.efficiency_Q = 0 as any;
+    r1.efficiency_Q = 0 as Q;
     const vol = computeAnnualTradeVolume(r, "A");
     expect(vol).toBe(200_000);
   });

@@ -19,7 +19,6 @@ import {
 } from "../src/infrastructure.js";
 import { createPolity } from "../src/polity.js";
 import { q, SCALE, mulDiv } from "../src/units.js";
-import type { Q } from "../src/units.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

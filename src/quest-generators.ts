@@ -2,13 +2,11 @@
 //
 // Generates quests from world state, faction standing, and entity capabilities.
 
-import type { Q } from "./units.js";
 import { q } from "./units.js";
 import type {
   Quest,
   QuestObjective,
   QuestRewards,
-  QuestTarget,
 } from "./quest.js";
 import type { CompetenceDomain } from "./competence/catalogue.js";
 
@@ -83,7 +81,7 @@ const DELIVERY_TEMPLATE: QuestTemplate = {
     currency: 50,
   },
   objectiveGenerators: [
-    (ctx) => ({
+    (_ctx) => ({
       objectiveId: "collect_package",
       description: "Collect the package from the quest giver",
       type: "collect_item",
@@ -175,7 +173,7 @@ const INVESTIGATION_TEMPLATE: QuestTemplate = {
       state: "available",
       hidden: false,
     }),
-    (ctx) => ({
+    (_ctx) => ({
       objectiveId: "report_findings",
       description: "Return and report your findings",
       type: "dialogue_choice",
@@ -233,7 +231,7 @@ const COLLECTION_TEMPLATE: QuestTemplate = {
     currency: 60,
   },
   objectiveGenerators: [
-    (ctx) => ({
+    (_ctx) => ({
       objectiveId: "collect_items",
       description: "Collect the requested items",
       type: "collect_item",
@@ -273,7 +271,7 @@ const WAIT_TEMPLATE: QuestTemplate = {
       state: "available",
       hidden: false,
     }),
-    (ctx) => ({
+    (_ctx) => ({
       objectiveId: "stand_watch",
       description: "Stand watch for the required duration",
       type: "wait_duration",

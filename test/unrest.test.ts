@@ -4,11 +4,8 @@ import { describe, it, expect } from "vitest";
 import {
   UNREST_MORALE_WEIGHT_Q,
   UNREST_STABILITY_WEIGHT_Q,
-  UNREST_FAMINE_WEIGHT_Q,
   UNREST_ACTION_THRESHOLD_Q,
   REBELLION_THRESHOLD_Q,
-  UNREST_MORALE_DRAIN_Q,
-  UNREST_STABILITY_DRAIN_Q,
   REBELLION_TREASURY_RAID_Q,
   computeUnrestLevel,
   stepUnrest,
@@ -210,7 +207,7 @@ describe("stepUnrest", () => {
 
 describe("resolveRebellion", () => {
   it("always returns a valid outcome", () => {
-    const p = makePolity();
+    const _p = makePolity();
     const valid: Set<string> = new Set(["quelled", "uprising", "civil_war"]);
     for (let tick = 0; tick < 20; tick++) {
       const pol = makePolity();

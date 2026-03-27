@@ -4,8 +4,8 @@
 // with the competence system.
 
 import type { Q } from "./units.js";
-import { q, qMul, clampQ, SCALE, mulDiv } from "./units.js";
-import type { ItemInstance, ItemMod } from "./inventory.js";
+import { q, clampQ, SCALE, mulDiv } from "./units.js";
+import type { ItemInstance } from "./inventory.js";
 import { applyItemMod } from "./inventory.js";
 
 // ── Durability Constants ──────────────────────────────────────────────────────
@@ -225,7 +225,7 @@ export function resolveRepair(
   item: ItemInstance,
   crafterCognitionQ: Q,
   toolQuality_Q: Q,
-  seed: number,
+  _seed: number,
 ): RepairResult {
   if (!hasDurability(item)) {
     return {

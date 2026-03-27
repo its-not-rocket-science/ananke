@@ -5,9 +5,6 @@ import type { ChronicleEntry, StoryArc } from "../src/chronicle.js";
 import {
   renderEntry,
   renderChronicle,
-  renderArcSummary,
-  renderArcNarrative,
-  renderAllArcs,
   registerTemplate,
   registerTemplates,
   generateNarrative,

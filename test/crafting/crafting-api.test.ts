@@ -102,7 +102,7 @@ function mkForgeWorkshop(facilityLevel: WorkshopInstance["facilityLevel"] = "bas
   return createWorkshop("forge", "test_location", facilityLevel, tools)!;
 }
 
-function mkEmptyWorkshop(): WorkshopInstance {
+function _mkEmptyWorkshop(): WorkshopInstance {
   return {
     typeId: "unknown_type",
     locationId: "nowhere",
@@ -398,7 +398,7 @@ describe("getAvailableRecipes", () => {
 
 describe("applyMaterialProperties", () => {
   it("returns MaterialPropertyModifier with multipliers for known material", () => {
-    const materialType = getMaterialTypeById("iron")!;
+    const _materialType = getMaterialTypeById("iron")!;
     const material = createMaterialItem("iron", q(0.70), 1000, "mat_iron_1");
     const baseItem = { id: "wpn_sword", name: "Sword", mass_kg: 1500, bulk: q(1.0) };
     const mods = applyMaterialProperties(baseItem, material);

@@ -17,7 +17,7 @@ import type { KernelContext } from "../../src/sim/context.js";
 import { stepWorld }          from "../../src/sim/kernel.js";
 import { mkWorld }            from "../../src/sim/testing.js";
 import { mkKnight }           from "../../src/presets.js";
-import { mkHumanoidEntity }   from "../../src/sim/testing.js";
+import { mkHumanoidEntity as _mkHumanoidEntity }   from "../../src/sim/testing.js";
 import { extractRigSnapshots, deriveAnimationHints, deriveGrappleConstraint } from "../../src/model3d.js";
 import { BridgeEngine }       from "../../src/bridge/bridge-engine.js";
 

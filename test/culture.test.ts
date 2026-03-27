@@ -231,7 +231,7 @@ describe("generateCulture — contradictions", () => {
     // medieval: high power → high honour; wealthy: high exchange → high commerce
     const richMedieval = makePolity({ techEra: "medieval", population: 10_000, treasury_cu: 200_000 });
     const p = generateCulture(richMedieval, makeRegistry(), NO_MYTHS);
-    const c = p.contradictions.find(x => x.valueA === "honour" && x.valueB === "commerce");
+    const _c = p.contradictions.find(x => x.valueA === "honour" && x.valueB === "commerce");
     // May or may not fire depending on balance; check that contradiction list is valid
     for (const x of p.contradictions) {
       expect(x.tension_Q).toBeGreaterThanOrEqual(CONTRADICTION_THRESHOLD_Q);

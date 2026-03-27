@@ -2,6 +2,7 @@
 
 import { describe, it, expect } from "vitest";
 import { q, SCALE } from "../src/units.js";
+import type { Q } from "../src/units.js";
 import type { Chronicle, ChronicleEntry } from "../src/chronicle.ts";
 import { createChronicle } from "../src/chronicle.ts";
 import {
@@ -15,7 +16,6 @@ import {
   stepLegendFame,
   serializeLegendRegistry,
   deserializeLegendRegistry,
-  LEGEND_MIN_SIGNIFICANCE,
   type Legend,
 } from "../src/legend.ts";
 
@@ -45,7 +45,7 @@ function mkLegend(override: Partial<Legend> = {}): Legend {
     subjectId: 1,
     subjectName: "Arath",
     reputation: "heroic",
-    fame_Q: q(0.70) as any,
+    fame_Q: q(0.70),
     tags: ["warrior"],
     sourceEntryIds: ["e1"],
     sourceArcTypes: [],
@@ -206,26 +206,26 @@ describe("LegendRegistry", () => {
 
 describe("getLegendEffect", () => {
   it("heroic legend gives persuasionBonus > 0 and no intimidation/fear", () => {
-    const eff = getLegendEffect(mkLegend({ reputation: "heroic", fame_Q: q(0.70) as any }));
+    const eff = getLegendEffect(mkLegend({ reputation: "heroic", fame_Q: q(0.70) }));
     expect(eff.persuasionBonus_Q).toBeGreaterThan(0);
     expect(eff.intimidationBonus_Q).toBe(0);
     expect(eff.fearBonus_Q).toBe(0);
   });
 
   it("heroic legend gives moraleBonus > 0", () => {
-    const eff = getLegendEffect(mkLegend({ reputation: "heroic", fame_Q: q(0.70) as any }));
+    const eff = getLegendEffect(mkLegend({ reputation: "heroic", fame_Q: q(0.70) }));
     expect(eff.moraleBonus_Q).toBeGreaterThan(0);
   });
 
   it("notorious legend gives intimidationBonus > 0 and fearBonus > 0", () => {
-    const eff = getLegendEffect(mkLegend({ reputation: "notorious", fame_Q: q(0.80) as any }));
+    const eff = getLegendEffect(mkLegend({ reputation: "notorious", fame_Q: q(0.80) }));
     expect(eff.intimidationBonus_Q).toBeGreaterThan(0);
     expect(eff.fearBonus_Q).toBeGreaterThan(0);
     expect(eff.persuasionBonus_Q).toBe(0);
   });
 
   it("legendary gives both persuasion and intimidation bonuses", () => {
-    const eff = getLegendEffect(mkLegend({ reputation: "legendary", fame_Q: q(0.90) as any }));
+    const eff = getLegendEffect(mkLegend({ reputation: "legendary", fame_Q: q(0.90) }));
     expect(eff.persuasionBonus_Q).toBeGreaterThan(0);
     expect(eff.intimidationBonus_Q).toBeGreaterThan(0);
     expect(eff.moraleBonus_Q).toBeGreaterThan(0);
@@ -233,7 +233,7 @@ describe("getLegendEffect", () => {
   });
 
   it("forgotten legend returns all zeros", () => {
-    const eff = getLegendEffect(mkLegend({ reputation: "forgotten", fame_Q: q(0.05) as any }));
+    const eff = getLegendEffect(mkLegend({ reputation: "forgotten", fame_Q: q(0.05) }));
     expect(eff.persuasionBonus_Q).toBe(0);
     expect(eff.intimidationBonus_Q).toBe(0);
     expect(eff.fearBonus_Q).toBe(0);
@@ -241,8 +241,8 @@ describe("getLegendEffect", () => {
   });
 
   it("higher fame → higher persuasionBonus for heroic", () => {
-    const low  = getLegendEffect(mkLegend({ reputation: "heroic", fame_Q: q(0.20) as any }));
-    const high = getLegendEffect(mkLegend({ reputation: "heroic", fame_Q: q(0.90) as any }));
+    const low  = getLegendEffect(mkLegend({ reputation: "heroic", fame_Q: q(0.20) }));
+    const high = getLegendEffect(mkLegend({ reputation: "heroic", fame_Q: q(0.90) }));
     expect(high.persuasionBonus_Q).toBeGreaterThan(low.persuasionBonus_Q);
   });
 });
@@ -251,28 +251,28 @@ describe("getLegendEffect", () => {
 
 describe("npcKnowsLegend", () => {
   it("fame_Q = SCALE.Q → always known", () => {
-    const legend = mkLegend({ fame_Q: SCALE.Q as any });
+    const legend = mkLegend({ fame_Q: SCALE.Q as Q });
     for (let npcId = 1; npcId <= 20; npcId++) {
       expect(npcKnowsLegend(legend, npcId, 42, 0)).toBe(true);
     }
   });
 
   it("fame_Q = 0 → never known", () => {
-    const legend = mkLegend({ fame_Q: q(0) as any });
+    const legend = mkLegend({ fame_Q: q(0) });
     for (let npcId = 1; npcId <= 20; npcId++) {
       expect(npcKnowsLegend(legend, npcId, 42, 0)).toBe(false);
     }
   });
 
   it("same inputs produce the same result (deterministic)", () => {
-    const legend = mkLegend({ fame_Q: q(0.50) as any });
+    const legend = mkLegend({ fame_Q: q(0.50) });
     const r1 = npcKnowsLegend(legend, 7, 999, 500);
     const r2 = npcKnowsLegend(legend, 7, 999, 500);
     expect(r1).toBe(r2);
   });
 
   it("different npcIds produce different results across population", () => {
-    const legend = mkLegend({ fame_Q: q(0.50) as any });
+    const legend = mkLegend({ fame_Q: q(0.50) });
     const results = new Set<boolean>();
     for (let npcId = 1; npcId <= 50; npcId++) {
       results.add(npcKnowsLegend(legend, npcId, 1, 0));
@@ -296,7 +296,7 @@ describe("applyLegendToDialogueContext", () => {
 
   it("heroic legend (fame=SCALE.Q, always known) → persuasionBonus > 0", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: SCALE.Q as any, reputation: "heroic" }));
+    registerLegend(reg, mkLegend({ fame_Q: SCALE.Q as Q, reputation: "heroic" }));
 
     const result = applyLegendToDialogueContext(1, 2, reg, 42, 0);
     expect(result.persuasionBonus_Q).toBeGreaterThan(0);
@@ -304,7 +304,7 @@ describe("applyLegendToDialogueContext", () => {
 
   it("notorious legend (fame=SCALE.Q) → intimidationBonus > 0", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: SCALE.Q as any, reputation: "notorious" }));
+    registerLegend(reg, mkLegend({ fame_Q: SCALE.Q as Q, reputation: "notorious" }));
 
     const result = applyLegendToDialogueContext(1, 2, reg, 42, 0);
     expect(result.intimidationBonus_Q).toBeGreaterThan(0);
@@ -313,7 +313,7 @@ describe("applyLegendToDialogueContext", () => {
 
   it("legend not known (fame=0) → no bonus", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: q(0) as any, reputation: "heroic" }));
+    registerLegend(reg, mkLegend({ fame_Q: q(0), reputation: "heroic" }));
 
     const result = applyLegendToDialogueContext(1, 2, reg, 42, 0);
     expect(result.persuasionBonus_Q).toBe(0);
@@ -325,7 +325,7 @@ describe("applyLegendToDialogueContext", () => {
     for (let i = 0; i < 10; i++) {
       registerLegend(reg, mkLegend({
         legendId: `legend_1_${i}`,
-        fame_Q: SCALE.Q as any,
+        fame_Q: SCALE.Q as Q,
         reputation: "heroic",
       }));
     }
@@ -340,7 +340,7 @@ describe("applyLegendToDialogueContext", () => {
 describe("stepLegendFame", () => {
   it("fame decays over time", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: q(0.80) as any, reputation: "heroic" }));
+    registerLegend(reg, mkLegend({ fame_Q: q(0.80), reputation: "heroic" }));
 
     const before = reg.legends.get("legend_1_100")!.fame_Q;
     stepLegendFame(reg, 100_000); // large delta to ensure decay > 0
@@ -351,7 +351,7 @@ describe("stepLegendFame", () => {
 
   it("legendary reputation has a fame floor at q(0.50)", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: q(0.51) as any, reputation: "legendary" }));
+    registerLegend(reg, mkLegend({ fame_Q: q(0.51), reputation: "legendary" }));
 
     stepLegendFame(reg, 100_000_000); // enormous delta
 
@@ -361,7 +361,7 @@ describe("stepLegendFame", () => {
 
   it("no decay when deltaTicks = 0", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: q(0.70) as any, reputation: "heroic" }));
+    registerLegend(reg, mkLegend({ fame_Q: q(0.70), reputation: "heroic" }));
 
     stepLegendFame(reg, 0);
 
@@ -370,7 +370,7 @@ describe("stepLegendFame", () => {
 
   it("reputation becomes forgotten when fame falls below threshold", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: q(0.11) as any, reputation: "heroic" }));
+    registerLegend(reg, mkLegend({ fame_Q: q(0.11), reputation: "heroic" }));
 
     stepLegendFame(reg, 100_000_000);
 
@@ -379,7 +379,7 @@ describe("stepLegendFame", () => {
 
   it("fame never goes below 0", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: q(0.15) as any, reputation: "heroic" }));
+    registerLegend(reg, mkLegend({ fame_Q: q(0.15), reputation: "heroic" }));
 
     stepLegendFame(reg, 1_000_000_000);
 
@@ -392,8 +392,8 @@ describe("stepLegendFame", () => {
 describe("serialization", () => {
   it("serializeLegendRegistry → deserializeLegendRegistry round-trip", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: q(0.70) as any, reputation: "heroic" }));
-    registerLegend(reg, mkLegend({ legendId: "legend_2_200", subjectId: 2, subjectName: "Brak", fame_Q: q(0.50) as any }));
+    registerLegend(reg, mkLegend({ fame_Q: q(0.70), reputation: "heroic" }));
+    registerLegend(reg, mkLegend({ legendId: "legend_2_200", subjectId: 2, subjectName: "Brak", fame_Q: q(0.50) }));
 
     const data = serializeLegendRegistry(reg);
     const restored = deserializeLegendRegistry(data);
@@ -405,7 +405,7 @@ describe("serialization", () => {
 
   it("bySubject index is rebuilt correctly on deserialize", () => {
     const reg = createLegendRegistry();
-    registerLegend(reg, mkLegend({ fame_Q: q(0.70) as any }));
+    registerLegend(reg, mkLegend({ fame_Q: q(0.70) }));
 
     const restored = deserializeLegendRegistry(serializeLegendRegistry(reg));
 

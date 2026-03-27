@@ -307,8 +307,9 @@ describe("aggregateClimateEffects", () => {
 
   it("all aggregated values clamped to [0, SCALE.Q]", () => {
     // stack many severe events to test clamping
+    const climateTypes = ["drought", "flood", "harsh_winter", "earthquake", "plague_season", "locust_swarm"] as const;
     const events = Array.from({ length: 6 }, (_, i) =>
-      makeActive(["drought", "flood", "harsh_winter", "earthquake", "plague_season", "locust_swarm"][i] as any, SCALE.Q as Q)
+      makeActive(climateTypes[i], SCALE.Q as Q)
     );
     const agg = aggregateClimateEffects(events);
     for (const val of Object.values(agg)) {

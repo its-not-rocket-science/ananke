@@ -4,10 +4,9 @@
 // Integrates with economy (Phase 25), quests (Phase 41), and competence (Phase 40).
 
 import type { Q } from "./units.js";
-import { q, SCALE, qMul } from "./units.js";
-import type { Settlement, AvailableServices, FacilityLevel } from "./settlement.js";
+import { q, SCALE } from "./units.js";
+import type { Settlement } from "./settlement.js";
 import { getAvailableServices, SETTLEMENT_TIER_NAMES } from "./settlement.js";
-import type { QuestTemplate } from "./quest-generators.js";
 
 // ── Service Pricing ────────────────────────────────────────────────────────────
 
@@ -140,12 +139,12 @@ export function generateSettlementNeeds(settlement: Settlement): SettlementQuest
     });
   }
 
-  // Recent raid → defense need
+  // Recent raid → defence need
   if (settlement.safetyStatus.ticksSinceLastRaid < 100) {
     needs.push({
       type: "defense",
       priority: 8,
-      description: "Recent raid requires improved defenses",
+      description: "Recent raid requires improved defences",
       suggestedReward: 300,
     });
   }

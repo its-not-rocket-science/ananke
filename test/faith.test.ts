@@ -1,7 +1,7 @@
 // test/faith.test.ts — Phase 85: Religion & Faith Systems
 
 import { describe, it, expect } from "vitest";
-import { q, SCALE } from "../src/units.js";
+import { q, SCALE, type Q } from "../src/units.js";
 import {
   SOLAR_CHURCH,
   EARTH_SPIRITS,
@@ -80,7 +80,7 @@ describe("sample faiths", () => {
 describe("setPolityFaith", () => {
   it("creates new record", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "P1", "solar_church", q(0.80) as any);
+    setPolityFaith(r, "P1", "solar_church", q(0.80));
     const list = getPolityFaiths(r, "P1");
     expect(list).toHaveLength(1);
     expect(list[0].adherents_Q).toBe(q(0.80));
@@ -88,24 +88,24 @@ describe("setPolityFaith", () => {
 
   it("updates existing record", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "P1", "solar_church", q(0.60) as any);
-    setPolityFaith(r, "P1", "solar_church", q(0.80) as any);
+    setPolityFaith(r, "P1", "solar_church", q(0.60));
+    setPolityFaith(r, "P1", "solar_church", q(0.80));
     expect(getPolityFaiths(r, "P1")).toHaveLength(1);
     expect(getPolityFaiths(r, "P1")[0].adherents_Q).toBe(q(0.80));
   });
 
   it("can hold multiple faiths", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "P1", "solar_church",  q(0.60) as any);
-    setPolityFaith(r, "P1", "earth_spirits", q(0.30) as any);
+    setPolityFaith(r, "P1", "solar_church",  q(0.60));
+    setPolityFaith(r, "P1", "earth_spirits", q(0.30));
     expect(getPolityFaiths(r, "P1")).toHaveLength(2);
   });
 
   it("clamps adherents to [0, SCALE.Q]", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "P1", "solar_church", (SCALE.Q * 2) as any);
+    setPolityFaith(r, "P1", "solar_church", (SCALE.Q * 2) as Q);
     expect(getPolityFaiths(r, "P1")[0].adherents_Q).toBe(SCALE.Q);
-    setPolityFaith(r, "P1", "solar_church", -100 as any);
+    setPolityFaith(r, "P1", "solar_church", -100 as Q);
     expect(getPolityFaiths(r, "P1")[0].adherents_Q).toBe(0);
   });
 
@@ -120,8 +120,8 @@ describe("setPolityFaith", () => {
 describe("getDominantFaith", () => {
   it("returns faith with highest adherents", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "P1", "solar_church",  q(0.30) as any);
-    setPolityFaith(r, "P1", "earth_spirits", q(0.60) as any);
+    setPolityFaith(r, "P1", "solar_church",  q(0.30));
+    setPolityFaith(r, "P1", "earth_spirits", q(0.60));
     expect(getDominantFaith(r, "P1")!.faithId).toBe("earth_spirits");
   });
 
@@ -132,7 +132,7 @@ describe("getDominantFaith", () => {
 
   it("works with a single faith", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "P1", "solar_church", q(0.90) as any);
+    setPolityFaith(r, "P1", "solar_church", q(0.90));
     expect(getDominantFaith(r, "P1")!.faithId).toBe("solar_church");
   });
 });
@@ -142,21 +142,21 @@ describe("getDominantFaith", () => {
 describe("sharesDominantFaith", () => {
   it("returns true when both have same dominant faith", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "A", "solar_church", q(0.90) as any);
-    setPolityFaith(r, "B", "solar_church", q(0.80) as any);
+    setPolityFaith(r, "A", "solar_church", q(0.90));
+    setPolityFaith(r, "B", "solar_church", q(0.80));
     expect(sharesDominantFaith(r, "A", "B")).toBe(true);
   });
 
   it("returns false when dominant faiths differ", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "A", "solar_church",  q(0.80) as any);
-    setPolityFaith(r, "B", "earth_spirits", q(0.80) as any);
+    setPolityFaith(r, "A", "solar_church",  q(0.80));
+    setPolityFaith(r, "B", "earth_spirits", q(0.80));
     expect(sharesDominantFaith(r, "A", "B")).toBe(false);
   });
 
   it("returns false when either polity has no faith", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "A", "solar_church", q(0.80) as any);
+    setPolityFaith(r, "A", "solar_church", q(0.80));
     expect(sharesDominantFaith(r, "A", "B")).toBe(false);
   });
 });
@@ -165,27 +165,27 @@ describe("sharesDominantFaith", () => {
 
 describe("computeConversionPressure", () => {
   it("returns 0 for zero missionary presence", () => {
-    expect(computeConversionPressure(SOLAR_CHURCH, 0 as any)).toBe(0);
+    expect(computeConversionPressure(SOLAR_CHURCH, 0)).toBe(0);
   });
 
   it("returns positive pressure for positive missionary presence", () => {
-    expect(computeConversionPressure(SOLAR_CHURCH, q(0.80) as any)).toBeGreaterThan(0);
+    expect(computeConversionPressure(SOLAR_CHURCH, q(0.80))).toBeGreaterThan(0);
   });
 
   it("high fervor faith converts faster than low fervor", () => {
-    const presence = q(0.80) as any;
+    const presence = q(0.80);
     expect(computeConversionPressure(SOLAR_CHURCH, presence))
       .toBeGreaterThan(computeConversionPressure(EARTH_SPIRITS, presence));
   });
 
   it("pressure scales with missionary presence", () => {
-    const low  = computeConversionPressure(SOLAR_CHURCH, q(0.20) as any);
-    const high = computeConversionPressure(SOLAR_CHURCH, q(0.80) as any);
+    const low  = computeConversionPressure(SOLAR_CHURCH, q(0.20));
+    const high = computeConversionPressure(SOLAR_CHURCH, q(0.80));
     expect(high).toBeGreaterThan(low);
   });
 
   it("is clamped to [0, SCALE.Q]", () => {
-    const p = computeConversionPressure(SOLAR_CHURCH, SCALE.Q as any);
+    const p = computeConversionPressure(SOLAR_CHURCH, SCALE.Q);
     expect(p).toBeGreaterThanOrEqual(0);
     expect(p).toBeLessThanOrEqual(SCALE.Q);
   });
@@ -198,9 +198,9 @@ describe("stepFaithConversion", () => {
     const r = createFaithRegistry();
     registerFaith(r, EARTH_SPIRITS);
     registerFaith(r, MERCHANT_CULT);
-    setPolityFaith(r, "P1", "earth_spirits", q(0.40) as any);
-    setPolityFaith(r, "P1", "merchant_cult", q(0.30) as any);
-    stepFaithConversion(r, "P1", "earth_spirits", q(0.10) as any);
+    setPolityFaith(r, "P1", "earth_spirits", q(0.40));
+    setPolityFaith(r, "P1", "merchant_cult", q(0.30));
+    stepFaithConversion(r, "P1", "earth_spirits", q(0.10));
     const list = getPolityFaiths(r, "P1");
     expect(list.find(p => p.faithId === "earth_spirits")!.adherents_Q).toBe(q(0.50));
     expect(list.find(p => p.faithId === "merchant_cult")!.adherents_Q).toBe(q(0.30));
@@ -211,9 +211,9 @@ describe("stepFaithConversion", () => {
     registerFaith(r, SOLAR_CHURCH);
     const rival: typeof SOLAR_CHURCH = { ...SOLAR_CHURCH, faithId: "rival_church", name: "Rival", exclusive: true };
     registerFaith(r, rival);
-    setPolityFaith(r, "P1", "solar_church", q(0.50) as any);
-    setPolityFaith(r, "P1", "rival_church", q(0.50) as any);
-    stepFaithConversion(r, "P1", "solar_church", q(0.10) as any);
+    setPolityFaith(r, "P1", "solar_church", q(0.50));
+    setPolityFaith(r, "P1", "rival_church", q(0.50));
+    stepFaithConversion(r, "P1", "solar_church", q(0.10));
     const list = getPolityFaiths(r, "P1");
     const solar = list.find(p => p.faithId === "solar_church")!;
     const rival_ = list.find(p => p.faithId === "rival_church")!;
@@ -225,9 +225,9 @@ describe("stepFaithConversion", () => {
     const r = createFaithRegistry();
     registerFaith(r, SOLAR_CHURCH);
     registerFaith(r, EARTH_SPIRITS);
-    setPolityFaith(r, "P1", "solar_church",  q(0.60) as any);
-    setPolityFaith(r, "P1", "earth_spirits", q(0.40) as any);
-    stepFaithConversion(r, "P1", "solar_church", q(0.10) as any);
+    setPolityFaith(r, "P1", "solar_church",  q(0.60));
+    setPolityFaith(r, "P1", "earth_spirits", q(0.40));
+    stepFaithConversion(r, "P1", "solar_church", q(0.10));
     const list = getPolityFaiths(r, "P1");
     expect(list.find(p => p.faithId === "earth_spirits")!.adherents_Q).toBe(q(0.40));
   });
@@ -235,23 +235,23 @@ describe("stepFaithConversion", () => {
   it("creates new record if faith not yet present", () => {
     const r = createFaithRegistry();
     registerFaith(r, EARTH_SPIRITS);
-    stepFaithConversion(r, "P1", "earth_spirits", q(0.10) as any);
+    stepFaithConversion(r, "P1", "earth_spirits", q(0.10));
     expect(getPolityFaiths(r, "P1")[0].adherents_Q).toBe(q(0.10));
   });
 
   it("zero delta is a no-op", () => {
     const r = createFaithRegistry();
     registerFaith(r, SOLAR_CHURCH);
-    setPolityFaith(r, "P1", "solar_church", q(0.70) as any);
-    stepFaithConversion(r, "P1", "solar_church", 0 as any);
+    setPolityFaith(r, "P1", "solar_church", q(0.70));
+    stepFaithConversion(r, "P1", "solar_church", 0);
     expect(getPolityFaiths(r, "P1")[0].adherents_Q).toBe(q(0.70));
   });
 
   it("adherents cannot go below 0 via negative delta", () => {
     const r = createFaithRegistry();
     registerFaith(r, EARTH_SPIRITS);
-    setPolityFaith(r, "P1", "earth_spirits", q(0.10) as any);
-    stepFaithConversion(r, "P1", "earth_spirits", -q(0.50) as any);
+    setPolityFaith(r, "P1", "earth_spirits", q(0.10));
+    stepFaithConversion(r, "P1", "earth_spirits", -q(0.50));
     expect(getPolityFaiths(r, "P1")[0].adherents_Q).toBe(0);
   });
 });
@@ -268,8 +268,8 @@ describe("computeHeresyRisk", () => {
     const r = createFaithRegistry();
     registerFaith(r, EARTH_SPIRITS);
     registerFaith(r, SOLAR_CHURCH);
-    setPolityFaith(r, "P1", "earth_spirits", q(0.80) as any);
-    setPolityFaith(r, "P1", "solar_church",  q(0.20) as any);
+    setPolityFaith(r, "P1", "earth_spirits", q(0.80));
+    setPolityFaith(r, "P1", "solar_church",  q(0.20));
     expect(computeHeresyRisk(r, "P1")).toBe(0);
   });
 
@@ -278,8 +278,8 @@ describe("computeHeresyRisk", () => {
     registerFaith(r, SOLAR_CHURCH);
     const rival = { ...SOLAR_CHURCH, faithId: "rival", exclusive: true } as typeof SOLAR_CHURCH;
     registerFaith(r, rival);
-    setPolityFaith(r, "P1", "solar_church", q(0.90) as any);
-    setPolityFaith(r, "P1", "rival",        q(0.10) as any); // below q(0.15) threshold
+    setPolityFaith(r, "P1", "solar_church", q(0.90));
+    setPolityFaith(r, "P1", "rival",        q(0.10)); // below q(0.15) threshold
     expect(computeHeresyRisk(r, "P1")).toBe(0);
   });
 
@@ -288,8 +288,8 @@ describe("computeHeresyRisk", () => {
     registerFaith(r, SOLAR_CHURCH);
     const rival = { ...SOLAR_CHURCH, faithId: "rival", exclusive: true } as typeof SOLAR_CHURCH;
     registerFaith(r, rival);
-    setPolityFaith(r, "P1", "solar_church", q(0.60) as any);
-    setPolityFaith(r, "P1", "rival",        q(0.40) as any); // above q(0.15) threshold
+    setPolityFaith(r, "P1", "solar_church", q(0.60));
+    setPolityFaith(r, "P1", "rival",        q(0.40)); // above q(0.15) threshold
     expect(computeHeresyRisk(r, "P1")).toBeGreaterThan(0);
   });
 
@@ -299,11 +299,11 @@ describe("computeHeresyRisk", () => {
     const rival = { ...SOLAR_CHURCH, faithId: "rival", exclusive: true } as typeof SOLAR_CHURCH;
     registerFaith(r, rival);
 
-    setPolityFaith(r, "P1", "solar_church", q(0.70) as any);
-    setPolityFaith(r, "P1", "rival",        q(0.30) as any);
+    setPolityFaith(r, "P1", "solar_church", q(0.70));
+    setPolityFaith(r, "P1", "rival",        q(0.30));
 
-    setPolityFaith(r, "P2", "solar_church", q(0.50) as any);
-    setPolityFaith(r, "P2", "rival",        q(0.50) as any);
+    setPolityFaith(r, "P2", "solar_church", q(0.50));
+    setPolityFaith(r, "P2", "rival",        q(0.50));
 
     expect(computeHeresyRisk(r, "P2")).toBeGreaterThan(computeHeresyRisk(r, "P1"));
   });
@@ -312,8 +312,8 @@ describe("computeHeresyRisk", () => {
     const r = createFaithRegistry();
     registerFaith(r, SOLAR_CHURCH);
     registerFaith(r, EARTH_SPIRITS);
-    setPolityFaith(r, "P1", "solar_church",  q(0.60) as any);
-    setPolityFaith(r, "P1", "earth_spirits", q(0.40) as any);
+    setPolityFaith(r, "P1", "solar_church",  q(0.60));
+    setPolityFaith(r, "P1", "earth_spirits", q(0.40));
     expect(computeHeresyRisk(r, "P1")).toBe(0);
   });
 });
@@ -324,8 +324,8 @@ describe("computeFaithDiplomaticModifier", () => {
   it("shared dominant faith → positive bonus", () => {
     const r = createFaithRegistry();
     registerFaith(r, SOLAR_CHURCH);
-    setPolityFaith(r, "A", "solar_church", q(0.90) as any);
-    setPolityFaith(r, "B", "solar_church", q(0.85) as any);
+    setPolityFaith(r, "A", "solar_church", q(0.90));
+    setPolityFaith(r, "B", "solar_church", q(0.85));
     expect(computeFaithDiplomaticModifier(r, "A", "B")).toBe(FAITH_DIPLOMATIC_BONUS_Q);
   });
 
@@ -334,8 +334,8 @@ describe("computeFaithDiplomaticModifier", () => {
     registerFaith(r, SOLAR_CHURCH);
     const rival = { ...SOLAR_CHURCH, faithId: "rival_faith" } as typeof SOLAR_CHURCH;
     registerFaith(r, rival);
-    setPolityFaith(r, "A", "solar_church", q(0.90) as any);
-    setPolityFaith(r, "B", "rival_faith",  q(0.90) as any);
+    setPolityFaith(r, "A", "solar_church", q(0.90));
+    setPolityFaith(r, "B", "rival_faith",  q(0.90));
     expect(computeFaithDiplomaticModifier(r, "A", "B")).toBe(-FAITH_DIPLOMATIC_PENALTY_Q);
   });
 
@@ -343,14 +343,14 @@ describe("computeFaithDiplomaticModifier", () => {
     const r = createFaithRegistry();
     registerFaith(r, SOLAR_CHURCH);
     registerFaith(r, EARTH_SPIRITS);
-    setPolityFaith(r, "A", "solar_church",  q(0.90) as any);
-    setPolityFaith(r, "B", "earth_spirits", q(0.90) as any);
+    setPolityFaith(r, "A", "solar_church",  q(0.90));
+    setPolityFaith(r, "B", "earth_spirits", q(0.90));
     expect(computeFaithDiplomaticModifier(r, "A", "B")).toBe(0);
   });
 
   it("polity with no faith → no modifier", () => {
     const r = createFaithRegistry();
-    setPolityFaith(r, "A", "solar_church", q(0.90) as any);
+    setPolityFaith(r, "A", "solar_church", q(0.90));
     expect(computeFaithDiplomaticModifier(r, "A", "B")).toBe(0);
   });
 
@@ -382,8 +382,8 @@ describe("conversion over time", () => {
   it("missionary presence gradually increases adherents", () => {
     const r = createFaithRegistry();
     registerFaith(r, EARTH_SPIRITS);
-    setPolityFaith(r, "P1", "earth_spirits", q(0.10) as any);
-    const presence = q(0.80) as any;
+    setPolityFaith(r, "P1", "earth_spirits", q(0.10));
+    const presence = q(0.80);
     for (let day = 0; day < 30; day++) {
       const pressure = computeConversionPressure(EARTH_SPIRITS, presence);
       stepFaithConversion(r, "P1", "earth_spirits", pressure);
@@ -394,11 +394,11 @@ describe("conversion over time", () => {
   it("exclusive high-fervor faith displaces rival over time", () => {
     const r = createFaithRegistry();
     registerFaith(r, SOLAR_CHURCH);
-    const rival = { ...SOLAR_CHURCH, faithId: "rival", fervor_Q: q(0.30) as any, name: "Rival" } as typeof SOLAR_CHURCH;
+    const rival = { ...SOLAR_CHURCH, faithId: "rival", fervor_Q: q(0.30), name: "Rival" } as typeof SOLAR_CHURCH;
     registerFaith(r, rival);
-    setPolityFaith(r, "P1", "solar_church", q(0.50) as any);
-    setPolityFaith(r, "P1", "rival",        q(0.50) as any);
-    const presence = q(1.0) as any;
+    setPolityFaith(r, "P1", "solar_church", q(0.50));
+    setPolityFaith(r, "P1", "rival",        q(0.50));
+    const presence = q(1.0);
     for (let day = 0; day < 50; day++) {
       const pressure = computeConversionPressure(SOLAR_CHURCH, presence);
       stepFaithConversion(r, "P1", "solar_church", pressure);
