@@ -6,6 +6,34 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.45] — 2026-03-27
+
+### Added
+
+- **Phase 100 · Wonders & Monuments** (`src/wonders.ts`)
+  - `WonderType`: `"great_pyramid" | "colosseum" | "grand_library" | "great_wall" | "grand_harbour" | "aqueduct_system" | "grand_temple"`.
+  - `WonderProject { projectId, polityId, type, progress_Q, investedCost_cu, startTick }` — in-progress construction.
+  - `Wonder { wonderId, polityId, type, completedAtTick, damaged }` — completed monument.
+  - `WonderEffects { stabilityBonus_Q, moraleBonus_Q, researchPointBonus, unrestReduction_Q, tradeIncomeBonus_Q, defenseBonus_Q, epidemicResistance_Q }` — advisory bundle.
+  - `WONDER_BASE_COST_CU`: grand_library 150k → great_pyramid 1,000k cu.
+  - `WONDER_TYPICAL_DAYS`: grand_library 180 → great_pyramid 3,650 days (10 years).
+  - `WONDER_BASE_EFFECTS`: distinct niches — great_wall highest defense (q(0.20)), grand_harbour highest trade (q(0.25)), aqueduct_system highest epidemic resistance (q(0.15)), colosseum highest unrest reduction (q(0.12)), grand_library +3 RP/day, great_pyramid highest stability (q(0.08)).
+  - `WONDER_DAMAGED_EFFECT_MUL = q(0.50)` — damaged wonders provide half effects.
+  - `WONDER_REPAIR_COST_FRAC = q(0.25)` — repair costs 25% of base construction cost.
+  - `createWonderProject(projectId, polityId, type, startTick)` — factory.
+  - `contributeToWonder(project, polity, contribution_cu)` — deducts treasury, advances progress_Q; capped by treasury and remaining cost; returns new progress.
+  - `isWonderProjectComplete(project)` → `progress_Q >= SCALE.Q`.
+  - `completeWonder(project, tick)` → `Wonder`.
+  - `damageWonder(wonder)` — set by Phase-96 earthquake or Phase-93 siege callers.
+  - `repairWonder(wonder, polity)` → `boolean` — spends repair cost; returns false if funds insufficient.
+  - `computeWonderEffects(wonder)` — full or half effects based on damage state.
+  - `aggregateWonderEffects(wonders)` — sums Q fields (clamped to SCALE.Q); sums researchPointBonus uncapped.
+  - `isWonderIntact(wonder)` / `computeRepairCost(type)` — helpers.
+  - Added `./wonders` subpath export to `package.json`.
+  - 43 new tests; 5,216 total. Coverage: 100% statements/branches/functions/lines on `wonders.ts`.
+
+---
+
 ## [0.1.44] — 2026-03-27
 
 ### Added

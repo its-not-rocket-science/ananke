@@ -6500,6 +6500,45 @@ natural next step.
 
 ---
 
+### Phase 100 — Wonders & Monuments *(COMPLETE — 2026-03-27)*
+
+**The gap:** Great civilisations are defined by their monuments — the pyramids, colosseums,
+grand libraries, walls, harbours, aqueducts, and temples that outlast dynasties and signal
+civilisational achievement.  Phase-89 functional infrastructure covers roads, markets, and
+apothecaries; nothing models these unique, prestige-defining constructions.
+
+**Design:** `WonderProject` tracks incremental treasury investment toward completion.
+`Wonder` is the standing monument.  `WonderEffects` is a per-field advisory bundle
+spanning every downstream phase.  Wonders can be damaged by Phase-96 earthquakes or
+Phase-93 sieges — providing half effects until repaired at 25% of base cost.
+
+**Key exports (`src/wonders.ts`):**
+
+| Export | Purpose |
+|--------|---------|
+| `WonderType` | Seven unique monument types |
+| `WonderProject` | In-progress construction (progress_Q, investedCost_cu) |
+| `Wonder` | Completed monument (damaged flag) |
+| `WonderEffects` | Advisory bundle: stability, morale, research, unrest, trade, defense, epidemic |
+| `contributeToWonder` | Incremental treasury investment; returns progress_Q |
+| `completeWonder` | Finalise project → Wonder |
+| `damageWonder` / `repairWonder` | Earthquake/siege damage; repair for 25% base cost |
+| `computeWonderEffects` | Full or halved effects by damage state |
+| `aggregateWonderEffects` | Sum across all a polity's wonders |
+
+**Distinct niches:** great_wall = defense (q(0.20)); grand_harbour = trade (q(0.25));
+aqueduct_system = epidemic resistance (q(0.15)); colosseum = unrest reduction (q(0.12));
+grand_library = +3 RP/day; great_pyramid = stability (q(0.08)); grand_temple = morale + stability.
+
+**Integration targets:** Phase-88 health, Phase-90 unrest, Phase-91 research, Phase-92 trade,
+Phase-93 defense, Phase-96 earthquake damage.
+
+**Subpath export:** `@its-not-rocket-science/ananke/wonders`
+
+**Tests:** 43 new · 5,216 total · 100% statement/branch/function/line coverage on `wonders.ts`.
+
+---
+
 ### Phase 99 — Mercenaries & Hired Forces *(COMPLETE — 2026-03-27)*
 
 **The gap:** Phase-93 (Military Campaign) models polity armies raised from population levies,
