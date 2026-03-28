@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.53",
+  "version": "0.1.54",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -181,6 +181,10 @@
     "./content-pack": {
       "import": "./dist/src/content-pack.js",
       "types": "./dist/src/content-pack.d.ts"
+    },
+    "./terrain-bridge": {
+      "import": "./dist/src/terrain-bridge.js",
+      "types": "./dist/src/terrain-bridge.d.ts"
     }
   },
   "workspaces": [

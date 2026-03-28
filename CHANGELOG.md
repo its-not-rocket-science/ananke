@@ -6,6 +6,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.54] — 2026-03-28
+
+### Added
+
+- **PA-5 — Campaign ↔ Tactical Terrain Bridge (complete):**
+  - `src/terrain-bridge.ts` (new): maps campaign hex tiles to tactical battlefield parameters consumable by `KernelContext`, and merges tactical battle results back into `CampaignState`.
+  - `extractTerrainParams(hexType)` → deterministic 10×8-cell (100 m × 80 m) battlefield with `TerrainGrid`, `ObstacleGrid`, `ElevationGrid`, `SlopeGrid`, and `CoverSegment[]` for all 8 hex types: `plains`, `forest`, `hills`, `marsh`, `urban`, `mountain`, `river_crossing`, `coastal`.
+  - `generateBattleSite(ctx)` → full `BattleTerrainParams` including `EntryVector[]` — attacker/defender spawn positions (y=5 m south, y=75 m north) with `facingY` direction.
+  - `mergeBattleOutcome(campaign, outcome)` → merges post-battle `WorldState` into `CampaignState`: removes `injury.dead` entities, copies post-battle `injury`/`condition` onto survivors, transfers looted weapons/items from captured entities to winner's inventory, advances `worldTime_s`, appends a log entry.
+  - Exports: `CampaignHexType`, `EntryVector`, `BattleTerrainParams`, `BattleSiteContext`, `BattleOutcome`; field constants `FIELD_WIDTH_Sm`, `FIELD_HEIGHT_Sm`, `CELL_SIZE_Sm`, `GRID_COLS`, `GRID_ROWS`.
+  - `"./terrain-bridge"` subpath export added to `package.json`.
+- 67 new tests (185 test files, 5,397 tests total). Coverage: 97.05% stmt, 87.88% branch, 95.75% func, 97.05% lines. Build: clean.
+
+---
+
 ## [0.1.53] — 2026-03-28
 
 ### Added
