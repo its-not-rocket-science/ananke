@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.49] — 2026-03-28
+
+### Fixed
+
+- **Crafting subsystem — remaining TODO/placeholder items resolved:**
+- `src/crafting/manufacturing.ts` — `createAssemblySteps`: now derives skill types and tool categories from the recipe's actual `skillRequirements` and `toolRequirements` instead of hardcoded `"forge"`/alternating BK–LM defaults.
+- Removed misleading "placeholder" and outdated "Phase 24 placeholder" comments from `recipes.ts`, `crafting/index.ts`, and `dialogue.ts`; documentation now accurately reflects current behaviour.
+- Build: clean. Tests: 5,261 passing. Coverage: statements 97.1 %, branches 87.83 %, functions 95.65 %, lines 97.1 %.
+
+---
+
 ## [0.1.48] — 2026-03-28
 
 ### Fixed

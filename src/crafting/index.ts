@@ -298,7 +298,7 @@ export function integrateCraftingIntoInventory(
     instanceId,
     templateId: result.outputItemId,
     quantity: result.outputQuantity,
-    durability_Q: result.quality_Q, // Use quality as durability placeholder
+    durability_Q: result.quality_Q, // New items start with durability matching their crafting quality
     modifications: [],
     containerPath: [],
   };

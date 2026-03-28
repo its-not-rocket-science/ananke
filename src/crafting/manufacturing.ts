@@ -198,16 +198,22 @@ function updateQualityRange(currentRange: ProductQualityRange): ProductQualityRa
  * Create assembly steps for a complex recipe.
  */
 export function createAssemblySteps(recipe: Recipe): AssemblyStep[] {
-  // Placeholder: generate steps based on recipe complexity
   const steps: AssemblyStep[] = [];
   const stepCount = Math.max(1, Math.round(recipe.complexity_Q / q(0.30)));
+
+  // Derive skills and tools from recipe requirements
+  const skillTypes = recipe.skillRequirements.length > 0
+    ? recipe.skillRequirements.map(sr => sr.skillType)
+    : ["bodilyKinesthetic", "logicalMathematical"];
+  const toolCategories = recipe.toolRequirements.map(tr => tr.toolCategory);
+
   for (let i = 0; i < stepCount; i++) {
     steps.push({
       stepId: `step_${i}`,
       description: `Step ${i + 1}`,
-      requiredSkill: i % 2 === 0 ? "bodilyKinesthetic" : "logicalMathematical",
+      requiredSkill: skillTypes[i % skillTypes.length]!,
       timeFraction: Math.round(SCALE.Q / stepCount) as Q,
-      toolRequirements: i === 0 ? ["forge"] : [],
+      toolRequirements: i === 0 && toolCategories.length > 0 ? [toolCategories[0]!] : [],
     });
   }
   return steps;

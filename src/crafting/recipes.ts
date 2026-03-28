@@ -300,7 +300,7 @@ export function resolveRecipe(
   // Determine descriptor
   const descriptor = qualityToDescriptor(quality_Q);
 
-  // Consume ingredients (placeholder)
+  // Build consumed ingredients list (actual inventory mutation is handled by the caller)
   const consumedIngredients = recipe.ingredients.map(ing => ({
     itemId: ing.itemId,
     quantity: ing.quantity,

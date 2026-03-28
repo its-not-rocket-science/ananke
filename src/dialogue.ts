@@ -47,7 +47,8 @@ export type DialogueOutcome =
 /**
  * Context for a dialogue resolution.
  *
- * `sharedFaction` — Phase 24 placeholder; set to true when entities share a faction.
+ * `sharedFaction` — when true, applies a `PERSUADE_FACTION_BONUS` to persuasion rolls;
+ *   set by the host when entities belong to the same faction.
  * `priorFailedAttempts` — cumulative failed persuasion attempts by this initiator against
  *   this target; each one imposes a PERSUADE_FAILURE_PENALTY.
  */
@@ -56,7 +57,7 @@ export interface DialogueContext {
   target:               Entity;
   worldSeed:            number;
   tick:                 number;
-  sharedFaction?:       boolean;   // Phase 24 placeholder
+  sharedFaction?:       boolean;   // bonus applied when initiator and target share a faction
   priorFailedAttempts?: number;    // failed persuasion attempts (penalty accumulator)
 }
 
