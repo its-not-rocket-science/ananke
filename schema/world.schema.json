@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://its-not-rocket-science.github.io/ananke/schema/world.schema.json",
+  "title": "WorldState",
+  "description": "Ananke world snapshot — the complete state required to resume or replay a simulation. See docs/wire-protocol.md for serialisation rules.",
+  "type": "object",
+  "required": ["tick", "seed", "entities"],
+  "properties": {
+    "_ananke_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Schema version stamped by stampSnapshot(), e.g. \"0.1\". Absent on legacy saves."
+    },
+    "_schema": {
+      "type": "string",
+      "const": "world",
+      "description": "Schema discrimination tag — always \"world\" for WorldState snapshots."
+    },
+    "tick": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "@core — Current simulation tick. Incremented by stepWorld() each call."
+    },
+    "seed": {
+      "type": "integer",
+      "description": "@core — Deterministic RNG seed. Same seed + same commands → identical output."
+    },
+    "entities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/EntityCore" },
+      "description": "@core — All live and dead entities."
+    },
+    "activeFieldEffects": {
+      "type": "array",
+      "items": { "type": "object" },
+      "description": "@subsystem(capability) — Active suppression zones and field-effect modifiers."
+    },
+    "__sensoryEnv": {
+      "type": "object",
+      "description": "@subsystem(sensory) — Ambient lighting and visibility environment."
+    },
+    "__factionRegistry": {
+      "type": "object",
+      "description": "@subsystem(faction) — Global faction standing registry."
+    },
+    "__partyRegistry": {
+      "type": "object",
+      "description": "@subsystem(party) — Global party registry for morale and formation bonuses."
+    },
+    "__relationshipGraph": {
+      "type": "object",
+      "description": "@subsystem(relationships) — Inter-entity relationship graph."
+    },
+    "__nutritionAccum": {
+      "type": "number",
+      "description": "@subsystem(nutrition) — Cross-tick nutrition accumulator (scalar)."
+    }
+  },
+  "unevaluatedProperties": true,
+  "$defs": {
+    "EntityCore": {
+      "title": "Entity (@core fields)",
+      "description": "Core entity fields required by stepWorld() every tick. Subsystem and host-extension fields are permitted but not listed here — see src/sim/entity.ts.",
+      "type": "object",
+      "required": ["id", "teamId", "attributes", "energy", "loadout", "traits"],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Unique entity identifier (positive I32)."
+        },
+        "teamId": {
+          "type": "integer",
+          "description": "Team allegiance. Entities on the same teamId do not auto-target each other."
+        },
+        "attributes": {
+          "type": "object",
+          "description": "IndividualAttributes — physical and cognitive stats. All Q values are fixed-point integers scaled by SCALE.Q = 10 000."
+        },
+        "energy": {
+          "type": "object",
+          "description": "EnergyState — current stamina and metabolic state."
+        },
+        "loadout": {
+          "type": "object",
+          "description": "Loadout — equipped weapons and armour."
+        },
+        "traits": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Trait string identifiers, e.g. [\"leader\", \"berserker\"]."
+        },
+        "condition": {
+          "type": "object",
+          "description": "@subsystem(condition) — fear, morale, consciousness, surrender state."
+        },
+        "injury": {
+          "type": "object",
+          "description": "@subsystem(injury) — per-region damage fractions (all Q values)."
+        }
+      },
+      "unevaluatedProperties": true
+    }
+  }
+}

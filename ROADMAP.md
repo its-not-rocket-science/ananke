@@ -8365,20 +8365,32 @@ benefits from clean package boundaries.
 
 ---
 
-### PA-3 · Stable Schema, Save & Wire Contract
+### PA-3 · Stable Schema, Save & Wire Contract ✅ Complete
 
 **Problem:** The repo has fixtures and round-trip tests but no single "this is the contract"
 layer.  Teams building on Ananke seriously need save compatibility and deterministic integration
 to feel boring and dependable.
 
-**Work:**
-- Publish canonical JSON Schema files for `World`, `Campaign`, and `Replay` snapshots.
-- Add explicit migration utilities (`migrateWorld(snapshot, fromVersion, toVersion)`) between
-  schema versions.
-- Document a network wire protocol (CBOR or compact JSON with deterministic key ordering) for
-  bridge/agent/multiplayer use.
-- Ship a host-side validation utility (`validateSnapshot(snapshot)`) that checks schema
-  conformance and emits actionable errors.
+**Work (complete):**
+- `src/schema-migration.ts` (new) — schema versioning and migration utilities:
+  - `SCHEMA_VERSION = "0.1"` — current major.minor version constant
+  - `stampSnapshot(snapshot, schema)` — stamps `_ananke_version` + `_schema` onto a save
+  - `validateSnapshot(snapshot)` — structural validation returning `ValidationError[]` with
+    JSONPath `path` + `message` for actionable error reporting
+  - `migrateWorld(snapshot, toVersion?)` — migration framework; chains registered migrations;
+    treats legacy saves (no version stamp) as `"0.0"`; throws descriptively for unknown paths
+  - `registerMigration(from, to, fn)` — extensible migration registry
+  - `detectVersion(snapshot)` — reads `_ananke_version` from any object
+  - `isValidSnapshot(snapshot)` — convenience wrapper
+- `schema/world.schema.json` (new) — JSON Schema 2020-12 for `WorldState` (core + subsystem
+  fields with Q-value descriptions)
+- `schema/replay.schema.json` (new) — JSON Schema 2020-12 for `Replay` and `ReplayFrame`
+- `docs/wire-protocol.md` (new) — Q-value serialisation rules, binary diff format (ANKD),
+  multiplayer lockstep message types (`cmd`/`ack`/`resync`/`hash_mismatch`), save-format
+  recommendations table, and load-with-migration code sample
+- `"./schema"` subpath added to `package.json` exports
+- `schema/` and `docs/wire-protocol.md` added to `package.json` `"files"`
+- 39 new tests; all 5,300 tests passing
 
 **Success criterion:** A host app can save a world snapshot, upgrade to a new Ananke version,
 call `migrateWorld`, and resume simulation without data loss or replay divergence.

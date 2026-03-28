@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://its-not-rocket-science.github.io/ananke/schema/replay.schema.json",
+  "title": "Replay",
+  "description": "Ananke deterministic replay — an initial WorldState plus a sequence of command frames. Replaying all frames against the initial state must reproduce the exact final state (same tick, same entity conditions, same RNG sequence).",
+  "type": "object",
+  "required": ["initialState", "frames"],
+  "properties": {
+    "_ananke_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$",
+      "description": "Schema version stamped by stampSnapshot()."
+    },
+    "_schema": {
+      "type": "string",
+      "const": "replay",
+      "description": "Schema discrimination tag — always \"replay\" for Replay snapshots."
+    },
+    "initialState": {
+      "$ref": "world.schema.json",
+      "description": "The WorldState at tick 0 (or whatever tick the recording began). Must itself be a valid world snapshot."
+    },
+    "frames": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ReplayFrame" },
+      "description": "Ordered sequence of command frames. Frame indices correspond to ticks relative to initialState.tick."
+    }
+  },
+  "unevaluatedProperties": true,
+  "$defs": {
+    "ReplayFrame": {
+      "title": "ReplayFrame",
+      "type": "object",
+      "required": ["tick", "commands"],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Absolute simulation tick this frame was recorded at."
+        },
+        "commands": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Command" },
+          "description": "Commands dispatched during this tick. May be empty."
+        }
+      }
+    },
+    "Command": {
+      "title": "Command",
+      "description": "A single world-mutating command dispatched to stepWorld(). Commands are discriminated by their `kind` field.",
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "description": "Command type identifier, e.g. \"attack\", \"move\", \"grapple\"."
+        },
+        "entityId": {
+          "type": "integer",
+          "description": "Issuing entity id (where applicable)."
+        },
+        "targetId": {
+          "type": "integer",
+          "description": "Target entity id (where applicable)."
+        }
+      },
+      "unevaluatedProperties": true
+    }
+  }
+}

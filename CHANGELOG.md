@@ -6,6 +6,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.52] — 2026-03-28
+
+### Added
+
+- **PA-3 — Stable Schema, Save & Wire Contract (complete):**
+  - `src/schema-migration.ts` (new): schema versioning and migration utilities — `SCHEMA_VERSION`, `stampSnapshot`, `validateSnapshot` (returns `ValidationError[]` with JSONPath paths), `migrateWorld` (chains registered migrations; legacy saves treated as version `"0.0"`), `registerMigration`, `detectVersion`, `isValidSnapshot`.
+  - `schema/world.schema.json` (new): JSON Schema 2020-12 for `WorldState` — documents `@core` fields (`tick`, `seed`, `entities` with per-entity validation), `@subsystem` fields, and Q-value semantics.
+  - `schema/replay.schema.json` (new): JSON Schema 2020-12 for `Replay` / `ReplayFrame` / `Command`.
+  - `docs/wire-protocol.md` (new): Q-value serialisation rules (store raw integers, never divide by `SCALE.Q`), binary diff format (ANKD magic, tag-value encoding), multiplayer lockstep message types (`cmd`/`ack`/`resync`/`hash_mismatch`), save-format recommendations, and full load-with-migration code sample.
+  - `"./schema"` subpath added to `package.json` exports.
+  - `schema/` directory and `docs/wire-protocol.md` added to `package.json` `"files"`.
+- 39 new tests (183 test files, 5,300 tests total). Build: clean.
+
+---
+
 ## [0.1.51] — 2026-03-28
 
 ### Added
