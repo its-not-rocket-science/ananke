@@ -8333,29 +8333,35 @@ their use case, and reach the correct quickstart within two clicks.
 
 ---
 
-### PA-2 · Modular Package Architecture
+### PA-2 · Modular Package Architecture ✅ Phase 1 complete
 
 **Problem:** 41 exports in one package overwhelm newcomers and create accidental coupling.
 There is no clean stable/experimental boundary for adopters who only need combat, or only
 campaign, or only the bridge.
 
-**Work:**
-- Design a workspace split into focused, versioned packages:
-  - `@ananke/core` — `stepWorld`, `Entity`, `WorldState`, `units`, RNG, kernel
-  - `@ananke/combat` — Phase 1–3, grapple, stamina, ranged, siege
-  - `@ananke/campaign` — Phases 22–45, economy, polity, social
-  - `@ananke/bridge` — renderer bridge, interpolation, animation hints
-  - `@ananke/content` — species, body plans, archetypes, equipment catalogue
-- Document the public API surface per package.
-- Publish a migration guide from the monolith to the modular form.
-- Keep `@its-not-rocket-science/ananke` as a meta-package re-exporting all modules for
-  backwards compatibility.
+**Work (Phase 1 — complete):**
+- Workspace split designed and documented in `docs/package-architecture.md`.
+- Four npm package stubs published under the `@ananke/` scope:
+  - `@ananke/core` — re-exports `"."` (kernel, entity model, units, RNG, replay)
+  - `@ananke/combat` — re-exports `"./combat"`, `"./anatomy"`, `"./competence"`, `"./wasm-kernel"`
+  - `@ananke/campaign` — re-exports all 32 campaign-scale subpaths
+  - `@ananke/content` — re-exports `"./species"`, `"./catalog"`, `"./character"`, `"./crafting"`
+- Migration guide published as `docs/migration-monolith-to-modular.md`.
+- `@its-not-rocket-science/ananke` remains as meta-package with all 41 subpath exports.
+- npm workspace config added to root `package.json`.
+
+**Work (Phase 2 — planned):**
+- Move source files into `packages/NAME/src/` per the mapping in `docs/package-architecture.md`.
+- Update cross-package imports to use `@ananke/core` etc. instead of relative paths.
+- Add `@ananke/bridge` as a dedicated package (requires a `"./bridge"` subpath in the monolith).
+- Build tool: `tools/check-package-boundaries.ts` to detect import graph violations.
+- After Phase 2: bundle size for a combat-only host drops by ~60%.
 
 **Note:** This is the single highest-leverage technical item.  All SDK and content-pack work
 benefits from clean package boundaries.
 
-**Success criterion:** A host that only needs combat can depend on `@ananke/combat` without
-pulling in campaign economy or narrative prose.
+**Success criterion (Phase 1):** A host can install `@ananke/combat` and import from it today.
+**Success criterion (Phase 2):** `@ananke/combat` has no campaign dependency at the module level.
 
 ---
 

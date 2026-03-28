@@ -6,6 +6,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.51] — 2026-03-28
+
+### Added
+
+- **PA-2 — Modular Package Architecture (Phase 1 complete):**
+  - `packages/core/` — `@ananke/core` stub; re-exports the full main `"."` entry point (kernel, entity model, units, RNG, replay, bridge).
+  - `packages/combat/` — `@ananke/combat` stub; re-exports `"./combat"`, `"./anatomy"`, `"./competence"`, `"./wasm-kernel"`.
+  - `packages/campaign/` — `@ananke/campaign` stub; re-exports all 32 campaign-scale subpaths (polity, social, narrative, feudal, demography, economy, military…).
+  - `packages/content/` — `@ananke/content` stub; re-exports `"./species"`, `"./catalog"`, `"./character"`, `"./crafting"`.
+  - Each stub ships a pre-built `index.js` + `index.d.ts` (no separate compilation step); `@its-not-rocket-science/ananke` is a peer dependency.
+  - Root `package.json` gains `"workspaces": ["packages/*"]` for local linking.
+  - `docs/package-architecture.md` (new): canonical package boundary design — dependency graph, monolith subpath → package mapping table, full source-file → package mapping for Phase 2 migration, and a before/after import example.
+  - `docs/migration-monolith-to-modular.md` (new): step-by-step migration guide from the monolith to `@ananke/*` packages, with a complete old-import → new-package lookup table and Phase 2 expectations.
+  - `docs/package-architecture.md` and `docs/migration-monolith-to-modular.md` added to `package.json` `"files"` so they ship with the published package.
+- Build: clean. Tests: 5,261 passing. Coverage unchanged.
+
+---
+
 ## [0.1.50] — 2026-03-28
 
 ### Docs

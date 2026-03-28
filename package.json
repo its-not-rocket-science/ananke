@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.50",
+  "version": "0.1.51",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -172,6 +172,9 @@
       "types": "./dist/src/monetary.d.ts"
     }
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "files": [
     "dist/src",
     "dist/as",
@@ -182,6 +185,8 @@
     "docs/performance.md",
     "docs/versioning.md",
     "docs/emergent-validation-report.md",
+    "docs/package-architecture.md",
+    "docs/migration-monolith-to-modular.md",
     "CHANGELOG.md",
     "STABLE_API.md"
   ],

@@ -1,0 +1,19 @@
+{
+  "name": "@ananke/core",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Ananke core kernel — entity model, fixed-point units, RNG, replay (Phase 1: re-exports from @its-not-rocket-science/ananke)",
+  "license": "MIT",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "engines": { "node": ">=18" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/its-not-rocket-science/ananke.git",
+    "directory": "packages/core"
+  },
+  "keywords": ["simulation", "physics", "rpg", "deterministic", "fixed-point", "game-engine"],
+  "peerDependencies": {
+    "@its-not-rocket-science/ananke": ">=0.1"
+  }
+}
