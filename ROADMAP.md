@@ -8293,3 +8293,251 @@ version the historical/calibration claims, link results directly from README/rel
 
 **Success criterion:** The emergent validation report is a first-class artifact visible from
 README and linked from every release — not buried inside `tools/`.
+
+---
+
+## Platformization & Adoption Roadmap (2026–2027)
+
+> **External review, batch 4 (2026-03-28):**
+>
+> *"Ananke is no longer feature-starved. It is scope-rich and credibility-rich, but now at
+> risk of becoming hard to adopt, hard to navigate, and hard to extend safely. The next roadmap
+> should shift from 'more subsystems' to productization, modularization, and proof-of-use."*
+>
+> The simulation kernel is feature-complete through Phase 101.  The package exports 41 entry
+> points, the docs are rich, the benchmarks are honest, and the validation suite is a genuine
+> trust artefact.  The next tranche optimises for **adoption, composability, contract stability,
+> and discoverability** — not raw subsystem count.  No new simulation domain should be added
+> unless it multiplies the value of existing systems.
+
+---
+
+### PA-1 · Documentation Reconciliation & Architecture Map
+
+**Problem:** At Ananke's current scale, documentation drift is a trust problem.  Parts of
+`docs/project-overview.md` still reference companion projects as a next priority while ROADMAP
+marks those milestones complete.  There is no machine-checked map from export to stability tier
+to examples to docs.
+
+**Work:**
+- Audit all docs for stale "next priority" text and update to reflect current state.
+- Write a script (`tools/generate-module-index.ts`) that reads `package.json` exports and
+  `STABLE_API.md` to produce a machine-checked table: module → stability tier → example →
+  primary doc file.
+- Add a "choose your entry point" guide to `docs/integration-primer.md` structured by use case
+  (duel simulator / campaign layer / xenobiology / renderer bridge / multiplayer host).
+- Publish the module index as `docs/module-index.md` and link it from the README.
+
+**Success criterion:** A developer can open `docs/module-index.md`, find the entry point for
+their use case, and reach the correct quickstart within two clicks.
+
+---
+
+### PA-2 · Modular Package Architecture
+
+**Problem:** 41 exports in one package overwhelm newcomers and create accidental coupling.
+There is no clean stable/experimental boundary for adopters who only need combat, or only
+campaign, or only the bridge.
+
+**Work:**
+- Design a workspace split into focused, versioned packages:
+  - `@ananke/core` — `stepWorld`, `Entity`, `WorldState`, `units`, RNG, kernel
+  - `@ananke/combat` — Phase 1–3, grapple, stamina, ranged, siege
+  - `@ananke/campaign` — Phases 22–45, economy, polity, social
+  - `@ananke/bridge` — renderer bridge, interpolation, animation hints
+  - `@ananke/content` — species, body plans, archetypes, equipment catalogue
+- Document the public API surface per package.
+- Publish a migration guide from the monolith to the modular form.
+- Keep `@its-not-rocket-science/ananke` as a meta-package re-exporting all modules for
+  backwards compatibility.
+
+**Note:** This is the single highest-leverage technical item.  All SDK and content-pack work
+benefits from clean package boundaries.
+
+**Success criterion:** A host that only needs combat can depend on `@ananke/combat` without
+pulling in campaign economy or narrative prose.
+
+---
+
+### PA-3 · Stable Schema, Save & Wire Contract
+
+**Problem:** The repo has fixtures and round-trip tests but no single "this is the contract"
+layer.  Teams building on Ananke seriously need save compatibility and deterministic integration
+to feel boring and dependable.
+
+**Work:**
+- Publish canonical JSON Schema files for `World`, `Campaign`, and `Replay` snapshots.
+- Add explicit migration utilities (`migrateWorld(snapshot, fromVersion, toVersion)`) between
+  schema versions.
+- Document a network wire protocol (CBOR or compact JSON with deterministic key ordering) for
+  bridge/agent/multiplayer use.
+- Ship a host-side validation utility (`validateSnapshot(snapshot)`) that checks schema
+  conformance and emits actionable errors.
+
+**Success criterion:** A host app can save a world snapshot, upgrade to a new Ananke version,
+call `migrateWorld`, and resume simulation without data loss or replay divergence.
+
+---
+
+### PA-4 · Scenario & Content Pack System
+
+**Problem:** Most of Ananke's value is locked in source files and examples.  There is no
+runtime-loadable format for sharing weapons, species, scenarios, or AI doctrines.
+
+**Work:**
+- Define a `.ananke-pack` manifest schema (JSON) covering: weapons, species/body plans,
+  scenarios, AI behaviour trees, validation suites.
+- Implement a runtime loader in `@ananke/content` — `loadPack(manifest)` validates and
+  registers pack content into the active catalogues.
+- Publish three example packs: `weapons-medieval`, `species-humanoids`, `scenarios-duel`.
+- Ship a CLI: `npx ananke pack validate <pack.json>` and `npx ananke pack bundle <dir>`.
+
+**Success criterion:** A user can author a species pack, share it as a JSON file, and load it
+into any Ananke-powered host without touching source code.
+
+---
+
+### PA-5 · Campaign ↔ Tactical Terrain Bridge
+
+**Problem:** The repo has strong tactical and campaign systems but they operate as separate
+silos.  There is no formal layer translating strategic map state into tactical battle parameters
+and merging battle outcomes back into campaign state.
+
+**Work:**
+- Implement terrain extraction: map tile properties (slope, cover density, chokepoints,
+  watercourses, roads) → `BattleTerrainParams` struct consumed by the tactical kernel.
+- Implement battle site generation: given campaign movement context (hex type, weather, forces)
+  → battle field dimensions, cover placement, entry vectors.
+- Implement post-battle persistence: casualties, captured equipment, morale deltas, and
+  settlement damage merged back into `CampaignState`.
+- Demo scenario: "army moves into forest hex → tactical battle with forest cover bonuses →
+  campaign state updated."
+
+**Success criterion:** A campaign host can trigger a battle from map movement, run it tactically,
+and have the result automatically integrated into campaign state through a documented API.
+
+---
+
+### PA-6 · Unified Atmosphere Model: Wind, Precipitation & Propagation
+
+**Problem:** Projectile drift, flame/gas distortion, acoustic masking, scent propagation,
+visibility degradation, and traction changes are each simulated independently.  A single
+coherent atmosphere model would multiply the realism of all these systems simultaneously.
+
+**Work:**
+- Define a `AtmosphericState` struct: 3D wind field (speed, direction, turbulence), precipitation
+  (rain/snow intensity), visibility range, and surface traction modifier.
+- Wire `AtmosphericState` into projectile physics (drift), hazard propagation (smoke/gas
+  cone), acoustic perception (masking by wind noise), and terrain traction.
+- Expose a `queryAtmosphericModifiers(position, targetPosition, state)` API returning all
+  relevant modifiers at a query point.
+- Integration with Phase 65 (weather) and Phase 68 (biome) as inputs to `AtmosphericState`.
+
+**Success criterion:** Changing wind direction in one struct call coherently affects ballistics,
+gas hazards, hearing range, and terrain traction without separate per-system configuration.
+
+---
+
+### PA-7 · Advanced Non-Visual Sensory Systems
+
+**Problem:** The perception system is strong for vision and hearing but shallow for non-human
+sensing.  Given that species/xenobiology is a major Ananke theme, echolocation, electroreception,
+scent, and thermal detection deserve parity treatment.
+
+**Work:**
+- Define a unified `ExtendedSenses` interface covering: scent plume (propagated by
+  `AtmosphericState` wind), echolocation (environmental echo mapping), electroreception
+  (bio-electric field detection), and thermal detection (integrated with thermoregulation).
+- Implement `stepExtendedSenses(entity, world, atmospheric)` accumulating detections per sense.
+- Wire into existing AI targeting and perception modules so non-human species use their
+  dominant sense for threat detection.
+- Add body-plan flags: `hasEcholocation`, `hasElectroreception`, `hasThermalVision`.
+
+**Prerequisite:** PA-6 (atmosphere model for scent/acoustic propagation).
+
+**Success criterion:** A bat-species entity navigates and hunts by echolocation with no
+vision fallback; a shark-equivalent detects bleeding prey by electroreception.
+
+---
+
+### PA-8 · Host Integration SDKs
+
+**Problem:** The Godot and Unity reference repos prove possibility but are not production SDKs.
+The friction from "reference" to "integrable in a day" remains high.
+
+**Work:**
+- **Unity:** C# package with typed wrappers, MonoBehaviour integration helpers, prefab-ready
+  components, and an example scene (duel, crowd, campaign).
+- **Godot 4:** GDScript/C# plugin with inspector-exposed properties, signal-based event binding,
+  and example scene.
+- **Unreal:** C++ bridge module with Blueprint-callable nodes and a minimal example project.
+- **Web (Three.js):** npm package wrapping the WASM kernel with a Three.js scene adapter
+  and replay scrubber widget.
+- All SDKs share: deterministic host loop recipes, save/replay widgets, and a minimal surface
+  gating on `@ananke/core`.
+
+**Prerequisite:** PA-2 (modular packages), PA-3 (stable schema).
+
+**Success criterion:** A Unity developer can integrate a duel simulation into a new project by
+following a 15-minute guide, with no Ananke source reading required.
+
+---
+
+### PA-9 · Simulation Cookbook (Task-Oriented Recipes)
+
+**Problem:** The documentation is rich but dense and theory-oriented.  Time-to-first-success
+for a new developer is too high.
+
+**Work:**
+- Define a recipe format: problem statement, step-by-step code walkthrough, expected output,
+  link to runnable example in `examples/`.
+- Publish 12–15 initial recipes covering:
+  - "Simulate a duel" · "Run a 500-agent battle" · "Author a new species"
+  - "Add a custom weapon" · "Drive a renderer" · "Create a campaign loop"
+  - "Build a validation scenario" · "Use the what-if engine" · "Stream events to an agent"
+  - "Save and reload a world" · "Run a replay diff" · "Load a content pack"
+- Cross-link recipes from `README.md`, module docs, and SDK guides.
+
+**Success criterion:** A developer with no prior Ananke experience can produce a running
+simulation within 30 minutes using only the cookbook.
+
+---
+
+### PA-10 · Deterministic Networking Kit
+
+**Problem:** Determinism is one of Ananke's strongest differentiators, but "lockstep-friendly"
+is conceptual rather than productized.  There are no concrete tools for authoritative lockstep,
+rollback, desync diagnosis, or replay comparison.
+
+**Work:**
+- Publish an authoritative lockstep sample: server steps the world, clients receive diffs.
+- Publish a rollback sample: client-side speculative execution with server reconciliation.
+- Ship a CLI: `npx ananke replay diff <replay-a.json> <replay-b.json>` that identifies the
+  first tick where two replays diverge and prints the differing state.
+- Add `hashWorldState(world): bigint` — a deterministic 64-bit hash of all simulation state,
+  usable as a desync checksum in multiplayer loops.
+- Publish a "netcode host checklist" in `docs/` with required constraints (fixed tick rate,
+  no wall-clock reads in simulation path, input serialisation format).
+
+**Prerequisite:** PA-3 (stable schema / wire contract).
+
+**Success criterion:** A developer can detect a desync between two clients within one tick
+using the replay diff tool and the world state hash.
+
+---
+
+### External feedback batch 4 — item disposition
+
+| Item | Reviewer proposal | Disposition |
+|------|-------------------|-------------|
+| F4-1 | Modular package architecture | **Added as PA-2** |
+| F4-2 | Stable schema / save / wire contract | **Added as PA-3** |
+| F4-3 | Scenario & content pack system | **Added as PA-4** |
+| F4-4 | Campaign ↔ tactical terrain bridge | **Added as PA-5** |
+| F4-5 | Unified atmosphere model (wind, precipitation, propagation) | **Added as PA-6** |
+| F4-6 | Advanced non-visual sensory systems | **Added as PA-7** |
+| F4-7 | Host integration SDKs (Unity / Godot / Unreal / Web) | **Added as PA-8** |
+| F4-8 | Simulation cookbook (task-oriented recipes) | **Added as PA-9** |
+| F4-9 | Documentation reconciliation & architecture map | **Added as PA-1** (highest priority) |
+| F4-10 | Deterministic networking kit | **Added as PA-10** |
+| F4-misc | "Add a new section: Platformization Roadmap (2026)" | **Done** — this section |

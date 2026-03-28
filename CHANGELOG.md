@@ -11,8 +11,12 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 
 - **Crafting subsystem — remaining TODO/placeholder items resolved:**
-- `src/crafting/manufacturing.ts` — `createAssemblySteps`: now derives skill types and tool categories from the recipe's actual `skillRequirements` and `toolRequirements` instead of hardcoded `"forge"`/alternating BK–LM defaults.
-- Removed misleading "placeholder" and outdated "Phase 24 placeholder" comments from `recipes.ts`, `crafting/index.ts`, and `dialogue.ts`; documentation now accurately reflects current behaviour.
+  - `src/crafting/manufacturing.ts` — `createAssemblySteps`: now derives skill types and tool categories from the recipe's actual `skillRequirements` and `toolRequirements` instead of hardcoded `"forge"`/alternating BK–LM defaults.
+  - Removed misleading "placeholder" and outdated "Phase 24 placeholder" comments from `recipes.ts`, `crafting/index.ts`, and `dialogue.ts`; documentation now accurately reflects current behaviour.
+
+### Docs
+
+- **ROADMAP — Platformization & Adoption Roadmap (2026–2027):** Added a new top-level section following external review batch 4, which concluded that the simulation kernel is feature-complete and the next phase should focus on adoption, composability, and contract stability rather than new subsystems. Ten new roadmap items added (PA-1 through PA-10): documentation reconciliation & architecture map, modular package architecture (`@ananke/core`, `@ananke/combat`, etc.), stable schema/save/wire contract, scenario & content pack system, campaign ↔ tactical terrain bridge, unified atmosphere model, advanced non-visual sensory systems, host integration SDKs (Unity / Godot / Unreal / Web), simulation cookbook, and deterministic networking kit.
 - Build: clean. Tests: 5,261 passing. Coverage: statements 97.1 %, branches 87.83 %, functions 95.65 %, lines 97.1 %.
 
 ---
