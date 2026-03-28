@@ -1,3 +1,4 @@
+
 /**
  * Phase 17: Historical weapons database
  * Spans six eras with realistic physical properties calibrated to archaeological and

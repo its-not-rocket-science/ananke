@@ -202,8 +202,8 @@ export function createMaterialItem(
     id: itemId,
     kind: "material",
     name: displayName,
-    mass_kg: Math.round(quantity_kg * SCALE.kg), // mass = quantity * density? Actually quantity is already mass.
-    bulk: q(1.0), // placeholder
+    mass_kg: Math.round(quantity_kg * SCALE.kg / SCALE.Q),
+    bulk: clampQ(Math.round(quantity_kg / 10) as Q, q(0.05), 5 * SCALE.Q),
     materialTypeId,
     quality_Q,
     quantity_kg,

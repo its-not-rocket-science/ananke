@@ -1,3 +1,4 @@
+
 // src/siege.ts — Phase 84: Siege Warfare
 //
 // Models prolonged military operations against a fortified polity.

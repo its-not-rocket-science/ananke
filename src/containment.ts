@@ -1,3 +1,32 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // src/containment.ts — Phase 98: Plague Containment & Quarantine
 //
 // Active polity-level response to epidemic outbreaks.  Sits above Phase-88

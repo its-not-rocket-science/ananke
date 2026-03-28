@@ -196,18 +196,21 @@ export function upgradeWorkshop(
     return { success: false, upgradedWorkshop: workshop, consumedResources: new Map() };
   }
 
-  // TODO: check resource requirements based on workshop type and tier difference
-  // For now, assume upgrade always succeeds
+  // Check resource requirements: 10 units of "material_wood" per tier step
+  const tierSteps = targetTier - currentTier;
+  const woodRequired = 10 * tierSteps;
+  const woodAvailable = resources.get("material_wood") ?? 0;
+  if (woodAvailable < woodRequired) {
+    return { success: false, upgradedWorkshop: workshop, consumedResources: new Map() };
+  }
+
   const upgradedWorkshop: WorkshopInstance = {
     ...workshop,
     facilityLevel: targetLevel,
   };
 
-  // Consume resources (placeholder)
   const consumedResources = new Map<string, number>();
-  // Example: consume 10 units of "material_wood" per tier step
-  const tierSteps = targetTier - currentTier;
-  consumedResources.set("material_wood", 10 * tierSteps);
+  consumedResources.set("material_wood", woodRequired);
 
   return { success: true, upgradedWorkshop, consumedResources };
 }

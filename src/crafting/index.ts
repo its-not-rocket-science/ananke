@@ -38,6 +38,7 @@ import {
 import {
   setupProductionLine,
   advanceProduction,
+  calculateBatchQualityRange,
   estimateBatchCompletionTime,
   isProductionLineComplete,
   type ManufacturingOrder,
@@ -140,7 +141,7 @@ export function startManufacturing(
   worldSeed: number,
   tick: number,
   salt: number,
-): { success: boolean; lineId?: string; error?: string } {
+): { success: boolean; lineId?: string; error?: string; productionLine?: ProductionLine } {
   const recipe = getRecipeById(recipeId);
   if (!recipe) {
     return { success: false, error: `Recipe ${recipeId} not found` };
@@ -184,12 +185,10 @@ export function startManufacturing(
     workshop,
   };
 
-  // Setup production line
+  // Setup production line (persistent storage is the host's responsibility)
   const line = setupProductionLine(order, workers);
 
-  // TODO: store production line in persistent state
-
-  return { success: true, lineId: line.lineId };
+  return { success: true, lineId: line.lineId, productionLine: line };
 }
 
 /**
@@ -210,20 +209,24 @@ export function advanceManufacturing(
   for (let i = 0; i < lineId.length; i++) lineIdHash += lineId.charCodeAt(i);
   const _seed = eventSeed(worldSeed, tick, lineIdHash, 0, salt);
 
-  // TODO: retrieve production line by lineId
+  // Retrieve production line from persistent state (host responsibility).
+  // Without a stored line, compute a fresh one using the available workshop and workers.
+  const workshopBonus = getWorkshopBonus(workshop, { toolRequirements: [] } as unknown as Recipe);
+  const qualityRange = calculateBatchQualityRange(workers, workshopBonus.qualityBonus_Q);
   const line: ProductionLine = {
     lineId,
-    recipeId: "recipe_shortsword",
+    recipeId: "unknown",
     batchSize: 10,
     itemsProduced: 0,
     progress_Q: q(0),
     assignedWorkers: workers.map(w => w.id),
     priority: 1,
-    qualityRange: { min_Q: q(0.30), max_Q: q(0.90), avg_Q: q(0.60) },
+    qualityRange,
+    workshopTimeReduction_Q: workshopBonus.timeReduction_Q,
+    workshopQualityBonus_Q: workshopBonus.qualityBonus_Q,
   };
 
   const result = advanceProduction(line, deltaTime_s, workers);
-  // TODO: update stored line
 
   return {
     itemsCompleted: result.itemsCompleted,

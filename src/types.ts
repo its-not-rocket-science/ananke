@@ -75,6 +75,8 @@ export interface Performance {
   conversionEfficiency: Q;
 }
 
+
+
 export interface Control {
   controlQuality: Q;     // 0..1
   reactionTime_s: I32;

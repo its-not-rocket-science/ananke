@@ -8,6 +8,8 @@ import { SCALE, q, clampQ, qMul, mulDiv } from "../units.js";
 import type { Entity } from "../sim/entity.js";
 import type { Recipe } from "./recipes.js";
 import type { WorkshopInstance } from "./workshops.js";
+import { getWorkshopBonus } from "./workshops.js";
+import { getRecipeById } from "./recipes.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,12 +19,14 @@ export type ProductQualityRange = { min_Q: Q; max_Q: Q; avg_Q: Q };
 export interface ProductionLine {
   lineId: string;
   recipeId: string;
-  batchSize: number;           // Total items to produce
-  itemsProduced: number;       // Already completed items
-  progress_Q: Q;               // Progress toward next item (0–SCALE.Q)
-  assignedWorkers: number[];   // Entity IDs of workers assigned
-  priority: number;            // Higher priority gets more resources
+  batchSize: number;              // Total items to produce
+  itemsProduced: number;          // Already completed items
+  progress_Q: Q;                  // Progress toward next item (0–SCALE.Q)
+  assignedWorkers: number[];      // Entity IDs of workers assigned
+  priority: number;               // Higher priority gets more resources
   qualityRange: ProductQualityRange; // Predicted quality range for batch
+  workshopTimeReduction_Q?: Q;   // Workshop speed factor (q(0.90) = 10% faster; q(1.0) = no reduction)
+  workshopQualityBonus_Q?: Q;    // Workshop quality multiplier (q(1.10) = +10% quality; q(1.0) = none)
 }
 
 /** Manufacturing order for starting batch production. */
@@ -68,8 +72,13 @@ export function setupProductionLine(
   order: ManufacturingOrder,
   workers: Entity[]
 ): ProductionLine {
+  const recipe = getRecipeById(order.recipeId);
+  const workshopBonus = recipe
+    ? getWorkshopBonus(order.workshop, recipe)
+    : { toolBonus_Q: q(0) as Q, timeReduction_Q: q(1.0) as Q, qualityBonus_Q: q(1.0) as Q };
+
   const workerIds = workers.map(w => w.id);
-  const qualityRange = calculateBatchQualityRange(workers);
+  const qualityRange = calculateBatchQualityRange(workers, workshopBonus.qualityBonus_Q);
 
   return {
     lineId: `line_${order.orderId}`,
@@ -80,6 +89,8 @@ export function setupProductionLine(
     assignedWorkers: workerIds,
     priority: 1,
     qualityRange,
+    workshopTimeReduction_Q: workshopBonus.timeReduction_Q,
+    workshopQualityBonus_Q: workshopBonus.qualityBonus_Q,
   };
 }
 
@@ -111,8 +122,11 @@ export function advanceProduction(
     totalProgress += workerProgress;
   }
 
-  // Apply workshop time reduction (not yet implemented)
-  const effectiveProgress = totalProgress; // placeholder
+  // Apply workshop time reduction: timeReduction_Q < SCALE.Q means faster production
+  const timeReduction = productionLine.workshopTimeReduction_Q ?? SCALE.Q;
+  const effectiveProgress = timeReduction > 0
+    ? Math.round(totalProgress * SCALE.Q / timeReduction)
+    : totalProgress;
 
   // Advance progress
   let newProgress = productionLine.progress_Q + effectiveProgress;
@@ -142,7 +156,10 @@ export function advanceProduction(
  * Calculate predicted quality range for a batch based on workers, materials, workshop.
  * Returns min, max, and average expected quality.
  */
-export function calculateBatchQualityRange(workers: Entity[]): { min_Q: Q; max_Q: Q; avg_Q: Q } {
+export function calculateBatchQualityRange(
+  workers: Entity[],
+  workshopQualityBonus_Q: Q = q(1.0) as Q,
+): { min_Q: Q; max_Q: Q; avg_Q: Q } {
   if (workers.length === 0) {
     return { min_Q: q(0), max_Q: q(0), avg_Q: q(0) };
   }
@@ -154,11 +171,8 @@ export function calculateBatchQualityRange(workers: Entity[]): { min_Q: Q; max_Q
   }
   const avgSkill = totalSkill / workers.length;
 
-  // Workshop quality bonus (placeholder)
-  const workshopBonus = q(1.0); // TODO: get from workshop
-
-  // Base average quality = avgSkill × workshopBonus
-  const avg_Q = clampQ(qMul(avgSkill, workshopBonus) as Q, q(0), SCALE.Q);
+  // Base average quality = avgSkill × workshopQualityBonus
+  const avg_Q = clampQ(qMul(avgSkill, workshopQualityBonus_Q) as Q, q(0), SCALE.Q);
 
   // Variance decreases with more workers
   const variance = Math.max(
@@ -230,21 +244,23 @@ export function advanceAssemblyStep(
 export function estimateBatchCompletionTime(
   batchSize: number,
   workers: Entity[],
+  workshopTimeReduction_Q: Q = q(1.0) as Q,
 ): number {
   if (workers.length === 0) return Infinity;
+  if (batchSize === 0) return 0;
 
   let totalSkill = 0;
   for (const worker of workers) {
     totalSkill += worker.attributes.cognition?.bodilyKinesthetic ?? q(0.50);
   }
   const avgSkill = totalSkill / workers.length;
+  if (avgSkill <= 0) return Infinity;
 
-  // Base time per item (placeholder: 1 hour)
+  // At skill q(1.0), one item takes baseTimePerItem_s seconds.
+  // With time reduction q(0.90), items take 90% as long (10% faster).
   const baseTimePerItem_s = 3600;
-  const workshopSpeedFactor = q(1.0); // TODO: get from workshop
-
-  const effectiveTimePerItem = Math.round(baseTimePerItem_s * SCALE.Q / avgSkill / workshopSpeedFactor);
-  return effectiveTimePerItem * batchSize / SCALE.Q;
+  const timePerItem_s = Math.round(baseTimePerItem_s * workshopTimeReduction_Q / avgSkill);
+  return timePerItem_s * batchSize;
 }
 
 /** Check if production line is complete. */

@@ -596,12 +596,7 @@ export function findMaterialsByType(inventory: Inventory, materialTypeId: string
   const results: ItemInstance[] = [];
   // Helper to check and add
   const checkItem = (item: ItemInstance) => {
-    // We need to examine the item's materialTypeId property.
-    // Since ItemInstance doesn't have materialTypeId, we need to rely on the templateId mapping
-    // or assume that the item is a Material (which extends ItemBase).
-    // For now, we'll assume that templateId indicates material type (e.g., "material_iron").
-    // This is a placeholder; we need to integrate with crafting material system.
-    if (item.templateId.startsWith("material_") && item.templateId.includes(materialTypeId)) {
+    if (item.templateId === `material_${materialTypeId}`) {
       results.push(item);
     }
   };

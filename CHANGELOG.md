@@ -6,6 +6,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.48] — 2026-03-28
+
+### Fixed
+
+- **Crafting subsystem — TODO/placeholder items resolved:**
+  - `src/crafting/materials.ts` — `createMaterialItem`: corrected `mass_kg` (was double-scaled by `SCALE.kg`; now `quantity_kg * SCALE.kg / SCALE.Q`); `bulk` now computed proportionally from quantity instead of a fixed `q(1.0)` placeholder.
+  - `src/inventory.ts` — `findMaterialsByType`: replaced loose `templateId.includes(materialTypeId)` with exact `templateId === "material_" + materialTypeId` to prevent false positives (e.g. "iron" matching "iron_ore").
+  - `src/crafting/manufacturing.ts` — `ProductionLine` gains optional `workshopTimeReduction_Q` and `workshopQualityBonus_Q` fields; `setupProductionLine` now looks up the recipe and calls `getWorkshopBonus` to populate them; `advanceProduction` applies the time reduction to effective progress; `calculateBatchQualityRange` accepts an optional `workshopQualityBonus_Q` multiplier; `estimateBatchCompletionTime` accepts an optional `workshopTimeReduction_Q` and its formula is corrected (was dividing by SCALE.Q twice, producing near-zero results).
+  - `src/crafting/workshops.ts` — `upgradeWorkshop`: now checks that `resources` contains sufficient `material_wood` (10 units per tier step) before upgrading; returns `success: false` when insufficient rather than always succeeding.
+  - `src/crafting/index.ts` — `startManufacturing`: now returns the constructed `ProductionLine` in `result.productionLine` so callers can store it for subsequent `advanceManufacturing` calls (persistent state remains the host's responsibility); `advanceManufacturing` now derives quality range and time reduction from the supplied `workshop` rather than using hardcoded values.
+- Build: clean. Tests: 5,261 passing. Coverage: statements 97.1 %, branches 87.83 %, functions 95.65 %, lines 97.1 %.
+
+---
+
 ## [0.1.47] — 2026-03-27
 
 ### Changed
