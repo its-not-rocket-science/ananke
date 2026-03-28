@@ -20,6 +20,26 @@ The spike consisted of three concrete experiments:
 
 Each experiment is documented below, followed by a glossary of critical types and a list of integration gotchas.
 
+## Choose your entry point
+
+Use the table below to find the right subpath export for your use case.
+The full module index with all 41 exports is in [`docs/module-index.md`](module-index.md).
+
+| I want to… | Start with | Then add |
+|---|---|---|
+| **Simulate a duel or battle** | `"@its-not-rocket-science/ananke"` (main) | `"…/combat"` for grapple, ranged, formation |
+| **Run a campaign / world simulation** | `"…"` + `"…/polity"` | `"…/campaign"` + whichever campaign extensions you need |
+| **Design a species or xenobiology** | `"…"` + `"…/species"` + `"…/anatomy"` | `"…/character"` for aging, sleep, disease |
+| **Drive a 3D renderer** | `"…"` (bridge exports are in main bundle) | See [`docs/bridge-contract.md`](bridge-contract.md) |
+| **Build a multiplayer host** | `"…"` (deterministic by design) | See [`docs/host-contract.md`](host-contract.md) for lockstep pattern |
+| **Add narrative / storytelling** | `"…/narrative"` + `"…/narrative-prose"` | `"…/renown"` for legend-building |
+| **Craft / economic simulation** | `"…/crafting"` + `"…/catalog"` | `"…/social"` for trade and faction effects |
+| **Grand strategy / 4X** | `"…/polity"` + `"…/campaign"` | Any combination of the 26 campaign extension modules |
+
+**Stability:** `"."` and `"./polity"` are **Tier 1 (Stable)** — no breaking changes without a major version bump.
+All other subpaths are **Tier 2 (Experimental)** — changelog documents any breaking changes.
+See [`STABLE_API.md`](../STABLE_API.md) for the full tier table.
+
 ---
 
 ## 1. Architecture Overview

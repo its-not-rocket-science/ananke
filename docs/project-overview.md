@@ -1161,9 +1161,11 @@ Map each `segmentId` to a skeleton bone and drive blend-shape or constraint weig
 **Integration note:** These functions provide data snapshots only.  Mapping Ananke's abstract
 segment IDs to a specific engine's skeleton, handling tick-rate mismatch (20 Hz → 60+ Hz), and
 wiring animation hints into a state machine are the host's responsibility.  See
-`docs/bridge-api.md` for the full API reference and `docs/ecosystem.md` for Unity/Godot adapter
-sketches.  A minimal runnable reference plugin (ROADMAP item 6) is the next priority for
-lowering this integration barrier.
+[`docs/bridge-contract.md`](bridge-contract.md) for the field-by-field contract and
+[`docs/integration-primer.md`](integration-primer.md) for worked integration code.  The
+[`ananke-godot-reference`](https://github.com/its-not-rocket-science/ananke-godot-reference)
+and [`ananke-unity-reference`](https://github.com/its-not-rocket-science/ananke-unity-reference)
+companion repos provide complete runnable reference plugins for Godot 4 and Unity 6.
 
 ---
 
@@ -2144,25 +2146,14 @@ suggested first milestone.
 | `ananke-historical-battles` | Historical battle validation suite comparing outcomes against primary sources |
 | `ananke-archive` | Searchable public database of simulation runs, parameter spaces, and raw trace data |
 
-### Companion ecosystem infrastructure (ROADMAP CE-1 to CE-4)
+### Companion ecosystem infrastructure — all complete
 
-The following Ananke-side changes are the highest-leverage items for enabling companion projects:
+ROADMAP items CE-1 through CE-4 are complete:
 
-**CE-1 — npm publish + subpath exports map.**  Remove `"private": true` from `package.json`,
-add a `"exports"` map so consumers can import `ananke/units`, `ananke/sim/kernel`, etc.
-without bundling the whole library.  See ROADMAP for proposed exports JSON.
-
-**CE-2 — `createWorld()` convenience factory.**  A single call that builds a `World` with
-sensible defaults (5 humans, no terrain, tactical tuning).  Eliminates 20 lines of setup
-boilerplate for companion projects that need a quick simulation harness.
-
-**CE-3 — JSON scenario schema + `loadScenario()`.**  Lets companion projects (especially
-`ananke-historical-battles` and `ananke-fantasy-species`) ship scenario definitions as JSON
-files rather than TypeScript, reducing the barrier to non-developer contribution.
-
-**CE-4 — `src/index.ts` stable-API barrel.**  A single import surface (`import { ... } from "ananke"`)
-covering everything in `STABLE_API.md`.  Companion projects should depend on this barrel, not
-on internal module paths that may change.
+- **CE-1** — Package published as `@its-not-rocket-science/ananke` with 41 named subpath exports.
+- **CE-2** — `createWorld()` convenience factory ships in `src/sim/world.ts`.
+- **CE-3** — JSON scenario schema and `loadScenario()` in `src/sim/world.ts`.
+- **CE-4** — `src/index.ts` stable-API barrel covers everything in `STABLE_API.md`.
 
 ---
 
@@ -2203,25 +2194,23 @@ Agincourt, Roman testudo vs. Gaul charge, small-unit skirmish attrition, epidemi
 each run across 100 seeds.  The distribution of outcomes is compared against historical
 casualty data.  Run with `npm run run:emergent-validation`.
 
-Results from both suites are committed to `docs/` and linked from releases.  See ROADMAP
-item PH-8 for the plan to make these first-class trust artifacts.
+Results from both suites are committed to `docs/` and linked from releases.  See [`docs/emergent-validation-report.md`](emergent-validation-report.md) for the committed result summaries.
 
 ---
 
-## Next steps — Platform Hardening
+## Platform Hardening — all complete
 
-The simulation is architecturally complete.  The highest-leverage remaining work is making
-the existing depth trustworthy and legible to adopters:
+ROADMAP items PH-1 through PH-8 are complete as of 2026-03-19:
 
 | Item | What | Status |
 |------|------|--------|
-| PH-1 | API tiering — Stable / Advanced / Internal tiers in exports and docs | Planned |
-| PH-2 | Versioning policy unification — one unambiguous adopter contract | Planned |
-| PH-3 | Minimal host integration contract document | Planned |
-| PH-4 | Save / replay / bridge contract tests — golden compatibility fixtures | Planned |
-| PH-5 | Bridge as first-class supported surface — `docs/bridge-contract.md` | Planned |
-| PH-6 | Entity / WorldState core vs. extensions split — JSDoc annotations | Planned |
-| PH-7 | Benchmark operational guide — tick-rate and entity-cap recommendations | Planned |
-| PH-8 | Emergent validation as flagship trust artifact — versioned, CI-enforced | Planned |
+| PH-1 | API tiering — Stable / Advanced / Internal tiers in exports and docs | **Complete** |
+| PH-2 | Versioning policy unification — one unambiguous adopter contract | **Complete** |
+| PH-3 | Minimal host integration contract document | **Complete** |
+| PH-4 | Save / replay / bridge contract tests — golden compatibility fixtures | **Complete** |
+| PH-5 | Bridge as first-class supported surface — `docs/bridge-contract.md` | **Complete** |
+| PH-6 | Entity / WorldState core vs. extensions split — JSDoc annotations | **Complete** |
+| PH-7 | Benchmark operational guide — tick-rate and entity-cap recommendations | **Complete** |
+| PH-8 | Emergent validation as flagship trust artifact — versioned, CI-enforced | **Complete** |
 
-See ROADMAP `## Platform Hardening` for full scope of each item.
+See `ROADMAP.md` → `## Platform Hardening` for the full scope of each item.

@@ -6,6 +6,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.50] — 2026-03-28
+
+### Docs
+
+- **PA-1 — Documentation Reconciliation & Architecture Map (complete):**
+  - `docs/project-overview.md`: Updated stale "next priority" reference plugin note to reflect Godot and Unity bridge plugins are complete; updated CE-1–CE-4 companion infrastructure from "planned" to "all complete"; updated PH-1–PH-8 platform hardening table from "Planned" to "Complete".
+  - `docs/module-index.md` (new): Machine-checkable table of all 41 package subpath exports, with stability tier (Tier 1 Stable / Tier 2 Experimental / Tier 3 Campaign-scale), key exports, use-case notes, and doc links. Includes use-case entry-point guide at the top.
+  - `tools/generate-module-index.ts` (new): Script that reads `package.json` exports and renders `docs/module-index.md`. Added `generate-module-index` npm script.
+  - `docs/integration-primer.md`: Added "Choose Your Entry Point" section before Architecture Overview, with use-case decision tree and module tier table linking to `docs/module-index.md`.
+  - `README.md`: Added `docs/module-index.md` row to Further Reading table.
+- Build: clean. Tests: 5,261 passing. Coverage: statements 97.1 %, branches 87.83 %, functions 95.65 %, lines 97.1 %.
+
+---
+
 ## [0.1.49] — 2026-03-28
 
 ### Fixed

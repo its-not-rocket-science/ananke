@@ -411,6 +411,7 @@ Ananke's outputs are validated against historical and experimental sources:
 
 | Document | What's in it |
 |---|---|
+| [`docs/module-index.md`](docs/module-index.md) | All 41 entry points — stability tier, use case, key exports, doc links |
 | [`docs/host-contract.md`](docs/host-contract.md) | Stable integration surface — everything needed to embed Ananke without reading `src/` |
 | [`docs/integration-primer.md`](docs/integration-primer.md) | Data-flow diagrams, type glossary, gotchas |
 | [`docs/bridge-contract.md`](docs/bridge-contract.md) | 3D renderer bridge protocol (AnimationHints, GrapplePoseConstraint) |
