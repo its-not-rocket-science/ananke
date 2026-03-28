@@ -1,0 +1,149 @@
+{
+  "$schema": "../../schema/pack.schema.json",
+  "name": "weapons-medieval",
+  "version": "1.0.0",
+  "description": "Medieval European weapons pack — longsword, arming sword, war axe, mace, and pollaxe. All values are real-world SI units (kg, m, s); Q ratios are in [0, 1].",
+  "anankeVersion": ">=0.1",
+  "weapons": [
+    {
+      "id": "medieval_longsword",
+      "name": "Longsword",
+      "mass_kg": 1.4,
+      "bulk": 0.35,
+      "reach_m": 1.1,
+      "readyTime_s": 1.6,
+      "handedness": "twoHand",
+      "strikeEffectiveMassFrac": 0.25,
+      "damage": {
+        "surfaceFrac":     0.35,
+        "internalFrac":    0.30,
+        "structuralFrac":  0.10,
+        "bleedFactor":     0.40,
+        "penetrationBias": 0.50
+      }
+    },
+    {
+      "id": "medieval_arming_sword",
+      "name": "Arming Sword",
+      "mass_kg": 0.9,
+      "bulk": 0.25,
+      "reach_m": 0.85,
+      "readyTime_s": 1.2,
+      "handedness": "oneHand",
+      "strikeEffectiveMassFrac": 0.22,
+      "damage": {
+        "surfaceFrac":     0.30,
+        "internalFrac":    0.25,
+        "structuralFrac":  0.08,
+        "bleedFactor":     0.45,
+        "penetrationBias": 0.45
+      }
+    },
+    {
+      "id": "medieval_war_axe",
+      "name": "War Axe",
+      "mass_kg": 1.5,
+      "bulk": 0.40,
+      "reach_m": 0.75,
+      "readyTime_s": 1.8,
+      "handedness": "oneHand",
+      "strikeEffectiveMassFrac": 0.40,
+      "damage": {
+        "surfaceFrac":     0.50,
+        "internalFrac":    0.20,
+        "structuralFrac":  0.15,
+        "bleedFactor":     0.55,
+        "penetrationBias": 0.30
+      }
+    },
+    {
+      "id": "medieval_mace",
+      "name": "Mace",
+      "mass_kg": 1.2,
+      "bulk": 0.35,
+      "reach_m": 0.55,
+      "readyTime_s": 1.4,
+      "handedness": "oneHand",
+      "strikeEffectiveMassFrac": 0.45,
+      "damage": {
+        "surfaceFrac":     0.15,
+        "internalFrac":    0.25,
+        "structuralFrac":  0.45,
+        "bleedFactor":     0.10,
+        "penetrationBias": 0.60
+      }
+    },
+    {
+      "id": "medieval_pollaxe",
+      "name": "Pollaxe",
+      "mass_kg": 2.5,
+      "bulk": 0.55,
+      "reach_m": 1.8,
+      "readyTime_s": 2.2,
+      "handedness": "twoHand",
+      "strikeEffectiveMassFrac": 0.35,
+      "damage": {
+        "surfaceFrac":     0.45,
+        "internalFrac":    0.35,
+        "structuralFrac":  0.20,
+        "bleedFactor":     0.40,
+        "penetrationBias": 0.55
+      }
+    }
+  ],
+  "armour": [
+    {
+      "id": "medieval_gambeson",
+      "name": "Gambeson",
+      "mass_kg": 4.0,
+      "bulk": 0.12,
+      "resist_J": 80,
+      "protectedDamageMul": 0.35,
+      "insulation_m2KW": 0.12,
+      "coverageByRegion": {
+        "torso": 0.95,
+        "upperArm": 0.70,
+        "lowerArm": 0.50,
+        "hip": 0.80,
+        "thigh": 0.60
+      },
+      "protects": ["Kinetic", "Thermal"]
+    },
+    {
+      "id": "medieval_chainmail",
+      "name": "Chainmail Hauberk",
+      "mass_kg": 8.5,
+      "bulk": 0.22,
+      "resist_J": 220,
+      "protectedDamageMul": 0.55,
+      "insulation_m2KW": 0.05,
+      "coverageByRegion": {
+        "torso": 0.95,
+        "upperArm": 0.85,
+        "lowerArm": 0.70,
+        "hip": 0.90,
+        "thigh": 0.75
+      },
+      "protects": ["Kinetic"]
+    },
+    {
+      "id": "medieval_plate_armour",
+      "name": "Full Plate Armour",
+      "mass_kg": 22.0,
+      "bulk": 0.45,
+      "resist_J": 600,
+      "protectedDamageMul": 0.75,
+      "insulation_m2KW": 0.03,
+      "coverageByRegion": {
+        "torso": 0.98,
+        "upperArm": 0.92,
+        "lowerArm": 0.88,
+        "hip": 0.95,
+        "thigh": 0.90,
+        "lowerLeg": 0.85,
+        "head": 0.90
+      },
+      "protects": ["Kinetic"]
+    }
+  ]
+}

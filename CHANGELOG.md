@@ -6,6 +6,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.53] — 2026-03-28
+
+### Added
+
+- **PA-4 — Scenario & Content Pack System (complete):**
+  - `src/content-pack.ts` (new): runtime `.ananke-pack` loader — `validatePack`, `loadPack`, `getPackScenario`, `instantiatePackScenario`, `listLoadedPacks`, `getLoadedPack`, `clearPackRegistry`. `loadPack` registers weapons/armour/archetypes into the global catalog AND into the world-factory extension tables so they are immediately usable in `loadScenario` scenarios.
+  - `src/world-factory.ts`: added `registerWorldArchetype`, `registerWorldItem`, `clearWorldExtensions` extension hooks so content packs can make their items available to `createWorld` / `loadScenario` without a source build.
+  - `schema/pack.schema.json` (new): JSON Schema 2020-12 for pack manifests (weapons, armour, archetypes, scenarios sections; full per-field documentation).
+  - `tools/pack-cli.ts` (new): `ananke pack validate <file>`, `ananke pack bundle <dir>`, `ananke pack load <file>`. Registered as `bin.ananke` in `package.json` so `npx ananke pack validate` works after install.
+  - `examples/packs/weapons-medieval.json`: 5 medieval weapons + 3 armours.
+  - `examples/packs/species-humanoids.json`: 4 humanoid archetype variants.
+  - `examples/packs/scenarios-duel.json`: 3 duel scenarios, self-contained with own archetypes and weapons.
+  - `"./content-pack"` subpath, `schema/pack.schema.json`, and `bin.ananke` added to `package.json`.
+- 32 new tests (184 test files, 5,332 tests total). Build: clean.
+
+---
+
 ## [0.1.52] — 2026-03-28
 
 ### Added

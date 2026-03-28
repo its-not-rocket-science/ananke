@@ -1,0 +1,45 @@
+{
+  "$schema": "../../schema/pack.schema.json",
+  "name": "species-humanoids",
+  "version": "1.0.0",
+  "description": "Humanoid archetype variants — tall human, stocky dwarf, lean elf, ageing veteran. All derived from HUMAN_BASE with SI-unit overrides. Full species registration (physiology, body plans, innate traits) requires the planned @ananke/content species API.",
+  "anankeVersion": ">=0.1",
+  "archetypes": [
+    {
+      "id": "species_tall_human",
+      "base": "HUMAN_BASE",
+      "overrides": {
+        "height_m":     1.90,
+        "mass_kg":      85,
+        "peakForce_N":  1050
+      }
+    },
+    {
+      "id": "species_stocky_dwarf",
+      "base": "HUMAN_BASE",
+      "overrides": {
+        "height_m":            1.45,
+        "mass_kg":             75,
+        "peakForce_N":         980,
+        "distressTolerance":   0.55
+      }
+    },
+    {
+      "id": "species_lean_elf",
+      "base": "HUMAN_BASE",
+      "overrides": {
+        "height_m":    1.78,
+        "mass_kg":     62,
+        "peakForce_N": 720
+      }
+    },
+    {
+      "id": "species_ageing_veteran",
+      "base": "KNIGHT_INFANTRY",
+      "overrides": {
+        "peakForce_N": 850,
+        "distressTolerance": 0.65
+      }
+    }
+  ]
+}

@@ -8397,18 +8397,30 @@ call `migrateWorld`, and resume simulation without data loss or replay divergenc
 
 ---
 
-### PA-4 · Scenario & Content Pack System
+### PA-4 · Scenario & Content Pack System ✅ Complete
 
 **Problem:** Most of Ananke's value is locked in source files and examples.  There is no
 runtime-loadable format for sharing weapons, species, scenarios, or AI doctrines.
 
-**Work:**
-- Define a `.ananke-pack` manifest schema (JSON) covering: weapons, species/body plans,
-  scenarios, AI behaviour trees, validation suites.
-- Implement a runtime loader in `@ananke/content` — `loadPack(manifest)` validates and
-  registers pack content into the active catalogues.
-- Publish three example packs: `weapons-medieval`, `species-humanoids`, `scenarios-duel`.
-- Ship a CLI: `npx ananke pack validate <pack.json>` and `npx ananke pack bundle <dir>`.
+**Work (complete):**
+- `schema/pack.schema.json` (new) — JSON Schema 2020-12 for `.ananke-pack` manifests covering weapons, armour, archetypes, and scenarios.
+- `src/content-pack.ts` (new) — runtime pack loader:
+  - `validatePack(manifest)` — structural validation returning `PackValidationError[]` with JSONPath paths
+  - `loadPack(manifest)` — validates then registers weapons/armour/archetypes into catalog AND into the world-factory lookup tables; stores scenarios in the pack registry; returns `LoadPackResult { packId, registeredIds, scenarioIds, fingerprint, errors }`; idempotent on repeated calls
+  - `getPackScenario(packId, scenarioId)` — retrieve raw scenario JSON
+  - `instantiatePackScenario(packId, scenarioId)` — calls `loadScenario` to return a live `WorldState`
+  - `listLoadedPacks()`, `getLoadedPack(packId)`, `clearPackRegistry()` — registry query/management
+- `src/world-factory.ts` — extended with `registerWorldArchetype`, `registerWorldItem`, `clearWorldExtensions` so that pack archetypes and items are visible to `createWorld` / `loadScenario`.
+- `"./content-pack"` subpath added to `package.json` exports.
+- `schema/pack.schema.json` added to `package.json` `"files"`.
+- `bin.ananke` added to `package.json` for `npx ananke` CLI entry.
+- `tools/pack-cli.ts` (new) — `ananke pack validate <file>`, `ananke pack bundle <dir>`, `ananke pack load <file>`.
+- `npm run pack` shortcut added to `package.json` scripts.
+- Three example packs in `examples/packs/`:
+  - `weapons-medieval.json` — 5 weapons (longsword, arming sword, war axe, mace, pollaxe) + 3 armours (gambeson, chainmail, plate)
+  - `species-humanoids.json` — 4 humanoid archetype variants (tall human, stocky dwarf, lean elf, ageing veteran)
+  - `scenarios-duel.json` — self-contained pack with 3 archetypes, 2 weapons, and 3 duel scenarios
+- 32 new tests; all 5,332 tests passing.
 
 **Success criterion:** A user can author a species pack, share it as a JSON file, and load it
 into any Ananke-powered host without touching source code.

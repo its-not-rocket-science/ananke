@@ -1,0 +1,89 @@
+{
+  "$schema": "../../schema/pack.schema.json",
+  "name": "scenarios-duel",
+  "version": "1.0.0",
+  "description": "Self-contained duel scenarios. Includes the archetypes and weapons each scenario needs — load this pack and call instantiatePackScenario() to run any scenario without additional setup.",
+  "anankeVersion": ">=0.1",
+  "archetypes": [
+    {
+      "id": "duel_knight",
+      "base": "KNIGHT_INFANTRY"
+    },
+    {
+      "id": "duel_brawler",
+      "base": "AMATEUR_BOXER"
+    },
+    {
+      "id": "duel_wrestler",
+      "base": "GRECO_WRESTLER"
+    }
+  ],
+  "weapons": [
+    {
+      "id": "duel_broadsword",
+      "name": "Broadsword",
+      "mass_kg": 1.2,
+      "bulk": 0.30,
+      "reach_m": 0.90,
+      "readyTime_s": 1.4,
+      "handedness": "oneHand",
+      "strikeEffectiveMassFrac": 0.24,
+      "damage": {
+        "surfaceFrac":     0.32,
+        "internalFrac":    0.28,
+        "structuralFrac":  0.08,
+        "bleedFactor":     0.42,
+        "penetrationBias": 0.48
+      }
+    },
+    {
+      "id": "duel_dagger",
+      "name": "Dagger",
+      "mass_kg": 0.3,
+      "bulk": 0.10,
+      "reach_m": 0.30,
+      "readyTime_s": 0.8,
+      "handedness": "oneHand",
+      "strikeEffectiveMassFrac": 0.18,
+      "damage": {
+        "surfaceFrac":     0.20,
+        "internalFrac":    0.45,
+        "structuralFrac":  0.05,
+        "bleedFactor":     0.60,
+        "penetrationBias": 0.65
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "duel_knight_vs_brawler",
+      "seed": 42,
+      "maxTicks": 600,
+      "tractionCoeff": 0.85,
+      "entities": [
+        { "id": 1, "teamId": 1, "archetype": "duel_knight",   "weapon": "duel_broadsword", "x_m": -2, "y_m": 0 },
+        { "id": 2, "teamId": 2, "archetype": "duel_brawler",  "weapon": "duel_dagger",     "x_m":  2, "y_m": 0 }
+      ]
+    },
+    {
+      "id": "duel_knight_vs_knight",
+      "seed": 99,
+      "maxTicks": 600,
+      "tractionCoeff": 0.85,
+      "entities": [
+        { "id": 1, "teamId": 1, "archetype": "duel_knight",   "weapon": "duel_broadsword", "x_m": -2, "y_m": 0 },
+        { "id": 2, "teamId": 2, "archetype": "duel_knight",   "weapon": "duel_broadsword", "x_m":  2, "y_m": 0 }
+      ]
+    },
+    {
+      "id": "duel_wrestler_vs_knight",
+      "seed": 7,
+      "maxTicks": 600,
+      "tractionCoeff": 0.90,
+      "entities": [
+        { "id": 1, "teamId": 1, "archetype": "duel_wrestler", "weapon": "duel_dagger",     "x_m": -1, "y_m": 0 },
+        { "id": 2, "teamId": 2, "archetype": "duel_knight",   "weapon": "duel_broadsword", "x_m":  1, "y_m": 0 }
+      ]
+    }
+  ]
+}

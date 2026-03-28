@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://its-not-rocket-science.github.io/ananke/schema/pack.schema.json",
+  "title": "AnankePackManifest",
+  "description": "Ananke content pack manifest — a runtime-loadable bundle of weapons, armour, archetypes, and scenarios. Load with loadPack() from @its-not-rocket-science/ananke/content-pack.",
+  "type": "object",
+  "required": ["name", "version"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Link to this schema for editor validation."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique pack identifier (kebab-case recommended), e.g. \"weapons-medieval\"."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$",
+      "description": "Semantic version, e.g. \"1.0.0\". Used as part of the packId \"name@version\"."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable summary of pack contents."
+    },
+    "anankeVersion": {
+      "type": "string",
+      "description": "Minimum Ananke version required (semver range), e.g. \">=0.1\"."
+    },
+    "weapons": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/WeaponEntry" },
+      "description": "Weapon definitions — each registered via registerWeapon()."
+    },
+    "armour": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ArmourEntry" },
+      "description": "Armour definitions — each registered via registerArmour()."
+    },
+    "archetypes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ArchetypeEntry" },
+      "description": "Archetype definitions — each registered via registerArchetype()."
+    },
+    "scenarios": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Scenario" },
+      "description": "Scenario definitions — stored in the pack registry; instantiate with instantiatePackScenario()."
+    }
+  },
+  "unevaluatedProperties": true,
+  "$defs": {
+    "WeaponDamageProfile": {
+      "type": "object",
+      "required": ["surfaceFrac", "internalFrac", "structuralFrac", "bleedFactor", "penetrationBias"],
+      "properties": {
+        "surfaceFrac":     { "type": "number", "minimum": 0, "maximum": 1, "description": "Surface damage fraction [0, 1]." },
+        "internalFrac":    { "type": "number", "minimum": 0, "maximum": 1, "description": "Internal damage fraction [0, 1]." },
+        "structuralFrac":  { "type": "number", "minimum": 0, "maximum": 1, "description": "Structural (bone) damage fraction [0, 1]." },
+        "bleedFactor":     { "type": "number", "minimum": 0, "maximum": 1, "description": "Bleed factor [0, 1]." },
+        "penetrationBias": { "type": "number", "minimum": 0, "maximum": 1, "description": "Armour penetration bias [0, 1]." }
+      }
+    },
+    "WeaponEntry": {
+      "type": "object",
+      "required": ["id", "name", "mass_kg", "damage"],
+      "properties": {
+        "id":                       { "type": "string", "minLength": 1 },
+        "name":                     { "type": "string" },
+        "mass_kg":                  { "type": "number", "exclusiveMinimum": 0, "description": "Real-world mass in kilograms." },
+        "bulk":                     { "type": "number", "minimum": 0, "maximum": 1, "description": "Handling difficulty factor [0, 1]." },
+        "reach_m":                  { "type": "number", "exclusiveMinimum": 0, "description": "Strike reach in metres." },
+        "readyTime_s":              { "type": "number", "exclusiveMinimum": 0, "description": "Wind-up time in seconds." },
+        "handedness":               { "type": "string", "enum": ["oneHand", "twoHand", "mounted", "natural"] },
+        "strikeEffectiveMassFrac":  { "type": "number", "minimum": 0, "maximum": 1 },
+        "strikeSpeedMul":           { "type": "number", "minimum": 0 },
+        "handlingMul":              { "type": "number", "minimum": 0 },
+        "damage":                   { "$ref": "#/$defs/WeaponDamageProfile" }
+      },
+      "unevaluatedProperties": true
+    },
+    "ArmourEntry": {
+      "type": "object",
+      "required": ["id", "name", "mass_kg", "resist_J", "protectedDamageMul", "coverageByRegion"],
+      "properties": {
+        "id":                  { "type": "string", "minLength": 1 },
+        "name":                { "type": "string" },
+        "mass_kg":             { "type": "number", "exclusiveMinimum": 0, "description": "Real-world mass in kilograms." },
+        "bulk":                { "type": "number", "minimum": 0, "maximum": 1 },
+        "resist_J":            { "type": "number", "exclusiveMinimum": 0, "description": "Energy absorption capacity in real-world Joules." },
+        "protectedDamageMul":  { "type": "number", "minimum": 0, "maximum": 1, "description": "Damage multiplier applied when armour absorbs a hit [0, 1]." },
+        "coverageByRegion":    { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }, "description": "Region name → coverage fraction [0, 1]." },
+        "protects":            { "type": "array", "items": { "type": "string" }, "description": "Damage channel names this armour blocks, e.g. [\"Kinetic\", \"Thermal\"]." },
+        "mobilityMul":         { "type": "number", "minimum": 0 },
+        "fatigueMul":          { "type": "number", "minimum": 0 },
+        "reflectivity":        { "type": "number", "minimum": 0, "maximum": 1 },
+        "ablative":            { "type": "boolean" },
+        "insulation_m2KW":     { "type": "number", "minimum": 0 }
+      },
+      "unevaluatedProperties": true
+    },
+    "ArchetypeEntry": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id":        { "type": "string", "minLength": 1, "description": "Unique catalog id for this archetype." },
+        "base":      { "type": "string", "description": "Built-in base to inherit from: HUMAN_BASE, KNIGHT_INFANTRY, AMATEUR_BOXER, PRO_BOXER, GRECO_WRESTLER, etc." },
+        "overrides": { "type": "object", "description": "Field → real-world SI value overrides, e.g. {\"mass_kg\": 80, \"height_m\": 1.85}." }
+      },
+      "unevaluatedProperties": true
+    },
+    "ScenarioEntity": {
+      "type": "object",
+      "required": ["id", "teamId", "archetype", "weapon"],
+      "properties": {
+        "id":        { "type": "integer", "minimum": 1 },
+        "teamId":    { "type": "integer" },
+        "archetype": { "type": "string", "description": "Catalog archetype id." },
+        "weapon":    { "type": "string", "description": "Catalog weapon id." },
+        "armour":    { "type": "string", "description": "Catalog armour id (optional)." },
+        "x_m":       { "type": "number" },
+        "y_m":       { "type": "number" }
+      }
+    },
+    "Scenario": {
+      "type": "object",
+      "required": ["id", "seed", "maxTicks", "entities"],
+      "properties": {
+        "id":           { "type": "string", "minLength": 1 },
+        "seed":         { "type": "integer" },
+        "maxTicks":     { "type": "integer", "minimum": 1 },
+        "tractionCoeff": { "type": "number", "minimum": 0, "maximum": 1 },
+        "entities":     { "type": "array", "items": { "$ref": "#/$defs/ScenarioEntity" }, "minItems": 1 }
+      }
+    }
+  }
+}

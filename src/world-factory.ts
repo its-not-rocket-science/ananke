@@ -94,6 +94,38 @@ function buildItemMap(): Map<string, Item> {
 /** Map of item id → Item for weapons and armour usable with createWorld(). */
 export const ITEM_MAP: ReadonlyMap<string, Item> = buildItemMap();
 
+// ── Content-pack extension registries ────────────────────────────────────────
+// Dynamic additions from loadPack(); checked after the static maps.
+
+const _archetypeExtensions = new Map<string, Archetype>();
+const _itemExtensions       = new Map<string, Item>();
+
+/**
+ * Register an archetype so it is resolvable by `createWorld` and `loadScenario`.
+ * Called automatically by `loadPack` in `content-pack.ts`.
+ */
+export function registerWorldArchetype(id: string, archetype: Archetype): void {
+  _archetypeExtensions.set(id, archetype);
+}
+
+/**
+ * Register a weapon or armour so it is resolvable by `createWorld` and `loadScenario`.
+ * Called automatically by `loadPack` in `content-pack.ts`.
+ */
+export function registerWorldItem(id: string, item: Item): void {
+  _itemExtensions.set(id, item);
+}
+
+/**
+ * Remove all content-pack extensions from the world-factory lookup tables.
+ * Does NOT affect the static `ARCHETYPE_MAP` or `ITEM_MAP`.
+ * Call in test `afterEach` alongside `clearCatalog()` and `clearPackRegistry()`.
+ */
+export function clearWorldExtensions(): void {
+  _archetypeExtensions.clear();
+  _itemExtensions.clear();
+}
+
 // ── EntitySpec ────────────────────────────────────────────────────────────────
 
 export interface EntitySpec {
@@ -121,8 +153,8 @@ export function createWorld(seed: number, entities: EntitySpec[]): WorldState {
   const built: Entity[] = [];
 
   for (const spec of entities) {
-    // ── Archetype lookup ──────────────────────────────────────────────────────
-    const archetype = ARCHETYPE_MAP.get(spec.archetype);
+    // ── Archetype lookup (static map + content-pack extensions) ──────────────
+    const archetype = ARCHETYPE_MAP.get(spec.archetype) ?? _archetypeExtensions.get(spec.archetype);
     if (archetype === undefined) {
       throw new Error(
         `createWorld: unknown archetype "${spec.archetype}". ` +
@@ -130,8 +162,8 @@ export function createWorld(seed: number, entities: EntitySpec[]): WorldState {
       );
     }
 
-    // ── Weapon lookup ─────────────────────────────────────────────────────────
-    const weapon = ITEM_MAP.get(spec.weaponId);
+    // ── Weapon lookup (static map + content-pack extensions) ─────────────────
+    const weapon = ITEM_MAP.get(spec.weaponId) ?? _itemExtensions.get(spec.weaponId);
     if (weapon === undefined) {
       throw new Error(`createWorld: unknown weaponId "${spec.weaponId}"`);
     }
@@ -139,7 +171,7 @@ export function createWorld(seed: number, entities: EntitySpec[]): WorldState {
     // ── Optional armour lookup ────────────────────────────────────────────────
     let armour: Item | undefined;
     if (spec.armourId !== undefined) {
-      armour = ITEM_MAP.get(spec.armourId);
+      armour = ITEM_MAP.get(spec.armourId) ?? _itemExtensions.get(spec.armourId);
       if (armour === undefined) {
         throw new Error(`createWorld: unknown armourId "${spec.armourId}"`);
       }

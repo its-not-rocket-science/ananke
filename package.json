@@ -1,9 +1,12 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.52",
+  "version": "0.1.53",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
+  "bin": {
+    "ananke": "./dist/tools/pack-cli.js"
+  },
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "exports": {
@@ -174,6 +177,10 @@
     "./schema": {
       "import": "./dist/src/schema-migration.js",
       "types": "./dist/src/schema-migration.d.ts"
+    },
+    "./content-pack": {
+      "import": "./dist/src/content-pack.js",
+      "types": "./dist/src/content-pack.d.ts"
     }
   },
   "workspaces": [
@@ -194,6 +201,7 @@
     "docs/wire-protocol.md",
     "schema/world.schema.json",
     "schema/replay.schema.json",
+    "schema/pack.schema.json",
     "CHANGELOG.md",
     "STABLE_API.md"
   ],
@@ -239,6 +247,7 @@
     "example:campaign": "node dist/examples/quickstart-campaign.js",
     "example:species": "node dist/examples/quickstart-species.js",
     "generate-module-index": "node dist/tools/generate-module-index.js",
+    "pack": "node dist/tools/pack-cli.js pack",
     "generate-fixtures": "node dist/tools/generate-fixtures.js",
     "generate-zoo": "node dist/tools/generate-zoo.js",
     "generate-playground": "node dist/tools/generate-playground.js",
