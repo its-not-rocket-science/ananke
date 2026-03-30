@@ -8312,7 +8312,7 @@ README and linked from every release — not buried inside `tools/`.
 
 ---
 
-### PA-1 · Documentation Reconciliation & Architecture Map
+### PA-1 · Documentation Reconciliation & Architecture Map ✅ COMPLETE
 
 **Problem:** At Ananke's current scale, documentation drift is a trust problem.  Parts of
 `docs/project-overview.md` still reference companion projects as a next priority while ROADMAP
@@ -8427,7 +8427,7 @@ into any Ananke-powered host without touching source code.
 
 ---
 
-### PA-5 · Campaign ↔ Tactical Terrain Bridge
+### PA-5 · Campaign ↔ Tactical Terrain Bridge ✅ COMPLETE
 
 **Problem:** The repo has strong tactical and campaign systems but they operate as separate
 silos.  There is no formal layer translating strategic map state into tactical battle parameters
@@ -8448,7 +8448,7 @@ and have the result automatically integrated into campaign state through a docum
 
 ---
 
-### PA-6 · Unified Atmosphere Model: Wind, Precipitation & Propagation
+### PA-6 · Unified Atmosphere Model: Wind, Precipitation & Propagation ✅ COMPLETE
 
 **Problem:** Projectile drift, flame/gas distortion, acoustic masking, scent propagation,
 visibility degradation, and traction changes are each simulated independently.  A single
@@ -8468,7 +8468,7 @@ gas hazards, hearing range, and terrain traction without separate per-system con
 
 ---
 
-### PA-7 · Advanced Non-Visual Sensory Systems
+### PA-7 · Advanced Non-Visual Sensory Systems ✅ COMPLETE
 
 **Problem:** The perception system is strong for vision and hearing but shallow for non-human
 sensing.  Given that species/xenobiology is a major Ananke theme, echolocation, electroreception,
@@ -8490,7 +8490,7 @@ vision fallback; a shark-equivalent detects bleeding prey by electroreception.
 
 ---
 
-### PA-8 · Host Integration SDKs
+### PA-8 · Host Integration SDKs ✅ COMPLETE
 
 **Problem:** The Godot and Unity reference repos prove possibility but are not production SDKs.
 The friction from "reference" to "integrable in a day" remains high.
