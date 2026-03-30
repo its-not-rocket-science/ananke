@@ -8571,3 +8571,288 @@ using the replay diff tool and the world state hash.
 | F4-9 | Documentation reconciliation & architecture map | **Added as PA-1** (highest priority) |
 | F4-10 | Deterministic networking kit | **Added as PA-10** |
 | F4-misc | "Add a new section: Platformization Roadmap (2026)" | **Done** — this section |
+
+---
+
+## Platform Maturity Roadmap (2026–2027)
+
+> **External review, batch 5 (2026-03-30):**
+>
+> *"Ananke has crossed from 'ambitious engine project' into 'serious platform-in-progress.' …
+> The README now presents Ananke as a deterministic, physics-grounded simulation engine with
+> explicit installation, semver language, API stability tiers, quick starts, performance
+> guidance, and validation/trust sections. … The project no longer mainly risks being
+> underestimated. It now risks becoming too sprawling to navigate cleanly, even while being
+> excellent."*
+>
+> Reviewer's updated appraisal:
+> - **Technical ambition:** still extraordinary
+> - **Engineering seriousness:** obvious
+> - **Adoption readiness:** much better than before
+> - **Platform readiness:** real, but not finished
+> - **Primary risk:** not lack of rigor — now scale management and editorial discipline
+>
+> Reviewer conclusion: *"My honest read: Ananke is now a credible simulation platform with
+> an increasingly coherent adoption layer, but it still needs stronger curation of scope,
+> package boundaries, and 'proof of real use' artifacts."*
+
+The PA roadmap proved the platform's infrastructure.  The PM roadmap proves it hangs together
+in real use.  The emphasis shifts from adding capabilities to curating, enforcing, and
+evidencing them.
+
+---
+
+### PM-1 · First-Party Reference Builds (Proof of Real Use)
+
+**Problem:** The platform has rich infrastructure — combat, campaign, species, replay,
+bridge, cookbook, networking — but no end-to-end host apps that prove it all composes
+cleanly outside the repo.  Case studies are the trust artifact that infrastructure alone
+cannot provide.
+
+**Work:**
+- Build three first-party reference host apps, each a small but real runnable program:
+  - **Tactical duel gamelet** — single-room, keyboard-driven 1v1; demonstrates `combat`,
+    `anatomy`, `sensory`, `AI`, `bridge`, and `replay` working end-to-end.
+  - **Campaign sandbox** — turn-based world map with multiple polities, trade, and
+    military campaigns; demonstrates `campaign`, `feudal`, `diplomacy`, `migration`,
+    `demography`, `epidemic`, and save/reload.
+  - **Species / xenobiology lab** — interactive species editor + combat simulator;
+    demonstrates `species`, `character`, `generate`, `competence`, `extended-senses`,
+    and content packs.
+- Each reference build documents:
+  - Architecture diagram (what packages it uses and why)
+  - Performance envelope (entity count, tick budget, measured)
+  - Pain points encountered and how they were resolved
+  - Link to its own `README.md` within `examples/reference/`
+
+**Success criterion:** A first-time evaluator can clone the repo, run one reference build
+in under 5 minutes, and see physics-grounded outcomes with no Ananke source reading required.
+
+---
+
+### PM-2 · Package-Boundary Enforcement in CI
+
+**Problem:** PA-2 Phase 1 published four `@ananke/*` package stubs, but nothing prevents
+source files from importing across package boundaries.  The architecture is a declaration,
+not a constraint.
+
+**Work:**
+- Implement `tools/check-package-boundaries.ts`: reads the package→module mapping from
+  `docs/package-architecture.md` and the import graph from TypeScript's language service;
+  reports cross-boundary violations.
+- Add the boundary check to `package.json` `"ci"` script.
+- Add bundle-size snapshot per logical package (combat, campaign, core, content) using
+  `esbuild` in `--bundle --metafile` mode; compare against a committed baseline.
+- Publish public API extraction report per package (types only): `tools/extract-api.ts`
+  → `docs/api-surface-NAME.md` per package.
+
+**Success criterion:** A PR that imports `@ananke/campaign` from `@ananke/core` source
+fails CI before merge.
+
+---
+
+### PM-3 · Supported-Recipes Matrix
+
+**Problem:** The cookbook, module index, host contract, and STABLE_API.md are four separate
+documents covering overlapping ground.  A first-time adopter still has to triangulate across
+them to understand "what should I use for my use case, and what guarantees do I get?"
+
+**Work:**
+- Generate `docs/recipes-matrix.md` from structured frontmatter in the cookbook recipes
+  and metadata in `docs/module-index.md`.  Columns:
+  - Use case / recipe title
+  - Recommended package(s) / subpath exports
+  - Stability tier of APIs involved
+  - Runnable example / SDK link
+  - Known performance envelope
+  - Save/replay compatibility status
+- Add `tools/generate-recipes-matrix.ts` that builds the table from source of truth.
+- Link the matrix from README "Further reading" table.
+
+**Success criterion:** A developer deciding between the campaign layer and the tactical
+layer can read one table and reach the correct entry point without opening more than one doc.
+
+---
+
+### PM-4 · Release Discipline Dashboard
+
+**Problem:** The project has semver messaging, changelog, schema fixtures, benchmark
+regression, and emergent validation — but they are separate artefacts run at different
+times.  There is no single gate that confirms "this release is coherent."
+
+**Work:**
+- Define a pre-release gate report: `npm run release-check` that runs in sequence:
+  1. Schema migration pass (`test/schema.test.ts`)
+  2. Golden replay/save round-trip pass (`test/fixtures/`)
+  3. Bridge contract type-check pass (`tsc --noEmit`)
+  4. Benchmark regression pass (`npm run benchmark-check`)
+  5. Emergent validation pass (`npm run run:emergent-validation`)
+  6. Module-index freshness check (`tools/generate-module-index.ts` idempotent diff)
+- Produce a structured `docs/release-report.json` with timestamp, version, and
+  pass/fail per gate.
+- Render as `docs/release-dashboard.md` and commit it alongside each release.
+
+**Success criterion:** A maintainer can run one command and know whether the repo is in
+a releasable state, with a human-readable audit trail.
+
+---
+
+### PM-5 · Deterministic Conformance Suite for Third-Party Hosts
+
+**Problem:** PA-10 ships `hashWorldState`, `diffReplays`, and the replay CLI.  But there
+is no visible "host integration certification" suite that third-party SDK authors can run
+to prove their implementation is correct.
+
+**Work:**
+- Define a `conformance/` directory with self-contained test fixtures:
+  - **Command serialisation**: reference command JSON → expected `CommandMap` encoding
+  - **Replay parity**: reference `Replay` JSON → expected state hash sequence at each tick
+  - **State-hash parity**: reference `WorldState` JSON → expected `hashWorldState` output
+  - **Bridge snapshot compatibility**: reference `WorldState` → expected `BridgeFrame` JSON
+  - **Lockstep tick handling**: reference tick sequence → expected entity positions/conditions
+- Publish a `conformance-runner.ts` tool that any host SDK can invoke against these fixtures.
+- Add a `docs/conformance-report.md` showing current Unity / Godot / Web SDK pass status.
+- Expose `"./conformance"` as a subpath export.
+
+**Success criterion:** A developer building a new SDK can run `npx ananke-conformance`
+and get a pass/fail report with per-fixture detail before shipping.
+
+---
+
+### PM-6 · Content-Pack Registry Format
+
+**Problem:** Content packs are distributable and validated, but there is no metadata
+standard governing compatibility ranges, stability tiers, checksums, licensing, or
+provenance.  Sharing packs between projects requires out-of-band trust.
+
+**Work:**
+- Extend `schema/pack.schema.json` with a `registry` metadata block:
+  - `compatRange`: semver range of Ananke versions this pack targets
+  - `stabilityTier`: `"stable"` | `"experimental"` | `"internal"`
+  - `requiredExports`: which `@ananke/*` subpaths this pack's content uses
+  - `checksum`: SHA-256 of the pack JSON (excluding the `checksum` field itself)
+  - `license`: SPDX identifier
+  - `provenance`: optional dataset / paper references (for empirically grounded content)
+- Update `validatePack` to check `compatRange` against the running Ananke version.
+- Update `tools/pack-cli.ts` to compute and embed `checksum` on `bundle`.
+- Publish a `docs/pack-registry-spec.md` describing the format and how a future online
+  registry could index packs.
+
+**Success criterion:** A researcher can publish a content pack with `provenance` links,
+and a host can verify it is compatible before loading it.
+
+---
+
+### PM-7 · API Deprecation Framework
+
+**Problem:** STABLE_API.md defines tiers but has no lifecycle mechanism.  There is no way
+to mark an export as deprecated, guide users to a replacement, or auto-surface that
+information in generated docs.
+
+**Work:**
+- Define a JSDoc deprecation convention: `@deprecated since {version} — use {replacement}
+  instead.  Removes at {removeAfter}.`
+- Add `tools/audit-deprecations.ts`: scans `src/` for `@deprecated` tags, outputs a
+  structured table of `{ symbol, since, removeAfter, replacement }`.
+- Surface the table in `docs/module-index.md` (append a "Deprecated exports" section).
+- Add a pre-publish check: fail `npm publish` if any `@removeAfter` version is ≤ current.
+- Document the deprecation lifecycle in `docs/versioning.md`.
+
+**Success criterion:** A developer upgrading Ananke versions can run one command to see
+every deprecated symbol they use, when it removes, and what to replace it with.
+
+---
+
+### PM-8 · Scenario Corpus as Shared Benchmark and Pedagogy Asset
+
+**Problem:** Scenarios exist in `examples/`, `tools/`, and validation fixtures, but they
+are not curated or tagged.  There is no canonical set of "this is what Ananke does, with
+expected outputs."
+
+**Work:**
+- Create `corpus/` directory with scenarios tagged by purpose:
+  - `tutorial` — entry-level, no prior knowledge required
+  - `benchmark` — designed for stable timing comparisons
+  - `validation` — compared against empirical data
+  - `networking` — exercises replay, hash, lockstep
+  - `bridge` — exercises the renderer bridge
+  - `content-pack` — exercises loading and composing packs
+- Each corpus entry carries a `corpus.json` manifest:
+  - `title`, `tags`, `stabilityStatus`
+  - `expectedOutputHash`: deterministic hash of the final world state
+  - `performanceClass`: entity count tier and expected tick budget
+  - `replayFixture`: path to a reference `Replay` JSON
+- Add `tools/verify-corpus.ts`: runs each scenario, checks output hash, reports regressions.
+- Link from README and `docs/cookbook.md`.
+
+**Success criterion:** CI can run the scenario corpus and detect regressions in both
+physics correctness (output hash) and performance (tick budget).
+
+---
+
+### PM-9 · Core Guarantees Technical Paper
+
+**Problem:** Ananke's determinism guarantees, API contract philosophy, and validation
+methodology are implicit across many docs.  There is no concise, self-contained artefact
+that explains why Ananke is different and what it guarantees — suitable for sharing with
+technical evaluators or publishing.
+
+**Work:**
+- Write `docs/core-guarantees.md` (4–8 pages), covering:
+  1. Fixed-point determinism — what the guarantee is, how it is enforced, what can break it
+  2. API stability tiers — what "stable" means in contractual terms
+  3. Schema and wire contracts — what is guaranteed across versions
+  4. Validation philosophy — empirical vs. plausibility vs. content-layer claims
+  5. Benchmark methodology — what the numbers mean and what they do not
+  6. Known limits — what Ananke does not guarantee (floating-point interop, JS engine
+     version portability, host clock independence)
+- Explicitly label each section: **Empirical claim**, **Engineering claim**, or
+  **Design principle** to prevent confusion between different confidence levels.
+- Link from README and `STABLE_API.md`.
+
+**Success criterion:** A technical evaluator can read `docs/core-guarantees.md` and
+understand Ananke's determinism contract without reading `src/`.
+
+---
+
+### PM-10 · Maintenance Budget Roadmap
+
+**Problem:** The repo is now large enough that "feature complete" without explicit
+maintenance budgeting becomes a liability.  Docs drift, SDK parity slips, migration
+scripts accumulate, and example upkeep gets skipped.
+
+**Work:**
+- Add `docs/maintenance-policy.md` defining standing maintenance commitments:
+  - **Docs reconciliation**: every release, run `tools/generate-module-index.ts` and
+    `tools/generate-recipes-matrix.ts`; diff against committed files; fail if stale.
+  - **Issue triage cadence**: P0 (regression) same day; P1 (correctness) within a week;
+    P2 (enhancement) roadmap-tracked.
+  - **Migration maintenance**: every minor version bump that changes a `@core` field
+    must ship a registered migration in `src/schema-migration.ts`.
+  - **SDK parity policy**: Unity, Godot, and Web reference sidecars must update to
+    the current `BRIDGE_SCHEMA_VERSION` within one minor release of the core.
+  - **Example upkeep**: all `examples/` and `corpus/` entries are CI-validated; any that
+    fail to build or produce unexpected output hashes block release.
+  - **Content-pack schema evolution**: pack schema minor bumps are backward-compatible;
+    major bumps ship a migration tool.
+- Add a `maintenance-checklist.md` template for release preparation.
+
+**Success criterion:** A new maintainer can read `docs/maintenance-policy.md` and
+understand what the project commits to keeping working, at what cadence, and by whom.
+
+---
+
+### External feedback batch 5 — item disposition
+
+| Item | Reviewer proposal | Disposition |
+|------|-------------------|-------------|
+| F5-1  | Real adopter case studies | **Added as PM-1** (highest priority) |
+| F5-2  | Package-boundary enforcement in CI | **Added as PM-2** |
+| F5-3  | Supported-recipes matrix | **Added as PM-3** |
+| F5-4  | Release discipline dashboard | **Added as PM-4** |
+| F5-5  | Deterministic conformance suite for third-party hosts | **Added as PM-5** |
+| F5-6  | Content-pack registry format | **Added as PM-6** |
+| F5-7  | API deprecation framework | **Added as PM-7** |
+| F5-8  | Scenario corpus as benchmark + pedagogy asset | **Added as PM-8** |
+| F5-9  | Core guarantees white paper | **Added as PM-9** |
+| F5-10 | Maintenance budget roadmap | **Added as PM-10** |
