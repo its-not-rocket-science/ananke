@@ -8513,7 +8513,7 @@ following a 15-minute guide, with no Ananke source reading required.
 
 ---
 
-### PA-9 · Simulation Cookbook (Task-Oriented Recipes)
+### PA-9 · Simulation Cookbook (Task-Oriented Recipes) ✅ COMPLETE (v0.1.58)
 
 **Problem:** The documentation is rich but dense and theory-oriented.  Time-to-first-success
 for a new developer is too high.
@@ -8533,7 +8533,7 @@ simulation within 30 minutes using only the cookbook.
 
 ---
 
-### PA-10 · Deterministic Networking Kit
+### PA-10 · Deterministic Networking Kit ✅ COMPLETE (v0.1.59)
 
 **Problem:** Determinism is one of Ananke's strongest differentiators, but "lockstep-friendly"
 is conceptual rather than productized.  There are no concrete tools for authoritative lockstep,

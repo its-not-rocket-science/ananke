@@ -6,6 +6,48 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.59] — 2026-03-30
+
+### Added
+
+- **PA-10 — Deterministic Networking Kit (complete):**
+  - `src/netcode.ts` (new): determinism utilities for authoritative lockstep and desync diagnosis.
+    - **`hashWorldState(world): bigint`**: FNV-64 hash over `tick`, `seed`, and all entity state sorted by `id` (Map fields serialised as sorted entry arrays for canonical form). Use as a per-tick desync checksum in multiplayer loops.
+    - **`diffReplays(replayA, replayB, ctx): ReplayDiff`**: steps two replays in lock-step and returns the first tick where their hashes diverge. O(N) in replay length.
+    - **`diffReplayJson(jsonA, jsonB, ctx): ReplayDiff`**: convenience wrapper for CLI use.
+    - `ReplayDiff` interface: `{ divergeAtTick, hashA, hashB, ticksCompared }`.
+  - `"./netcode"` subpath export added to `package.json`.
+  - **`ananke replay diff` CLI subcommand**: extends the `npx ananke` CLI — reads two replay JSON files and prints the first divergence tick and hex hashes, or confirms they are identical. Exit code 0 = identical; exit code 1 = divergence.
+  - **`docs/netcode-host-checklist.md`** (new): 8-section guide covering fixed tick rate, no wall-clock reads in simulation path, input serialisation format, desync detection, state resync (full snapshot), replay recording and diff, rollback implementation outline, and KernelContext consistency requirements.
+  - **`examples/lockstep-server.ts`** (new): self-contained authoritative lockstep demo — one server steps the world, two virtual clients verify hash checksums every tick. Demonstrates replay recording and `serializeBridgeFrame` integration.
+  - **`examples/rollback-client.ts`** (new): rollback demo — client predicts speculatively, reconciles against server hash, and re-simulates from the last confirmed snapshot when a mismatch is detected.
+  - npm scripts: `example:lockstep`, `example:rollback`.
+- 16 new tests (189 test files, 5,569 tests total). Coverage: 97.11% stmt, 88.07% branch, 95.82% func. `netcode.ts`: 100%/100%/100%. Build: clean.
+
+---
+
+## [0.1.58] — 2026-03-30
+
+### Added
+
+- **PA-9 — Simulation Cookbook (complete):**
+  - `docs/cookbook.md` (new): 12 task-oriented recipes designed to take a developer from zero to running simulation in under 30 minutes.
+    - **Recipe 1 — Simulate a duel**: `mkWorld` + `stepWorld` + command loop; expected output showing injury accumulation and fight end.
+    - **Recipe 2 — Run a 500-agent battle**: entity loop with `buildAICommands`; timing guidance (≤6 ms/tick on modern hardware).
+    - **Recipe 3 — Author a new species**: custom `Archetype` → `generateIndividual`; species-specific attribute overrides.
+    - **Recipe 4 — Add a custom weapon**: `Item` definition with mass, blade length, and damage profile; `createWorld` with `customItems`.
+    - **Recipe 5 — Drive a renderer**: `serializeBridgeFrame` + WebSocket sidecar pattern; references `docs/quickstart-unity.md`, `docs/quickstart-godot.md`, `docs/quickstart-web.md`.
+    - **Recipe 6 — Create a campaign loop**: `createPolity` + `stepPolityDay`; campaign-to-tactical transition example.
+    - **Recipe 7 — Build a validation scenario**: empirical range-check pattern; tolerance bands and `±%` reporting.
+    - **Recipe 8 — Use the what-if engine**: `npm run run:what-if`; scenario customization via parameter override.
+    - **Recipe 9 — Stream events to an agent**: delta detection + `serializeBridgeFrame` push over Server-Sent Events.
+    - **Recipe 10 — Save and reload a world**: `JSON.stringify` / `JSON.parse` round-trip with tick continuity check.
+    - **Recipe 11 — Record and replay a fight**: `ReplayRecorder` + `replayTo` + `serializeReplay` / `deserializeReplay`.
+    - **Recipe 12 — Load a content pack**: `loadPack` + `validatePack` + pack JSON schema reference.
+  - `README.md`: cookbook cross-link added in intro and "Further reading" table.
+
+---
+
 ## [0.1.57] — 2026-03-30
 
 ### Added
