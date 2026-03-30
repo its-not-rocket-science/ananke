@@ -6,6 +6,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.55] — 2026-03-30
+
+### Added
+
+- **PA-6 — Unified Atmosphere Model (complete):**
+  - `src/atmosphere.ts` (new): single `AtmosphericState` struct derived from Phase 51 `WeatherState` and Phase 68 `BiomeContext`, with a unified per-pair query API.
+  - `deriveAtmosphericState(weather?, biome?)` → `AtmosphericState`: maps WeatherState wind to 3D `AtmosphericWind` (adds `dz_m`, derives `turbulence_Q` from speed); derives `precipIntensity_Q` from precipitation type; computes `baseVisibility_Sm` from fog × precipitation; computes `acousticMask_Q` from wind noise; maps biome `soundPropagation_Q` (vacuum = 0, water = 4×, standard air = 1×); derives `tractionMod_Q` and `thermalOffset_Q` from `deriveWeatherModifiers`.
+  - `queryAtmosphericModifiers(from, to, state)` → `AtmosphericModifiers`: single call yields all position-pair atmospheric effects — `crossWindSpeed_mps` (perpendicular wind for projectile drift), `hazardConeMul_Q` (gas/smoke cone range 0.5×–1.5× from headwind/tailwind), `acousticMaskMul_Q` (hearing range including upwind bonus and biome propagation), `visibilityRange_Sm` (headwind-boosted precipitation degradation), `tractionMod_Q`, `scentStrength_Q` (q(1.0) fully downwind of target, q(0) upwind — prerequisite for PA-7), `thermalOffset_Q`.
+  - `"./atmosphere"` subpath export added to `package.json`.
+  - Exports: `AtmosphericWind`, `AtmosphericState`, `AtmosphericModifiers`, `deriveAtmosphericState`, `queryAtmosphericModifiers`; constants `ATMO_BASE_VISIBILITY_Sm`, `ATMO_ACOUSTIC_FULL_MASK_MPS`, `ATMO_TURBULENCE_FULL_MPS`, `ATMO_HAZARD_TAILWIND_MUL_MAX`, `ATMO_HAZARD_HEADWIND_MUL_MIN`, `ATMO_HEARING_UPWIND_BONUS`.
+- 53 new tests (186 test files, 5,452 tests total). Build: clean.
+
+---
+
 ## [0.1.54] — 2026-03-28
 
 ### Added
