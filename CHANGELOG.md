@@ -6,6 +6,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.57] — 2026-03-30
+
+### Added
+
+- **PA-8 — Host Integration SDKs (complete):**
+  - `src/host-loop.ts` (new): stable, versioned wire-format protocol for the Ananke sidecar ↔ renderer bridge. All values on the wire are real SI units (floats, not fixed-point).
+    - **Wire types**: `BridgeVec3`, `BridgeCondition`, `BridgeAnimation`, `BridgePoseModifier`, `BridgeGrappleConstraint`, `BridgeEntitySnapshot`, `BridgeFrame`, `HostLoopConfig`.
+    - **`serializeBridgeFrame(world, config)`**: canonical serializer — converts `WorldState` to `BridgeFrame`. Replaces per-sidecar serializer duplications in Unity and Godot reference implementations.
+    - **`derivePrimaryState(animation)`**: maps `AnimationHints` to a single state string (`"idle"` | `"attack"` | `"flee"` | `"prone"` | `"unconscious"` | `"dead"`). Suitable for top-level renderer state machines.
+    - **`derivePoseOffset(segmentId, impairmentQ)`**: anatomical local-space bone offset at a given impairment level (real metres), for injury deformation blend shapes.
+    - Constants: `BRIDGE_SCHEMA_VERSION = "ananke.bridge.frame.v1"`, `DEFAULT_TICK_HZ = 20`, `DEFAULT_BRIDGE_PORT = 3001`, `DEFAULT_BRIDGE_HOST`, `DEFAULT_STREAM_PATH`.
+  - `"./host-loop"` subpath export added to `package.json`.
+  - **Reference sidecar updates**: both `ananke-unity-reference` and `ananke-godot-reference` sidecars updated to v0.1.57 dependency and refactored to import `serializeBridgeFrame` from `@its-not-rocket-science/ananke/host-loop` — local serialization code removed.
+  - **Quickstart guides** (new):
+    - `docs/quickstart-unity.md`: 15-minute Unity integration guide (sidecar → WebSocket → `AnankeReceiver` → `AnimationDriver` → your mesh).
+    - `docs/quickstart-godot.md`: 15-minute Godot 4 integration guide (GDScript and C# addon variants).
+    - `docs/quickstart-web.md`: Three.js browser integration guide (zero-build-step HTML example + `serializeBridgeFrame` sidecar recipe).
+- 41 new tests (188 test files, 5,553 tests total). Coverage: 97.10% stmt, 88.05% branch, 95.81% func. Build: clean.
+
+---
+
 ## [0.1.56] — 2026-03-30
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.56",
+  "version": "0.1.57",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -193,6 +193,10 @@
     "./extended-senses": {
       "import": "./dist/src/extended-senses.js",
       "types": "./dist/src/extended-senses.d.ts"
+    },
+    "./host-loop": {
+      "import": "./dist/src/host-loop.js",
+      "types": "./dist/src/host-loop.d.ts"
     }
   },
   "workspaces": [
