@@ -48,6 +48,18 @@ export interface ExtendedSenses {
    * Precipitation disperses scent.
    */
   olfactionSensitivity_Q?: Q;
+
+  /**
+   * Thermal (infrared) detection range [SCALE.m].
+   * Non-zero = entity detects warm-bodied targets by heat signature.
+   * Effective range scales with target thermal signature strength.
+   * Degraded by precipitation (water absorbs thermal radiation).
+   * Dead entities have no thermal signature — not detectable.
+   *
+   * Added by PA-7. Typical values: pit-viper ≈ 5 m (50 000 Sm);
+   * evolved predator ≈ 30 m (300 000 Sm).
+   */
+  thermalVisionRange_m?: number;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────

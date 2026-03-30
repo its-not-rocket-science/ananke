@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.55",
+  "version": "0.1.56",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -189,6 +189,10 @@
     "./atmosphere": {
       "import": "./dist/src/atmosphere.js",
       "types": "./dist/src/atmosphere.d.ts"
+    },
+    "./extended-senses": {
+      "import": "./dist/src/extended-senses.js",
+      "types": "./dist/src/extended-senses.d.ts"
     }
   },
   "workspaces": [

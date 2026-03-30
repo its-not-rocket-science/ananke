@@ -6,6 +6,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.56] — 2026-03-30
+
+### Added
+
+- **PA-7 — Advanced Non-Visual Sensory Systems (complete):**
+  - `src/sim/sensory-extended.ts`: added `thermalVisionRange_m?: number` to `ExtendedSenses` interface — fourth modality alongside echolocation, electroreception, and olfaction. Effective range scales with target thermal signature; degraded by precipitation; dead entities have no thermal signature.
+  - `src/extended-senses.ts` (new): unified extended-senses module with `AtmosphericState` integration (PA-6).
+    - Body-plan predicates: `hasEcholocation`, `hasElectroreception`, `hasThermalVision`, `hasOlfaction`, `dominantSense` (priority: electroreception > echolocation > thermal > olfaction > vision).
+    - `thermalSignature(entity)` → Q: dead=q(0); living=base q(0.30) + q(0.10) per bleeding region + q(0.15) if shock≥q(0.40).
+    - `canDetectByThermalVision(observer, subject, dist_m, precipIntensity?)`: effective range = baseRange × signature / SCALE.Q × (1 − precipIntensity × 0.60). Detection quality `DETECT_THERMAL = q(0.35)`.
+    - `canDetectExtendedAtmospheric(observer, subject, env, atmospheric, sensorBoost?)`: drop-in replacement for Phase 52 `canDetectExtended` that uses `AtmosphericState.scentStrength_Q` from `queryAtmosphericModifiers` for olfaction, and `precipIntensity_Q` for thermal attenuation.
+    - `stepExtendedSenses(observer, world, atmospheric, env)` → `ExtendedSensesResult { detections }`: per-tick batch detection accumulator; iterates all world entities, checks all four extended modalities, returns `SensoryDetection[]` with `entityId`, `modality`, `quality_Q`, `dist_Sm`. Multiple detections per target are possible.
+  - Exports: `SenseModality`, `SensoryDetection`, `ExtendedSensesResult`, `THERMAL_BASE_SIGNATURE_Q`, `THERMAL_BLEED_BONUS_Q`, `THERMAL_SHOCK_BONUS_Q`, `THERMAL_SHOCK_THRESHOLD`, `THERMAL_PRECIP_PENALTY`, `DETECT_THERMAL`, `DETECT_OLFACTION_ATMO_MIN`, `DETECT_OLFACTION_ATMO_MAX`.
+  - `"./extended-senses"` subpath export added to `package.json`.
+- 60 new tests (187 test files, 5,512 tests total). Build: clean.
+
+---
+
 ## [0.1.55] — 2026-03-30
 
 ### Added
