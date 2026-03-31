@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.59",
+  "version": "0.1.60",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -268,6 +268,10 @@
     "example:species": "node dist/examples/quickstart-species.js",
     "example:lockstep": "node dist/examples/lockstep-server.js",
     "example:rollback": "node dist/examples/rollback-client.js",
+    "ref:tactical-duel": "node dist/examples/reference/tactical-duel/index.js",
+    "ref:campaign-sandbox": "node dist/examples/reference/campaign-sandbox/index.js",
+    "ref:species-lab": "node dist/examples/reference/species-lab/index.js",
+    "ref:species-lab:quick": "node dist/examples/reference/species-lab/index.js --quick",
     "generate-module-index": "node dist/tools/generate-module-index.js",
     "pack": "node dist/tools/pack-cli.js pack",
     "generate-fixtures": "node dist/tools/generate-fixtures.js",

@@ -6,6 +6,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.60] — 2026-03-31
+
+### Added
+
+- **PM-1 — First-Party Reference Builds (complete):**
+  - `examples/reference/tactical-duel/` — end-to-end tactical demonstration: combat, anatomy, AI, `serializeBridgeFrame`, `hashWorldState`, `ReplayRecorder`. Runs in < 1 ms/tick; produces a replay file comparable with `npx ananke replay diff`. Includes architecture doc and pain-points guide.
+  - `examples/reference/campaign-sandbox/` — turn-based world simulation: four polities (Rome, Carthage, Athens, Sparta) with trade, alliances, population dynamics, plague outbreak, inter-polity spread, save/reload via `stampSnapshot`. Runs in < 1 ms/day. Includes full `README.md` with correct API signatures.
+  - `examples/reference/species-lab/` — xenobiology lab: attribute profiles for 6 species (Elf, Dwarf, Orc, Goblin, Troll, Halfling), extended-senses predicates, round-robin combat tournament (100 seeds × 15 matchups) with outcome distributions and physics insights. Quick mode (`--quick`) completes 150 trials in < 1 s. Includes pain-points guide and extension examples.
+  - Each reference build includes: architecture diagram, package choices rationale, measured performance envelope, pain points encountered and resolved, extension examples.
+  - npm scripts: `ref:tactical-duel`, `ref:campaign-sandbox`, `ref:species-lab`, `ref:species-lab:quick`.
+  - ROADMAP: PM-1 through PM-10 added (Platform Maturity Roadmap); PA-1, PA-5–PA-8 marked complete.
+
+---
+
 ## [0.1.59] — 2026-03-30
 
 ### Added
