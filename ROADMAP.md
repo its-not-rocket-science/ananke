@@ -8743,7 +8743,7 @@ and a host can verify it is compatible before loading it.
 
 ---
 
-### PM-7 · API Deprecation Framework
+### PM-7 · API Deprecation Framework ✅ COMPLETE
 
 **Problem:** STABLE_API.md defines tiers but has no lifecycle mechanism.  There is no way
 to mark an export as deprecated, guide users to a replacement, or auto-surface that

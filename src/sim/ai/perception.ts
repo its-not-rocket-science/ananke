@@ -13,7 +13,7 @@ export interface LocalPerception {
   allies: Entity[];
 }
 
-/** @deprecated Use LocalPerception */
+/** @deprecated since 0.1.0 — use `LocalPerception` instead. Removes at 0.3.0. */
 export type Perception = LocalPerception;
 
 export function perceiveLocal(

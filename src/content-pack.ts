@@ -20,7 +20,7 @@ import type { WorldState }                                    from "./sim/world.
 // Must be kept in sync with package.json "version" field.
 
 /** Current Ananke engine version — used to evaluate pack compatRange at runtime. */
-export const ANANKE_ENGINE_VERSION = "0.1.65";
+export const ANANKE_ENGINE_VERSION = "0.1.66";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -108,7 +108,7 @@ export interface AnankePackManifest {
   description?: string;
   /**
    * Minimum Ananke version required, as a semver range string.
-   * @deprecated Use `registry.compatRange` instead — this field is informational only.
+   * @deprecated since 0.1.65 — use `registry.compatRange` instead. Removes at 0.3.0.
    */
   anankeVersion?: string;
   /**

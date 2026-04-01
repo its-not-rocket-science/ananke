@@ -83,6 +83,22 @@ Choose your entry point based on what you need:
 
 ---
 
+## Deprecated exports
+
+The following symbols carry a `@deprecated` tag.  Run `npm run audit-deprecations` for
+the latest list with `since`, `removeAfter`, and replacement guidance.
+
+| Symbol | File | Since | Removes at | Use instead |
+|--------|------|-------|------------|-------------|
+| `anankeVersion` | `src/content-pack.ts` | 0.1.65 | 0.3.0 | `registry.compatRange` |
+| `Perception` | `src/sim/ai/perception.ts` | 0.1.0 | 0.3.0 | `LocalPerception` |
+| `mkWorld(seed, loadout)` | `src/sim/testing.ts` | 0.1.0 | 0.2.0 | `mkWorld(seed, entities[])` |
+
+> This table is manually maintained.  Run `npm run audit-deprecations` for the canonical
+> live list; update this table whenever a new deprecation is added or a symbol is removed.
+
+---
+
 ## Adding a new entry point
 
 1. Add the subpath to the `"exports"` field in `package.json` (import + types).

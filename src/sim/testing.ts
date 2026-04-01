@@ -36,7 +36,7 @@ export function mkHumanoidEntity(id: number, teamId: number, x_m: number, y_m: n
 }
 
 export function mkWorld(seed: number, entities: Entity[]): WorldState;
-/** @deprecated Pass an explicit entity array instead: mkWorld(seed, [a, b]) */
+/** @deprecated since 0.1.0 — use `mkWorld(seed, entities[])` instead. Removes at 0.2.0. */
 export function mkWorld(seed: number, loadoutA: Loadout): WorldState;
 
 // implementation

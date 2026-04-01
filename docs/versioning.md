@@ -179,3 +179,67 @@ body plan hooks):
 3. Keep an `UPSTREAM.md` at your fork root noting your base version and a diff summary
 4. Periodically rebase onto upstream Tier 3 commits to collect non-breaking improvements;
    treat Tier 1/2 commits as explicit migration tasks to schedule
+
+---
+
+## Deprecation lifecycle
+
+Symbols are deprecated rather than removed immediately so downstream projects have time
+to migrate.  The lifecycle follows a three-phase pattern:
+
+### 1 — Mark deprecated (current version)
+
+Add a structured JSDoc tag to the symbol:
+
+```typescript
+/**
+ * @deprecated since 0.1.50 — use `newFunction` instead. Removes at 0.3.0.
+ */
+export function oldFunction() { … }
+```
+
+The **required format** is:
+
+```
+@deprecated since {version} — use {replacement} instead. Removes at {removeAfter}.
+```
+
+| Field | Meaning |
+|-------|---------|
+| `since` | Version in which the deprecation was introduced |
+| `replacement` | Short description or code reference of what to use instead |
+| `removeAfter` | Version at which the symbol will be deleted — must be a future version |
+
+`removeAfter` must satisfy `> current` at publish time; `npm publish` runs
+`audit-deprecations --check` and fails if any symbol is overdue.
+
+### 2 — Migration window
+
+During the migration window the symbol still works but emits a TypeScript deprecation
+warning in IDEs (the `@deprecated` tag triggers the strikethrough).
+
+The migration window is at least one **minor** version for Tier 2 symbols
+and at least one **major** version for Tier 1 (Stable) symbols.
+
+### 3 — Remove at removeAfter
+
+When the engine reaches `removeAfter`, the symbol is deleted and a CHANGELOG entry is
+added under a `### Removed` heading.  The `since` version and the replacement are
+included in the removal note so the changelog is self-contained.
+
+### Auditing
+
+```bash
+npm run audit-deprecations             # human-readable table
+npm run audit-deprecations -- --json   # machine-readable JSON
+npm run audit-deprecations -- --check  # exit 1 if any overdue
+```
+
+The `--check` flag is run automatically by `npm run prepublishOnly`.
+
+### Adding a new deprecation (checklist)
+
+- [ ] Add the structured `@deprecated` JSDoc tag with `since`, replacement, and `removeAfter`.
+- [ ] Run `npm run audit-deprecations` to confirm the tag is detected and not overdue.
+- [ ] Add a CHANGELOG entry under `### Deprecated`.
+- [ ] Surface the replacement in the relevant `docs/` file or `STABLE_API.md`.

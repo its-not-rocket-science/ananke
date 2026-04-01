@@ -6,6 +6,31 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.66] — 2026-04-01
+
+### Added
+
+- **PM-7 — API Deprecation Framework (complete):**
+  - `tools/audit-deprecations.ts` (new): scans all `src/` TypeScript files for `@deprecated` JSDoc tags and outputs a structured table of `{ symbol, file, line, since, removeAfter, replacement, overdue }`.
+    - `--json` flag: machine-readable JSON output with timestamp, engine version, and full entry list.
+    - `--check` flag: exits 1 if any symbol's `removeAfter` version ≤ current engine version (overdue).
+  - `prepublishOnly` now includes `npm run audit-deprecations -- --check`: `npm publish` fails if any symbol is overdue for removal.
+  - npm script: `audit-deprecations`.
+  - Structured `@deprecated` convention defined: `@deprecated since {version} — use {replacement} instead. Removes at {removeAfter}.`
+  - All three existing `@deprecated` tags in `src/` updated to the new structured format:
+    - `anankeVersion` in `content-pack.ts`: since 0.1.65, removes at 0.3.0
+    - `Perception` type alias in `sim/ai/perception.ts`: since 0.1.0, removes at 0.3.0
+    - `mkWorld(seed, loadout)` overload in `sim/testing.ts`: since 0.1.0, removes at 0.2.0
+  - `docs/versioning.md`: new "Deprecation lifecycle" section documenting the three-phase pattern (mark → migration window → remove), the required tag format, and the audit checklist.
+  - `docs/module-index.md`: new "Deprecated exports" table surfacing all known deprecated symbols with since/removeAfter/replacement.
+- 0 new tests (5,593 total). Coverage: 97.11%/88.07%/95.83%/97.11%. Build: clean.
+
+### Deprecated
+
+- `AnankePackManifest.anankeVersion` — since 0.1.65, use `registry.compatRange` instead. Removes at 0.3.0.
+
+---
+
 ## [0.1.65] — 2026-04-01
 
 ### Added
