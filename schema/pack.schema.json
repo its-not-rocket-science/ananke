@@ -26,7 +26,51 @@
     },
     "anankeVersion": {
       "type": "string",
-      "description": "Minimum Ananke version required (semver range), e.g. \">=0.1\"."
+      "description": "Deprecated: use registry.compatRange instead. Minimum Ananke version required (semver range)."
+    },
+    "registry": {
+      "type": "object",
+      "description": "Registry metadata — compatibility, checksum, license, and provenance. registry.compatRange is enforced at runtime by validatePack.",
+      "properties": {
+        "compatRange": {
+          "type": "string",
+          "description": "Semver range of Ananke engine versions this pack targets, e.g. \">=0.1.50\", \"^0.1.60\". Validated at runtime against the running engine version."
+        },
+        "stabilityTier": {
+          "type": "string",
+          "enum": ["stable", "experimental", "internal"],
+          "description": "Stability guarantee — governs how the pack appears in a public registry."
+        },
+        "requiredExports": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Subpath exports from @its-not-rocket-science/ananke this pack's content depends on. Informational only."
+        },
+        "checksum": {
+          "type": "string",
+          "pattern": "^([0-9a-f]{64}|)$",
+          "description": "SHA-256 hex digest of the pack JSON (with registry.checksum set to \"\" before hashing). Computed by `npx ananke pack bundle`."
+        },
+        "license": {
+          "type": "string",
+          "description": "SPDX license identifier, e.g. \"MIT\", \"CC-BY-4.0\"."
+        },
+        "provenance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["title"],
+            "properties": {
+              "title": { "type": "string" },
+              "url":   { "type": "string" },
+              "doi":   { "type": "string" },
+              "notes": { "type": "string" }
+            }
+          },
+          "description": "Dataset or paper references for empirically grounded pack content."
+        }
+      },
+      "additionalProperties": false
     },
     "weapons": {
       "type": "array",

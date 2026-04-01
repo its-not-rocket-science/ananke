@@ -8719,7 +8719,7 @@ and get a pass/fail report with per-fixture detail before shipping.
 
 ---
 
-### PM-6 · Content-Pack Registry Format
+### PM-6 · Content-Pack Registry Format ✅ COMPLETE
 
 **Problem:** Content packs are distributable and validated, but there is no metadata
 standard governing compatibility ranges, stability tiers, checksums, licensing, or

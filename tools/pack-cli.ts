@@ -13,6 +13,7 @@
 
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve, extname, basename } from "node:path";
+import { createHash } from "node:crypto";
 import { validatePack, loadPack, type AnankePackManifest } from "../src/content-pack.js";
 import { diffReplayJson } from "../src/netcode.js";
 import { q } from "../src/units.js";
@@ -106,6 +107,13 @@ function cmdBundle(args: string[]): void {
     if (!bundle.name && typeof partial.name === "string") bundle.name = partial.name;
   }
 
+  // Compute SHA-256 checksum: serialise with checksum="" (placeholder), then hash.
+  // Store in registry block so consumers can verify integrity.
+  if (!bundle.registry) bundle.registry = {};
+  bundle.registry.checksum = "";  // placeholder — field present but blank for hashing
+  const checksumInput = JSON.stringify(bundle, null, 2);
+  bundle.registry.checksum = createHash("sha256").update(checksumInput).digest("hex");
+
   // Pre-validate before writing
   const errors = validatePack(bundle);
   if (errors.length > 0) {
@@ -117,6 +125,7 @@ function cmdBundle(args: string[]): void {
   writeFileSync(outFile, json, "utf8");
   console.log(`✓  Bundle written to ${outFile}`);
   console.log(`   weapons: ${bundle.weapons!.length}, armour: ${bundle.armour!.length}, archetypes: ${bundle.archetypes!.length}, scenarios: ${bundle.scenarios!.length}`);
+  console.log(`   checksum: ${bundle.registry.checksum}`);
 }
 
 function cmdLoad(args: string[]): void {

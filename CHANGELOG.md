@@ -6,6 +6,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.65] — 2026-04-01
+
+### Added
+
+- **PM-6 — Content-Pack Registry Format (complete):**
+  - `PackRegistryMeta` interface (new): optional `registry` block in `AnankePackManifest` with fields:
+    - `compatRange` (string): semver range enforced at runtime by `validatePack` — rejects packs incompatible with the running engine version.
+    - `stabilityTier` (`"stable"` | `"experimental"` | `"internal"`): controls listing in a public registry.
+    - `requiredExports` (string[]): subpath exports the pack's content depends on — informational.
+    - `checksum` (string): SHA-256 hex digest of the pack JSON — computed by `npx ananke pack bundle`, verified by the host.
+    - `license` (string): SPDX identifier.
+    - `provenance` (object[]): dataset / paper references for empirically grounded content.
+  - `PackStabilityTier` and `PackProvenanceRef` types (new, exported from `"./content-pack"`).
+  - `ANANKE_ENGINE_VERSION = "0.1.65"` constant (new, exported from `"./content-pack"`): current engine version used in `compatRange` evaluation.
+  - `semverSatisfies(version, range)` (new, exported): lightweight semver range evaluator — supports `>=`, `>`, `<=`, `<`, `=`, `^` (caret), `~` (tilde), bare version, and compound space-separated ranges. No external dependencies.
+  - `validatePack` extended to validate all registry sub-fields and reject incompatible `compatRange`.
+  - `tools/pack-cli.ts` `bundle` command: automatically computes SHA-256 checksum and embeds it in `registry.checksum` before writing the bundle.
+  - `schema/pack.schema.json`: `registry` block with full JSON Schema definition for all sub-fields.
+  - `docs/pack-registry-spec.md` (new): full specification — field reference, checksum algorithm, runtime enforcement table, future online registry design.
+- 24 new tests (5,593 total). Coverage: 97.11%/88.07%/95.83%/97.11%. Build: clean.
+
+---
+
 ## [0.1.64] — 2026-04-01
 
 ### Added

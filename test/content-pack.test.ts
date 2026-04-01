@@ -7,6 +7,8 @@ import {
   getPackScenario,
   instantiatePackScenario,
   clearPackRegistry,
+  semverSatisfies,
+  ANANKE_ENGINE_VERSION,
   type AnankePackManifest,
 } from "../src/content-pack.js";
 import { clearCatalog } from "../src/catalog.js";
@@ -308,5 +310,161 @@ describe("clearPackRegistry", () => {
     loadPack(makePack("clr"));
     clearPackRegistry();
     expect(listLoadedPacks()).toHaveLength(0);
+  });
+});
+
+// ── semverSatisfies ────────────────────────────────────────────────────────────
+
+describe("semverSatisfies", () => {
+  it("handles >= comparator", () => {
+    expect(semverSatisfies("0.1.64", ">=0.1.60")).toBe(true);
+    expect(semverSatisfies("0.1.50", ">=0.1.60")).toBe(false);
+  });
+  it("handles > comparator", () => {
+    expect(semverSatisfies("0.1.64", ">0.1.60")).toBe(true);
+    expect(semverSatisfies("0.1.60", ">0.1.60")).toBe(false);
+  });
+  it("handles <= comparator", () => {
+    expect(semverSatisfies("0.1.60", "<=0.1.64")).toBe(true);
+    expect(semverSatisfies("0.1.65", "<=0.1.64")).toBe(false);
+  });
+  it("handles < comparator", () => {
+    expect(semverSatisfies("0.1.60", "<0.2")).toBe(true);
+    expect(semverSatisfies("0.2.0", "<0.2")).toBe(false);
+  });
+  it("handles = comparator", () => {
+    expect(semverSatisfies("0.1.64", "=0.1.64")).toBe(true);
+    expect(semverSatisfies("0.1.63", "=0.1.64")).toBe(false);
+  });
+  it("handles bare version (exact match)", () => {
+    expect(semverSatisfies("0.1.64", "0.1.64")).toBe(true);
+    expect(semverSatisfies("0.1.63", "0.1.64")).toBe(false);
+  });
+  it("handles caret ^", () => {
+    expect(semverSatisfies("0.1.70", "^0.1.60")).toBe(true);
+    expect(semverSatisfies("0.2.0",  "^0.1.60")).toBe(false);
+    expect(semverSatisfies("0.1.59", "^0.1.60")).toBe(false);
+  });
+  it("handles tilde ~", () => {
+    // ~X.Y.Z = >=X.Y.Z <X.(Y+1).0 (patch-level changes within minor)
+    expect(semverSatisfies("0.1.60", "~0.1.60")).toBe(true);
+    expect(semverSatisfies("0.1.61", "~0.1.60")).toBe(true);   // patch bump within minor — OK
+    expect(semverSatisfies("0.2.0",  "~0.1.60")).toBe(false);  // minor bump — excluded
+  });
+  it("handles compound range (space-separated)", () => {
+    expect(semverSatisfies("0.1.64", ">=0.1.60 <0.2")).toBe(true);
+    expect(semverSatisfies("0.2.0",  ">=0.1.60 <0.2")).toBe(false);
+    expect(semverSatisfies("0.1.59", ">=0.1.60 <0.2")).toBe(false);
+  });
+  it("handles short versions like X.Y", () => {
+    expect(semverSatisfies("0.1.64", ">=0.1")).toBe(true);
+    expect(semverSatisfies("0.0.9",  ">=0.1")).toBe(false);
+  });
+  it("returns false for unparseable version", () => {
+    expect(semverSatisfies("not-a-version", ">=0.1")).toBe(false);
+  });
+  it("ANANKE_ENGINE_VERSION satisfies itself", () => {
+    expect(semverSatisfies(ANANKE_ENGINE_VERSION, `>=${ANANKE_ENGINE_VERSION}`)).toBe(true);
+  });
+});
+
+// ── registry block validation ──────────────────────────────────────────────────
+
+describe("validatePack — registry block", () => {
+  it("accepts pack with no registry block", () => {
+    const errors = validatePack({ name: "no-reg", version: "1.0.0" });
+    expect(errors).toHaveLength(0);
+  });
+
+  it("accepts valid registry block", () => {
+    const errors = validatePack({
+      name: "reg-test", version: "1.0.0",
+      registry: {
+        compatRange:   `>=${ANANKE_ENGINE_VERSION}`,
+        stabilityTier: "stable",
+        requiredExports: ["./catalog"],
+        license: "MIT",
+        provenance: [{ title: "Some paper", doi: "10.1234/test" }],
+      },
+    });
+    expect(errors).toHaveLength(0);
+  });
+
+  it("rejects registry that is not an object", () => {
+    const errors = validatePack({ name: "x", version: "1.0.0", registry: "bad" as unknown });
+    expect(errors.some(e => e.path === "$.registry")).toBe(true);
+  });
+
+  it("rejects incompatible compatRange", () => {
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { compatRange: "<0.0.1" },
+    });
+    expect(errors.some(e => e.path === "$.registry.compatRange")).toBe(true);
+  });
+
+  it("accepts compatible compatRange with compound range", () => {
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { compatRange: `>=${ANANKE_ENGINE_VERSION} <99.0.0` },
+    });
+    expect(errors).toHaveLength(0);
+  });
+
+  it("rejects unknown stabilityTier", () => {
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { stabilityTier: "unknown" as "stable" },
+    });
+    expect(errors.some(e => e.path === "$.registry.stabilityTier")).toBe(true);
+  });
+
+  it("rejects non-array requiredExports", () => {
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { requiredExports: "bad" as unknown as string[] },
+    });
+    expect(errors.some(e => e.path === "$.registry.requiredExports")).toBe(true);
+  });
+
+  it("rejects non-string entries in requiredExports", () => {
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { requiredExports: [42 as unknown as string] },
+    });
+    expect(errors.some(e => e.path.startsWith("$.registry.requiredExports"))).toBe(true);
+  });
+
+  it("rejects malformed checksum (not 64-char hex)", () => {
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { checksum: "tooshort" },
+    });
+    expect(errors.some(e => e.path === "$.registry.checksum")).toBe(true);
+  });
+
+  it("accepts valid 64-char hex checksum", () => {
+    const hex64 = "a".repeat(64);
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { checksum: hex64 },
+    });
+    expect(errors).toHaveLength(0);
+  });
+
+  it("rejects empty license string", () => {
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { license: "   " },
+    });
+    expect(errors.some(e => e.path === "$.registry.license")).toBe(true);
+  });
+
+  it("rejects provenance entry missing title", () => {
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { provenance: [{ url: "http://example.com" } as { title: string }] },
+    });
+    expect(errors.some(e => e.path.startsWith("$.registry.provenance"))).toBe(true);
   });
 });

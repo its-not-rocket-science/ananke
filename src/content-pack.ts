@@ -16,6 +16,12 @@ import { hashMod }                                            from "./modding.js
 import { registerWorldArchetype, registerWorldItem }          from "./world-factory.js";
 import type { WorldState }                                    from "./sim/world.js";
 
+// ── Version constant ──────────────────────────────────────────────────────────
+// Must be kept in sync with package.json "version" field.
+
+/** Current Ananke engine version — used to evaluate pack compatRange at runtime. */
+export const ANANKE_ENGINE_VERSION = "0.1.65";
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /** A single actionable validation failure from `validatePack`. */
@@ -24,6 +30,64 @@ export interface PackValidationError {
   path:    string;
   /** Human-readable explanation of what is wrong. */
   message: string;
+}
+
+/** Stability tier for a content pack — controls how it is listed in a registry. */
+export type PackStabilityTier = "stable" | "experimental" | "internal";
+
+/** Dataset or paper reference for empirically grounded pack content. */
+export interface PackProvenanceRef {
+  /** Short description of the source. */
+  title:   string;
+  /** URL of the source, if available. */
+  url?:    string;
+  /** DOI of the source, if applicable. */
+  doi?:    string;
+  /** Free-text notes about what this source grounds. */
+  notes?:  string;
+}
+
+/**
+ * Registry metadata block — optional top-level section of a pack manifest.
+ *
+ * Including a `registry` block enables:
+ * - Runtime compatibility checking via `compatRange`
+ * - Deterministic integrity verification via `checksum` (SHA-256)
+ * - Licensing and provenance attestation for empirical content
+ *
+ * Generate the checksum with:
+ *   `npx ananke pack bundle <dir>`  (embeds it automatically)
+ *
+ * or manually with `computePackChecksum(manifest)` from `@ananke/content-pack`.
+ */
+export interface PackRegistryMeta {
+  /**
+   * Semver range of Ananke engine versions this pack targets.
+   * Examples: `">=0.1.50"`, `">=0.1 <0.2"`, `"^0.1.60"`.
+   * `validatePack` rejects packs whose `compatRange` excludes the running version.
+   */
+  compatRange?:     string;
+  /** Stability guarantee — governs how the pack appears in a public registry. */
+  stabilityTier?:   PackStabilityTier;
+  /**
+   * Subpath exports from `@its-not-rocket-science/ananke` that this pack's
+   * content references, e.g. `["./combat", "./catalog"]`.
+   * Informational only — not enforced at runtime.
+   */
+  requiredExports?: string[];
+  /**
+   * SHA-256 hex digest of the pack JSON (with `registry.checksum` set to `""`
+   * before hashing, so the field is present but blank).
+   * Compute with `npx ananke pack bundle` or `computePackChecksum`.
+   */
+  checksum?:        string;
+  /** SPDX license identifier, e.g. `"MIT"`, `"CC-BY-4.0"`. */
+  license?:         string;
+  /**
+   * Dataset or paper references for empirically grounded pack content.
+   * Include when your pack derives parameters from research data.
+   */
+  provenance?:      PackProvenanceRef[];
 }
 
 /**
@@ -44,9 +108,14 @@ export interface AnankePackManifest {
   description?: string;
   /**
    * Minimum Ananke version required, as a semver range string.
-   * Used for documentation only — not enforced at runtime in v0.1.
+   * @deprecated Use `registry.compatRange` instead — this field is informational only.
    */
   anankeVersion?: string;
+  /**
+   * Registry metadata — compatibility, checksum, license, and provenance.
+   * `registry.compatRange` is enforced at runtime by `validatePack`.
+   */
+  registry?:    PackRegistryMeta;
   /** Weapon definitions — each passed to `registerWeapon`. */
   weapons?:     unknown[];
   /** Armour definitions — each passed to `registerArmour`. */
@@ -79,6 +148,87 @@ export interface LoadPackResult {
   fingerprint:   string;
   /** Validation and registration errors.  Empty on full success. */
   errors:        PackValidationError[];
+}
+
+// ── Semver utilities ──────────────────────────────────────────────────────────
+// Lightweight range evaluator — no external dependencies.
+// Supports: >=X.Y.Z  >X.Y.Z  <=X.Y.Z  <X.Y.Z  =X.Y.Z  ^X.Y.Z  ~X.Y.Z
+// Short forms X.Y and X treated as X.Y.0 and X.0.0 respectively.
+// Compound ranges (space-separated) require all constraints to match.
+
+function parseSemverTuple(v: string): [number, number, number] | null {
+  const parts = v.replace(/^v/, "").split(".").map(Number);
+  if (parts.some(isNaN)) return null;
+  const [major = 0, minor = 0, patch = 0] = parts;
+  return [major, minor, patch];
+}
+
+function cmpSemver(a: [number, number, number], b: [number, number, number]): number {
+  if (a[0] !== b[0]) return a[0] - b[0];
+  if (a[1] !== b[1]) return a[1] - b[1];
+  return a[2] - b[2];
+}
+
+/**
+ * Test whether `version` satisfies `range`.
+ * Returns `false` if the range string is unparseable.
+ */
+export function semverSatisfies(version: string, range: string): boolean {
+  const ver = parseSemverTuple(version);
+  if (!ver) return false;
+
+  const constraints = range.trim().split(/\s+/);
+  for (const constraint of constraints) {
+    if (!evalConstraint(ver, constraint.trim())) return false;
+  }
+  return true;
+}
+
+function evalConstraint(ver: [number, number, number], c: string): boolean {
+  // Caret: ^X.Y.Z — compatible within the leftmost non-zero component.
+  // ^1.2.3 → >=1.2.3 <2.0.0 (major locked when major > 0)
+  // ^0.2.3 → >=0.2.3 <0.3.0 (minor locked when major == 0, minor > 0)
+  // ^0.0.3 → >=0.0.3 <0.0.4 (patch locked when both major and minor == 0)
+  if (c.startsWith("^")) {
+    const lo = parseSemverTuple(c.slice(1));
+    if (!lo) return false;
+    let hi: [number, number, number];
+    if (lo[0] > 0)      hi = [lo[0] + 1, 0, 0];
+    else if (lo[1] > 0) hi = [0, lo[1] + 1, 0];
+    else                hi = [0, 0, lo[2] + 1];
+    return cmpSemver(ver, lo) >= 0 && cmpSemver(ver, hi) < 0;
+  }
+  // Tilde: ~X.Y.Z → >=X.Y.Z <X.(Y+1).0
+  if (c.startsWith("~")) {
+    const lo = parseSemverTuple(c.slice(1));
+    if (!lo) return false;
+    const hi: [number, number, number] = [lo[0], lo[1] + 1, 0];
+    return cmpSemver(ver, lo) >= 0 && cmpSemver(ver, hi) < 0;
+  }
+  // Comparators
+  if (c.startsWith(">=")) {
+    const t = parseSemverTuple(c.slice(2));
+    return t !== null && cmpSemver(ver, t) >= 0;
+  }
+  if (c.startsWith(">")) {
+    const t = parseSemverTuple(c.slice(1));
+    return t !== null && cmpSemver(ver, t) > 0;
+  }
+  if (c.startsWith("<=")) {
+    const t = parseSemverTuple(c.slice(2));
+    return t !== null && cmpSemver(ver, t) <= 0;
+  }
+  if (c.startsWith("<")) {
+    const t = parseSemverTuple(c.slice(1));
+    return t !== null && cmpSemver(ver, t) < 0;
+  }
+  if (c.startsWith("=")) {
+    const t = parseSemverTuple(c.slice(1));
+    return t !== null && cmpSemver(ver, t) === 0;
+  }
+  // Bare version: exact match
+  const t = parseSemverTuple(c);
+  return t !== null && cmpSemver(ver, t) === 0;
 }
 
 // ── Internal registry ─────────────────────────────────────────────────────────
@@ -125,6 +275,77 @@ export function validatePack(manifest: unknown): PackValidationError[] {
     !/^\d+\.\d+(\.\d+)?$/.test(m["version"] as string)
   ) {
     errors.push({ path: "$.version", message: 'must be a semver string like "1.0.0" or "1.0"' });
+  }
+
+  // Optional: registry block
+  if (m["registry"] !== undefined) {
+    if (typeof m["registry"] !== "object" || m["registry"] === null || Array.isArray(m["registry"])) {
+      errors.push({ path: "$.registry", message: "must be a plain object if present" });
+    } else {
+      const reg = m["registry"] as Record<string, unknown>;
+
+      // compatRange — semver range string; must include the running engine version
+      if (reg["compatRange"] !== undefined) {
+        if (typeof reg["compatRange"] !== "string") {
+          errors.push({ path: "$.registry.compatRange", message: "must be a string" });
+        } else if (!semverSatisfies(ANANKE_ENGINE_VERSION, reg["compatRange"] as string)) {
+          errors.push({
+            path:    "$.registry.compatRange",
+            message: `engine version ${ANANKE_ENGINE_VERSION} does not satisfy range "${reg["compatRange"] as string}"`,
+          });
+        }
+      }
+
+      // stabilityTier — must be one of the known tiers
+      const TIERS: PackStabilityTier[] = ["stable", "experimental", "internal"];
+      if (reg["stabilityTier"] !== undefined && !TIERS.includes(reg["stabilityTier"] as PackStabilityTier)) {
+        errors.push({
+          path:    "$.registry.stabilityTier",
+          message: `must be one of: ${TIERS.join(", ")}`,
+        });
+      }
+
+      // requiredExports — must be array of strings
+      if (reg["requiredExports"] !== undefined) {
+        if (!Array.isArray(reg["requiredExports"])) {
+          errors.push({ path: "$.registry.requiredExports", message: "must be an array" });
+        } else {
+          for (let i = 0; i < (reg["requiredExports"] as unknown[]).length; i++) {
+            if (typeof (reg["requiredExports"] as unknown[])[i] !== "string") {
+              errors.push({ path: `$.registry.requiredExports[${i}]`, message: "must be a string" });
+            }
+          }
+        }
+      }
+
+      // checksum — must be a 64-char hex string (SHA-256) if present
+      if (reg["checksum"] !== undefined) {
+        if (typeof reg["checksum"] !== "string" || !/^[0-9a-f]{64}$/.test(reg["checksum"] as string)) {
+          errors.push({ path: "$.registry.checksum", message: "must be a 64-character lowercase hex string (SHA-256)" });
+        }
+      }
+
+      // license — must be a non-empty string
+      if (reg["license"] !== undefined && (typeof reg["license"] !== "string" || (reg["license"] as string).trim() === "")) {
+        errors.push({ path: "$.registry.license", message: "must be a non-empty SPDX identifier string" });
+      }
+
+      // provenance — must be array of objects with at least a title
+      if (reg["provenance"] !== undefined) {
+        if (!Array.isArray(reg["provenance"])) {
+          errors.push({ path: "$.registry.provenance", message: "must be an array" });
+        } else {
+          for (let i = 0; i < (reg["provenance"] as unknown[]).length; i++) {
+            const ref = (reg["provenance"] as unknown[])[i];
+            if (typeof ref !== "object" || ref === null) {
+              errors.push({ path: `$.registry.provenance[${i}]`, message: "must be an object" });
+            } else if (typeof (ref as Record<string, unknown>)["title"] !== "string") {
+              errors.push({ path: `$.registry.provenance[${i}].title`, message: "must be a string" });
+            }
+          }
+        }
+      }
+    }
   }
 
   // Optional arrays — must be arrays if present
