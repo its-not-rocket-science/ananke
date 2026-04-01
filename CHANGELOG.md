@@ -6,6 +6,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.61] — 2026-04-01
+
+### Added
+
+- **PM-2 — Package-Boundary Enforcement in CI (complete):**
+  - `tools/check-package-boundaries.ts` (new): static import-graph analyser mapping all 207 src/ files to their planned `@ananke/*` package. Reports:
+    - **Hard violations** — files classified as `@ananke/core` that import from `@ananke/combat`, `@ananke/campaign`, or `@ananke/content` (86 identified; all expected in Phase 1 monolith, must be resolved in Phase 2 source migration).
+    - **Suspicious cross-boundary imports** — peer-layer imports (`combat↔campaign`, `combat↔content`, `content↔campaign`) grouped by edge with file:line references and example paths.
+    - **Cross-package import matrix** — NxN table showing import counts between packages, annotated ✓ (allowed) or ✗ (violation).
+    - **Source size estimate** — raw TypeScript byte counts per package (core 341 KB, combat 499 KB, campaign 833 KB, content 248 KB).
+    - **Unmapped files** — 9 files not yet in the mapping (atmosphere, battle-bridge, debug, host-loop, index, parallel, sensory, terrain-bridge).
+    - Flags: `--strict` (exit 1 on hard violations), `--json` (machine-readable output).
+  - `tools/extract-api.ts` (new): public API surface extraction — scans each package's entry-point source files for exported symbols, generates `docs/api-surface-<package>.md` with grouped tables (types/interfaces, enums, functions, constants, classes) and a source-file index.
+    - `docs/api-surface-core.md` — 125 exports
+    - `docs/api-surface-combat.md` — 221 exports
+    - `docs/api-surface-campaign.md` — 691 exports
+    - `docs/api-surface-content.md` — 103 exports (1140 total)
+  - `"ci"` script now runs `check-boundaries` after test coverage, making cross-boundary drift visible in CI output.
+  - npm scripts: `check-boundaries`, `check-boundaries:strict`, `extract-api`.
+- 0 new tests (5,569 total — tools only). Coverage unchanged: 97.11% stmt, 88.08% branch, 95.82% func. Build: clean.
+
+---
+
 ## [0.1.60] — 2026-03-31
 
 ### Added

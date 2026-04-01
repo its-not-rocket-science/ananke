@@ -8630,7 +8630,7 @@ in under 5 minutes, and see physics-grounded outcomes with no Ananke source read
 
 ---
 
-### PM-2 · Package-Boundary Enforcement in CI
+### PM-2 · Package-Boundary Enforcement in CI ✅ COMPLETE
 
 **Problem:** PA-2 Phase 1 published four `@ananke/*` package stubs, but nothing prevents
 source files from importing across package boundaries.  The architecture is a declaration,
