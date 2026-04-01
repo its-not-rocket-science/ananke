@@ -234,6 +234,9 @@
   "engines": {
     "node": ">=18"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/its-not-rocket-science/ananke.git"
@@ -248,6 +251,7 @@
     "game-engine"
   ],
   "scripts": {
+    "release": "bash scripts/tag-release.sh",
     "prepublishOnly": "npm run build && npm run test:coverage && npm run audit-deprecations -- --check",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
