@@ -6,6 +6,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.64] — 2026-04-01
+
+### Added
+
+- **PM-5 — Deterministic Conformance Suite (complete):**
+  - `conformance/` directory (published in package): 5 self-contained JSON fixture files that any third-party host SDK can use to verify deterministic compatibility with the reference TypeScript engine.
+    - `state-hash.json`: given a canonical `WorldState`, `hashWorldState` must return specific hex values at tick 0 and tick 1.
+    - `replay-parity.json`: re-simulating a recorded 10-tick replay with `replayTo` must reproduce the per-tick hash trace exactly. Uses `noMove` commands to avoid AI-state side-effect divergence.
+    - `command-round-trip.json`: verifies `SCALE` constants and `CommandMap` JSON serialisation round-trips without loss for all 4 command kinds.
+    - `bridge-snapshot.json`: `serializeBridgeFrame` must produce a `BridgeFrame` with the correct schema, tick, entity count, and entity IDs.
+    - `lockstep-sequence.json`: stepping the simulation 20 ticks with `lineInfantry` AI must produce matching entity positions, dead flags, shock values, and world-state hashes at each tick.
+  - `tools/generate-conformance-fixtures.ts`: reference fixture generator; run `npm run generate-conformance-fixtures` to regenerate after changes to the hash algorithm, `stepWorld`, or `serializeBridgeFrame`.
+  - `tools/conformance-runner.ts`: standalone runner with `--json` (machine-readable) and `--fixture=<kind>` (single fixture) flags; exits 0 on all-pass, 1 on any failure.
+  - `src/conformance.ts` (new subpath export `"./conformance"`): public TypeScript types for third-party runners — `FixtureKind`, `ConformanceFixtureHeader`, `StateHashFixture`, `ReplayParityFixture`, `CommandRoundTripFixture`, `BridgeSnapshotFixture`, `LockstepSequenceFixture`, `ConformanceResult`, `ConformanceSummary`, and `CONFORMANCE_VERSION`.
+  - npm scripts: `generate-conformance-fixtures`, `conformance-runner`.
+- 0 new tests (5,569 total). Coverage: 97.11%/88.08%/95.82%/97.11%. Build: clean.
+
+---
+
 ## [0.1.63] — 2026-04-01
 
 ### Added

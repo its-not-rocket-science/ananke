@@ -1,0 +1,47 @@
+{
+  "version": "conformance/v1",
+  "id": "command-round-trip-01",
+  "description": "CommandMap entries must serialise to and from JSON without loss.",
+  "kind": "command-round-trip",
+  "notes": [
+    "CommandMap is Map<entityId, Command[]>.",
+    "For wire transport, serialise as [[entityId, commands[]], ...].",
+    "All numeric fields are fixed-point integers (SCALE.Q = 10000)."
+  ],
+  "scale": {
+    "Q": 10000,
+    "kg": 1000,
+    "m": 10000,
+    "mps": 10000
+  },
+  "commands": [
+    {
+      "entityId": 1,
+      "kind": "attack",
+      "mode": "strike",
+      "targetId": 2,
+      "intensity_Q": 10000,
+      "description": "Full-intensity strike at entity 2"
+    },
+    {
+      "entityId": 2,
+      "kind": "move",
+      "direction_x": 5000,
+      "direction_y": 0,
+      "direction_z": 0,
+      "mode": "walk",
+      "description": "Walk toward +x at 0.5 m/s"
+    },
+    {
+      "entityId": 1,
+      "kind": "defend",
+      "mode": "active",
+      "description": "Active defence stance"
+    },
+    {
+      "entityId": 2,
+      "kind": "idle",
+      "description": "No action this tick"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "version": "conformance/v1",
+  "id": "replay-parity-01",
+  "description": "Re-simulating this replay must reproduce the hash after each recorded frame.",
+  "kind": "replay-parity",
+  "notes": [
+    "seed=42; 2 entities; 10 ticks of noMove commands.",
+    "Fixed commands are used (not AI) so replayTo starts from a clean initial state.",
+    "For each entry: call replayTo(replay, recordedAtTick, ctx).",
+    "The returned world.tick must equal expectedWorldTick.",
+    "hashWorldState(world) must equal hashHex."
+  ],
+  "replayJson": "{\"initialState\":{\"tick\":0,\"seed\":42,\"entities\":[{\"id\":1,\"teamId\":1,\"attributes\":{\"morphology\":{\"stature_m\":17400,\"mass_kg\":74977,\"actuatorMass_kg\":30125,\"actuatorScale\":9946,\"structureScale\":20000,\"reachScale\":10233},\"performance\":{\"peakForce_N\":165802,\"peakPower_W\":3600,\"continuousPower_W\":128,\"reserveEnergy_J\":15800,\"conversionEfficiency\":8651},\"control\":{\"controlQuality\":6848,\"reactionTime_s\":2329,\"stability\":6855,\"fineControl\":7624},\"resilience\":{\"surfaceIntegrity\":9459,\"bulkIntegrity\":9437,\"structureIntegrity\":10163,\"distressTolerance\":4629,\"shockTolerance\":5169,\"concussionTolerance\":5526,\"heatTolerance\":4758,\"coldTolerance\":4505,\"fatigueRate\":9668,\"recoveryRate\":10195},\"perception\":{\"visionRange_m\":2000000,\"visionArcDeg\":120,\"halfArcCosQ\":5000,\"hearingRange_m\":500000,\"decisionLatency_s\":5000,\"attentionDepth\":4,\"threatHorizon_m\":400000},\"cognition\":{\"linguistic\":6500,\"logicalMathematical\":6000,\"spatial\":6000,\"bodilyKinesthetic\":6000,\"musical\":5000,\"interpersonal\":6000,\"intrapersonal\":5500,\"naturalist\":5000,\"interSpecies\":3500}},\"energy\":{\"reserveEnergy_J\":15800,\"fatigue\":0},\"loadout\":{\"items\":[{\"id\":\"wpn_longsword\",\"kind\":\"weapon\",\"name\":\"Longsword\",\"mass_kg\":1500,\"bulk\":15000,\"reach_m\":9000,\"handedness\":\"twoHand\",\"momentArm_m\":5500,\"handlingMul\":10500,\"strikeEffectiveMassFrac\":1500,\"strikeSpeedMul\":10000,\"readyTime_s\":7500,\"damage\":{\"surfaceFrac\":3500,\"internalFrac\":4500,\"structuralFrac\":2000,\"bleedFactor\":7000,\"penetrationBias\":4000}}]},\"traits\":[],\"position_m\":{\"x\":-5000,\"y\":0,\"z\":0},\"velocity_mps\":{\"x\":0,\"y\":0,\"z\":0},\"intent\":{\"move\":{\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"},\"defence\":{\"mode\":\"none\",\"intensity\":0},\"prone\":false},\"action\":{\"attackCooldownTicks\":0,\"defenceCooldownTicks\":0,\"grappleCooldownTicks\":0,\"facingDirQ\":{\"x\":10000,\"y\":0,\"z\":0},\"weaponBindPartnerId\":0,\"weaponBindTicks\":0,\"swingMomentumQ\":0,\"shootCooldownTicks\":0,\"aimTicks\":0,\"aimTargetId\":0},\"condition\":{\"onFire\":0,\"corrosiveExposure\":0,\"radiation\":0,\"electricalOverload\":0,\"suffocation\":0,\"stunned\":0,\"prone\":false,\"pinned\":false,\"standBlockedTicks\":0,\"unconsciousTicks\":0,\"suppressedTicks\":0,\"blindTicks\":0,\"fearQ\":0,\"suppressionFearMul\":10000,\"recentAllyDeaths\":0,\"lastAllyDeathTick\":-1,\"surrendered\":false,\"rallyCooldownTicks\":0},\"injury\":{\"byRegion\":{\"head\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"torso\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"leftArm\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"rightArm\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"leftLeg\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"rightLeg\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0}},\"fluidLoss\":0,\"shock\":0,\"consciousness\":10000,\"dead\":false,\"hemolymphLoss\":0},\"grapple\":{\"holdingTargetId\":0,\"heldByIds\":[],\"gripQ\":0,\"position\":\"standing\"}},{\"id\":2,\"teamId\":2,\"attributes\":{\"morphology\":{\"stature_m\":17440,\"mass_kg\":74182,\"actuatorMass_kg\":29420,\"actuatorScale\":9904,\"structureScale\":20000,\"reachScale\":9895},\"performance\":{\"peakForce_N\":154468,\"peakPower_W\":3600,\"continuousPower_W\":129,\"reserveEnergy_J\":14502,\"conversionEfficiency\":8557},\"control\":{\"controlQuality\":7058,\"reactionTime_s\":2091,\"stability\":6517,\"fineControl\":7109},\"resilience\":{\"surfaceIntegrity\":9544,\"bulkIntegrity\":10338,\"structureIntegrity\":9742,\"distressTolerance\":5605,\"shockTolerance\":5235,\"concussionTolerance\":4836,\"heatTolerance\":5353,\"coldTolerance\":4988,\"fatigueRate\":9233,\"recoveryRate\":9064},\"perception\":{\"visionRange_m\":2000000,\"visionArcDeg\":120,\"halfArcCosQ\":5000,\"hearingRange_m\":500000,\"decisionLatency_s\":5000,\"attentionDepth\":4,\"threatHorizon_m\":400000},\"cognition\":{\"linguistic\":6500,\"logicalMathematical\":6000,\"spatial\":6000,\"bodilyKinesthetic\":6000,\"musical\":5000,\"interpersonal\":6000,\"intrapersonal\":5500,\"naturalist\":5000,\"interSpecies\":3500}},\"energy\":{\"reserveEnergy_J\":14502,\"fatigue\":0},\"loadout\":{\"items\":[{\"id\":\"wpn_longsword\",\"kind\":\"weapon\",\"name\":\"Longsword\",\"mass_kg\":1500,\"bulk\":15000,\"reach_m\":9000,\"handedness\":\"twoHand\",\"momentArm_m\":5500,\"handlingMul\":10500,\"strikeEffectiveMassFrac\":1500,\"strikeSpeedMul\":10000,\"readyTime_s\":7500,\"damage\":{\"surfaceFrac\":3500,\"internalFrac\":4500,\"structuralFrac\":2000,\"bleedFactor\":7000,\"penetrationBias\":4000}}]},\"traits\":[],\"position_m\":{\"x\":5000,\"y\":0,\"z\":0},\"velocity_mps\":{\"x\":0,\"y\":0,\"z\":0},\"intent\":{\"move\":{\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"},\"defence\":{\"mode\":\"none\",\"intensity\":0},\"prone\":false},\"action\":{\"attackCooldownTicks\":0,\"defenceCooldownTicks\":0,\"grappleCooldownTicks\":0,\"facingDirQ\":{\"x\":10000,\"y\":0,\"z\":0},\"weaponBindPartnerId\":0,\"weaponBindTicks\":0,\"swingMomentumQ\":0,\"shootCooldownTicks\":0,\"aimTicks\":0,\"aimTargetId\":0},\"condition\":{\"onFire\":0,\"corrosiveExposure\":0,\"radiation\":0,\"electricalOverload\":0,\"suffocation\":0,\"stunned\":0,\"prone\":false,\"pinned\":false,\"standBlockedTicks\":0,\"unconsciousTicks\":0,\"suppressedTicks\":0,\"blindTicks\":0,\"fearQ\":0,\"suppressionFearMul\":10000,\"recentAllyDeaths\":0,\"lastAllyDeathTick\":-1,\"surrendered\":false,\"rallyCooldownTicks\":0},\"injury\":{\"byRegion\":{\"head\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"torso\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"leftArm\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"rightArm\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"leftLeg\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0},\"rightLeg\":{\"surfaceDamage\":0,\"internalDamage\":0,\"structuralDamage\":0,\"bleedingRate\":0,\"fractured\":false,\"infectedTick\":-1,\"bleedDuration_ticks\":0,\"permanentDamage\":0}},\"fluidLoss\":0,\"shock\":0,\"consciousness\":10000,\"dead\":false,\"hemolymphLoss\":0},\"grapple\":{\"holdingTargetId\":0,\"heldByIds\":[],\"gripQ\":0,\"position\":\"standing\"}}]},\"frames\":[{\"tick\":0,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]},{\"tick\":1,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]},{\"tick\":2,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]},{\"tick\":3,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]},{\"tick\":4,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]},{\"tick\":5,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]},{\"tick\":6,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]},{\"tick\":7,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]},{\"tick\":8,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]},{\"tick\":9,\"commands\":[[1,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]],[2,[{\"kind\":\"move\",\"dir\":{\"x\":0,\"y\":0,\"z\":0},\"intensity\":0,\"mode\":\"walk\"}]]]}]}",
+  "hashTrace": [
+    {
+      "recordedAtTick": 0,
+      "expectedWorldTick": 1,
+      "hashHex": "0xfdf533148d08f459"
+    },
+    {
+      "recordedAtTick": 1,
+      "expectedWorldTick": 2,
+      "hashHex": "0xfdf233148d06be82"
+    },
+    {
+      "recordedAtTick": 2,
+      "expectedWorldTick": 3,
+      "hashHex": "0xfdee2f148d02cedf"
+    },
+    {
+      "recordedAtTick": 3,
+      "expectedWorldTick": 4,
+      "hashHex": "0xfe062f148d1760c0"
+    },
+    {
+      "recordedAtTick": 4,
+      "expectedWorldTick": 5,
+      "hashHex": "0xfe0333148d1531b5"
+    },
+    {
+      "recordedAtTick": 5,
+      "expectedWorldTick": 6,
+      "hashHex": "0xfdff33148d1148de"
+    },
+    {
+      "recordedAtTick": 6,
+      "expectedWorldTick": 7,
+      "hashHex": "0xfdfc2f148d0f0c3b"
+    },
+    {
+      "recordedAtTick": 7,
+      "expectedWorldTick": 8,
+      "hashHex": "0xfddd2f148cf45bac"
+    },
+    {
+      "recordedAtTick": 8,
+      "expectedWorldTick": 9,
+      "hashHex": "0xfdda33148cf22ca1"
+    },
+    {
+      "recordedAtTick": 9,
+      "expectedWorldTick": 10,
+      "hashHex": "0x8fe5f3eba59e0b75"
+    }
+  ]
+}

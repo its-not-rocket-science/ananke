@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.63",
+  "version": "0.1.64",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -201,6 +201,10 @@
     "./netcode": {
       "import": "./dist/src/netcode.js",
       "types": "./dist/src/netcode.d.ts"
+    },
+    "./conformance": {
+      "import": "./dist/src/conformance.js",
+      "types": "./dist/src/conformance.d.ts"
     }
   },
   "workspaces": [
@@ -209,6 +213,7 @@
   "files": [
     "dist/src",
     "dist/as",
+    "conformance",
     "docs/project-overview.md",
     "docs/host-contract.md",
     "docs/integration-primer.md",
@@ -279,6 +284,8 @@
     "ref:species-lab:quick": "node dist/examples/reference/species-lab/index.js --quick",
     "generate-module-index": "node dist/tools/generate-module-index.js",
     "generate-recipes-matrix": "node dist/tools/generate-recipes-matrix.js",
+    "generate-conformance-fixtures": "node dist/tools/generate-conformance-fixtures.js",
+    "conformance-runner": "node dist/tools/conformance-runner.js",
     "pack": "node dist/tools/pack-cli.js pack",
     "generate-fixtures": "node dist/tools/generate-fixtures.js",
     "generate-zoo": "node dist/tools/generate-zoo.js",

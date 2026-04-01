@@ -1,0 +1,40 @@
+{
+  "version": "conformance/v1",
+  "id": "bridge-snapshot-01",
+  "description": "serializeBridgeFrame must produce a BridgeFrame with these invariants.",
+  "kind": "bridge-snapshot",
+  "notes": [
+    "Check: frame.schema === 'ananke-bridge/v1'.",
+    "Check: frame.tick === 0.",
+    "Check: frame.entities.length === 2.",
+    "Check: entity positions match input WorldState positions.",
+    "The generatedAt timestamp is non-deterministic — do not compare it."
+  ],
+  "input": {
+    "seed": 42,
+    "tick": 0,
+    "entityCount": 2,
+    "entityPositions": [
+      {
+        "id": 1,
+        "x_m": -0.5,
+        "y_m": 0
+      },
+      {
+        "id": 2,
+        "x_m": 0.5,
+        "y_m": 0
+      }
+    ]
+  },
+  "expected": {
+    "schema": "ananke.bridge.frame.v1",
+    "tick": 0,
+    "entityCount": 2,
+    "scenarioId": "conformance-test",
+    "entityIds": [
+      1,
+      2
+    ]
+  }
+}

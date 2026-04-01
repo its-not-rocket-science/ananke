@@ -8697,7 +8697,7 @@ a releasable state, with a human-readable audit trail.
 
 ---
 
-### PM-5 · Deterministic Conformance Suite for Third-Party Hosts
+### PM-5 · Deterministic Conformance Suite for Third-Party Hosts ✅ COMPLETE
 
 **Problem:** PA-10 ships `hashWorldState`, `diffReplays`, and the replay CLI.  But there
 is no visible "host integration certification" suite that third-party SDK authors can run

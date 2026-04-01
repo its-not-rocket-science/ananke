@@ -1,0 +1,23 @@
+{
+  "version": "conformance/v1",
+  "id": "state-hash-01",
+  "description": "Given a canonical WorldState, hashWorldState must return the specified hex value.",
+  "kind": "state-hash",
+  "notes": [
+    "seed=42; two humanoid entities at ±0.5 m with chainmail and longsword.",
+    "hash is FNV-64 over canonical JSON (sorted keys, Map→sorted entries).",
+    "A conforming implementation must produce identical hashes."
+  ],
+  "cases": [
+    {
+      "tick": 0,
+      "description": "Initial world state before any tick",
+      "hashHex": "0xec578e005fcbef34"
+    },
+    {
+      "tick": 1,
+      "description": "World state after one idle tick (noMove commands)",
+      "hashHex": "0xfdf533148d08f459"
+    }
+  ]
+}
