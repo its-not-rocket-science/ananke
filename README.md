@@ -96,6 +96,8 @@ for (let tick = 0; tick < 2000; tick++) {
 `stepWorld` is the only function that mutates state.  Everything else is pure computation.
 Call it at 20 Hz for real-time simulation; 1 Hz or lower for campaign-scale time.
 
+Not sure which entry point to use?  See the **[Recipes Matrix](docs/recipes-matrix.md)** — use case → package → stability → runnable example → performance in one table.
+
 For task-oriented walkthroughs, see the **[Simulation Cookbook](docs/cookbook.md)** — 12 recipes
 from "Simulate a duel" to "Load a content pack", each with step-by-step code and expected output.
 
@@ -414,6 +416,7 @@ Ananke's outputs are validated against historical and experimental sources:
 
 | Document | What's in it |
 |---|---|
+| [`docs/recipes-matrix.md`](docs/recipes-matrix.md) | **Start here** — use case → package → stability → example → performance in one table |
 | [`docs/cookbook.md`](docs/cookbook.md) | Task-oriented recipes — duel, 500-agent battle, species, renderer, campaign, replay, and more |
 | [`docs/module-index.md`](docs/module-index.md) | All 41 entry points — stability tier, use case, key exports, doc links |
 | [`docs/host-contract.md`](docs/host-contract.md) | Stable integration surface — everything needed to embed Ananke without reading `src/` |

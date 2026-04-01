@@ -6,6 +6,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.62] — 2026-04-01
+
+### Added
+
+- **PM-3 — Supported-Recipes Matrix (complete):**
+  - `docs/recipes-matrix.md` (new, auto-generated): 36 recipes across 6 domains (Tactical ⚔️, Campaign 🏰, Content 📦, Renderer 🖼️, Multiplayer 🌐, Tooling 🔧). Each row maps a use case to recommended packages, stability tier (🟢 Stable / 🟡 Experimental), runnable npm script, performance envelope, and save/replay compatibility status. Domain tables, summary counts, and a quick-reference "I want to…" table at the bottom.
+  - `tools/generate-recipes-matrix.ts` (new): structured recipe catalogue as TypeScript array; outputs `docs/recipes-matrix.md` deterministically. Run `npm run generate-recipes-matrix` to refresh.
+  - `npm run generate-recipes-matrix` script added.
+  - README: "Not sure which entry point to use? → Recipes Matrix" note added near the cookbook paragraph; matrix linked first in the Further Reading table.
+- 0 new tests (5,569 total). Coverage unchanged. Build: clean.
+
+---
+
 ## [0.1.61] — 2026-04-01
 
 ### Added

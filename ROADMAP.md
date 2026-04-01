@@ -8651,7 +8651,7 @@ fails CI before merge.
 
 ---
 
-### PM-3 · Supported-Recipes Matrix
+### PM-3 · Supported-Recipes Matrix ✅ COMPLETE
 
 **Problem:** The cookbook, module index, host contract, and STABLE_API.md are four separate
 documents covering overlapping ground.  A first-time adopter still has to triangulate across
