@@ -8790,7 +8790,7 @@ physics correctness (output hash) and performance (tick budget).
 
 ---
 
-### PM-9 · Core Guarantees Technical Paper
+### ✅ PM-9 · Core Guarantees Technical Paper
 
 **Problem:** Ananke's determinism guarantees, API contract philosophy, and validation
 methodology are implicit across many docs.  There is no concise, self-contained artefact

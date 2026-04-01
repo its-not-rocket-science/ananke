@@ -6,6 +6,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.68] — 2026-04-01
+
+### Added
+
+- **PM-9 — Core Guarantees Technical Paper (complete):**
+  - `docs/core-guarantees.md` (new): concise, self-contained reference covering Ananke's full guarantee surface:
+    1. **Fixed-point determinism** — the guarantee, how it is enforced (integer arithmetic, no `Math.random()`, insertion-order iteration, corpus hash CI), and what can break it.
+    2. **API stability tiers** — what "breaking" means for Tier 1, the pre-1.0 note, and the deprecation lifecycle.
+    3. **Schema and wire contracts** — world-state hash, replay format, content-pack checksum, semver range enforcement.
+    4. **Validation philosophy** — three claim types: Empirical (source-bounded), Plausibility (first-principles), and Content-layer (definitional).
+    5. **Benchmark methodology** — what the numbers mean and do not mean; how to detect correctness vs. performance regressions.
+    6. **Known limits** — floating-point interop boundary, JS engine version portability, host clock independence, entity count scalability, numerical overflow handling.
+  - Each claim is labelled **Engineering claim**, **Empirical claim**, or **Design principle**.
+  - Links added to `README.md` Further Reading table and `STABLE_API.md` intro.
+- 0 new tests (5,593 total). Coverage: 97.06%/88.06%/95.83%/97.06%. Build: clean.
+
+---
+
 ## [0.1.67] — 2026-04-01
 
 ### Added

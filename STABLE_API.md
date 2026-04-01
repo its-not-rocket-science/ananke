@@ -3,6 +3,8 @@
 This document defines the three stability tiers for Ananke's public API surface.
 See [`docs/versioning.md`](docs/versioning.md) for the full versioning policy, upgrade
 cadence, and commit-hash pinning guide.
+See [`docs/core-guarantees.md`](docs/core-guarantees.md) for the full determinism contract,
+validation philosophy, benchmark methodology, and known limits.
 
 ---
 
