@@ -60,6 +60,10 @@ node -e "
   console.log('  ANANKE_ENGINE_VERSION =', process.argv[1]);
 " "$NEW_VERSION"
 
+# ── Update lock file ─────────────────────────────────────────────────────────
+echo "→ Updating package-lock.json…"
+npm install --ignore-scripts
+
 # ── Rebuild ───────────────────────────────────────────────────────────────────
 echo "→ Building…"
 npm run build
@@ -78,7 +82,7 @@ fi
 
 # ── Commit and tag ────────────────────────────────────────────────────────────
 echo "→ Committing version bump…"
-git add package.json src/content-pack.ts dist/
+git add package.json package-lock.json src/content-pack.ts dist/
 git commit -m "chore: release v${NEW_VERSION}"
 
 echo "→ Tagging v${NEW_VERSION}…"
