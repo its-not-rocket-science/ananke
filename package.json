@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.62",
+  "version": "0.1.63",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -248,6 +248,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "ci": "npm run build && npm run test:coverage && npm run check-boundaries",
+    "release-check": "node dist/tools/release-check.js",
+    "release-check:quick": "node dist/tools/release-check.js --quick",
     "check-boundaries": "node dist/tools/check-package-boundaries.js",
     "check-boundaries:strict": "node dist/tools/check-package-boundaries.js --strict",
     "extract-api": "node dist/tools/extract-api.js",

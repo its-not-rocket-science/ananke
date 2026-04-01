@@ -8674,7 +8674,7 @@ layer can read one table and reach the correct entry point without opening more 
 
 ---
 
-### PM-4 · Release Discipline Dashboard
+### PM-4 · Release Discipline Dashboard ✅ COMPLETE
 
 **Problem:** The project has semver messaging, changelog, schema fixtures, benchmark
 regression, and emergent validation — but they are separate artefacts run at different

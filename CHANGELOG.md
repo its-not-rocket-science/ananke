@@ -6,6 +6,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.63] — 2026-04-01
+
+### Added
+
+- **PM-4 — Release Discipline Dashboard (complete):**
+  - `tools/release-check.ts` (new): pre-release gate runner that executes 6 gates in sequence and produces two output artefacts:
+    1. **Schema migration pass** — runs `test/schema-migration.test.ts` + `test/anatomy_schema.test.ts` via Vitest
+    2. **Golden replay / fixture round-trip** — skips gracefully if `test/fixtures/` does not exist; runs fixture tests when present
+    3. **Bridge contract type-check** — `tsc --noEmit -p tsconfig.build.json`; counts TypeScript errors
+    4. **Benchmark regression** — delegates to `dist/tools/benchmark-check.js`; exit-code based
+    5. **Emergent behaviour validation** — runs emergent-validation and parses PASS / PARTIAL PASS / FAIL from stdout
+    6. **Module-index freshness** — re-generates `docs/module-index.md` and diffs against the committed version; warns if stale
+  - `docs/release-report.json` (auto-generated): structured JSON with timestamp, version, per-gate status, duration, summary, and detail strings.
+  - `docs/release-dashboard.md` (auto-generated): human-readable Markdown audit trail rendered from the JSON report. Includes verdict, gate table, and per-gate detail blocks.
+  - `--quick` flag: skips slow gates (benchmark, emergent validation) for fast local checks.
+  - Exit code: 0 = releasable (no failures, no warnings); 1 = not releasable.
+  - npm scripts: `release-check`, `release-check:quick`.
+- 0 new tests (5,569 total). Coverage unchanged. Build: clean.
+
+---
+
 ## [0.1.62] — 2026-04-01
 
 ### Added
