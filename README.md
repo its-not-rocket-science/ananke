@@ -418,6 +418,7 @@ Ananke's outputs are validated against historical and experimental sources:
 |---|---|
 | [`docs/recipes-matrix.md`](docs/recipes-matrix.md) | **Start here** — use case → package → stability → example → performance in one table |
 | [`docs/cookbook.md`](docs/cookbook.md) | Task-oriented recipes — duel, 500-agent battle, species, renderer, campaign, replay, and more |
+| [`corpus/README.md`](corpus/README.md) | Scenario corpus — 5 canonical deterministic scenarios (tutorial, benchmark, validation, networking, bridge); run `npm run verify-corpus` |
 | [`docs/module-index.md`](docs/module-index.md) | All 41 entry points — stability tier, use case, key exports, doc links |
 | [`docs/host-contract.md`](docs/host-contract.md) | Stable integration surface — everything needed to embed Ananke without reading `src/` |
 | [`docs/integration-primer.md`](docs/integration-primer.md) | Data-flow diagrams, type glossary, gotchas |

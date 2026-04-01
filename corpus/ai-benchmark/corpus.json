@@ -1,0 +1,36 @@
+{
+  "version": "corpus/v1",
+  "id": "ai-benchmark",
+  "title": "AI Skirmish Benchmark (20 Ticks)",
+  "description": "Two line-infantry entities engaging over 20 ticks. Benchmark scenario: exercises the full AI decision + physics + injury path. Use the timing result to detect performance regressions between engine versions.",
+  "tags": [
+    "benchmark"
+  ],
+  "stabilityStatus": "stable",
+  "scenario": {
+    "seed": 42,
+    "tractionCoeff_Q": 9000,
+    "entities": [
+      {
+        "id": 1,
+        "teamId": 1,
+        "x_m": -0.5,
+        "weapon": "wpn_longsword"
+      },
+      {
+        "id": 2,
+        "teamId": 2,
+        "x_m": 0.5,
+        "weapon": "wpn_longsword"
+      }
+    ],
+    "aiPolicy": "lineInfantry",
+    "tickCount": 20
+  },
+  "expectedOutputHash": "0xacb04548fd68a7fb",
+  "performanceClass": {
+    "entityCount": 2,
+    "expectedTickBudgetMs": 150
+  },
+  "replayFixture": null
+}

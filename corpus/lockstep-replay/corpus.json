@@ -1,0 +1,36 @@
+{
+  "version": "corpus/v1",
+  "id": "lockstep-replay",
+  "title": "Lockstep Replay Parity (10 Ticks)",
+  "description": "Two entities with noMove commands over 10 ticks. Networking scenario: records a reference replay and verifies that replayTo() reproduces identical world-state hashes at each tick. Use as a correctness check when porting to a new host environment.",
+  "tags": [
+    "networking"
+  ],
+  "stabilityStatus": "stable",
+  "scenario": {
+    "seed": 42,
+    "tractionCoeff_Q": 9000,
+    "entities": [
+      {
+        "id": 1,
+        "teamId": 1,
+        "x_m": -0.5,
+        "weapon": "wpn_longsword"
+      },
+      {
+        "id": 2,
+        "teamId": 2,
+        "x_m": 0.5,
+        "weapon": "wpn_longsword"
+      }
+    ],
+    "aiPolicy": "noMove",
+    "tickCount": 10
+  },
+  "expectedOutputHash": "0x8fe5f3eba59e0b75",
+  "performanceClass": {
+    "entityCount": 2,
+    "expectedTickBudgetMs": 200
+  },
+  "replayFixture": "replay.json"
+}

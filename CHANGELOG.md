@@ -6,6 +6,23 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.67] — 2026-04-01
+
+### Added
+
+- **PM-8 — Scenario Corpus as Shared Benchmark and Pedagogy Asset (complete):**
+  - `corpus/` directory with 5 canonical deterministic scenarios, each carrying a `corpus.json` manifest (`version`, `id`, `title`, `tags`, `stabilityStatus`, `scenario`, `expectedOutputHash`, `performanceClass`, `replayFixture`, `bridgeExpected`).
+  - Tags: `tutorial`, `benchmark`, `validation`, `networking`, `bridge`, `content-pack`.
+  - Entries: `basic-duel` (tutorial, 30 ticks), `armoured-combat` (validation+content-pack, 50 ticks), `lockstep-replay` (networking, 10 ticks + replay.json fixture), `bridge-snapshot` (bridge, 0 ticks), `ai-benchmark` (benchmark, 20 ticks).
+  - `tools/generate-corpus.ts`: regenerates all corpus entries from scenario definitions; computes world-state hashes, replay fixtures, and bridge-frame invariants. Run after any change to `stepWorld`, `hashWorldState`, or equipment constants.
+  - `tools/verify-corpus.ts`: verifies all corpus entries against the live engine; checks world-state hash, replay parity (networking), and bridge frame shape (bridge). Supports `--id=<entry>` and `--json` flags.
+  - npm scripts: `generate-corpus`, `verify-corpus`.
+  - `corpus` added to `package.json` `files` array (shipped with the npm package).
+  - Links added to README "Further Reading" table and `docs/cookbook.md` "Further reading" table.
+- 0 new tests (5,593 total). Coverage: 97.11%/88.07%/95.83%/97.11%. Build: clean.
+
+---
+
 ## [0.1.66] — 2026-04-01
 
 ### Added

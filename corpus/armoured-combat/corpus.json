@@ -1,0 +1,39 @@
+{
+  "version": "corpus/v1",
+  "id": "armoured-combat",
+  "title": "Armoured 1v1 Combat (Line Infantry AI)",
+  "description": "Two entities equipped with chainmail armour and longswords, driven by lineInfantry AI. Validation scenario: armour damage absorption, shock accumulation, and equipment interaction over 50 ticks.",
+  "tags": [
+    "validation",
+    "content-pack"
+  ],
+  "stabilityStatus": "stable",
+  "scenario": {
+    "seed": 42,
+    "tractionCoeff_Q": 9000,
+    "entities": [
+      {
+        "id": 1,
+        "teamId": 1,
+        "x_m": -0.5,
+        "weapon": "wpn_longsword",
+        "armour": "arm_chainmail"
+      },
+      {
+        "id": 2,
+        "teamId": 2,
+        "x_m": 0.5,
+        "weapon": "wpn_longsword",
+        "armour": "arm_chainmail"
+      }
+    ],
+    "aiPolicy": "lineInfantry",
+    "tickCount": 50
+  },
+  "expectedOutputHash": "0x8231f53b3211a379",
+  "performanceClass": {
+    "entityCount": 2,
+    "expectedTickBudgetMs": 200
+  },
+  "replayFixture": null
+}

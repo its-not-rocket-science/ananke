@@ -1,0 +1,42 @@
+{
+  "version": "corpus/v1",
+  "id": "bridge-snapshot",
+  "title": "Renderer Bridge Snapshot",
+  "description": "Two entities at tick 0 serialized through serializeBridgeFrame. Bridge scenario: verifies the BridgeFrame schema version, tick, entity count, and entity IDs. Baseline for renderer integration testing.",
+  "tags": [
+    "bridge"
+  ],
+  "stabilityStatus": "stable",
+  "scenario": {
+    "seed": 42,
+    "tractionCoeff_Q": 9000,
+    "entities": [
+      {
+        "id": 1,
+        "teamId": 1,
+        "x_m": -0.5,
+        "weapon": "wpn_longsword"
+      },
+      {
+        "id": 2,
+        "teamId": 2,
+        "x_m": 0.5,
+        "weapon": "wpn_longsword"
+      }
+    ],
+    "aiPolicy": "noMove",
+    "tickCount": 0
+  },
+  "expectedOutputHash": "0xec578e005fcbef34",
+  "performanceClass": {
+    "entityCount": 2,
+    "expectedTickBudgetMs": 10
+  },
+  "replayFixture": null,
+  "bridgeExpected": {
+    "schema": "ananke.bridge.frame.v1",
+    "tick": 0,
+    "entityCount": 2,
+    "scenarioId": "corpus-bridge"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "version": "corpus/v1",
+  "id": "basic-duel",
+  "title": "Basic 1v1 Duel (No AI)",
+  "description": "Two entities face off with longswords and no AI commands. Entry-level tutorial: demonstrates combat resolution, injury accumulation, and deterministic world-state hashing over 30 ticks.",
+  "tags": [
+    "tutorial"
+  ],
+  "stabilityStatus": "stable",
+  "scenario": {
+    "seed": 42,
+    "tractionCoeff_Q": 9000,
+    "entities": [
+      {
+        "id": 1,
+        "teamId": 1,
+        "x_m": -0.5,
+        "weapon": "wpn_longsword"
+      },
+      {
+        "id": 2,
+        "teamId": 2,
+        "x_m": 0.5,
+        "weapon": "wpn_longsword"
+      }
+    ],
+    "aiPolicy": "noMove",
+    "tickCount": 30
+  },
+  "expectedOutputHash": "0x7d82acd3d1966c61",
+  "performanceClass": {
+    "entityCount": 2,
+    "expectedTickBudgetMs": 100
+  },
+  "replayFixture": null
+}

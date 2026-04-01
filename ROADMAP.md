@@ -8763,7 +8763,7 @@ every deprecated symbol they use, when it removes, and what to replace it with.
 
 ---
 
-### PM-8 · Scenario Corpus as Shared Benchmark and Pedagogy Asset
+### ✅ PM-8 · Scenario Corpus as Shared Benchmark and Pedagogy Asset
 
 **Problem:** Scenarios exist in `examples/`, `tools/`, and validation fixtures, but they
 are not curated or tagged.  There is no canonical set of "this is what Ananke does, with

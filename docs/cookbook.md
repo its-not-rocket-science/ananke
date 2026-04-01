@@ -767,6 +767,7 @@ function rollCustomEvent(worldSeed: number, tick: number, entityId: number): boo
 
 | Document | Topic |
 |---|---|
+| [`corpus/README.md`](../corpus/README.md) | Scenario corpus — 5 canonical deterministic scenarios (tutorial, benchmark, validation, networking, bridge) |
 | [`docs/integration-primer.md`](integration-primer.md) | Architecture, data flow, fixed-point gotchas |
 | [`docs/host-contract.md`](host-contract.md) | Host loop requirements and tick contract |
 | [`docs/bridge-contract.md`](bridge-contract.md) | Renderer bridge wire format |
