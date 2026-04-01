@@ -8815,7 +8815,7 @@ understand Ananke's determinism contract without reading `src/`.
 
 ---
 
-### PM-10 · Maintenance Budget Roadmap
+### ✅ PM-10 · Maintenance Budget Roadmap
 
 **Problem:** The repo is now large enough that "feature complete" without explicit
 maintenance budgeting becomes a liability.  Docs drift, SDK parity slips, migration

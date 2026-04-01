@@ -6,6 +6,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.69] — 2026-04-01
+
+### Added
+
+- **PM-10 — Maintenance Budget Roadmap (complete):**
+  - `docs/maintenance-policy.md` (new): standing maintenance commitments covering:
+    - **Docs reconciliation** — `generate-module-index` + `generate-recipes-matrix` must match committed files before every release.
+    - **Issue triage cadence** — P0 (regression) same day; P1 (correctness) within one week; P2 (enhancement) roadmap-tracked; P3 (docs) best-effort.
+    - **Migration maintenance** — every minor version bump that changes a `@core` field must ship a registered migration in `src/schema-migration.ts`.
+    - **SDK parity policy** — Unity, Godot, and Web sidecars must update to the current `BRIDGE_SCHEMA_VERSION` within one minor release.
+    - **Example and corpus upkeep** — all `examples/` compile cleanly; `npm run verify-corpus` passes on every release.
+    - **Content-pack schema evolution** — minor bumps are backward-compatible; major bumps ship a migration tool.
+    - **Coverage floor** — statements 90%, branches 80%, functions 85%, lines 90%.
+    - **Deprecation budget** — no more than 10 symbols in deprecated state at once.
+  - `docs/maintenance-checklist.md` (new): per-release preparation checklist (10 sections, 30 items) operationalising the policy; includes a hotfix fast-path for P0 regressions.
+  - Link added to `README.md` Further Reading table.
+- 0 new tests (5,593 total). Coverage: 97.06%/88.06%/95.83%/97.06%. Build: clean.
+
+---
+
 ## [0.1.68] — 2026-04-01
 
 ### Added

@@ -20,7 +20,7 @@ import type { WorldState }                                    from "./sim/world.
 // Must be kept in sync with package.json "version" field.
 
 /** Current Ananke engine version — used to evaluate pack compatRange at runtime. */
-export const ANANKE_ENGINE_VERSION = "0.1.68";
+export const ANANKE_ENGINE_VERSION = "0.1.69";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
