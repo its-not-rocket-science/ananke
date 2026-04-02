@@ -6,6 +6,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.1] — 2026-04-02
+
+### Changed
+
+- Introduced deterministic world-step pipeline scaffolding with explicit `WorldStepContext` and stable phase ordering metadata in `src/sim/step/world-step-context.ts` and `src/sim/step/world-phases.ts`.
+- Added regression coverage for phase order in `test/kernel_phase_order.test.ts`.
+- No gameplay mechanics changed; this release is an internal kernel-structure refactor foundation.
+
+---
+
 ## [0.2.0] — 2026-04-02
 
 ### Changed
