@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-02",
+  "maturityLevels": [
+    {
+      "id": "M0",
+      "name": "Concept",
+      "definition": "Intent documented, no implementation committed.",
+      "requiredEvidence": ["Roadmap entry with planned scope"]
+    },
+    {
+      "id": "M1",
+      "name": "Prototype",
+      "definition": "Initial implementation exists, but behaviour/coverage is incomplete.",
+      "requiredEvidence": ["Source module exists", "At least one focused test"]
+    },
+    {
+      "id": "M2",
+      "name": "Integrated",
+      "definition": "Integrated into simulation loop or public API with deterministic wiring.",
+      "requiredEvidence": ["Exported API", "Integration/contract test"]
+    },
+    {
+      "id": "M3",
+      "name": "Hardened",
+      "definition": "Broad automated test coverage and stable behaviour across scenarios.",
+      "requiredEvidence": ["Multiple subsystem tests", "No open deterministic regressions in repo docs"]
+    },
+    {
+      "id": "M4",
+      "name": "Validated",
+      "definition": "Hardened implementation plus explicit validation artifacts or benchmark/conformance evidence.",
+      "requiredEvidence": ["M3 evidence", "Validation docs, conformance fixtures, or benchmark reports"]
+    }
+  ],
+  "subsystems": [
+    {
+      "name": "Deterministic combat kernel",
+      "maturity": "M4",
+      "evidence": [
+        "src/sim/kernel.ts",
+        "test/kernel_determinism.test.ts",
+        "test/kernel_phase_order.test.ts",
+        "conformance/lockstep-sequence.json"
+      ],
+      "notes": "Historically marked COMPLETE in roadmap phases 1-3 and 26-29."
+    },
+    {
+      "name": "Injury, medical, and survivability",
+      "maturity": "M4",
+      "evidence": [
+        "src/sim/injury.ts",
+        "src/sim/medical.ts",
+        "test/medical.test.ts",
+        "docs/validation-first-aid-saves-lives-2026-03-18T19-34-10.md"
+      ],
+      "notes": "Validated against external references in validation reports."
+    },
+    {
+      "name": "Environment, hazards, and climate",
+      "maturity": "M4",
+      "evidence": [
+        "src/sim/hazard.ts",
+        "src/climate.ts",
+        "test/hazards.test.ts",
+        "test/climate.test.ts",
+        "docs/validation-thermoregulation-core-stability-2026-03-18T00-07-52.md"
+      ],
+      "notes": "Phase 10/29/60 capability set plus validation artifacts."
+    },
+    {
+      "name": "AI, perception, and cognition",
+      "maturity": "M3",
+      "evidence": [
+        "src/sim/ai/system.ts",
+        "src/sim/ai/perception.ts",
+        "test/ai_system.test.ts",
+        "test/perception_phase4.test.ts"
+      ],
+      "notes": "Integrated and tested; promoted to M4 once dedicated validation suite is published."
+    },
+    {
+      "name": "Campaign/world simulation",
+      "maturity": "M3",
+      "evidence": [
+        "src/campaign.ts",
+        "src/world-generation.ts",
+        "test/campaign.test.ts",
+        "test/world-generation.test.ts"
+      ],
+      "notes": "Broad feature coverage with automated tests; external validation still partial."
+    },
+    {
+      "name": "Bridge, replay, and integration surfaces",
+      "maturity": "M4",
+      "evidence": [
+        "src/bridge/bridge-engine.ts",
+        "src/replay.ts",
+        "test/bridge/integration.test.ts",
+        "conformance/replay-parity.json",
+        "docs/bridge-contract.md"
+      ],
+      "notes": "Conformance fixtures and bridge contract provide validation evidence."
+    },
+    {
+      "name": "Tooling, benchmarks, and release checks",
+      "maturity": "M4",
+      "evidence": [
+        "tools/release-check.ts",
+        "tools/benchmark.ts",
+        "docs/release-report.json",
+        "test/performance.test.ts"
+      ],
+      "notes": "Performance baselines and release artifacts tracked in-repo."
+    }
+  ]
+}

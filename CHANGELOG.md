@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.4] — 2026-04-02
+
+### Changed
+
+- Replaced roadmap-wide uppercase **COMPLETE** status claims with maturity-language equivalents (`M4 VALIDATED`) to avoid binary completion framing while preserving historical phase context in narrative text.
+- Added explicit maturity definitions (`M0`..`M4`) to `ROADMAP.md` and linked roadmap status language to subsystem evidence artifacts.
+- Added subsystem maturity matrix in both machine-readable JSON (`docs/maturity-matrix.json`) and human-readable markdown (`docs/maturity-matrix.md`) with evidence pointers to tests, conformance fixtures, source modules, and validation reports.
+- Bumped package version to `0.2.4` and synced lockfile.
+
+---
+
 ## [0.2.3] — 2026-04-02
 
 ### Changed
