@@ -327,7 +327,9 @@
     "check-stable-api": "node dist/tools/check-stable-api.js",
     "check-boundaries:report": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md",
     "example:first-hour": "node dist/examples/guided-first-hour.js",
-    "check-maturity-evidence": "node tools/check-maturity-evidence.mjs"
+    "check-maturity-evidence": "node tools/check-maturity-evidence.mjs",
+    "generate-release-dashboard": "node dist/tools/release-check.js --quick || true",
+    "check-release-docs": "node dist/tools/check-release-docs.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
