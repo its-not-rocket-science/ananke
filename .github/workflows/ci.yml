@@ -33,6 +33,15 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Regenerate release dashboard (quick)
+        run: npm run generate-release-dashboard
+
+      - name: Verify release docs version alignment
+        run: npm run check-release-docs
+
+      - name: Fail if release dashboard/report are stale
+        run: git diff --exit-code -- docs/release-dashboard.md docs/release-report.json
+
       - name: Reference app smoke test
         run: npx vitest run test/reference-tactical-duel-smoke.test.ts
 

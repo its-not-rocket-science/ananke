@@ -1,12 +1,12 @@
 {
-  "_generated": "2026-04-01T09:38:54.447Z",
-  "version": "0.1.62",
+  "_generated": "2026-04-02T19:38:25.238Z",
+  "version": "0.2.9",
   "quick": true,
-  "releasable": true,
+  "releasable": false,
   "summary": {
-    "passed": 3,
+    "passed": 2,
     "failed": 0,
-    "warned": 0,
+    "warned": 1,
     "skipped": 3
   },
   "gates": [
@@ -14,7 +14,7 @@
       "id": "schema",
       "name": "Schema migration tests",
       "status": "pass",
-      "durationMs": 2598,
+      "durationMs": 2559,
       "summary": "Schema migration tests passed",
       "detail": "2 passed"
     },
@@ -30,7 +30,7 @@
       "id": "typecheck",
       "name": "Bridge contract type-check (tsc --noEmit)",
       "status": "pass",
-      "durationMs": 7253,
+      "durationMs": 7608,
       "summary": "No TypeScript errors",
       "detail": "Clean compile"
     },
@@ -53,10 +53,10 @@
     {
       "id": "module-index",
       "name": "Module-index freshness (idempotent diff)",
-      "status": "pass",
-      "durationMs": 90,
-      "summary": "Module index is up-to-date",
-      "detail": "Re-generated output matches committed docs/module-index.md"
+      "status": "warn",
+      "durationMs": 111,
+      "summary": "Module index is stale — run `npm run generate-module-index`",
+      "detail": "Committed: 109 lines. Re-generated: 93 lines. Diff found."
     }
   ]
 }
