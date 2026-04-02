@@ -24,6 +24,7 @@ import { hashWorldState }            from "../src/netcode.js";
 import { ReplayRecorder, serializeReplay } from "../src/replay.js";
 import { serializeBridgeFrame }      from "../src/host-loop.js";
 import { noMove }                    from "../src/sim/commands.js";
+import { WORLD_STEP_PHASE_ORDER }    from "../src/sim/step/world-phases.js";
 import type { KernelContext }        from "../src/sim/context.js";
 import type { WorldState }           from "../src/sim/world.js";
 import type { Entity }               from "../src/sim/entity.js";
@@ -68,49 +69,100 @@ function safeStringify(v: unknown): string {
 // Minimal WorldState → expected hashWorldState hex.
 // A conforming host must produce the same hash given this world state.
 
-function genStateHashFixture() {
-  const world: WorldState = mkWorld(SCENARIO_SEED, [
-    makeEntity(1, 1, -0.5),
-    makeEntity(2, 2,  0.5),
-  ]);
+function writeStateHashFixture(
+  fileName: string,
+  fixtureId: string,
+  commandSource: "idle" | "lineInfantry",
+  notes: string[],
+  worldFactory: () => WorldState,
+  commandsPerTick: (world: WorldState) => CommandMap,
+  ticks: number[],
+) {
+  const world = worldFactory();
+  const tickSet = new Set(ticks);
+  const maxTick = Math.max(...ticks);
+  const cases: Array<{ tick: number; description: string; hashHex: string }> = [];
 
-  const hash0 = hashWorldState(world);
-
-  // Step once with no commands (idle tick)
-  const cmds: CommandMap = new Map([
-    [1, [noMove()]],
-    [2, [noMove()]],
-  ]);
-  stepWorld(world, cmds, CTX);
-  const hash1 = hashWorldState(world);
+  for (let tick = 0; tick <= maxTick; tick++) {
+    if (tickSet.has(world.tick)) {
+      cases.push({
+        tick: world.tick,
+        description: `World state at tick ${world.tick}`,
+        hashHex: hexHash(hashWorldState(world)),
+      });
+    }
+    if (tick === maxTick) break;
+    stepWorld(world, commandsPerTick(world), CTX);
+  }
 
   const fixture = {
     version:     "conformance/v1",
-    id:          "state-hash-01",
+    id:          fixtureId,
     description: "Given a canonical WorldState, hashWorldState must return the specified hex value.",
     kind:        "state-hash",
-    notes: [
+    commandSource,
+    notes,
+    cases,
+  };
+
+  const out = path.join(CONFORMANCE, fileName);
+  fs.writeFileSync(out, safeStringify(fixture), "utf8");
+  console.log(`✓  conformance/${fileName}  (${fixture.cases.length} cases)`);
+}
+
+function genStateHashFixtures() {
+  writeStateHashFixture(
+    "state-hash.json",
+    "state-hash-01",
+    "idle",
+    [
       "seed=42; two humanoid entities at ±0.5 m with chainmail and longsword.",
       "hash is FNV-64 over canonical JSON (sorted keys, Map→sorted entries).",
       "A conforming implementation must produce identical hashes.",
     ],
-    cases: [
-      {
-        tick:        0,
-        description: "Initial world state before any tick",
-        hashHex:     hexHash(hash0),
-      },
-      {
-        tick:        1,
-        description: "World state after one idle tick (noMove commands)",
-        hashHex:     hexHash(hash1),
-      },
+    () => mkWorld(SCENARIO_SEED, [makeEntity(1, 1, -0.5), makeEntity(2, 2, 0.5)]),
+    () => new Map([[1, [noMove()]], [2, [noMove()]]]),
+    [0, 1],
+  );
+
+  writeStateHashFixture(
+    "state-hash-regression.json",
+    "state-hash-02",
+    "lineInfantry",
+    [
+      "seed=42; two humanoid entities with lineInfantry AI commands.",
+      "captures a longer deterministic timeline to guard against kernel regressions.",
+      "x/y/z positions and injury state changes are included through hashWorldState.",
     ],
+    () => mkWorld(SCENARIO_SEED, [makeEntity(1, 1, -0.5), makeEntity(2, 2, 0.5)]),
+    (world) => {
+      const idx = buildWorldIndex(world);
+      const spatial = buildSpatialIndex(world, Math.trunc(4 * M));
+      return buildAICommands(world, idx, spatial,
+        (eId) => world.entities.find(e => e.id === eId && !e.injury.dead)
+          ? AI_PRESETS.lineInfantry : undefined);
+    },
+    [0, 1, 5, 10, 20],
+  );
+}
+
+function genPhaseOrderFixture() {
+  const fixture = {
+    version: "conformance/v1",
+    id: "phase-order-01",
+    description: "World-step phases must execute in this exact order for deterministic behavior.",
+    kind: "phase-order",
+    notes: [
+      "phase order is part of deterministic runtime contract.",
+      "changing order can alter cooldown, movement, and combat interaction semantics.",
+      "fixtures and runtime tests should fail immediately on order drift.",
+    ],
+    phases: [...WORLD_STEP_PHASE_ORDER],
   };
 
-  const out = path.join(CONFORMANCE, "state-hash.json");
+  const out = path.join(CONFORMANCE, "phase-order.json");
   fs.writeFileSync(out, safeStringify(fixture), "utf8");
-  console.log(`✓  conformance/state-hash.json  (${fixture.cases.length} cases)`);
+  console.log("✓  conformance/phase-order.json");
 }
 
 // ── Fixture 2: Replay parity ──────────────────────────────────────────────────
@@ -363,7 +415,9 @@ reference TypeScript engine.
 
 | File | Kind | What it tests |
 |------|------|---------------|
-| \`state-hash.json\` | \`state-hash\` | \`hashWorldState\` output for a known WorldState |
+| \`state-hash.json\` | \`state-hash\` | \`hashWorldState\` output for a canonical idle baseline |
+| \`state-hash-regression.json\` | \`state-hash\` | Extended hash checkpoints across an AI-driven timeline |
+| \`phase-order.json\` | \`phase-order\` | Stable kernel phase ordering contract |
 | \`replay-parity.json\` | \`replay-parity\` | Per-tick hash trace when re-simulating a recorded replay |
 | \`command-round-trip.json\` | \`command-round-trip\` | CommandMap wire encoding and field semantics |
 | \`bridge-snapshot.json\` | \`bridge-snapshot\` | \`serializeBridgeFrame\` output shape and invariants |
@@ -405,10 +459,11 @@ Re-run after any change to \`hashWorldState\`, \`stepWorld\`, or \`serializeBrid
 // ── Run all generators ────────────────────────────────────────────────────────
 
 console.log("\nAnanke — Generating conformance fixtures …\n");
-genStateHashFixture();
+genPhaseOrderFixture();
 genReplayParityFixture();
 genCommandRoundTripFixture();
 genBridgeSnapshotFixture();
 genLockstepSequenceFixture();
+genStateHashFixtures();
 writeReadme();
 console.log(`\nAll fixtures written to conformance/`);

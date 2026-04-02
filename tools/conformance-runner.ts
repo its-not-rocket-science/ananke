@@ -29,6 +29,7 @@ import { hashWorldState }            from "../src/netcode.js";
 import { deserializeReplay, replayTo } from "../src/replay.js";
 import { serializeBridgeFrame }      from "../src/host-loop.js";
 import { noMove }                    from "../src/sim/commands.js";
+import { WORLD_STEP_PHASE_ORDER }    from "../src/sim/step/world-phases.js";
 import type { KernelContext }        from "../src/sim/context.js";
 import type { WorldState }           from "../src/sim/world.js";
 import type { Entity }               from "../src/sim/entity.js";
@@ -76,10 +77,19 @@ function runStateHash(fix: Record<string, unknown>): FixtureResult {
   const failures: string[] = [];
 
   const world: WorldState = mkWorld(42, [makeEntity(1, 1, -0.5), makeEntity(2, 2, 0.5)]);
+  const commandSource = (fix["commandSource"] as string | undefined) ?? "idle";
 
   for (const c of cases) {
     while (world.tick < c.tick) {
-      const cmds: CommandMap = new Map([[1, [noMove()]], [2, [noMove()]]]);
+      const cmds: CommandMap = commandSource === "lineInfantry"
+        ? buildAICommands(
+          world,
+          buildWorldIndex(world),
+          buildSpatialIndex(world, Math.trunc(4 * M)),
+          (eId) => world.entities.find(e => e.id === eId && !e.injury.dead)
+            ? AI_PRESETS.lineInfantry : undefined,
+        )
+        : new Map([[1, [noMove()]], [2, [noMove()]]]);
       stepWorld(world, cmds, CTX);
     }
     const got  = hexHash(hashWorldState(world));
@@ -134,6 +144,30 @@ function runReplayParity(fix: Record<string, unknown>): FixtureResult {
       failures: [String(err)], durationMs: Date.now() - start,
     };
   }
+}
+
+function runPhaseOrder(fix: Record<string, unknown>): FixtureResult {
+  const start = Date.now();
+  const failures: string[] = [];
+  const expected = fix["phases"] as string[] | undefined;
+
+  if (!Array.isArray(expected)) {
+    failures.push("fixture missing phases[]");
+  } else {
+    const actual = [...WORLD_STEP_PHASE_ORDER];
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      failures.push(`phase order mismatch: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    }
+  }
+
+  return {
+    id: fix["id"] as string,
+    kind: fix["kind"] as string,
+    status: failures.length === 0 ? "pass" : "fail",
+    checks: 1,
+    failures,
+    durationMs: Date.now() - start,
+  };
 }
 
 function runCommandRoundTrip(fix: Record<string, unknown>): FixtureResult {
@@ -248,6 +282,7 @@ function runLockstepSequence(fix: Record<string, unknown>): FixtureResult {
 
 const RUNNERS: Record<string, (fix: Record<string, unknown>) => FixtureResult> = {
   "state-hash":         runStateHash,
+  "phase-order":        runPhaseOrder,
   "replay-parity":      runReplayParity,
   "command-round-trip": runCommandRoundTrip,
   "bridge-snapshot":    runBridgeSnapshot,

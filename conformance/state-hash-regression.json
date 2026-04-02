@@ -1,0 +1,39 @@
+{
+  "version": "conformance/v1",
+  "id": "state-hash-02",
+  "description": "Given a canonical WorldState, hashWorldState must return the specified hex value.",
+  "kind": "state-hash",
+  "commandSource": "lineInfantry",
+  "notes": [
+    "seed=42; two humanoid entities with lineInfantry AI commands.",
+    "captures a longer deterministic timeline to guard against kernel regressions.",
+    "x/y/z positions and injury state changes are included through hashWorldState."
+  ],
+  "cases": [
+    {
+      "tick": 0,
+      "description": "World state at tick 0",
+      "hashHex": "0xfdf82f148d0b2364"
+    },
+    {
+      "tick": 1,
+      "description": "World state at tick 1",
+      "hashHex": "0x94e31245fae65074"
+    },
+    {
+      "tick": 5,
+      "description": "World state at tick 5",
+      "hashHex": "0xd5e1600766daf978"
+    },
+    {
+      "tick": 10,
+      "description": "World state at tick 10",
+      "hashHex": "0x49d767bfed374445"
+    },
+    {
+      "tick": 20,
+      "description": "World state at tick 20",
+      "hashHex": "0xacb04548fd68a7fb"
+    }
+  ]
+}

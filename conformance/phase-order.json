@@ -1,0 +1,21 @@
+{
+  "version": "conformance/v1",
+  "id": "phase-order-01",
+  "description": "World-step phases must execute in this exact order for deterministic behavior.",
+  "kind": "phase-order",
+  "notes": [
+    "phase order is part of deterministic runtime contract.",
+    "changing order can alter cooldown, movement, and combat interaction semantics.",
+    "fixtures and runtime tests should fail immediately on order drift."
+  ],
+  "phases": [
+    "prepare",
+    "cooldowns",
+    "input",
+    "movement",
+    "actions",
+    "impacts",
+    "systems",
+    "finalize"
+  ]
+}

@@ -13,6 +13,7 @@
 /** Discriminated union of all supported fixture kinds. */
 export type FixtureKind =
   | "state-hash"
+  | "phase-order"
   | "replay-parity"
   | "command-round-trip"
   | "bridge-snapshot"
@@ -38,12 +39,19 @@ export interface ConformanceFixtureHeader {
 /** State-hash fixture: given an initial world, hashWorldState must return a known hex. */
 export interface StateHashFixture extends ConformanceFixtureHeader {
   kind:  "state-hash";
+  commandSource: "idle" | "lineInfantry";
   cases: Array<{
     tick:        number;
     description: string;
     /** FNV-64 hash as a 0x-prefixed hex string. */
     hashHex:     string;
   }>;
+}
+
+/** Phase-order fixture: world-step phases must execute in this exact order. */
+export interface PhaseOrderFixture extends ConformanceFixtureHeader {
+  kind:   "phase-order";
+  phases: string[];
 }
 
 /** Replay-parity fixture: re-simulating a replay must produce the same per-tick hashes. */
@@ -93,6 +101,7 @@ export interface LockstepSequenceFixture extends ConformanceFixtureHeader {
 /** Union of all fixture types. */
 export type ConformanceFixture =
   | StateHashFixture
+  | PhaseOrderFixture
   | ReplayParityFixture
   | CommandRoundTripFixture
   | BridgeSnapshotFixture
