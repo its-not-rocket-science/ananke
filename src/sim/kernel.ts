@@ -22,7 +22,7 @@ import { TIER_RANK, TIER_MUL, ACTION_MIN_TIER, TIER_TECH_REQ } from "./medical.j
 import { type BlastSpec, blastEnergyFracQ, fragmentsExpected, fragmentKineticEnergy } from "./explosion.js";
 
 import { makeRng } from "../rng.js";
-import { WorldIndex, buildWorldIndex } from "./indexing.js";
+import { WorldIndex } from "./indexing.js";
 import { buildSpatialIndex, type SpatialIndex } from "./spatial.js";
 import { type ImpactEvent, sortEventsDeterministic } from "./events.js";
 
@@ -32,12 +32,13 @@ import { pickNearestEnemyInReach } from "./formation.js";
 import { isMeleeLaneOccludedByFriendly } from "./occlusion.js";
 import { applyFrontageCap } from "./frontage.js";
 
-import { computeDensityField } from "./density.js";
 import { coverFractionAtPosition, elevationAtPosition } from "./terrain.js";
 
 import { type TraceSink, nullTrace } from "./trace.js";
 import { TraceKinds } from "./kinds.js";
 import { type SensoryEnvironment, DEFAULT_SENSORY_ENV, canDetect } from "./sensory.js";
+import { runPreparePhase } from "./step/phases/prepare-phase.js";
+import { runCooldownsPhase } from "./step/phases/cooldowns-phase.js";
 import { FEAR_SURPRISE, isRouting, painBlocksAction } from "./morale.js";
 
 import { stepPushAndRepulsion } from "./step/push.js";
@@ -57,7 +58,7 @@ import { stepLimbFatigue } from "./limb.js";
 import { stepCapabilitySources } from "./step/capability.js";
 import { stepMovement } from "./step/movement.js";
 import { stepChainEffects, stepFieldEffects, stepHazardEffects } from "./step/effects.js";
-import { deriveWeatherModifiers, computeWindAimError } from "./weather.js";
+import { computeWindAimError } from "./weather.js";
 
 import {
   resolveGrappleAttempt,
@@ -91,7 +92,6 @@ import { getSkill } from "./skills.js";
 import { TICK_HZ } from "./tick.js";
 
 // Phase 2 extension: swing momentum carry
-const SWING_MOMENTUM_DECAY = q(0.95) as Q;  // 5% decay per tick
 const SWING_MOMENTUM_MAX   = q(0.12) as Q;  // max +12% energy bonus at full momentum
 
 // Phase 3 extension: aiming time
@@ -171,79 +171,12 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
   const trace = ctx.trace ?? nullTrace;
 
-  // Phase 4: attach sensory environment to world for use in resolveAttack / resolveShoot.
-  // WorldState is a plain data object; we use a type-cast side-channel to avoid widening the type.
-  const runtimeState = world.runtimeState ?? (world.runtimeState = {});
-  runtimeState.sensoryEnv = ctx.sensoryEnv ?? DEFAULT_SENSORY_ENV;
-
-  // Phase 51: apply weather modifiers to traction, sensory environment, and thermal ambient.
-  if (ctx.weather) {
-    const wMod = deriveWeatherModifiers(ctx.weather);
-
-    // Traction: rain/snow/ice reduce friction.
-    ctx.tractionCoeff = Math.trunc((ctx.tractionCoeff * wMod.tractionMul_Q) / SCALE.Q) as Q;
-
-    // Sensory: fog and precipitation reduce vision range.
-    const baseEnv = runtimeState.sensoryEnv!;
-    runtimeState.sensoryEnv = {
-      ...baseEnv,
-      lightMul: Math.trunc((baseEnv.lightMul * wMod.lightMul_Q) / SCALE.Q) as Q,
-      smokeMul: Math.trunc((baseEnv.smokeMul * wMod.precipVisionMul_Q) / SCALE.Q) as Q,
-    };
-
-    // Thermal: precipitation cools the ambient temperature (Phase 29 encoding).
-    if (ctx.thermalAmbient_Q !== undefined && wMod.thermalOffset_Q !== 0) {
-      ctx.thermalAmbient_Q = (ctx.thermalAmbient_Q + wMod.thermalOffset_Q) as Q;
-    }
-  }
-
-  world.entities.sort((a, b) => a.id - b.id);
-
-  const index = buildWorldIndex(world);
-
-  const cellSize_m = ctx.cellSize_m ?? Math.trunc(4 * SCALE.m);
-  const spatial = buildSpatialIndex(world, cellSize_m);
-
-  const density = computeDensityField(world, index, spatial, {
-    personalRadius_m: Math.trunc(0.45 * SCALE.m),
-    maxNeighbours: 12,
-    crowdingAt: 6,
-  });
-  ctx.density = density;
+  const { cellSize_m, index, spatial } = runPreparePhase(world, ctx);
+  const runtimeState = world.runtimeState!;
 
   const impacts: ImpactEvent[] = [];
 
-  for (const e of world.entities) {
-    e.action.attackCooldownTicks = Math.max(0, e.action.attackCooldownTicks - 1);
-    e.action.defenceCooldownTicks = Math.max(0, e.action.defenceCooldownTicks - 1);
-    e.action.grappleCooldownTicks = Math.max(0, e.action.grappleCooldownTicks - 1);
-    e.action.shootCooldownTicks = Math.max(0, e.action.shootCooldownTicks - 1);     // Phase 3
-    e.action.swingMomentumQ = qMul(e.action.swingMomentumQ, SWING_MOMENTUM_DECAY) as Q; // Phase 2 ext
-    // Phase 12B: per-capability cooldown decay
-    if (e.action.capabilityCooldowns) {
-      for (const [key, ticks] of e.action.capabilityCooldowns) {
-        if (ticks <= 1) e.action.capabilityCooldowns.delete(key);
-        else e.action.capabilityCooldowns.set(key, ticks - 1);
-      }
-    }
-    e.condition.standBlockedTicks = Math.max(0, e.condition.standBlockedTicks - 1);
-    e.condition.unconsciousTicks = Math.max(0, e.condition.unconsciousTicks - 1);
-    e.condition.suppressedTicks = Math.max(0, e.condition.suppressedTicks - 1);    // Phase 3
-    e.condition.blindTicks      = Math.max(0, e.condition.blindTicks - 1);         // Phase 10C
-    if (e.action.staggerTicks) e.action.staggerTicks = Math.max(0, e.action.staggerTicks - 1); // Phase 26
-    e.condition.rallyCooldownTicks = Math.max(0, e.condition.rallyCooldownTicks - 1); // Phase 5 ext
-    // Phase 2C: weapon bind decay — emit trace only from the smaller-ID entity to avoid duplicates
-    if (e.action.weaponBindTicks > 0) {
-      e.action.weaponBindTicks = Math.max(0, e.action.weaponBindTicks - 1);
-      if (e.action.weaponBindTicks === 0) {
-        const partnerId = e.action.weaponBindPartnerId;
-        e.action.weaponBindPartnerId = 0;
-        if (partnerId !== 0 && e.id < partnerId) {
-          trace.onEvent({ kind: TraceKinds.WeaponBindBreak, tick: world.tick, entityId: e.id, partnerId, reason: "timeout" });
-        }
-      }
-    }
-  }
+  runCooldownsPhase(world, trace);
 
   // Phase 12: resolve or interrupt pending capability activations (cast-time completion)
   const CAST_INTERRUPT_SHOCK: Q = q(0.30) as Q;
