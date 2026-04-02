@@ -8,6 +8,8 @@ import { ... } from "@its-not-rocket-science/ananke";
 
 If you are new, start here before the deep docs.
 
+The only first-hour runnable example is `examples/guided-first-hour.ts`. All other examples are advanced/reference paths.
+
 ## Success checklist
 
 By the end of this hour you will:
@@ -29,7 +31,7 @@ npm run build
 ## Step 2 (15 min): Run the guided first-hour example
 
 ```bash
-node dist/examples/guided-first-hour.js
+npm run example:first-hour
 ```
 
 What this example proves:
@@ -43,8 +45,8 @@ What this example proves:
 Run the same command twice:
 
 ```bash
-node dist/examples/guided-first-hour.js
-node dist/examples/guided-first-hour.js
+npm run example:first-hour
+npm run example:first-hour
 ```
 
 You should see the same final tick, same casualty state, and identical replay frame count.
