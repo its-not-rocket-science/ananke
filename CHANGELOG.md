@@ -6,6 +6,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.5] — 2026-04-02
+
+### Changed
+
+- Externalized package-boundary mapping and allowed-dependency graph into `tools/package-boundaries.config.json` so boundary definitions are versioned as data.
+- Upgraded `tools/check-package-boundaries.ts` to load mapping config, support markdown report generation (`--report-md=...`), and keep warning-mode as the default while retaining strict mode (`--strict`) for future hard enforcement.
+- Added `npm run check-boundaries:report` and CI integration in `.github/workflows/ci.yml` to run boundary checks on every PR/push and publish the generated report as an artifact (warning mode initially).
+- Generated `docs/package-boundary-report.md` with current cross-package violations and unmapped-file inventory for migration planning.
+- Bumped package version to `0.2.5` and synced lockfile.
+
+---
+
 ## [0.2.4] — 2026-04-02
 
 ### Changed
