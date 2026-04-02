@@ -1,44 +1,47 @@
-// ── Tier 1 — Stable host API ─────────────────────────────────────────────────
-// This is the only import path companion projects and hosts should use:
-//   import { stepWorld, createWorld, q, SCALE } from "@its-not-rocket-science/ananke"
+// ── Tier 1 — Stable host API (minimal contract) ─────────────────────────────
+// This is the only import path hosts should treat as semver-stable:
+//   import { createWorld, stepWorld, q, SCALE } from "@its-not-rocket-science/ananke"
 //
-// Breaking changes to any export here require a major semver bump (x.0.0) and
-// a migration guide in CHANGELOG.md.  See STABLE_API.md for the full contract.
+// Everything not exported here is intentionally Tier 2/3 and must be imported
+// via explicit subpaths (e.g. "/character", "/combat", "/tier2", "/tier3").
 //
-// Tier 2 (experimental) and Tier 3 (internal) exports are accessible via direct
-// module imports, e.g. import { stepAging } from ".../dist/src/sim/aging.js"
+// Source of truth: docs/stable-api-manifest.json
 
-export * from "./units.js";          // q(), SCALE, qMul, qDiv, clampQ, mulDiv, to, from, sqrtQ
-export * from "./types.js";          // IndividualAttributes, core scalar types
-export * from "./archetypes.js";     // Archetype, BodyPlan, built-in species presets
-export * from "./generate.js";       // generateIndividual()
-export * from "./equipment.js";      // Weapon, Armour, Gear, WeaponDamageProfile, EquipmentCatalogue
-export * from "./weapons.js";        // ALL_HISTORICAL_MELEE, ALL_HISTORICAL_RANGED, PREHISTORIC_MELEE … CONTEMPORARY_RANGED
-export * from "./presets.js";        // mkKnight(), mkBoxer(), mkWrestler(), mkOctopus(), mkScubaDiver()
-export * from "./channels.js";       // DamageChannel, ChannelMask, channelMask()
-export * from "./traits.js";         // TraitId, TRAITS, buildTraitProfile(), applyTraitsToAttributes()
-export * from "./describe.js";       // describeCharacter(), formatCharacterSheet(), formatOneLine()
+// Fixed-point utilities
+export {
+  SCALE,
+  G_mps2,
+  q,
+  clampQ,
+  qMul,
+  qDiv,
+  mulDiv,
+  to,
+  from,
+  sqrtQ,
+} from "./units.js";
+export type { I32, Q } from "./units.js";
 
-export * from "./sim/vec3.js";       // Vec3, lerpVec3, addVec3
-export * from "./sim/condition.js";  // ConditionSnapshot, condition constants
-export * from "./sim/injury.js";     // InjuryRegion, BodyRegion, injury constants
-export * from "./sim/entity.js";     // Entity (stable fields: id, pos, mass_kg, attributes…)
-export * from "./sim/commands.js";   // CommandMap, Command, noMove()
-export * from "./sim/kinds.js";      // CommandKinds, MoveModes, DefenceModes, EngageModes, HitArea
-export * from "./sim/kernel.js";     // stepWorld(), applyImpactToInjury(), applyExplosion()
-export * from "./sim/body.js";       // BodyPlan, BodySegment, humanoid / quadruped plans
-export * from "./sim/world.js";      // WorldState, KernelContext
+// Core host-facing types
+export type { IndividualAttributes } from "./types.js";
+export type { Entity } from "./sim/entity.js";
+export type { WorldState } from "./sim/world.js";
+export type { KernelContext } from "./sim/context.js";
+export type { Command, CommandMap } from "./sim/commands.js";
 
-export * from "./model3d.js";        // extractRigSnapshots(), deriveAnimationHints(), RigSnapshot, AnimationHints
-export * from "./replay.js";         // ReplayRecorder, replayTo(), serializeReplay(), deserializeReplay()
-export * from "./bridge/index.js";   // BridgeEngine, InterpolatedState, BridgeConfig
+// World creation and scenario loading
+export { createWorld } from "./world-factory.js";
+export type { EntitySpec } from "./world-factory.js";
+export { loadScenario, validateScenario } from "./scenario.js";
+export type { AnankeScenario, AnankeScenarioEntity } from "./scenario.js";
 
-export * from "./world-factory.js";  // createWorld(), EntitySpec, ARCHETYPE_MAP, ITEM_MAP
-export * from "./scenario.js";       // loadScenario(), validateScenario(), AnankeScenario
-export * from "./catalog.js";        // CE-12: registerArchetype(), registerWeapon(), registerArmour(), getCatalogEntry()
-export * from "./sim/formation-combat.js"; // Phase 69: FormationUnit, TacticalEngagement, resolveTacticalEngagement()
-export * from "./sim/cover.js";            // CE-15: CoverSegment, computeCoverProtection(), isLineOfSightBlocked(), applyExplosionToTerrain()
-export * from "./sim/ai/behavior-trees.js"; // CE-10: BehaviorNode, FlankTarget, RetreatTo, ProtectAlly, GuardPosition, HealTarget, Sequence, Fallback
-export * from "./snapshot.js";              // CE-9: diffWorldState(), applyDiff(), packDiff(), unpackDiff(), WorldStateDiff
-export * from "./parallel.js";             // CE-7: partitionWorld(), mergePartitions(), detectBoundaryPairs(), assignEntitiesToPartitions()
-export * from "./modding.js";              // CE-16: hashMod(), registerPostTickHook(), runPostTickHooks(), registerBehaviorNode(), computeModManifest()
+// Stepping
+export { stepWorld } from "./sim/kernel.js";
+
+// Replay / serialization
+export { ReplayRecorder, replayTo, serializeReplay, deserializeReplay } from "./replay.js";
+export type { Replay, ReplayFrame } from "./replay.js";
+
+// Bridge extraction
+export { extractRigSnapshots, deriveAnimationHints } from "./model3d.js";
+export type { RigSnapshot, AnimationHints } from "./model3d.js";
