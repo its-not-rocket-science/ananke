@@ -6,6 +6,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.3] — 2026-04-02
+
+### Changed
+
+- Moved legacy entity/world normalization out of `stepWorld` into dedicated normalization utilities (`src/sim/normalization.ts`) so default-repair logic no longer runs in the per-tick hot path.
+- Applied normalization at load/reconstruction boundaries:
+  - world construction (`createWorld`, `mkWorld`)
+  - scenario loading (`loadScenario`)
+  - replay deserialization/replay startup (`deserializeReplay`, `replayTo`)
+  - snapshot reconstruction (`applyDiff`)
+- Added migration-focused regression tests for legacy shape normalization across these boundaries in `test/normalization-migration.test.ts`.
+- Bumped package version to `0.2.3` and synced lockfile.
+
+---
+
 ## [0.2.2] — 2026-04-02
 
 ### Changed

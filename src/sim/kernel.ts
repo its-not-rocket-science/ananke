@@ -12,8 +12,6 @@ import { isCapabilityAvailable } from "./tech.js";
 import { deriveFunctionalState, hasAllDisabledFunctions } from "./impairment.js";
 import { TUNING, type SimulationTuning } from "./tuning.js";
 import { type Vec3, vSub, vAdd } from "./vec3.js";
-import { defaultIntent } from "./intent.js";
-import { defaultAction } from "./action.js";
 import { resolveHit, shieldCovers, chooseArea, type HitArea } from "./combat.js";
 import { normaliseDirCheapQ, dotDirQ } from "./vec3.js";
 import { eventSeed } from "./seeds.js";
@@ -39,7 +37,7 @@ import { coverFractionAtPosition, elevationAtPosition } from "./terrain.js";
 
 import { type TraceSink, nullTrace } from "./trace.js";
 import { TraceKinds } from "./kinds.js";
-import { type SensoryEnvironment, DEFAULT_SENSORY_ENV, DEFAULT_PERCEPTION, canDetect } from "./sensory.js";
+import { type SensoryEnvironment, DEFAULT_SENSORY_ENV, canDetect } from "./sensory.js";
 import { FEAR_SURPRISE, isRouting, painBlocksAction } from "./morale.js";
 
 import { stepPushAndRepulsion } from "./step/push.js";
@@ -55,7 +53,7 @@ import { stepCoreTemp, deriveTempModifiers, CORE_TEMP_NORMAL_Q } from "./thermor
 import { stepNutrition } from "./nutrition.js";
 import { stepToxicology } from "./toxicology.js";
 import { stepIngestedToxicology } from "./systemic-toxicology.js";
-import { buildLimbStates, stepLimbFatigue } from "./limb.js";
+import { stepLimbFatigue } from "./limb.js";
 import { stepCapabilitySources } from "./step/capability.js";
 import { stepMovement } from "./step/movement.js";
 import { stepChainEffects, stepFieldEffects, stepHazardEffects } from "./step/effects.js";
@@ -214,65 +212,6 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   ctx.density = density;
 
   const impacts: ImpactEvent[] = [];
-
-  for (const e of world.entities) {
-    if (!(e).intent) (e).intent = defaultIntent();
-    if (!(e).action) (e).action = defaultAction();
-    // Phase 2A: default new fields on entities created before this phase
-    if (!(e).grapple) {
-      (e).grapple = { holdingTargetId: 0, heldByIds: [], gripQ: q(0), position: "standing" };
-    } else if ((e).grapple.position === undefined) {
-      (e).grapple.position = "standing";
-    }
-    if ((e).action.grappleCooldownTicks === undefined) (e).action.grappleCooldownTicks = 0;
-    if ((e).condition?.pinned === undefined) (e).condition.pinned = false;
-    // Phase 2C: default weapon bind fields
-    if ((e).action.weaponBindPartnerId === undefined) (e).action.weaponBindPartnerId = 0;
-    if ((e).action.weaponBindTicks === undefined) (e).action.weaponBindTicks = 0;
-    // Phase 3: ranged combat fields
-    if ((e).action.shootCooldownTicks === undefined) (e).action.shootCooldownTicks = 0;
-    if ((e).condition.suppressedTicks === undefined) (e).condition.suppressedTicks = 0;
-    // Phase 2 extension: swing momentum
-    if ((e).action.swingMomentumQ === undefined) (e).action.swingMomentumQ = 0;
-    // Phase 3 extension: aiming time
-    if ((e).action.aimTicks === undefined) (e).action.aimTicks = 0;
-    if ((e).action.aimTargetId === undefined) (e).action.aimTargetId = 0;
-    // Phase 4: perception defaults and decision latency
-    if (!(e.attributes).perception) (e.attributes).perception = DEFAULT_PERCEPTION;
-    if (!e.ai) e.ai = { focusTargetId: 0, retargetCooldownTicks: 0, decisionCooldownTicks: 0 };
-    else if ((e.ai).decisionCooldownTicks === undefined) (e.ai).decisionCooldownTicks = 0;
-    // Phase 5: fear / morale
-    if ((e.condition).fearQ === undefined) (e.condition).fearQ = q(0);
-    // Phase 5 extensions: morale features
-    if ((e.condition).suppressionFearMul === undefined) (e.condition).suppressionFearMul = SCALE.Q;
-    if ((e.condition).recentAllyDeaths === undefined) (e.condition).recentAllyDeaths = 0;
-    if ((e.condition).lastAllyDeathTick === undefined) (e.condition).lastAllyDeathTick = -1;
-    if ((e.condition).surrendered === undefined) (e.condition).surrendered = false;
-    if ((e.condition).rallyCooldownTicks === undefined) (e.condition).rallyCooldownTicks = 0;
-    // Phase 10C: flash blindness
-    if ((e.condition).blindTicks === undefined) (e.condition).blindTicks = 0;
-    // Phase 9: new RegionInjury fields (default for entities created pre-Phase-9)
-    if ((e.injury).hemolymphLoss === undefined) (e.injury).hemolymphLoss = q(0);
-    for (const reg of Object.values(e.injury.byRegion)) {
-      if ((reg).fractured === undefined)         (reg).fractured = false;
-      if ((reg).infectedTick === undefined)      (reg).infectedTick = -1;
-      if ((reg).bleedDuration_ticks === undefined) (reg).bleedDuration_ticks = 0;
-      if ((reg).permanentDamage === undefined)   (reg).permanentDamage = q(0);
-    }
-    // Phase 11C: initialize ablative armour state for entities that don't have it yet
-    if (!e.armourState) {
-      const armourTiems = e.loadout.items.filter(it => it.kind === "armour");
-      const ablativeItems = armourTiems.filter(it => it.ablative);
-      if (ablativeItems.length > 0) {
-        e.armourState = new Map(ablativeItems.map(it => [it.id, { resistRemaining_J: (it).resist_J as number }]));
-      }
-    }
-    // Phase 32B: initialize per-limb state for multi-limb body plans (once only)
-    if (!e.limbStates && e.bodyPlan) {
-      const limbs = buildLimbStates(e.bodyPlan);
-      if (limbs.length > 0) e.limbStates = limbs;
-    }
-  }
 
   for (const e of world.entities) {
     e.action.attackCooldownTicks = Math.max(0, e.action.attackCooldownTicks - 1);
