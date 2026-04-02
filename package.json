@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.1.69",
+  "version": "0.2.0",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -205,6 +205,14 @@
     "./conformance": {
       "import": "./dist/src/conformance.js",
       "types": "./dist/src/conformance.d.ts"
+    },
+    "./tier2": {
+      "import": "./dist/src/tier2.js",
+      "types": "./dist/src/tier2.d.ts"
+    },
+    "./tier3": {
+      "import": "./dist/src/tier3.js",
+      "types": "./dist/src/tier3.d.ts"
     }
   },
   "workspaces": [
@@ -229,7 +237,8 @@
     "schema/replay.schema.json",
     "schema/pack.schema.json",
     "CHANGELOG.md",
-    "STABLE_API.md"
+    "STABLE_API.md",
+    "docs/stable-api-manifest.json"
   ],
   "engines": {
     "node": ">=18"
@@ -257,7 +266,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "ci": "npm run build && npm run test:coverage && npm run check-boundaries",
+    "ci": "npm run build && npm run test:coverage && npm run check-boundaries && npm run check-stable-api",
     "release-check": "node dist/tools/release-check.js",
     "release-check:quick": "node dist/tools/release-check.js --quick",
     "check-boundaries": "node dist/tools/check-package-boundaries.js",
@@ -313,7 +322,8 @@
     "build:wasm:push": "asc as/push.ts --outFile dist/as/push.wasm --textFile dist/as/push.wat --runtime stub --optimize --initialMemory 1",
     "build:wasm:injury": "asc as/injury.ts --outFile dist/as/injury.wasm --textFile dist/as/injury.wat --runtime stub --optimize --initialMemory 1",
     "build:wasm:all": "npm run build:wasm && npm run build:wasm:push && npm run build:wasm:injury",
-    "test:wasm": "npm run build:wasm:all && vitest run test/as/"
+    "test:wasm": "npm run build:wasm:all && vitest run test/as/",
+    "check-stable-api": "node dist/tools/check-stable-api.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

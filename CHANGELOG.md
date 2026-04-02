@@ -6,6 +6,50 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.0] — 2026-04-02
+
+### Changed
+
+- **Tier-1 API contraction (host-contract hardening):** root export `@its-not-rocket-science/ananke` now contains only the minimal stable host-facing contract:
+  - fixed-point utilities
+  - core host-required types
+  - world creation / scenario loading
+  - stepping
+  - replay / serialization
+  - bridge extraction
+- Added `docs/stable-api-manifest.json` as the machine-readable Tier-1 source of truth.
+- Added CI guard `check-stable-api` to fail builds if `src/index.ts` exports drift from the manifest.
+- Added explicit aggregate subpaths:
+  - `@its-not-rocket-science/ananke/tier2`
+  - `@its-not-rocket-science/ananke/tier3`
+
+### Migration guide
+
+If you previously imported non-core symbols from the root path, migrate as follows:
+
+1. **Keep root imports only for Tier-1 symbols** listed in `STABLE_API.md`.
+2. Move removed root imports to explicit subpaths:
+   - Tier 2: `@its-not-rocket-science/ananke/tier2` (or existing domain subpaths such as `/combat`, `/campaign`, `/social`, `/narrative`, `/anatomy`, `/crafting`, `/competence`, `/species`, `/polity`, `/catalog`).
+   - Tier 3: `@its-not-rocket-science/ananke/tier3`.
+3. Example:
+
+```ts
+// before
+import { stepWorld, BridgeEngine, resolveTacticalEngagement } from "@its-not-rocket-science/ananke";
+
+// after
+import { stepWorld } from "@its-not-rocket-science/ananke";
+import { BridgeEngine } from "@its-not-rocket-science/ananke/tier2";
+import { resolveTacticalEngagement } from "@its-not-rocket-science/ananke/tier3";
+```
+
+### Notes
+
+- This release intentionally tightens the semver-stable surface to improve long-term supportability.
+- No Tier-1 symbol was removed without a documented migration path.
+
+---
+
 ## [0.1.69] — 2026-04-01
 
 ### Added
