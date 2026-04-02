@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.9] — 2026-04-02
+
+### Changed
+
+- Added a strict first-hour adopter guide in `docs/first-hour-adopter-path.md` focused on stable Tier-1 onboarding and deterministic success criteria.
+- Added `examples/guided-first-hour.ts` as a guided runnable example that uses only stable root APIs (`createWorld`, `stepWorld`, `ReplayRecorder`, `serializeReplay`, `deserializeReplay`, `replayTo`).
+- Updated `README.md` with a "Start here" onboarding section and aligned the core simulation loop snippet with stable `createWorld` usage.
+- Added `npm run example:first-hour` and bumped package version to `0.2.9` with synchronized lockfile.
+
+---
+
 ## [0.2.8] — 2026-04-02
 
 ### Changed

@@ -34,6 +34,21 @@ needed.  Zero runtime dependencies.
 
 ---
 
+## Start here (strict first-hour path)
+
+If you are evaluating Ananke for the first time, use the **stable-only onboarding flow**:
+
+1. Read [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md).
+2. Run `npm run build`.
+3. Run `npm run example:first-hour`.
+
+This path intentionally uses **Tier 1 stable root exports only** so new adopters can get to a deterministic result quickly.
+
+Advanced references are still available after onboarding:
+[`docs/integration-primer.md`](docs/integration-primer.md), [`docs/cookbook.md`](docs/cookbook.md), and [`docs/recipes-matrix.md`](docs/recipes-matrix.md).
+
+---
+
 ## Core concepts
 
 ### Fixed-point arithmetic
@@ -83,9 +98,9 @@ Use a factory instead of constructing these manually — see **Quick starts** be
 ### The simulation loop
 
 ```typescript
-import { mkWorld, stepWorld } from "@its-not-rocket-science/ananke";
+import { createWorld, stepWorld } from "@its-not-rocket-science/ananke";
 
-const world = mkWorld(seed, entities);     // create world with deterministic seed
+const world = createWorld(seed, entities); // deterministic world creation
 
 for (let tick = 0; tick < 2000; tick++) {
   const commands = buildCommands(world);   // your AI / player input

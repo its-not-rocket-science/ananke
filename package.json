@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -325,7 +325,8 @@
     "build:wasm:all": "npm run build:wasm && npm run build:wasm:push && npm run build:wasm:injury",
     "test:wasm": "npm run build:wasm:all && vitest run test/as/",
     "check-stable-api": "node dist/tools/check-stable-api.js",
-    "check-boundaries:report": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md"
+    "check-boundaries:report": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md",
+    "example:first-hour": "node dist/examples/guided-first-hour.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
