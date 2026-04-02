@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.8] — 2026-04-02
+
+### Changed
+
+- Reworked `examples/reference/tactical-duel` into a minimal polished reference app that runs a full deterministic duel loop using only Tier-1 stable root APIs (`createWorld`, `stepWorld`, `ReplayRecorder`, `serializeReplay`, `q`).
+- Added a dedicated CI smoke test (`test/reference-tactical-duel-smoke.test.ts`) and wired it into `.github/workflows/ci.yml`.
+- Updated tactical-duel usage documentation to describe the stable-API loop and quick determinism verification workflow.
+- Bumped package version to `0.2.8` and synced lockfile.
+
+---
+
 ## [0.2.7] — 2026-04-02
 
 ### Changed
