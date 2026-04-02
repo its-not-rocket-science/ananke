@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.2] — 2026-04-02
+
+### Changed
+
+- Replaced hidden `__*` world runtime side-channel fields with explicit `world.runtimeState` typing via new `WorldRuntimeState` in `src/sim/world.ts`.
+- Updated kernel, AI, team hostility, snapshot diffing, and serialization pathways to read/write runtime subsystem data through `runtimeState`, preserving deterministic core hashing behavior.
+- Added lint guardrails in `eslint.config.mjs` and regression test `test/no-hidden-runtime-fields.test.ts` to block reintroduction of legacy hidden runtime fields.
+- Updated integration and protocol docs to document the explicit runtime-state pattern.
+
+---
+
 ## [0.2.1] — 2026-04-02
 
 ### Changed

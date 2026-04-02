@@ -238,7 +238,7 @@ describe("AI modulation", () => {
     registry.globalStanding.get("guards")!.set("merchants", q(0.80));
 
     const world = mkWorld(1, [self, target]);
-    (world).__factionRegistry = registry;
+    (world.runtimeState ??= {}).factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -256,7 +256,7 @@ describe("AI modulation", () => {
 
     const registry = createFactionRegistry([makeGuards(), makeBandits()]);
     const world    = mkWorld(1, [self, target]);
-    (world).__factionRegistry = registry;
+    (world.runtimeState ??= {}).factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -273,7 +273,7 @@ describe("AI modulation", () => {
     // No faction set on either entity
     const registry = createFactionRegistry([makeGuards()]);
     const world    = mkWorld(1, [self, target]);
-    (world).__factionRegistry = registry;
+    (world.runtimeState ??= {}).factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -290,7 +290,7 @@ describe("AI modulation", () => {
 
     const registry = createFactionRegistry([]);   // empty registry
     const world    = mkWorld(1, [self, target]);
-    (world).__factionRegistry = registry;
+    (world.runtimeState ??= {}).factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -313,7 +313,7 @@ describe("AI modulation", () => {
     self.injury.shock = q(0.10);
 
     const world = mkWorld(1, [self, target]);
-    (world).__factionRegistry = registry;
+    (world.runtimeState ??= {}).factionRegistry = registry;
 
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
@@ -417,7 +417,7 @@ describe("integration", () => {
     registry.globalStanding.get("guards")!.set("merchants", q(0.80));
 
     const world = mkWorld(1, [self, target]);
-    (world).__factionRegistry = registry;
+    (world.runtimeState ??= {}).factionRegistry = registry;
     const index   = buildWorldIndex(world);
     const spatial = buildSpatialIndex(world, Math.trunc(4 * S.m));
 

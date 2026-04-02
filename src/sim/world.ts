@@ -5,6 +5,14 @@ import { FactionRegistry } from "../faction.js";
 import { PartyRegistry } from "../party.js";
 import { RelationshipGraph } from "../relationships.js";
 
+export interface WorldRuntimeState {
+  sensoryEnv?: SensoryEnvironment;
+  factionRegistry?: FactionRegistry;
+  partyRegistry?: PartyRegistry;
+  relationshipGraph?: RelationshipGraph;
+  nutritionAccum?: number;
+}
+
 /**
  * Top-level simulation container.
  *
@@ -28,33 +36,8 @@ export interface WorldState {
   activeFieldEffects?: FieldEffect[];
 
   /**
-   * @subsystem(sensory) Ambient lighting and visibility environment.
-   * Consumed by `src/sim/sensory.ts` when provided.  Prefixed `__` to discourage
-   * direct access — use the sensory API instead.
+   * @subsystem(runtime) Explicit host/runtime state consumed by optional subsystems.
+   * Kept separate from core deterministic world data.
    */
-  __sensoryEnv?: SensoryEnvironment;
-
-  /**
-   * @subsystem(faction) Global faction-standing registry.
-   * Consumed by `src/faction.ts` and AI targeting.
-   */
-  __factionRegistry?: FactionRegistry;
-
-  /**
-   * @subsystem(party) Global party registry.
-   * Consumed by `src/party.ts` for morale and formation bonuses.
-   */
-  __partyRegistry?: PartyRegistry;
-
-  /**
-   * @subsystem(relationships) Inter-entity relationship graph.
-   * Consumed by `src/relationships.ts`.
-   */
-  __relationshipGraph?: RelationshipGraph;
-
-  /**
-   * @subsystem(nutrition) Cross-tick nutrition accumulator.
-   * Consumed by the nutrition sub-step in `src/sim/kernel.ts`.
-   */
-  __nutritionAccum?: number;
+  runtimeState?: WorldRuntimeState;
 }

@@ -72,7 +72,7 @@ if (serverHash !== BigInt(receivedHash)) {
 ```
 
 The hash covers `tick`, `seed`, and all entity state sorted by `id`.  Subsystem
-state (`__sensoryEnv`, `__factionRegistry`, etc.) is excluded — it is not part
+state (`runtimeState.sensoryEnv`, `runtimeState.factionRegistry`, etc. within `runtimeState`) is excluded — it is not part
 of the deterministic simulation core.
 
 ---

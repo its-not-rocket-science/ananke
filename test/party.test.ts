@@ -128,9 +128,9 @@ test("areEntitiesHostile integration", () => {
     tick: 0,
     seed: 0,
     entities: [],
-    __partyRegistry: createPartyRegistry(),
+    runtimeState: { partyRegistry: createPartyRegistry() },
   };
-  const registry = world.__partyRegistry!;
+  const registry = world.runtimeState.partyRegistry!;
   createParty(registry, "party1", "A", 1);
   createParty(registry, "party2", "B", 2);
   const entity1 = mockEntity(1, 1, undefined, "party1");

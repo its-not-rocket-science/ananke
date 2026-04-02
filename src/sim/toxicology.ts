@@ -5,7 +5,7 @@
  * accumulation, duration, and antidote clearance.
  *
  * Follows the 1 Hz accumulator pattern from Phase 30 (nutrition). Called from the
- * kernel's __nutritionAccum gate and from downtime.ts per-second loop.
+ * kernel's runtimeState.nutritionAccum gate and from downtime.ts per-second loop.
  */
 
 import { q, SCALE, type Q, clampQ } from "../units.js";

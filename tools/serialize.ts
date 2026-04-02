@@ -59,10 +59,8 @@ export function serializeWorldState(world: WorldState): unknown {
     seed: world.seed,
     entities: world.entities.map(e => serializeEntity(e)),
   };
-  // Optionally include side‑channel fields if they exist
   if (world.activeFieldEffects) obj.activeFieldEffects = world.activeFieldEffects;
-  if (world.__sensoryEnv) obj.__sensoryEnv = world.__sensoryEnv;
-  // We ignore other __ fields for brevity.
+  if (world.runtimeState) obj.runtimeState = world.runtimeState;
   return obj;
 }
 
@@ -92,7 +90,7 @@ export function deserializeWorldState(data: any): WorldState {
     entities: data.entities.map((e: any) => deserializeEntity(e)),
   };
   if (data.activeFieldEffects) world.activeFieldEffects = data.activeFieldEffects;
-  if (data.__sensoryEnv) world.__sensoryEnv = data.__sensoryEnv;
+  if (data.runtimeState) world.runtimeState = data.runtimeState;
   return world;
 }
 
@@ -112,7 +110,7 @@ function deserializeEntity(e: any): Entity {
 
 // ─── deterministic equality check ────────────────────────────────────────────
 
-/** Deep equality for simple WorldState (ignores side‑channel fields). */
+/** Deep equality for simple WorldState (ignores runtimeState fields). */
 function worldsEqual(a: WorldState, b: WorldState): boolean {
   if (a.tick !== b.tick || a.seed !== b.seed || a.entities.length !== b.entities.length) {
     return false;

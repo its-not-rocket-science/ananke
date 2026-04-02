@@ -45,10 +45,10 @@ JavaScript `Map` instances do not serialise to JSON automatically.  Ananke
 serialises `Map<K, V>` as an array of `[K, V]` pairs:
 
 ```json
-{ "__nutritionAccum": 0 }
+{ "runtimeState": { "nutritionAccum": 0 } }
 ```
 
-> Note: `__nutritionAccum` was simplified to a scalar in v0.1.  If a `Map`
+> Note: `runtimeState.nutritionAccum` is represented as a scalar field in v0.1.  If a `Map`
 > field is added in a future version, its pairs will use the array format above.
 
 ### 2.4 Version stamping

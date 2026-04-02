@@ -222,21 +222,21 @@ describe("weather kernel integration", () => {
     expect(ctx.tractionCoeff).toBe(q(0.85));
   });
 
-  it("fog → (world).__sensoryEnv.lightMul reduced", () => {
+  it("fog → (world).runtimeState.sensoryEnv.lightMul reduced", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     const w = mkWorld(1, [e]);
     const ctx = mkCtx({ weather: { fogDensity_Q: q(0.50) } as WeatherState });
     stepWorld(w, new Map(), ctx);
-    const env = w.__sensoryEnv!;
+    const env = w.runtimeState!.sensoryEnv!;
     expect(env.lightMul).toBeLessThan(DEFAULT_SENSORY_ENV.lightMul);
   });
 
-  it("heavy_rain → (world).__sensoryEnv.smokeMul reduced", () => {
+  it("heavy_rain → (world).runtimeState.sensoryEnv.smokeMul reduced", () => {
     const e = mkHumanoidEntity(1, 1, 0, 0);
     const w = mkWorld(1, [e]);
     const ctx = mkCtx({ weather: { precipitation: "heavy_rain" } as WeatherState });
     stepWorld(w, new Map(), ctx);
-    const env = w.__sensoryEnv!;
+    const env = w.runtimeState!.sensoryEnv!;
     expect(env.smokeMul).toBeLessThan(DEFAULT_SENSORY_ENV.smokeMul);
   });
 
@@ -258,7 +258,7 @@ describe("weather kernel integration", () => {
     const w = mkWorld(1, [e]);
     const ctx = mkCtx({ tractionCoeff: q(1.0), weather: { precipitation: "blizzard" } as WeatherState });
     stepWorld(w, new Map(), ctx);
-    const env = w.__sensoryEnv!;
+    const env = w.runtimeState!.sensoryEnv!;
     expect(ctx.tractionCoeff).toBe(q(0.40));
     expect(env.lightMul).toBe(q(0.30));
   });
@@ -285,7 +285,7 @@ describe("weather kernel integration", () => {
       const w = mkWorld(1, [e]);
       const ctx = mkCtx({ weather });
       stepWorld(w, new Map(), ctx);
-      return w.__sensoryEnv!.lightMul as number;
+      return w.runtimeState!.sensoryEnv!.lightMul as number;
     }
     const rainOnly     = runAndGetLightMul({ precipitation: "rain" });
     const fogOnly      = runAndGetLightMul({ fogDensity_Q: q(0.40) });

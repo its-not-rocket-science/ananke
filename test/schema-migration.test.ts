@@ -183,8 +183,8 @@ describe("validateSnapshot", () => {
   it("accepts snapshots with extra subsystem fields", () => {
     const world = {
       ...makeWorld(),
-      __factionRegistry: { standings: {} },
-      __nutritionAccum:  0,
+      runtimeState: { factionRegistry: { standings: {} },
+      nutritionAccum:  0 },
       _host_custom_field: "any value is allowed",
     };
     const errors = validateSnapshot(world);

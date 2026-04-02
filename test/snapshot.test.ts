@@ -205,11 +205,11 @@ describe("applyDiff", () => {
     const prev = mkWorld(1, []);
     const next  = deepClone(prev);
     next.tick = 1;
-    (next as { __nutritionAccum?: number }).__nutritionAccum = 500;
+    (next.runtimeState ??= {}).nutritionAccum = 500;
 
     const diff   = diffWorldState(prev, next);
     const result = applyDiff(prev, diff);
-    expect((result as { __nutritionAccum?: number }).__nutritionAccum).toBe(500);
+    expect(result.runtimeState?.nutritionAccum).toBe(500);
   });
 });
 
@@ -342,10 +342,10 @@ describe("packDiff / unpackDiff", () => {
   it("round-trips boolean, null, float, large int values", () => {
     const w    = mkWorld(1, []);
     const next  = deepClone(w); next.tick = 1;
-    (next as Record<string, unknown>).__nutritionAccum = 3.14159;
+    (next.runtimeState ??= {}).nutritionAccum = 3.14159;
     const diff = diffWorldState(w, next);
     const rt   = roundTrip(diff);
-    expect(rt.worldChanges["__nutritionAccum"]).toBeCloseTo(3.14159, 5);
+    expect((rt.worldChanges["runtimeState"] as { nutritionAccum?: number }).nutritionAccum).toBeCloseTo(3.14159, 5);
   });
 
   it("round-trips negative integers", () => {

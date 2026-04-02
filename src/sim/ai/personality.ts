@@ -105,7 +105,7 @@ export function computeEffectiveLoyalty(self: Entity, world: WorldState): Q {
   const personality = self.personality;
   const baseLoyalty = personality?.loyalty ?? q(0.50);
 
-  const partyRegistry = world.__partyRegistry;
+  const partyRegistry = world.runtimeState?.partyRegistry;
   if (!partyRegistry) return baseLoyalty;
 
   const partyId = self.party;
@@ -117,7 +117,7 @@ export function computeEffectiveLoyalty(self: Entity, world: WorldState): Q {
   const leaderId = party.leaderId;
   if (leaderId === self.id) return baseLoyalty; // leader is self
 
-  const relationshipGraph = world.__relationshipGraph;
+  const relationshipGraph = world.runtimeState?.relationshipGraph;
   if (!relationshipGraph) return baseLoyalty;
 
   const companionLoyalty = computeCompanionLoyalty(self, leaderId, relationshipGraph);
