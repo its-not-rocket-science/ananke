@@ -127,7 +127,7 @@ Total exported symbols: **125**
 | `formatCharacterSheet` | `src/describe.ts` |  |
 | `formatOneLine` | `src/describe.ts` |  |
 | `generateIndividual` | `src/generate.ts` |  |
-| `hashWorldState` | `src/netcode.ts` | Compute a deterministic 64-bit hash of the simulation's core state. Covers `tick`, `seed`, and all entity data sorted by `id`.  Optional subsystem fields (`__sensoryEnv`, `__factionRegistry`, etc.) are excluded — they are host concerns and do not affect simulation determinism. Use this as a desync checksum in multiplayer loops: ```ts const hash = hashWorldState(world); socket.emit("tick-ack", { tick: world.tick, hash: hash.toString() }); ``` @returns An unsigned 64-bit bigint. |
+| `hashWorldState` | `src/netcode.ts` | Compute a deterministic 64-bit hash of the simulation's core state. Covers `tick`, `seed`, and all entity data sorted by `id`.  Optional subsystem fields (`runtimeState.sensoryEnv`, `runtimeState.factionRegistry`, etc.) are excluded — they are host concerns and do not affect simulation determinism. Use this as a desync checksum in multiplayer loops: ```ts const hash = hashWorldState(world); socket.emit("tick-ack", { tick: world.tick, hash: hash.toString() }); ``` @returns An unsigned 64-bit bigint. |
 | `makeAttackCommand` | `src/sim/commandBuilders.ts` |  |
 | `makeRng` | `src/rng.ts` |  |
 | `meanTimeToIncapacitation` | `src/metrics.ts` | Mean tick-to-incapacitation across the given entities. Entities that were never incapacitated contribute `totalTicks` to the average (i.e. they survived the full duration). Returns `totalTicks` if no entity was incapacitated. |

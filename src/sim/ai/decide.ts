@@ -14,7 +14,7 @@ import { eventSeed } from "../seeds.js";
 import { type ObstacleGrid, coverFractionAtPosition, terrainKey } from "../terrain.js";
 import { getSkill } from "../skills.js";
 import { TICK_HZ } from "../tick.js";
-import { effectiveStanding, STANDING_FRIENDLY_THRESHOLD, type FactionRegistry } from "../../faction.js";
+import { effectiveStanding, STANDING_FRIENDLY_THRESHOLD } from "../../faction.js";
 import {
   computeEffectiveRetreatRange,
   computeDefenceIntensityBoost,
@@ -152,7 +152,7 @@ export function decideCommandsForEntity(
   // Self-defence override: if self has taken damage (shock > 0 or fluid loss > 0),
   // faction check is bypassed (attacker is fought back regardless of standing).
   if (target && self.faction) {
-    const factionRegistry = (world).__factionRegistry as FactionRegistry | undefined;
+    const factionRegistry = world.runtimeState?.factionRegistry;
     if (factionRegistry) {
       const standing = effectiveStanding(factionRegistry, self, target);
       const selfDefence = self.injury.shock > 0 || self.injury.fluidLoss > 0;

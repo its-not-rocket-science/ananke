@@ -343,13 +343,13 @@ describe("computeEffectiveLoyalty", () => {
     const world = mkWorld(1, []);
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
-    // No __partyRegistry set
+    // No runtimeState.partyRegistry set
     expect(computeEffectiveLoyalty(entity, world)).toBe(q(0.7));
   });
 
   it("returns base loyalty when entity has no party", () => {
     const world = mkWorld(1, []);
-    world.__partyRegistry = createPartyRegistry();
+    (world.runtimeState ??= {}).partyRegistry = createPartyRegistry();
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
     // entity.party is undefined
@@ -358,7 +358,7 @@ describe("computeEffectiveLoyalty", () => {
 
   it("returns base loyalty when party not found", () => {
     const world = mkWorld(1, []);
-    world.__partyRegistry = createPartyRegistry();
+    (world.runtimeState ??= {}).partyRegistry = createPartyRegistry();
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
     entity.party = "nonexistent";
@@ -368,7 +368,7 @@ describe("computeEffectiveLoyalty", () => {
   it("returns base loyalty when entity is party leader", () => {
     const world = mkWorld(1, []);
     const registry = createPartyRegistry();
-    world.__partyRegistry = registry;
+    (world.runtimeState ??= {}).partyRegistry = registry;
     createParty(registry, "party1", "Adventurers", 1);
     const entity = mkHumanoidEntity(1, 1, 0, 0);
     entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
@@ -379,22 +379,22 @@ describe("computeEffectiveLoyalty", () => {
   it("returns base loyalty when no relationship graph", () => {
     const world = mkWorld(1, []);
     const registry = createPartyRegistry();
-    world.__partyRegistry = registry;
+    (world.runtimeState ??= {}).partyRegistry = registry;
     createParty(registry, "party1", "Adventurers", 1);
     const entity = mkHumanoidEntity(2, 1, 0, 0);
     entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.7), opportunism: q(0.5) };
     entity.party = "party1";
-    // No __relationshipGraph set
+    // No runtimeState.relationshipGraph set
     expect(computeEffectiveLoyalty(entity, world)).toBe(q(0.7));
   });
 
   it("returns companion loyalty when higher than base loyalty", () => {
     const world = mkWorld(1, []);
     const registry = createPartyRegistry();
-    world.__partyRegistry = registry;
+    (world.runtimeState ??= {}).partyRegistry = registry;
     createParty(registry, "party1", "Adventurers", 1);
     const graph = createRelationshipGraph();
-    world.__relationshipGraph = graph;
+    (world.runtimeState ??= {}).relationshipGraph = graph;
     const entity = mkHumanoidEntity(2, 1, 0, 0);
     entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.3), opportunism: q(0.5) }; // low base loyalty
     entity.party = "party1";
@@ -412,10 +412,10 @@ describe("computeEffectiveLoyalty", () => {
   it("returns base loyalty when higher than companion loyalty", () => {
     const world = mkWorld(1, []);
     const registry = createPartyRegistry();
-    world.__partyRegistry = registry;
+    (world.runtimeState ??= {}).partyRegistry = registry;
     createParty(registry, "party1", "Adventurers", 1);
     const graph = createRelationshipGraph();
-    world.__relationshipGraph = graph;
+    (world.runtimeState ??= {}).relationshipGraph = graph;
     const entity = mkHumanoidEntity(2, 1, 0, 0);
     entity.personality = { aggression: q(0.5), caution: q(0.5), loyalty: q(0.9), opportunism: q(0.5) }; // high base loyalty
     entity.party = "party1";

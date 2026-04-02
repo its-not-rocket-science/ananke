@@ -54,7 +54,7 @@ function stableReplacer(_key: string, value: unknown): unknown {
  * Compute a deterministic 64-bit hash of the simulation's core state.
  *
  * Covers `tick`, `seed`, and all entity data sorted by `id`.  Optional
- * subsystem fields (`__sensoryEnv`, `__factionRegistry`, etc.) are excluded —
+ * subsystem fields (`runtimeState.sensoryEnv`, `runtimeState.factionRegistry`, etc.) are excluded —
  * they are host concerns and do not affect simulation determinism.
  *
  * Use this as a desync checksum in multiplayer loops:

@@ -80,11 +80,7 @@ export function diffWorldState(prev: WorldState, next: WorldState): WorldStateDi
   const worldKeys: Array<keyof WorldState> = [
     "tick", "seed",
     "activeFieldEffects",
-    "__sensoryEnv",
-    "__factionRegistry",
-    "__partyRegistry",
-    "__relationshipGraph",
-    "__nutritionAccum",
+    "runtimeState",
   ];
 
   for (const key of worldKeys) {

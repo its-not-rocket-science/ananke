@@ -54,7 +54,13 @@ interface WorldState {
   seed: number;
   entities: Entity[];
   activeFieldEffects?: FieldEffect[];
-  __sensoryEnv?: any; // internal side‑channel
+  runtimeState?: {
+    sensoryEnv?: SensoryEnvironment;
+    factionRegistry?: FactionRegistry;
+    partyRegistry?: PartyRegistry;
+    relationshipGraph?: RelationshipGraph;
+    nutritionAccum?: number;
+  }; // explicit host/runtime subsystem state
 }
 
 interface Entity {
@@ -189,7 +195,7 @@ function deserializeEntity(e: any): Entity {
 
 After deserialisation, the simulation can be continued from the saved state and will produce **identical results** to the original run, provided the same seed and commands are used. This is a direct consequence of the kernel’s pure‑deterministic design.
 
-> **Gotcha:** The `__sensoryEnv` and `activeFieldEffects` side‑channel fields are not required for basic combat simulation; they can be omitted during serialisation if not needed.
+> **Gotcha:** `runtimeState` and `activeFieldEffects` are optional host/runtime subsystem state; they can be omitted during serialisation for basic combat if unused.
 
 ---
 

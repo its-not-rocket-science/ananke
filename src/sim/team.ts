@@ -19,7 +19,7 @@ export function areEntitiesHostile(a: Entity, b: Entity, world: WorldState): boo
   const isInjured = a.injury.shock > 0 || a.injury.fluidLoss > 0;
 
   // party check
-  const partyRegistry = world.__partyRegistry;
+  const partyRegistry = world.runtimeState?.partyRegistry;
   if (partyRegistry) {
     // if parties are friendly, not hostile (unless injured)
     if (!isInjured && areEntitiesFriendlyByParty(partyRegistry, a, b)) return false;
@@ -28,7 +28,7 @@ export function areEntitiesHostile(a: Entity, b: Entity, world: WorldState): boo
   }
 
   // faction check
-  const factionRegistry = world.__factionRegistry;
+  const factionRegistry = world.runtimeState?.factionRegistry;
   if (factionRegistry && a.faction && b.faction) {
     const standing = effectiveStanding(factionRegistry, a, b);
     if (!isInjured && standing >= STANDING_FRIENDLY_THRESHOLD) return false;

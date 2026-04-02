@@ -26,6 +26,17 @@ export default [
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "MemberExpression[property.name=/^__(sensoryEnv|factionRegistry|partyRegistry|relationshipGraph|nutritionAccum)$/]",
+          message: "Use world.runtimeState with typed fields instead of hidden __* runtime side channels.",
+        },
+        {
+          selector: "Property[key.name=/^__(sensoryEnv|factionRegistry|partyRegistry|relationshipGraph|nutritionAccum)$/]",
+          message: "Use world.runtimeState with typed fields instead of hidden __* runtime side channels.",
+        },
+      ],
     },
   },
 

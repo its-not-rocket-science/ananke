@@ -175,7 +175,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
   // Phase 4: attach sensory environment to world for use in resolveAttack / resolveShoot.
   // WorldState is a plain data object; we use a type-cast side-channel to avoid widening the type.
-  (world).__sensoryEnv = ctx.sensoryEnv ?? DEFAULT_SENSORY_ENV;
+  const runtimeState = world.runtimeState ?? (world.runtimeState = {});
+  runtimeState.sensoryEnv = ctx.sensoryEnv ?? DEFAULT_SENSORY_ENV;
 
   // Phase 51: apply weather modifiers to traction, sensory environment, and thermal ambient.
   if (ctx.weather) {
@@ -185,8 +186,8 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     ctx.tractionCoeff = Math.trunc((ctx.tractionCoeff * wMod.tractionMul_Q) / SCALE.Q) as Q;
 
     // Sensory: fog and precipitation reduce vision range.
-    const baseEnv = world.__sensoryEnv!;
-    world.__sensoryEnv = {
+    const baseEnv = runtimeState.sensoryEnv!;
+    runtimeState.sensoryEnv = {
       ...baseEnv,
       lightMul: Math.trunc((baseEnv.lightMul * wMod.lightMul_Q) / SCALE.Q) as Q,
       smokeMul: Math.trunc((baseEnv.smokeMul * wMod.precipVisionMul_Q) / SCALE.Q) as Q,
@@ -613,10 +614,10 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   // Phase 30: nutrition at 1 Hz (world-level accumulator avoids per-tick BMR calls)
   // Phase 32C: toxicology ticked at same 1 Hz cadence
   {
-    if ((world).__nutritionAccum === undefined) (world).__nutritionAccum = 0;
-    (world).__nutritionAccum = ((world).__nutritionAccum as number) + (1 / TICK_HZ);
-    if ((world).__nutritionAccum >= 1.0) {
-      (world).__nutritionAccum -= 1.0;
+    if (runtimeState.nutritionAccum === undefined) runtimeState.nutritionAccum = 0;
+    runtimeState.nutritionAccum += (1 / TICK_HZ);
+    if (runtimeState.nutritionAccum >= 1.0) {
+      runtimeState.nutritionAccum -= 1.0;
       for (const e of world.entities) {
         if (!e.injury.dead) {
           const nVMag = Math.sqrt(e.velocity_mps.x ** 2 + e.velocity_mps.y ** 2);
@@ -905,7 +906,7 @@ function resolveAttack(world: WorldState,
   // Phase 4: surprise mechanics — if the defender cannot perceive the attacker,
   // their defensive response is reduced or eliminated.
   if (tuning.realism !== "arcade") {
-    const sEnv = (world).__sensoryEnv as SensoryEnvironment | undefined ?? DEFAULT_SENSORY_ENV;
+    const sEnv = world.runtimeState?.sensoryEnv ?? DEFAULT_SENSORY_ENV;
     // Phase 11C: sensor boost from loadout
     const tgtSensor = findSensor(target.loadout);
     const tgtSensorBoost = tgtSensor

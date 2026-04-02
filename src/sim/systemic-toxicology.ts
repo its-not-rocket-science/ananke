@@ -5,7 +5,7 @@
 //   - Cumulative exposure: heavy metals, radiation — irreversible dose accumulation
 //   - Withdrawal states after sustained addictive toxin use
 //
-// Follows the 1 Hz accumulator pattern; called from the kernel's __nutritionAccum gate.
+// Follows the 1 Hz accumulator pattern; called from the kernel's runtimeState.nutritionAccum gate.
 //
 // Data flow:
 //   ingestToxin(entity, id) → entity.activeIngestedToxins[]
