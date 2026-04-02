@@ -30,6 +30,7 @@
 
 import type { WorldState } from "./sim/world.js";
 import type { Entity }     from "./sim/entity.js";
+import { normalizeWorldInPlace } from "./sim/normalization.js";
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -159,7 +160,7 @@ export function applyDiff(base: WorldState, diff: WorldStateDiff): WorldState {
   // Restore canonical sort order (ascending id)
   entities.sort((a, b) => a.id - b.id);
 
-  return { ...next, entities };
+  return normalizeWorldInPlace({ ...next, entities });
 }
 
 // ── isEmpty / stats ───────────────────────────────────────────────────────────

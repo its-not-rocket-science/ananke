@@ -6,6 +6,7 @@
  */
 
 import type { WorldState } from "./sim/world.js";
+import { normalizeWorldInPlace } from "./sim/normalization.js";
 import { createWorld } from "./world-factory.js";
 import type { EntitySpec } from "./world-factory.js";
 
@@ -148,5 +149,5 @@ export function loadScenario(json: unknown): WorldState {
     return spec;
   });
 
-  return createWorld(scenario.seed, specs);
+  return normalizeWorldInPlace(createWorld(scenario.seed, specs));
 }

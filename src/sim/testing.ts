@@ -11,6 +11,7 @@ import { q, SCALE } from "../units.js";
 import type { Entity } from "./entity.js";
 import type { WorldState } from "./world.js";
 import { ImpactEvent } from "./events.js";
+import { normalizeWorldInPlace } from "./normalization.js";
 /**
  * Minimal humanoid entity for tests (deterministic attributes via generateIndividual()).
  * Positions are fixed-point metres (SCALE.m).
@@ -52,7 +53,7 @@ export function mkWorld(seed: number, arg: Entity | Entity[] | Loadout): WorldSt
       throw new Error(`mkWorld: duplicate entity IDs detected: ${[...new Set(dupes)].join(", ")}`);
     }
 
-    return { tick: 0, seed, entities };
+    return normalizeWorldInPlace({ tick: 0, seed, entities });
   }
 
   // Back-compat duel form: mkWorld(seed, loadoutA)
@@ -61,7 +62,7 @@ export function mkWorld(seed: number, arg: Entity | Entity[] | Loadout): WorldSt
   const aAttrs = generateIndividual(1, HUMAN_BASE);
   const bAttrs = generateIndividual(2, HUMAN_BASE);
 
-  return {
+  return normalizeWorldInPlace({
     tick: 0,
     seed,
     entities: [
@@ -96,7 +97,7 @@ export function mkWorld(seed: number, arg: Entity | Entity[] | Loadout): WorldSt
         grapple: { holdingTargetId: 0, heldByIds: [], gripQ: q(0), position: "standing" as const },
       },
     ],
-  };
+  });
 }
 
 export function mkImpactEvent(attackerId: number,

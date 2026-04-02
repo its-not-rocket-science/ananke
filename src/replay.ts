@@ -10,6 +10,7 @@ import type { WorldState } from "./sim/world.js";
 import type { CommandMap, Command } from "./sim/commands.js";
 import type { KernelContext } from "./sim/context.js";
 import { stepWorld } from "./sim/kernel.js";
+import { normalizeWorldInPlace } from "./sim/normalization.js";
 
 /** One recorded tick: the tick number and the commands dispatched that tick. */
 export interface ReplayFrame {
@@ -70,7 +71,7 @@ export class ReplayRecorder {
  * Pass `ctx.trace` to collect all replayed events for analysis.
  */
 export function replayTo(replay: Replay, targetTick: number, ctx: KernelContext): WorldState {
-  const world: WorldState = structuredClone(replay.initialState);
+  const world: WorldState = normalizeWorldInPlace(structuredClone(replay.initialState));
   for (const frame of replay.frames) {
     if (frame.tick > targetTick) break;
     const cmds: CommandMap = new Map(
@@ -113,5 +114,7 @@ export function serializeReplay(replay: Replay): string {
 
 /** Deserialize a JSON string produced by `serializeReplay` back into a Replay. */
 export function deserializeReplay(json: string): Replay {
-  return JSON.parse(json, mapAwareReviver) as Replay;
+  const replay = JSON.parse(json, mapAwareReviver) as Replay;
+  normalizeWorldInPlace(replay.initialState);
+  return replay;
 }

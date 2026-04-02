@@ -42,6 +42,7 @@ import { defaultIntent } from "./sim/intent.js";
 import { defaultAction } from "./sim/action.js";
 import { defaultCondition } from "./sim/condition.js";
 import { defaultInjury } from "./sim/injury.js";
+import { normalizeWorldInPlace } from "./sim/normalization.js";
 import type { Entity } from "./sim/entity.js";
 import type { WorldState } from "./sim/world.js";
 
@@ -222,5 +223,5 @@ export function createWorld(seed: number, entities: EntitySpec[]): WorldState {
     );
   }
 
-  return { tick: 0, seed, entities: built };
+  return normalizeWorldInPlace({ tick: 0, seed, entities: built });
 }
