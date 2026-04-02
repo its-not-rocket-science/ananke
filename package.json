@@ -267,7 +267,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "ci": "npm run build && npm run test:coverage && npm run check-boundaries && npm run check-stable-api",
+    "ci": "npm run build && npm run test:coverage && npm run check-boundaries && npm run check-stable-api && npm run check-maturity-evidence",
     "release-check": "node dist/tools/release-check.js",
     "release-check:quick": "node dist/tools/release-check.js --quick",
     "check-boundaries": "node dist/tools/check-package-boundaries.js",
@@ -326,7 +326,8 @@
     "test:wasm": "npm run build:wasm:all && vitest run test/as/",
     "check-stable-api": "node dist/tools/check-stable-api.js",
     "check-boundaries:report": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md",
-    "example:first-hour": "node dist/examples/guided-first-hour.js"
+    "example:first-hour": "node dist/examples/guided-first-hour.js",
+    "check-maturity-evidence": "node tools/check-maturity-evidence.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

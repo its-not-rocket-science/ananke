@@ -2,43 +2,62 @@
 
 _Date: 2026-04-02_
 
-This dashboard is an evidence-first check of completion posture. It is **not** a proof of universal correctness; it links roadmap-level claims to concrete repository signals and calls out weak areas.
+This dashboard converts maturity claims into explicit, machine-checkable evidence requirements.
 
-## 1) Repo signals scanned
+## Evidence mapping table (claim → proof)
 
-| Signal | Current repo evidence | Confidence note |
-|---|---|---|
-| Automated test surface | `195` test files matched by `test/**/*.test.{ts,js}` | Broad coverage signal only; does not guarantee depth per subsystem. |
-| Conformance fixtures | `7` fixtures in `conformance/*.json` | Shows deterministic checkpoint infrastructure exists. |
-| Validation dashboard | `docs/dashboard/validation-dashboard.json` reports `45/45` pass | Strong for included scenarios; limited to dashboard scenario set. |
-| Subsystem maturity map | `docs/maturity-matrix.md` and `docs/maturity-matrix.json` | Good traceability; maturity labels are still maintainers' judgment. |
-| Release gate report | `docs/release-dashboard.md` exists, but currently at version `0.1.62` | Useful process signal, but stale vs package version line. |
-| Boundary discipline | `docs/package-boundary-report.md` reports hard violations and warnings | Indicates active transparency and known architecture debt. |
+| Maturity dimension | Claim | Measurable criteria | Objective proof currently present |
+|---|---|---|---|
+| Deterministic combat kernel | M4 Validated | `>=3` deterministic/kernel tests, phase-order invariant test, `>=2` conformance fixtures, validation dashboard artifact. | `test/kernel_determinism.test.ts`, `test/kernel_phase_order.test.ts`, `test/determinism.test.ts`, `test/invariants.test.ts`, `conformance/lockstep-sequence.json`, `conformance/phase-order.json`, `docs/dashboard/validation-dashboard.json`. |
+| Injury, medical, survivability | M4 Validated | `>=3` survivability tests, at least one published medical validation artifact. | `test/medical.test.ts`, `test/injury_totals.test.ts`, `test/wound-aging.test.ts`, `docs/validation-first-aid-saves-lives-2026-03-18T19-34-10.md`. |
+| Environment, hazards, climate | M4 Validated | `>=3` hazard/climate/thermoregulation tests, at least one thermoregulation validation artifact. | `test/hazards.test.ts`, `test/climate.test.ts`, `test/thermoregulation.test.ts`, `docs/validation-thermoregulation-core-stability-2026-03-18T00-07-52.md`. |
+| AI, perception, cognition | M3 Hardened | `>=3` subsystem tests plus behaviour invariant coverage (no M4 validation artifact required yet). | `test/ai_system.test.ts`, `test/perception_phase4.test.ts`, `test/cognition.test.ts`, `test/behavior-trees.test.ts`. |
+| Campaign/world simulation | M3 Hardened | `>=3` campaign/world tests and at least one deterministic snapshot/fixture artifact. | `test/campaign.test.ts`, `test/world-generation.test.ts`, `test/scenarios.test.ts`, `test/snapshots/kernel_behaviour_snapshot.json`. |
+| Bridge/replay/integration surfaces | M4 Validated | `>=3` bridge/replay/netcode tests, `>=2` replay/bridge conformance fixtures, bridge contract artifact. | `test/bridge/integration.test.ts`, `test/replay.test.ts`, `test/netcode.test.ts`, `conformance/replay-parity.json`, `conformance/bridge-snapshot.json`, `docs/bridge-contract.md`. |
+| Tooling/benchmarks/release checks | M4 Validated | Performance regression test, release artifact(s), and coverage signal in CI. | `test/performance.test.ts`, `docs/release-report.json`, `docs/release-dashboard.md`, `npm run test:coverage`. |
 
-## 2) Roadmap claim linkage
+## Gap list (claims that still exceed evidence quality)
 
-| Roadmap claim | Evidence links in repo | Assessment |
-|---|---|---|
-| Roadmap uses maturity language rather than binary completion labels | `ROADMAP.md` status-language section + maturity matrix docs | **Supported** for wording/traceability. |
-| "All roadmap items delivered" (historical completion statement) | Broad test surface + validation dashboard + maturity matrix | **Partially supported**: strong internal evidence, but still mostly self-reported and internally generated. |
-| Validation dashboard is deliverable and runnable | `docs/dashboard/index.html`, `docs/dashboard/validation-dashboard.json`, and npm script `run:validation-dashboard` | **Supported** for artifact existence and current pass status. |
-| Release discipline includes dashboard/reporting | `docs/release-dashboard.md` + roadmap PM references to release dashboard | **Supported with caveat**: report exists, but latest checked-in report appears stale in version metadata. |
+1. **Coverage thresholds are still implicit**: we require `npm run test:coverage` to run, but no per-dimension minimum line/branch threshold is encoded yet.
+2. **Freshness/SLA is not yet enforced**: evidence files exist, but we do not fail when validation/release artifacts become stale by date.
+3. **Invariant depth is uneven**: only selected dimensions explicitly require invariant tests; some M4 areas still rely mostly on scenario tests.
+4. **External reproducibility remains partial**: most evidence is in-repo and deterministic, but independent external rerun attestations are not required by CI.
 
-## 3) Weak areas / credibility risks
+## Missing tests to add next
 
-1. **Package-boundary debt remains non-trivial**: the current boundary report records hard violations and suspicious imports, so modular architecture claims should be treated as in-progress hardening rather than closed. (`docs/package-boundary-report.md`)
-2. **Release dashboard freshness gap**: checked-in release dashboard version metadata lags current package line, reducing confidence that the artifact reflects the most recent release state. (`docs/release-dashboard.md`)
-3. **Validation scope risk**: `45/45` dashboard pass is strong for selected scenarios, but does not automatically cover all emergent behaviours or integration paths outside dashboard scenarios. (`docs/dashboard/validation-dashboard.json`)
-4. **Maturity labels are evidence-linked but still interpretive**: maturity matrix improves rigor, yet final label assignment remains a human judgment process. (`docs/maturity-matrix.md`)
+1. Add explicit **AI decision determinism** test (fixed seed + identical action traces) to strengthen M3 AI evidence.
+2. Add **campaign long-horizon regression** test (multi-turn economy/governance drift bound) for hardened campaign stability.
+3. Add **bridge backward-compatibility matrix** test (current engine vs prior snapshot schema) to detect integration drift.
+4. Add **release-check smoke fixture test** that validates release metadata/version freshness constraints.
 
-## 4) Practical interpretation
+## Missing validation artifacts to add next
 
-- The repository has **substantial completion evidence** across tests, conformance fixtures, validation artifacts, and maturity mapping.
-- The evidence is strongest for deterministic/runtime correctness and published validation scenarios.
-- Credibility is currently limited most by architecture-boundary debt and artifact freshness discipline.
+1. Add a dedicated **AI/perception validation report** (`docs/validation-ai-perception-*.md`) so that AI can graduate from M3 to M4 on objective grounds.
+2. Add a **campaign/world validation artifact** (scenario corpus or benchmark report) for M4 candidacy.
+3. Add a machine-readable **artifact freshness ledger** (e.g., `docs/validation-artifact-index.json`) with `generatedAt`, producer tool, and scenario set hash.
 
-## 5) Recommended next checks (high leverage)
+## CI enforcement proposal
 
-- Regenerate and recommit release dashboard on each version bump.
-- Burn down top package-boundary violations (starting with high-fanout `core -> combat/campaign/content` imports).
-- Add a compact claim-to-test index for the highest-risk roadmap claims to reduce interpretation overhead.
+### Implemented gate
+
+- New source of truth: `docs/maturity-evidence-map.json`.
+- New CI script: `tools/check-maturity-evidence.mjs`.
+- CI integration: `npm run check-maturity-evidence` is now part of `npm run ci`.
+
+### Gate semantics (fail conditions)
+
+The CI job fails when any of the following is true:
+
+1. A subsystem in `docs/maturity-matrix.json` has no entry in `docs/maturity-evidence-map.json`.
+2. A mapped subsystem claims a different maturity than `docs/maturity-matrix.json`.
+3. Any required evidence path is missing (tests, fixtures, invariants, validation artifacts).
+4. Any subsystem has zero `requiredTests` entries.
+5. Any M3 subsystem has fewer than 3 required tests.
+6. Any M4 subsystem lacks validation artifacts/conformance fixtures.
+7. Any subsystem has fewer than 2 total evidence signals.
+
+### Recommended next CI extensions (not yet implemented)
+
+1. Enforce per-dimension coverage floors (`lines/branches/functions`) instead of run-only coverage.
+2. Enforce artifact freshness windows (e.g., fail if release/validation artifact older than N days).
+3. Enforce fixture ↔ test linkage (each required fixture must be referenced by at least one test).

@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "updatedAt": "2026-04-02",
+  "dimensions": [
+    {
+      "subsystem": "Deterministic combat kernel",
+      "claim": "M4 Validated",
+      "expectedMaturity": "M4",
+      "criteria": {
+        "requiredTests": [
+          "test/kernel_determinism.test.ts",
+          "test/kernel_phase_order.test.ts",
+          "test/determinism.test.ts"
+        ],
+        "requiredFixtures": [
+          "conformance/lockstep-sequence.json",
+          "conformance/phase-order.json"
+        ],
+        "requiredInvariants": [
+          "test/invariants.test.ts"
+        ],
+        "requiredValidationArtifacts": [
+          "docs/dashboard/validation-dashboard.json"
+        ]
+      }
+    },
+    {
+      "subsystem": "Injury, medical, and survivability",
+      "claim": "M4 Validated",
+      "expectedMaturity": "M4",
+      "criteria": {
+        "requiredTests": [
+          "test/medical.test.ts",
+          "test/injury_totals.test.ts",
+          "test/wound-aging.test.ts"
+        ],
+        "requiredValidationArtifacts": [
+          "docs/validation-first-aid-saves-lives-2026-03-18T19-34-10.md"
+        ]
+      }
+    },
+    {
+      "subsystem": "Environment, hazards, and climate",
+      "claim": "M4 Validated",
+      "expectedMaturity": "M4",
+      "criteria": {
+        "requiredTests": [
+          "test/hazards.test.ts",
+          "test/climate.test.ts",
+          "test/thermoregulation.test.ts"
+        ],
+        "requiredValidationArtifacts": [
+          "docs/validation-thermoregulation-core-stability-2026-03-18T00-07-52.md"
+        ]
+      }
+    },
+    {
+      "subsystem": "AI, perception, and cognition",
+      "claim": "M3 Hardened",
+      "expectedMaturity": "M3",
+      "criteria": {
+        "requiredTests": [
+          "test/ai_system.test.ts",
+          "test/perception_phase4.test.ts",
+          "test/cognition.test.ts"
+        ],
+        "requiredInvariants": [
+          "test/behavior-trees.test.ts"
+        ]
+      }
+    },
+    {
+      "subsystem": "Campaign/world simulation",
+      "claim": "M3 Hardened",
+      "expectedMaturity": "M3",
+      "criteria": {
+        "requiredTests": [
+          "test/campaign.test.ts",
+          "test/world-generation.test.ts",
+          "test/scenarios.test.ts"
+        ],
+        "requiredFixtures": [
+          "test/snapshots/kernel_behaviour_snapshot.json"
+        ]
+      }
+    },
+    {
+      "subsystem": "Bridge, replay, and integration surfaces",
+      "claim": "M4 Validated",
+      "expectedMaturity": "M4",
+      "criteria": {
+        "requiredTests": [
+          "test/bridge/integration.test.ts",
+          "test/replay.test.ts",
+          "test/netcode.test.ts"
+        ],
+        "requiredFixtures": [
+          "conformance/replay-parity.json",
+          "conformance/bridge-snapshot.json"
+        ],
+        "requiredValidationArtifacts": [
+          "docs/bridge-contract.md"
+        ]
+      }
+    },
+    {
+      "subsystem": "Tooling, benchmarks, and release checks",
+      "claim": "M4 Validated",
+      "expectedMaturity": "M4",
+      "criteria": {
+        "requiredTests": [
+          "test/performance.test.ts"
+        ],
+        "requiredValidationArtifacts": [
+          "docs/release-report.json",
+          "docs/release-dashboard.md"
+        ],
+        "requiredCoverageSignals": [
+          "test:coverage"
+        ]
+      }
+    }
+  ]
+}
