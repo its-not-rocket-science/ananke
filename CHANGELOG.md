@@ -6,6 +6,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.7] — 2026-04-02
+
+### Changed
+
+- Added `docs/completion-evidence-dashboard.md`: an evidence-first completion dashboard that scans repository signals, links roadmap-level claims to concrete artifacts, and explicitly flags weak credibility areas without binary over-claiming.
+- Bumped package version to `0.2.7` and synced lockfile.
+
+---
+
 ## [0.2.6] — 2026-04-02
 
 ### Changed
