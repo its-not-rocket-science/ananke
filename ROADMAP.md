@@ -2,6 +2,21 @@
 
 ---
 
+## Status language update (2026-04-02)
+
+This roadmap now uses maturity levels instead of binary **M4 VALIDATED** claims:
+
+- **M0 Concept**
+- **M1 Prototype**
+- **M2 Integrated**
+- **M3 Hardened**
+- **M4 Validated**
+
+Historical "M4 VALIDATED" wording is preserved in git history and reflected as **M4 Validated** where equivalent.
+For subsystem-level evidence, see `docs/maturity-matrix.md` and `docs/maturity-matrix.json`.
+
+---
+
 ## Phase 0 — Foundational Vision
 
 Ananke is not a combat simulator.
@@ -452,9 +467,9 @@ in `decideCommandsForEntity`.
 
 ---
 
-## Phase 6 — Large-Scale Simulation *(COMPLETE)*
+## Phase 6 — Large-Scale Simulation *(M4 VALIDATED)*
 
-### Formation system expansion *(COMPLETE)*
+### Formation system expansion *(M4 VALIDATED)*
 
 `src/sim/formation-unit.ts` — pure computation module (no Entity/WorldState imports); 49 tests.
 
@@ -658,7 +673,7 @@ Archetype baseline, not modifying the simulation kernel.
 
 ---
 
-## Phase 8B — Exoskeleton Biology *(COMPLETE)*
+## Phase 8B — Exoskeleton Biology *(M4 VALIDATED)*
 
 **Depends on Phase 8 (body plan system) and Phase 9 (injury model). Implement after Phase 9.**
 
@@ -838,7 +853,7 @@ All segments `structureType: "exoskeleton"`. `regeneratesViaMolting: true` on le
 
 ---
 
-## Phase 8C — Exoskeleton-Specific Armour *(COMPLETE)*
+## Phase 8C — Exoskeleton-Specific Armour *(M4 VALIDATED)*
 
 **Depends on Phase 8B.**
 
@@ -922,7 +937,7 @@ tourniquet, surgery progression, infection onset, and fatal fluid loss over 266 
 
 ---
 
-## Phase 10 — Environmental Hazards ✓ COMPLETE
+## Phase 10 — Environmental Hazards ✓ M4 VALIDATED
 
 **Implemented**: fall damage, explosion physics (blast + fragmentation), pharmacokinetics,
 ambient temperature stress. All 488 tests passing; all coverage thresholds met.
@@ -973,7 +988,7 @@ Each tick (via `stepSubstances`): `concentration += absorptionRate × pendingDos
   `BLAST_THROW_MUL = SCALE.mps × SCALE.kg / 10 = 1_000_000`. Zero direction at epicentre is
   handled gracefully (no throw if `distSq = 0`).
 
-### Phase 10C implementations *(COMPLETE)*
+### Phase 10C implementations *(M4 VALIDATED)*
 
 #### Substance interactions *(implemented)*
 
@@ -1053,7 +1068,7 @@ The condition decrement belongs in the same cooldown loop as `suppressedTicks` i
 
 ---
 
-## Phase 11 — Technology Spectrum *(COMPLETE)*
+## Phase 11 — Technology Spectrum *(M4 VALIDATED)*
 
 ### What was implemented
 
@@ -1102,7 +1117,7 @@ exo force in `resolveAttack` after `energy_J`; exo powerDrain_W added to demand 
 
 ---
 
-## Phase 11C — Tech Spectrum Extensions *(COMPLETE)*
+## Phase 11C — Tech Spectrum Extensions *(M4 VALIDATED)*
 
 ### Implemented
 
@@ -1175,7 +1190,7 @@ import { TechEra, ERA_DEFAULTS } from "../src/sim/tech.js";
 
 ---
 
-## Phase 12 — Capability Sources and Effects *(COMPLETE)*
+## Phase 12 — Capability Sources and Effects *(M4 VALIDATED)*
 
 **Design principle — Clarke's Third Law**: "Any sufficiently advanced technology is
 indistinguishable from magic." The engine implements this literally: magic and advanced
@@ -1564,7 +1579,7 @@ The column that varies is only `tags`. The engine path is identical.
 
 ---
 
-## Phase 12B — Capability Extensions *(COMPLETE)*
+## Phase 12B — Capability Extensions *(M4 VALIDATED)*
 
 *Requires Phase 12 core.*
 
@@ -1595,7 +1610,7 @@ The column that varies is only `tags`. The engine path is identical.
 
 ---
 
-## Phase 13 — Replay, Research and Tooling *(COMPLETE)*
+## Phase 13 — Replay, Research and Tooling *(M4 VALIDATED)*
 
 ### Replay system *(complete)*
 
@@ -1650,7 +1665,7 @@ projectile hit attribution, survival rate, mean TTI, live simulation integration
 
 ---
 
-## Phase 14 — 3D Model Integration *(COMPLETE)*
+## Phase 14 — 3D Model Integration *(M4 VALIDATED)*
 
 Enable Ananke as a physics realism layer for 3D characters.
 Engine outputs physical state per tick; interpretation as visual motion is the host's responsibility.
@@ -1680,7 +1695,7 @@ Engine outputs physical state per tick; interpretation as visual motion is the h
 
 ---
 
-## Phase 15 — Named Archetypes and Scenario Validation *(COMPLETE)*
+## Phase 15 — Named Archetypes and Scenario Validation *(M4 VALIDATED)*
 
 **Goal**: ground Ananke's SI unit system in published sports-science and biomechanics data;
 provide ready-made entity factories for common real-world archetypes; validate statistically
@@ -1759,7 +1774,7 @@ mkScubaDiver(id, teamId, x, y): Entity
 
 ---
 
-## Phase 16 — Character Description Layer *(COMPLETE)*
+## Phase 16 — Character Description Layer *(M4 VALIDATED)*
 
 **Goal**: translate Ananke's SI fixed-point attributes into human-readable summaries grounded
 in real-world benchmarks, providing the narrative layer that RPG and game host applications need.
@@ -1847,7 +1862,7 @@ value above the 2000 N tier-3 ceiling. Ordering tests continue to use generated 
 
 ---
 
-## Phase 17 — Historical Weapons Database + Combat Extensions *(COMPLETE)*
+## Phase 17 — Historical Weapons Database + Combat Extensions *(M4 VALIDATED)*
 
 **Goal**: provide a comprehensive, physically calibrated weapons catalogue spanning six historical
 eras and close two combat gaps the new weapons expose: flexible/chain weapons bypassing shields,
@@ -1943,7 +1958,7 @@ New optional fields on `RangedWeapon` and `roundsInMag` on `ActionState`. Behavi
 
 ---
 
-## Phase 18 — Combat Narrative Layer *(COMPLETE)*
+## Phase 18 — Combat Narrative Layer *(M4 VALIDATED)*
 
 **Goal**: a pure translation module (`src/narrative.ts`) that converts `TraceEvent` streams
 into human-readable combat text. The companion to Phase 16's character description layer.
@@ -2049,7 +2064,7 @@ Second-person support: set `nameMap.get(id) === "you"` for bare-infinitive conju
 
 ---
 
-## Phase 19 — Downtime & Recovery Simulation *(COMPLETE)*
+## Phase 19 — Downtime & Recovery Simulation *(M4 VALIDATED)*
 
 **Goal**: a time-scale bridge between the 20 Hz combat kernel and the days-to-weeks timescale
 of wound recovery. `stepDowntime` re-uses the existing injury, clotting, substance, and
@@ -2210,7 +2225,7 @@ the arena calibration suite.
 
 ---
 
-## Phase 20 — Arena Simulation Framework *(COMPLETE)*
+## Phase 20 — Arena Simulation Framework *(M4 VALIDATED)*
 
 **Goal**: a declarative scenario system that makes it easy to define a fight (or a fight +
 recovery), run it statistically over many seeds, validate outcomes against expectations, and
@@ -2501,7 +2516,7 @@ brings them together for calibration, testing, and scenario design.
 
 ---
 
-## Phase 21 — Character Progression *(COMPLETE)*
+## Phase 21 — Character Progression *(M4 VALIDATED)*
 
 ### Overview
 
@@ -2677,7 +2692,7 @@ export function deriveSequelae(
 
 ---
 
-## Phase 22 — Campaign & World State *(COMPLETE)*
+## Phase 22 — Campaign & World State *(M4 VALIDATED)*
 
 ### Overview
 
@@ -2800,7 +2815,7 @@ export function deserialiseCampaign(json: string): CampaignState;
 
 ---
 
-## Phase 23 — Dialogue & Negotiation Layer *(COMPLETE)*
+## Phase 23 — Dialogue & Negotiation Layer *(M4 VALIDATED)*
 
 ### Overview
 
@@ -2904,7 +2919,7 @@ export function narrateDialogue(
 
 ---
 
-## Phase 24 — Faction & Reputation System *(COMPLETE)*
+## Phase 24 — Faction & Reputation System *(M4 VALIDATED)*
 
 ### Overview
 
@@ -3021,7 +3036,7 @@ export function extractWitnessEvents(
 
 ---
 
-## Phase 25 — Loot & Economy *(COMPLETE)*
+## Phase 25 — Loot & Economy *(M4 VALIDATED)*
 
 ### Overview
 
@@ -3124,7 +3139,7 @@ export function totalInventoryValue(inventory: ItemInventory): number;
 
 ---
 
-## Phase 26 — Momentum Transfer & Knockback *(COMPLETE)*
+## Phase 26 — Momentum Transfer & Knockback *(M4 VALIDATED)*
 
 ### Overview
 
@@ -3256,7 +3271,7 @@ then calls `applyKnockback` to update entity velocity.
 
 ---
 
-## Phase 27 — Hydrostatic Shock & Cavitation *(COMPLETE)*
+## Phase 27 — Hydrostatic Shock & Cavitation *(M4 VALIDATED)*
 
 ### Overview
 
@@ -3370,7 +3385,7 @@ Kernel integration: inside `resolveShoot`, after computing `internalInc`, multip
 
 ---
 
-## Phase 28 — Cone AoE: Breath Weapons, Fire, Gas *(COMPLETE)*
+## Phase 28 — Cone AoE: Breath Weapons, Fire, Gas *(M4 VALIDATED)*
 
 ### Overview
 
@@ -3509,7 +3524,7 @@ by the kernel against the `"thermal"` energyType tag.
 
 ---
 
-## Phase 29 — Environmental Stress: Staged Hypothermia & Hyperthermia *(COMPLETE)*
+## Phase 29 — Environmental Stress: Staged Hypothermia & Hyperthermia *(M4 VALIDATED)*
 
 ### Overview
 
@@ -3637,7 +3652,7 @@ minutes-scale process). `stepDowntime` calls at 1 Hz for recovery simulation.
 
 ---
 
-## Phase 30 — Nutrition & Starvation ✓ COMPLETE
+## Phase 30 — Nutrition & Starvation ✓ M4 VALIDATED
 
 ### Overview
 
@@ -3834,7 +3849,7 @@ Phases 1–30 are complete. Ananke now handles the following real-world physics 
 
 ---
 
-## Phase 31 — Species & Race System *(COMPLETE)*
+## Phase 31 — Species & Race System *(M4 VALIDATED)*
 
 ### Overview
 
@@ -3867,7 +3882,7 @@ nutrition for non-human physiology.
 
 ---
 
-## Phase 32 — Deferred Systems: Gap Resolution *(COMPLETE)*
+## Phase 32 — Deferred Systems: Gap Resolution *(M4 VALIDATED)*
 
 ### Overview
 
@@ -3987,7 +4002,7 @@ All items from the **Phase 5 enhancements (deferred)** section, implemented toge
 
 ---
 
-## Phase 33 — Multiple Intelligences: Attribute Architecture *(COMPLETE)*
+## Phase 33 — Multiple Intelligences: Attribute Architecture *(M4 VALIDATED)*
 
 ### Overview
 
@@ -4106,7 +4121,7 @@ and `learningRate` become aliases for `logicalMathematical` and
 
 ---
 
-## Phase 34 — Bodily-Kinesthetic & Spatial Intelligence (Non-Combat Applications) *(COMPLETE)*
+## Phase 34 — Bodily-Kinesthetic & Spatial Intelligence (Non-Combat Applications) *(M4 VALIDATED)*
 
 ### Overview
 
@@ -4179,7 +4194,7 @@ export function resolveNavigation(entity: Entity, spec: NavigationSpec, seed: nu
 
 ---
 
-## Phase 35 — Naturalist Intelligence & Animal Handling *(COMPLETE)*
+## Phase 35 — Naturalist Intelligence & Animal Handling *(M4 VALIDATED)*
 
 ### Overview
 
@@ -4249,7 +4264,7 @@ Full taming (trust_Q ≥ q(0.90)) makes the animal available as an ally entity i
 
 ---
 
-## Phase 36 — Inter-Species Intelligence & Xenodiplomacy *(COMPLETE)*
+## Phase 36 — Inter-Species Intelligence & Xenodiplomacy *(M4 VALIDATED)*
 
 ### Overview
 
@@ -4310,7 +4325,7 @@ has studied dragon physiology.
 
 ---
 
-## Phase 37 — Linguistic & Interpersonal Intelligence *(COMPLETE)*
+## Phase 37 — Linguistic & Interpersonal Intelligence *(M4 VALIDATED)*
 
 ### Overview
 
@@ -4398,7 +4413,7 @@ P_detect = clamp(
 
 ---
 
-## Phase 38 — Logical-Mathematical & Intrapersonal Intelligence *(COMPLETE)*
+## Phase 38 — Logical-Mathematical & Intrapersonal Intelligence *(M4 VALIDATED)*
 
 ### Overview
 
@@ -4462,7 +4477,7 @@ Troll building complex siege engine → 48% chance of latent flaw. Heechee → 0
 
 ---
 
-## Phase 39 — Musical Intelligence & Acoustic Systems *(COMPLETE)*
+## Phase 39 — Musical Intelligence & Acoustic Systems *(M4 VALIDATED)*
 
 ### Overview
 
@@ -4542,7 +4557,7 @@ export function resolvePerformance(
 
 ---
 
-## Phase 40 — Non-Combat Competence Framework (COMPLETE)
+## Phase 40 — Non-Combat Competence Framework (M4 VALIDATED)
 
 ### Overview
 
@@ -4693,7 +4708,7 @@ See Phase 55 entry in the phase log above.
 
 ---
 
-## Phase 41 — Quest & Mission System (COMPLETE)
+## Phase 41 — Quest & Mission System (M4 VALIDATED)
 
 ### Overview
 
@@ -4770,7 +4785,7 @@ export interface QuestUpdateEvent {
 
 ---
 
-## Phase 42 — Personal Relationship Graph (COMPLETE)
+## Phase 42 — Personal Relationship Graph (M4 VALIDATED)
 
 ### Overview
 
@@ -4827,7 +4842,7 @@ export type SocialBond =
 
 ---
 
-## Phase 43 — Deep Inventory & Encumbrance (COMPLETE)
+## Phase 43 — Deep Inventory & Encumbrance (M4 VALIDATED)
 
 ### Overview
 
@@ -4901,7 +4916,7 @@ Broken items: Weapons deal reduced damage (qMul(quality, durability_Q)). Broken 
 
 ---
 
-## Phase 44 — Settlement & Base Building (COMPLETE)
+## Phase 44 — Settlement & Base Building (M4 VALIDATED)
 
 ### Overview
 
@@ -4972,7 +4987,7 @@ export interface ConstructionProject {
 
 ---
 
-## Phase 45 — Emergent Story Generation (COMPLETE)
+## Phase 45 — Emergent Story Generation (M4 VALIDATED)
 
 ### Overview
 
@@ -5049,38 +5064,38 @@ export interface Chronicle {
 
 Potential future phases building on the RPG foundation:
 
-**Phase 46: Procedural World Generation (COMPLETE)** — Generate settlements, factions, and starting relationships procedurally from seed.
+**Phase 46: Procedural World Generation (M4 VALIDATED)** — Generate settlements, factions, and starting relationships procedurally from seed.
 
-**Phase 47: Advanced AI Personalities *(COMPLETE)*** — `PersonalityTraits` (aggression/caution/loyalty/opportunism) modulate `decide.ts` on top of `AIPolicy` presets; 5 named presets; `derivePersonalityFromCognition()`; 27 tests.
+**Phase 47: Advanced AI Personalities *(M4 VALIDATED)*** — `PersonalityTraits` (aggression/caution/loyalty/opportunism) modulate `decide.ts` on top of `AIPolicy` presets; 5 named presets; `derivePersonalityFromCognition()`; 27 tests.
 
-**Phase 48: Multi-Party Dynamics (COMPLETE)** — Managing multiple adventuring parties, companion loyalty, inter-party conflict.
+**Phase 48: Multi-Party Dynamics (M4 VALIDATED)** — Managing multiple adventuring parties, companion loyalty, inter-party conflict.
 
-**Phase 49: Legacy & Inheritance (COMPLETE)** — Character death not ending campaign; heir inherits equipment, relationships partially transfer.
+**Phase 49: Legacy & Inheritance (M4 VALIDATED)** — Character death not ending campaign; heir inherits equipment, relationships partially transfer.
 
-**Phase 50: Mythology & Legend (COMPLETE)** — Stories from chronicles become "legends" that NPCs reference, affecting their expectations and behaviour.
+**Phase 50: Mythology & Legend (M4 VALIDATED)** — Stories from chronicles become "legends" that NPCs reference, affecting their expectations and behaviour.
 
-**Phase 51: Weather & Atmospheric Environment (COMPLETE)** — `WeatherState` (wind, precipitation, fog) flows through `KernelContext.weather`; `deriveWeatherModifiers` produces traction, vision, and thermal deltas applied each tick; `computeWindAimError` adds crosswind drift to ranged aim; `adjustConeRange` modulates breath weapons; 32 tests.
+**Phase 51: Weather & Atmospheric Environment (M4 VALIDATED)** — `WeatherState` (wind, precipitation, fog) flows through `KernelContext.weather`; `deriveWeatherModifiers` produces traction, vision, and thermal deltas applied each tick; `computeWindAimError` adds crosswind drift to ranged aim; `adjustConeRange` modulates breath weapons; 32 tests.
 
-**Phase 52: Extended Sensory Systems (COMPLETE)** — `ExtendedSenses` on `Entity` enables echolocation (darkness-independent, noise-degraded), electroreception (bioelectric short-range, fails on dead targets), and olfaction (wind/precipitation-aware scent detection). `computeDaylightMul(hourOfDay)` → Q for time-of-day lighting. `canDetectExtended` wraps Phase 4 `canDetect` with all modalities. 30 tests.
-**Phase 53: Systemic Toxicology — Ingested / Cumulative (COMPLETE)** — Extends Phase 32C (injection venom) and Phase 10 (pharmacokinetics) with ingested toxins (alcohol, sedative alkaloid, plant poison, heavy lead, radiation dose). Metabolic half-life decay, long-onset symptom timing (minutes vs. seconds for injected venom), motor/cognitive impairment modelled as fatigue and consciousness drain, signed fear modifiers (disinhibition vs. panic), cumulative irreversible dose accumulation for heavy metals and radiation (`CumulativeExposureRecord`), withdrawal states after sustained addictive use. `deriveCumulativeToxicity(entity)` sums chronic exposure for AI/combat queries. Stepped at 1 Hz alongside nutrition and Phase 32C venom. 33 tests.
+**Phase 52: Extended Sensory Systems (M4 VALIDATED)** — `ExtendedSenses` on `Entity` enables echolocation (darkness-independent, noise-degraded), electroreception (bioelectric short-range, fails on dead targets), and olfaction (wind/precipitation-aware scent detection). `computeDaylightMul(hourOfDay)` → Q for time-of-day lighting. `canDetectExtended` wraps Phase 4 `canDetect` with all modalities. 30 tests.
+**Phase 53: Systemic Toxicology — Ingested / Cumulative (M4 VALIDATED)** — Extends Phase 32C (injection venom) and Phase 10 (pharmacokinetics) with ingested toxins (alcohol, sedative alkaloid, plant poison, heavy lead, radiation dose). Metabolic half-life decay, long-onset symptom timing (minutes vs. seconds for injected venom), motor/cognitive impairment modelled as fatigue and consciousness drain, signed fear modifiers (disinhibition vs. panic), cumulative irreversible dose accumulation for heavy metals and radiation (`CumulativeExposureRecord`), withdrawal states after sustained addictive use. `deriveCumulativeToxicity(entity)` sums chronic exposure for AI/combat queries. Stepped at 1 Hz alongside nutrition and Phase 32C venom. 33 tests.
 
-**Phase 54: Wound Aging & Long-Term Sequelae (COMPLETE)** — Extends Phase 21 (injury) and Phase 9 (infection) with time-based wound progression for downtime / campaign simulation. `stepWoundAging(entity, elapsedSeconds)` → `WoundAgingResult`: uninfected regions heal surface (1%/day) and internal (0.5%/day) damage clamped to permanentDamage floor; infected regions worsen at 1.5%/day with sepsis detection at q(0.85) internalDamage; fractured regions with permanentDamage ≥ q(0.30) inject phantom-pain shock; sustained permanent damage above threshold drains chronic fatigue. `recordTraumaEvent` / `deriveFearThresholdMul` implement PTSD-like trauma with natural decay. `deriveSepsisRisk` aggregates infection severity for the medical AI. `TraumaState` added to `Entity`. 35 tests; 100% coverage.
+**Phase 54: Wound Aging & Long-Term Sequelae (M4 VALIDATED)** — Extends Phase 21 (injury) and Phase 9 (infection) with time-based wound progression for downtime / campaign simulation. `stepWoundAging(entity, elapsedSeconds)` → `WoundAgingResult`: uninfected regions heal surface (1%/day) and internal (0.5%/day) damage clamped to permanentDamage floor; infected regions worsen at 1.5%/day with sepsis detection at q(0.85) internalDamage; fractured regions with permanentDamage ≥ q(0.30) inject phantom-pain shock; sustained permanent damage above threshold drains chronic fatigue. `recordTraumaEvent` / `deriveFearThresholdMul` implement PTSD-like trauma with natural decay. `deriveSepsisRisk` aggregates infection severity for the medical AI. `TraumaState` added to `Entity`. 35 tests; 100% coverage.
 
-**Phase 55: Collective Non-Combat Activities (COMPLETE)** — Three group-scale systems for downtime and logistics. **Siege Engineering**: `createCollectiveProject` / `contributeToCollectiveProject` maintain a shared `progress_Q` pool accumulating Σ(competence × hoursWorked / requiredWorkHours); `deriveEngineeringCompetence` averages `logicalMathematical + bodilyKinesthetic`; `isProjectComplete` detects crossing the threshold; `completedAtTick` stamped once. **Ritual & Ceremony**: `stepRitual(participants, elapsedSeconds)` → `{ moraleBonus_Q, fearReduction_Q }` using average `(intrapersonal + musical) / 2` per participant with sqrt(N) collective scaling (diminishing returns) and linear time ramp over `RITUAL_DURATION_s = 3600 s`; moraleBonus capped at `RITUAL_MAX_BONUS = q(0.30)`; fear reduction = 60% of morale bonus. **Trade Caravan Logistics**: `planCaravanRoute(waypoints, participants, inventory)` → `CaravanPlan`; route quality from best `logicalMathematical`; negotiation bonus from best `interpersonal`; speed factor ∈ [q(0.80), q(1.00)] shortens travel time; `supplySufficiency_Q` from ration count vs. travel-day demand. 35 tests; 100% statement/function/line coverage.
+**Phase 55: Collective Non-Combat Activities (M4 VALIDATED)** — Three group-scale systems for downtime and logistics. **Siege Engineering**: `createCollectiveProject` / `contributeToCollectiveProject` maintain a shared `progress_Q` pool accumulating Σ(competence × hoursWorked / requiredWorkHours); `deriveEngineeringCompetence` averages `logicalMathematical + bodilyKinesthetic`; `isProjectComplete` detects crossing the threshold; `completedAtTick` stamped once. **Ritual & Ceremony**: `stepRitual(participants, elapsedSeconds)` → `{ moraleBonus_Q, fearReduction_Q }` using average `(intrapersonal + musical) / 2` per participant with sqrt(N) collective scaling (diminishing returns) and linear time ramp over `RITUAL_DURATION_s = 3600 s`; moraleBonus capped at `RITUAL_MAX_BONUS = q(0.30)`; fear reduction = 60% of morale bonus. **Trade Caravan Logistics**: `planCaravanRoute(waypoints, participants, inventory)` → `CaravanPlan`; route quality from best `logicalMathematical`; negotiation bonus from best `interpersonal`; speed factor ∈ [q(0.80), q(1.00)] shortens travel time; `supplySufficiency_Q` from ration count vs. travel-day demand. 35 tests; 100% statement/function/line coverage.
 
-**Phase 56: Disease & Epidemic Simulation (COMPLETE)** — Entity-to-entity disease transmission layered above Phase 9 wound infection. `src/sim/disease.ts`: 6 disease profiles (common_fever, wound_fever, plague_pneumonic, dysentery, marsh_fever, wasting_sickness) with `transmissionRoute` ("airborne" | "contact" | "vector" | "waterborne"), daily fatigue drain, incubation/symptomatic phase timers, mortality roll via `eventSeed`, and graduated immunity (permanent / temporary / none). `exposeToDisease(entity, id)` adds incubating state if not immune; `stepDiseaseForEntity(entity, delta_s, worldSeed, tick)` → `EntityDiseaseResult` advances phase timers, drains fatigue, rolls mortality, grants immunity; `computeTransmissionRisk(carrier, target, dist_Sm, profile)` → Q — airborne: linear falloff to zero at `airborneRange_Sm`; contact/vector/waterborne: flat within `CONTACT_RANGE_Sm = 2 m`; returns q(0) for incubating carriers and immune/already-infected targets; `spreadDisease(entityMap, pairs, worldSeed, tick)` — deterministic batch transmission from host-supplied spatial pairs. `DiseaseState` and `ImmunityRecord` added to `Entity`. 37 tests; 100% statement/function/line coverage.
+**Phase 56: Disease & Epidemic Simulation (M4 VALIDATED)** — Entity-to-entity disease transmission layered above Phase 9 wound infection. `src/sim/disease.ts`: 6 disease profiles (common_fever, wound_fever, plague_pneumonic, dysentery, marsh_fever, wasting_sickness) with `transmissionRoute` ("airborne" | "contact" | "vector" | "waterborne"), daily fatigue drain, incubation/symptomatic phase timers, mortality roll via `eventSeed`, and graduated immunity (permanent / temporary / none). `exposeToDisease(entity, id)` adds incubating state if not immune; `stepDiseaseForEntity(entity, delta_s, worldSeed, tick)` → `EntityDiseaseResult` advances phase timers, drains fatigue, rolls mortality, grants immunity; `computeTransmissionRisk(carrier, target, dist_Sm, profile)` → Q — airborne: linear falloff to zero at `airborneRange_Sm`; contact/vector/waterborne: flat within `CONTACT_RANGE_Sm = 2 m`; returns q(0) for incubating carriers and immune/already-infected targets; `spreadDisease(entityMap, pairs, worldSeed, tick)` — deterministic batch transmission from host-supplied spatial pairs. `DiseaseState` and `ImmunityRecord` added to `Entity`. 37 tests; 100% statement/function/line coverage.
 
-**Phase 57: Aging & Lifespan (COMPLETE)** — Species-agnostic attribute curves parameterized by normalized age fraction (`ageFrac = ageYears / lifespanYears`). `src/sim/aging.ts`: seven piecewise-linear Q multiplier dimensions — `muscularStrength` (peakForce/peakPower/continuousPower; peaks ageFrac ≈ 0.28), `reactionTime` (multiplier >q(1.0) = slower; best at ageFrac ≈ 0.28), `motorControl` (controlQuality/stability/fineControl), `stature` (stable adult, slight elder compression), `cognitionFluid` (logical/spatial/kinesthetic/musical; peaks ageFrac ≈ 0.28), `cognitionCrystal` (linguistic/interpersonal/intrapersonal; peaks ageFrac ≈ 0.55 — wisdom outlasts speed), `distressTolerance` (peaks middle age). `computeAgeFrac(ageYears, lifespanYears?)` → Q; `getAgePhase` → 7-stage string ("infant" through "ancient"); `deriveAgeMultipliers` → `AgeMultipliers`; `applyAgingToAttributes(base, ageYears, ...)` → new `IndividualAttributes` (immutable); `stepAging(entity, elapsedSeconds)` → increments `entity.age.ageSeconds`; `entityAgeYears` convenience helper. `AgeState` added to `Entity`. 38 tests; 100% coverage.
+**Phase 57: Aging & Lifespan (M4 VALIDATED)** — Species-agnostic attribute curves parameterized by normalized age fraction (`ageFrac = ageYears / lifespanYears`). `src/sim/aging.ts`: seven piecewise-linear Q multiplier dimensions — `muscularStrength` (peakForce/peakPower/continuousPower; peaks ageFrac ≈ 0.28), `reactionTime` (multiplier >q(1.0) = slower; best at ageFrac ≈ 0.28), `motorControl` (controlQuality/stability/fineControl), `stature` (stable adult, slight elder compression), `cognitionFluid` (logical/spatial/kinesthetic/musical; peaks ageFrac ≈ 0.28), `cognitionCrystal` (linguistic/interpersonal/intrapersonal; peaks ageFrac ≈ 0.55 — wisdom outlasts speed), `distressTolerance` (peaks middle age). `computeAgeFrac(ageYears, lifespanYears?)` → Q; `getAgePhase` → 7-stage string ("infant" through "ancient"); `deriveAgeMultipliers` → `AgeMultipliers`; `applyAgingToAttributes(base, ageYears, ...)` → new `IndividualAttributes` (immutable); `stepAging(entity, elapsedSeconds)` → increments `entity.age.ageSeconds`; `entityAgeYears` convenience helper. `AgeState` added to `Entity`. 38 tests; 100% coverage.
 
-**Phase 58: Sleep & Circadian Rhythm (COMPLETE)** — Two-factor sleep model: `awakeSeconds` (continuous wake duration) and `sleepDebt_s` (cumulative shortfall, ½ s/s accrual beyond 16 h, capped at 72 h). `src/sim/sleep.ts`: `circadianAlertness(hourOfDay)` → Q piecewise-linear curve peaking at 17:00 (q(1.0)), nadir at 03:00 (q(0.30)); `deriveSleepDeprivationMuls(state)` → `SleepDeprivationMuls` — four multipliers linear from baseline to max at 72 h (`cognitionFluid` −45%, `reactionTime` +45% slower, `stability` −25%, `distressTolerance` −35%); impairment threshold at 17 h; effective driver = max(awakeSeconds, sleepDebt_s) so prior-night debt persists even after short sleep. `stepSleep(entity, elapsedSeconds, isSleeping)` — awake: accumulates both counters; sleep onset resets `awakeSeconds`, enters "light" phase, repays debt 1:1; NREM/REM cycle: light (45 min) → deep (25 min) → rem (20 min) → light. `applySleepToAttributes(base, state)` → new `IndividualAttributes` (immutable; same pattern as Phase 57). `entitySleepDebt_h(entity)` convenience helper. `SleepState` added to `Entity`. 39 tests; 96% statement coverage.
+**Phase 58: Sleep & Circadian Rhythm (M4 VALIDATED)** — Two-factor sleep model: `awakeSeconds` (continuous wake duration) and `sleepDebt_s` (cumulative shortfall, ½ s/s accrual beyond 16 h, capped at 72 h). `src/sim/sleep.ts`: `circadianAlertness(hourOfDay)` → Q piecewise-linear curve peaking at 17:00 (q(1.0)), nadir at 03:00 (q(0.30)); `deriveSleepDeprivationMuls(state)` → `SleepDeprivationMuls` — four multipliers linear from baseline to max at 72 h (`cognitionFluid` −45%, `reactionTime` +45% slower, `stability` −25%, `distressTolerance` −35%); impairment threshold at 17 h; effective driver = max(awakeSeconds, sleepDebt_s) so prior-night debt persists even after short sleep. `stepSleep(entity, elapsedSeconds, isSleeping)` — awake: accumulates both counters; sleep onset resets `awakeSeconds`, enters "light" phase, repays debt 1:1; NREM/REM cycle: light (45 min) → deep (25 min) → rem (20 min) → light. `applySleepToAttributes(base, state)` → new `IndividualAttributes` (immutable; same pattern as Phase 57). `entitySleepDebt_h(entity)` convenience helper. `SleepState` added to `Entity`. 39 tests; 96% statement coverage.
 
-**Phase 59: Mounted Combat & Riding (COMPLETE)** — Physics-grounded rider/mount pair model. `src/sim/mount.ts`: 5 mount profiles (pony, horse, warhorse, camel, war_elephant) with mass, rider seat height, gait speeds (walk/trot/gallop/charge), stability, and fear threshold. `computeChargeBonus(profile, speed_Smps)` → `ChargeBonus { bonusEnergy_J, strikeMass_kg }` — `bonusEnergy_J = ½ × (mass × CHARGE_MASS_FRAC/8%) × v²` (horse at gallop ≈ 3500 J; elephant charge ≈ 7700 J). `deriveRiderHeightBonus(profile)` → Q — aim/accuracy bonus from elevation (q(0.12)/m, capped at q(0.30)). `deriveRiderStabilityBonus(profile)` → Q — 15% of mount stability transfers to rider. `computeFallEnergy_J(profile, riderMass_Skg)` → J — fall injury energy = m×g×h. `deriveMountFearPressure(mountShockQ, fearThreshold_Q)` → Q — 40% of excess shock propagates to rider when mount panics. `checkMountStep(riderShockQ, mountShockQ, mountDead, profile, riderMass_Skg)` → `MountStepResult { shouldDismount, dismountCause, fallEnergy_J, fearPressure_Q }` — evaluates rider_shock/mount_dead/mount_bolt triggers in priority order. `entityIsMounted` / `entityIsMount` convenience helpers. `MountState { mountId, riderId, gait }` added to `Entity`. 42 tests; clean build.
+**Phase 59: Mounted Combat & Riding (M4 VALIDATED)** — Physics-grounded rider/mount pair model. `src/sim/mount.ts`: 5 mount profiles (pony, horse, warhorse, camel, war_elephant) with mass, rider seat height, gait speeds (walk/trot/gallop/charge), stability, and fear threshold. `computeChargeBonus(profile, speed_Smps)` → `ChargeBonus { bonusEnergy_J, strikeMass_kg }` — `bonusEnergy_J = ½ × (mass × CHARGE_MASS_FRAC/8%) × v²` (horse at gallop ≈ 3500 J; elephant charge ≈ 7700 J). `deriveRiderHeightBonus(profile)` → Q — aim/accuracy bonus from elevation (q(0.12)/m, capped at q(0.30)). `deriveRiderStabilityBonus(profile)` → Q — 15% of mount stability transfers to rider. `computeFallEnergy_J(profile, riderMass_Skg)` → J — fall injury energy = m×g×h. `deriveMountFearPressure(mountShockQ, fearThreshold_Q)` → Q — 40% of excess shock propagates to rider when mount panics. `checkMountStep(riderShockQ, mountShockQ, mountDead, profile, riderMass_Skg)` → `MountStepResult { shouldDismount, dismountCause, fallEnergy_J, fearPressure_Q }` — evaluates rider_shock/mount_dead/mount_bolt triggers in priority order. `entityIsMounted` / `entityIsMount` convenience helpers. `MountState { mountId, riderId, gait }` added to `Entity`. 42 tests; clean build.
 
-**Phase 60: Environmental Hazard Zones (COMPLETE)** — Persistent 2-D circular hazard zones that inflict per-second effects on entities within their radius.
+**Phase 60: Environmental Hazard Zones (M4 VALIDATED)** — Persistent 2-D circular hazard zones that inflict per-second effects on entities within their radius.
 
-**Phase 70: Stratified Political Simulation ✅ COMPLETE** — Vassal/noble layer between individual and polity; seven loyalty types (ideological, transactional, terrified, honor_bound, opportunistic, kin_bound, ideological_rival); command-chain filtering reduces effective military strength by disloyal vassals; deterministic succession crises. See detailed spec below.
+**Phase 70: Stratified Political Simulation ✅ M4 VALIDATED** — Vassal/noble layer between individual and polity; seven loyalty types (ideological, transactional, terrified, honor_bound, opportunistic, kin_bound, ideological_rival); command-chain filtering reduces effective military strength by disloyal vassals; deterministic succession crises. See detailed spec below.
 
-**Phase 71: Cultural Generation & Evolution Framework ✅ COMPLETE** — Bottom-up culture derivation from five environmental forces (Environment, Power, Exchange, Legacy, Belief); CYCLES audit extracts values, contradictions, and recurring practices; `stepCultureYear` drifts culture via tech diffusion, military outcomes, and myth formation; `describeCulture` outputs human-readable summaries for writers and game designers. See detailed spec below.
+**Phase 71: Cultural Generation & Evolution Framework ✅ M4 VALIDATED** — Bottom-up culture derivation from five environmental forces (Environment, Power, Exchange, Legacy, Belief); CYCLES audit extracts values, contradictions, and recurring practices; `stepCultureYear` drifts culture via tech diffusion, military outcomes, and myth formation; `describeCulture` outputs human-readable summaries for writers and game designers. See detailed spec below.
 
 ---
 
@@ -5092,7 +5107,7 @@ in the order below before committing to full-scale production.
 
 ---
 
-### 1 · Confirm Fit for Purpose: Use-Case Validation **COMPLETE** (see Integration Milestone 1)
+### 1 · Confirm Fit for Purpose: Use-Case Validation **M4 VALIDATED** (see Integration Milestone 1)
 
 **Rigorously validate that a physics-first, deterministic simulation is the right
 foundation for the intended player experience.**
@@ -5117,7 +5132,7 @@ physics fidelity meaningfully enhances the target experience.
 
 ---
 
-### 2 · Deep Integration & Technical Onboarding **COMPLETE** (see Integration Milestone 2)
+### 2 · Deep Integration & Technical Onboarding **M4 VALIDATED** (see Integration Milestone 2)
 
 **Acknowledge the learning curve and commit to a structured evaluation spike.**
 
@@ -5141,7 +5156,7 @@ diagrams, type glossaries, and gotchas discovered during the spike.
 
 ---
 
-### 3 · Asset Pipeline & Renderer Bridge **COMPLETE** (see Integration Milestone 3)
+### 3 · Asset Pipeline & Renderer Bridge **M4 VALIDATED** (see Integration Milestone 3)
 
 **Delivered:** Bridge module (`src/bridge/`) with double‑buffered interpolation, segment‑to‑bone mapping, deterministic tick‑rate conversion, and full API documentation (`docs/bridge‑api.md`). Working example in `tools/bridge‑demo.ts`.
 
@@ -5170,7 +5185,7 @@ body plan connected to a reference renderer).
 
 ---
 
-### 4 · Systematic Validation Against Real-World Data **COMPLETE** (2026-03-14)
+### 4 · Systematic Validation Against Real-World Data **M4 VALIDATED** (2026-03-14)
 
 **Delivered:** Validation framework (`tools/validation.ts`) with CLI, statistical comparison, calibration scenario validation, and report generation. All six `CALIBRATION_*` scenarios pass expectations. Reports saved to `docs/validation-*.md`. Constants update mechanism ready for low‑level physical constants. The framework now includes direct validation against three external real‑world datasets (AddBiomechanics walking metabolic cost, BVR Air Combat projectile drag, sports‑science jump height) and a comprehensive inventory of validated and potential future datasets (`docs/external-dataset-validation-inventory.md`).
 
@@ -5215,7 +5230,7 @@ deviations exceed ±20 % of the empirical mean.
 
 ---
 
-### 5 · Community & Ecosystem Development **COMPLETE** (2026-03-18)
+### 5 · Community & Ecosystem Development **M4 VALIDATED** (2026-03-18)
 
 **Acknowledge the project's current single-maintainer nature and build a support and
 contribution strategy.**
@@ -5270,7 +5285,7 @@ turning a technically excellent engine into a platform people can confidently bu
 
 ---
 
-### 6 · Reference Renderer Implementation *(COMPLETE)*
+### 6 · Reference Renderer Implementation *(M4 VALIDATED)*
 
 **Status (March 2026):** M1–M4 complete in both companion repos.
 
@@ -5291,7 +5306,7 @@ WebSocket bridge (`ws://localhost:3001/bridge`, `npm run run:renderer-bridge`).
 
 ---
 
-### 7 · Emergent Behaviour Validation Suite *(COMPLETE)*
+### 7 · Emergent Behaviour Validation Suite *(M4 VALIDATED)*
 
 **Deliverable:** `tools/emergent-validation.ts` — four historical combat scenarios validated
 across 100 seeds each, comparing outcome distributions against historical reference ranges.
@@ -5308,7 +5323,7 @@ ranges. Run with `npm run run:emergent-validation`.
 
 ---
 
-### 8 · Visual Editors for Non-Developers *(COMPLETE)*
+### 8 · Visual Editors for Non-Developers *(M4 VALIDATED)*
 
 **Deliverable:** Two standalone HTML/JS tools in `docs/editors/` (no build step, no TypeScript
 required). Serve locally or via GitHub Pages.
@@ -5332,7 +5347,7 @@ Landing page: `docs/editors/index.html` links both tools and the validation dash
 
 ---
 
-### 9 · Performance & Scalability Benchmarks *(COMPLETE)*
+### 9 · Performance & Scalability Benchmarks *(M4 VALIDATED)*
 
 **Deliverable:** `tools/benchmark.ts` + `docs/performance.md`. Run with `npm run run:benchmark`.
 
@@ -5354,7 +5369,7 @@ Landing page: `docs/editors/index.html` links both tools and the validation dash
 
 ---
 
-### 10 · Public Validation Dashboard *(COMPLETE)*
+### 10 · Public Validation Dashboard *(M4 VALIDATED)*
 
 **Deliverable:** `docs/dashboard/index.html` + `docs/dashboard/validation-dashboard.json`
 + `.github/workflows/validation-dashboard.yml`.
@@ -5373,7 +5388,7 @@ on every push to `master` and commits the updated JSON automatically (no manual 
 
 ---
 
-### 11 · Formalised Dataset Contribution Pipeline *(COMPLETE)*
+### 11 · Formalised Dataset Contribution Pipeline *(M4 VALIDATED)*
 
 **Deliverable:** `docs/dataset-contribution.md` + `datasets/example-sprint-speed.csv` +
 working `DirectValidationScenario` for human peak anaerobic power wired into `tools/validation.ts`.
@@ -5392,7 +5407,7 @@ The guide covers:
 
 ---
 
-### 12 · Stable Host API + Versioning Policy *(COMPLETE)*
+### 12 · Stable Host API + Versioning Policy *(M4 VALIDATED)*
 
 **Deliverable:** `STABLE_API.md` (three-tier API reference) + `CHANGELOG.md` (initial v0.1.0 entry).
 
@@ -5409,7 +5424,7 @@ The guide covers:
 
 ---
 
-### 13 · Three Canonical Adoption Quickstarts *(COMPLETE)*
+### 13 · Three Canonical Adoption Quickstarts *(M4 VALIDATED)*
 
 **Deliverable:** Three files in `examples/`, each ≤ 60 lines, self-contained, and runnable
 after `npm run build`.
@@ -5438,7 +5453,7 @@ Cognition 90% of rested  |  Stability 97% of rested
 
 ---
 
-### 14 · Golden Replay and Save Compatibility Fixtures *(COMPLETE)*
+### 14 · Golden Replay and Save Compatibility Fixtures *(M4 VALIDATED)*
 
 **Deliverable:** Two committed fixture files + 16 Vitest tests in `test/golden-fixtures.test.ts`.
 
@@ -5461,7 +5476,7 @@ Tests verify:
 
 ---
 
-### 15 · Published Benchmark Methodology + CI Regression Budget *(COMPLETE)*
+### 15 · Published Benchmark Methodology + CI Regression Budget *(M4 VALIDATED)*
 
 **Deliverable:** `tools/benchmark-check.ts` + `benchmarks/baseline.json` +
 `.github/workflows/nightly.yml`.
@@ -5491,7 +5506,7 @@ PR added 8 ms of overhead on formation combat."  Use 10% locally, 50% in CI.
 
 ---
 
-### 16 · Governance & Contribution Model *(COMPLETE)*
+### 16 · Governance & Contribution Model *(M4 VALIDATED)*
 
 **Deliverable:** Four documents + four GitHub issue templates.
 
@@ -5521,7 +5536,7 @@ infrastructure items above.  Each builds directly on existing Ananke infrastruct
 
 ---
 
-### Phase 61 — Polity & World-State System (Layer 6) *(COMPLETE)*
+### Phase 61 — Polity & World-State System (Layer 6) *(M4 VALIDATED)*
 
 **Concept:** Introduce a `Polity` entity (city, nation, empire) as a first-class simulation
 object operating at a lower tick rate than individual combat (1 per simulated day rather than
@@ -5567,7 +5582,7 @@ The host decides how many individual ticks to run between each polity tick.
 
 ---
 
-### Phase 62 — Narrative Bias Parameter for `generateIndividual` *(COMPLETE)*
+### Phase 62 — Narrative Bias Parameter for `generateIndividual` *(M4 VALIDATED)*
 
 **Concept:** Add an optional `NarrativeBias` parameter to `generateIndividual` that skews
 the RNG sampling toward a requested profile while preserving physical plausibility.  A designer
@@ -5602,7 +5617,7 @@ A heavily biased character is extreme but not physically impossible.
 
 ---
 
-### Phase 63 — Narrative Stress Test ("Plot Armour Analyser") *(COMPLETE)*
+### Phase 63 — Narrative Stress Test ("Plot Armour Analyser") *(M4 VALIDATED)*
 
 **Concept:** Given a narrative scene described as a sequence of expected outcomes (e.g., "the
 hero defeats the guard and escapes"), run the simulation thousands of times with perturbed
@@ -5667,7 +5682,7 @@ optionally saves a successful replay for visual inspection.
 
 ---
 
-### Phase 64 — "What If?" / Alternate History Engine *(COMPLETE)*
+### Phase 64 — "What If?" / Alternate History Engine *(M4 VALIDATED)*
 
 **Concept:** Polity-scale alternate-history simulator.  A scenario defines a baseline
 `PolityRegistry` and a single divergence point; the engine runs both the baseline and the
@@ -5709,7 +5724,7 @@ population floor — consistent with pre-modern epidemic dynamics.
 
 ---
 
-### Phase 65 — Emotional Contagion at Polity Scale *(COMPLETE)*
+### Phase 65 — Emotional Contagion at Polity Scale *(M4 VALIDATED)*
 
 **Concept:** Fear and hope propagate between polities using the same transmission model as
 Phase 56 disease spread, with `fear_Q` / `hope_Q` as the "pathogen".  Structurally identical
@@ -5733,7 +5748,7 @@ Phase 39 (leaderAmplification_Q), `eventSeed`, `makeRng`.
 
 ---
 
-### Phase 66 — Generative Mythology *(COMPLETE)*
+### Phase 66 — Generative Mythology *(M4 VALIDATED)*
 
 **Concept:** Narrative compression of the Legend/Chronicle log into in-world cultural
 beliefs (`Myth`) held by factions.  Each myth carries a `MythEffect` that modifies faction
@@ -5759,7 +5774,7 @@ Phase 24 (faction believingIds).
 
 ---
 
-### Phase 67 — Technology Diffusion at Polity Scale *(COMPLETE)*
+### Phase 67 — Technology Diffusion at Polity Scale *(M4 VALIDATED)*
 
 **Concept:** Technology eras spread from more-advanced polities to less-advanced neighbours
 via trade routes and cultural contact.  Each day, for every pair where one polity leads the
@@ -5793,7 +5808,7 @@ under median route conditions — ~5.5 years, historically consistent with pre-m
 
 ---
 
-### Phase 68 — Multi-Biome Physics *(COMPLETE)*
+### Phase 68 — Multi-Biome Physics *(M4 VALIDATED)*
 
 **Concept:** Extend the movement and thermoregulation systems to support non-terrestrial
 environments: underwater, low-gravity, and vacuum.  Each biome modifies a distinct set of
@@ -5827,7 +5842,7 @@ pass `BiomeContext`; the kernel uses it in movement and thermoregulation sub-ste
 
 ---
 
-### Phase 69 — Macro-Scale Formation Combat ✅ COMPLETE
+### Phase 69 — Macro-Scale Formation Combat ✅ M4 VALIDATED
 
 **Concept:** A tactical abstraction layer between individual entities (20 Hz simulation)
 and polity-level conflict (1 tick/day).  Squads and companies resolve combat as cohesive
@@ -5883,7 +5898,7 @@ strength aggregation), `generateIndividual` (for archetype draws on decisive eng
 
 ---
 
-### Phase 70 — Stratified Political Simulation ("Vassal Web" Layer) ✅ COMPLETE
+### Phase 70 — Stratified Political Simulation ("Vassal Web" Layer) ✅ M4 VALIDATED
 
 **The gap:** Phase 61 (Polity) models kingdoms and factions as atomic units with population,
 treasury, tech era, and morale.  It has no intermediate relational layer — the vassals, landed
@@ -5974,7 +5989,7 @@ strength aggregation), Phase 69 (formation combat for effective-strength pass-th
 
 ---
 
-### Phase 71 — Cultural Generation & Evolution Framework ✅ COMPLETE
+### Phase 71 — Cultural Generation & Evolution Framework ✅ M4 VALIDATED
 
 **The gap:** Ananke generates physically plausible individuals (Phases 0–8, archetype system)
 and can model political and economic polities (Phase 61), but it has no system for the
@@ -6094,7 +6109,7 @@ power force — optional; can stub with `q(0.50)` if Phase 70 not yet implemente
 
 ---
 
-### Phase 72 — Generative Economics *(COMPLETE — 2026-03-26)*
+### Phase 72 — Generative Economics *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Phase 61 (Polity) tracks `treasury_Q`, trade routes, and military strength, but
 the economy is fundamentally static — polities accumulate or spend at fixed rates, with no
@@ -6131,7 +6146,7 @@ to neighbouring polities via Phase 65.
 
 ---
 
-### Phase 73 — Enhanced Epidemiological Models *(COMPLETE — 2026-03-26)*
+### Phase 73 — Enhanced Epidemiological Models *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Phase 56 disease models use a simplified contagion loop — fixed incubation times,
 binary immune states, uniform susceptibility.  This is sufficient for tactical/campaign
@@ -6178,7 +6193,7 @@ here so the architectural decisions made in near-term phases account for them.
 
 ---
 
-### "What If?" / Alternate History Engine *(COMPLETE — Phase 64)*
+### "What If?" / Alternate History Engine *(M4 VALIDATED — Phase 64)*
 
 **Concept:** Combine Phase 61 (Polity system) with the Narrative Stress Test (Phase 63) at
 geopolitical scale.  A user defines a historical or fictional world state and a single
@@ -6209,7 +6224,7 @@ pre-modern epidemic mechanics.
 
 ---
 
-### Emotional Contagion at Polity Scale *(COMPLETE — Phase 65)*
+### Emotional Contagion at Polity Scale *(M4 VALIDATED — Phase 65)*
 
 **Concept:** Extend the morale and fear systems upward from the individual entity to the
 polity.  A military defeat reduces `polity.moraleQ`; a charismatic leader's address (using
@@ -6243,7 +6258,7 @@ a social network the same way a respiratory illness does through a physical one.
 
 ---
 
-### Generative Mythology *(COMPLETE — Phase 66)*
+### Generative Mythology *(M4 VALIDATED — Phase 66)*
 
 **Concept:** As a long-running simulation accumulates significant events — a volcanic eruption
 that kills hundreds, a plague that halves a city's population, a single warrior who defeats
@@ -6278,7 +6293,7 @@ Six myth archetypes with cultural effect profiles (`MythEffect`):
 
 ---
 
-### Artificial Life Validation ("Blade Runner" Test) *(COMPLETE)*
+### Artificial Life Validation ("Blade Runner" Test) *(M4 VALIDATED)*
 
 **Concept:** Run a city-scale simulation (1 000+ entities, Phase 61 Polity providing the
 economic and social frame) for months of simulated time without intervention.  Then analyse
@@ -6307,7 +6322,7 @@ demonstration of the system's depth.
 
 ---
 
-### Visual Tooling — Species Forge *(COMPLETE)*
+### Visual Tooling — Species Forge *(M4 VALIDATED)*
 
 *Extends ROADMAP item 8 (Visual Editors for Non-Developers)*
 
@@ -6338,7 +6353,7 @@ Four built-in templates loaded from the template dropdown:
 
 ---
 
-### Culture Forge — COMPLETE
+### Culture Forge — M4 VALIDATED
 
 **Delivered:** `docs/editors/culture-forge.html` — standalone HTML/JS editor, same dark-theme
 pattern as Species Forge.
@@ -6357,7 +6372,7 @@ pattern as Species Forge.
 
 ---
 
-### Simulation Zoo / Ananke Archive — COMPLETE
+### Simulation Zoo / Ananke Archive — M4 VALIDATED
 
 **Delivered:** `tools/generate-zoo.ts` + `docs/zoo/index.html` — pre-computed scenario archive with a self-contained browser viewer.
 
@@ -6374,7 +6389,7 @@ pattern as Species Forge.
 
 ---
 
-### Generative Cartography — COMPLETE
+### Generative Cartography — M4 VALIDATED
 
 **Delivered:** `tools/generate-map.ts` + `docs/map/index.html` — self-contained interactive SVG map viewer driven by a 180-day world simulation.
 
@@ -6394,7 +6409,7 @@ pattern as Species Forge.
 
 ---
 
-### Persistent World Server — COMPLETE (reference implementation + battle-bridge integration)
+### Persistent World Server — M4 VALIDATED (reference implementation + battle-bridge integration)
 
 **Delivered:** `tools/world-server.ts` + `docs/world-client/index.html` (polity-only server);
 `tools/persistent-world.ts` + `src/battle-bridge.ts` (battle-bridge integration, 2026-03-25).
@@ -6495,12 +6510,12 @@ unusual artifact — most game physics engines are validation-free.  Outreach op
   simulation benchmark.
 
 Prerequisite: the emergent validation report (`docs/emergent-validation-report.md`) is
-already published as a first-class artifact (PH-8 COMPLETE).  The white paper is the
+already published as a first-class artifact (PH-8 M4 VALIDATED).  The white paper is the
 natural next step.
 
 ---
 
-### Phase 101 — Currency & Monetary Policy *(COMPLETE — 2026-03-27)*
+### Phase 101 — Currency & Monetary Policy *(M4 VALIDATED — 2026-03-27)*
 
 **The gap:** Every polity tracks `treasury_cu` but there is no model for what that currency
 is worth.  Historically, rulers routinely debased coinage to finance wars and monuments —
@@ -6535,7 +6550,7 @@ purity per day.  Debased treasury is nominally larger but real purchasing power 
 
 ---
 
-### Phase 100 — Wonders & Monuments *(COMPLETE — 2026-03-27)*
+### Phase 100 — Wonders & Monuments *(M4 VALIDATED — 2026-03-27)*
 
 **The gap:** Great civilisations are defined by their monuments — the pyramids, colosseums,
 grand libraries, walls, harbours, aqueducts, and temples that outlast dynasties and signal
@@ -6574,7 +6589,7 @@ Phase-93 defence, Phase-96 earthquake damage.
 
 ---
 
-### Phase 99 — Mercenaries & Hired Forces *(COMPLETE — 2026-03-27)*
+### Phase 99 — Mercenaries & Hired Forces *(M4 VALIDATED — 2026-03-27)*
 
 **The gap:** Phase-93 (Military Campaign) models polity armies raised from population levies,
 but professional mercenaries were historically central to pre-modern warfare — faster to
@@ -6612,7 +6627,7 @@ determinism.
 
 ---
 
-### Phase 98 — Plague Containment & Quarantine *(COMPLETE — 2026-03-26)*
+### Phase 98 — Plague Containment & Quarantine *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Phase-88 (Epidemic) models disease spread and death pressure, and Phase-96
 (Climate) can trigger plague seasons, but polities have no active response mechanism.
@@ -6650,7 +6665,7 @@ A fresh voluntary advisory can eventually outperform a decayed total lockdown.
 
 ---
 
-### Phase 97 — Famine Relief & Rationing *(COMPLETE — 2026-03-26)*
+### Phase 97 — Famine Relief & Rationing *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Phase-87 (Granary) tracks food reserves and emits a binary famine flag to
 Phase-86 (Demography).  But real polity responses to food crises are active, graduated, and
@@ -6687,7 +6702,7 @@ Phase-87 granary consumption, Phase-92 treasury.
 
 ---
 
-### Phase 96 — Climate Events & Natural Disasters *(COMPLETE — 2026-03-26)*
+### Phase 96 — Climate Events & Natural Disasters *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polity simulation handles population, economy, military, and governance but has
 no mechanism for the multi-week climate shocks — droughts, floods, harsh winters, earthquakes,
@@ -6725,7 +6740,7 @@ epidemicGrowthBonus, Phase-89 infrastructureDamage, Phase-90 unrestPressure, Pha
 
 ---
 
-### Phase 95 — Natural Resources & Extraction *(COMPLETE — 2026-03-26)*
+### Phase 95 — Natural Resources & Extraction *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polity income comes from population taxation (Phase 92) and marketplace
 infrastructure (Phase 89), but real economies are heavily resource-driven.  Mines, forests,
@@ -6757,7 +6772,7 @@ Phase-61/89/93 within this module.
 
 ---
 
-### Phase 94 — Laws & Governance Codes *(COMPLETE — 2026-03-26)*
+### Phase 94 — Laws & Governance Codes *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polities vary in their governance structures but there is no mechanism for
 governance type to affect taxation efficiency, military mobilisation caps, research output,
@@ -6788,7 +6803,7 @@ stability hit and cooldown.
 
 ---
 
-### Phase 93 — Military Campaigns & War Resolution *(COMPLETE — 2026-03-26)*
+### Phase 93 — Military Campaigns & War Resolution *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Phase 84 handles siege warfare against fortified positions.  There is no mechanism
 for field army mobilization, campaign marches, or open-battle resolution between polities.
@@ -6820,7 +6835,7 @@ pressure signal during active campaigns.  Siege warfare remains Phase 84's domai
 
 ---
 
-### Phase 92 — Taxation & Treasury Revenue *(COMPLETE — 2026-03-26)*
+### Phase 92 — Taxation & Treasury Revenue *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** The polity `treasury_cu` field is drained by infrastructure investment, research
 investment, siege costs, and rebellion raids — but no passive income mechanism exists beyond
@@ -6849,7 +6864,7 @@ Q value that can be passed directly as an extra factor into Phase-90 `computeUnr
 
 ---
 
-### Phase 91 — Technology Research *(COMPLETE — 2026-03-26)*
+### Phase 91 — Technology Research *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polities have a `techEra` field and `advanceTechEra` exists, but there is no
 passive research accumulation mechanism.  There is no model for how population size and
@@ -6879,7 +6894,7 @@ and calls `deriveMilitaryStrength` — it does not use `advanceTechEra` which al
 
 ---
 
-### Phase 90 — Civil Unrest & Rebellion *(COMPLETE — 2026-03-26)*
+### Phase 90 — Civil Unrest & Rebellion *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Each pressure system (famine, epidemic, heresy, weak feudal bonds) produces
 signals independently.  There is no mechanism that aggregates these signals into a polity-level
@@ -6907,7 +6922,7 @@ full determinism.
 
 ---
 
-### Phase 89 — Infrastructure & Development *(COMPLETE — 2026-03-26)*
+### Phase 89 — Infrastructure & Development *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polities accumulate treasury but have no way to invest it permanently.
 All system bonuses (trade route efficiency, siege defence, granary capacity, health capacity)
@@ -6936,7 +6951,7 @@ host passes into existing Phase-83/84/87/88 calls — no hard dependencies in ei
 
 ---
 
-### Phase 88 — Epidemic Spread at Polity Scale *(COMPLETE — 2026-03-26)*
+### Phase 88 — Epidemic Spread at Polity Scale *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Phase 56 models disease at entity-to-entity level with individual infection states.
 There is no polity-level mechanism for tracking epidemic prevalence across populations,
@@ -6968,7 +6983,7 @@ migration flow).
 
 ---
 
-### Phase 87 — Granary & Food Supply *(COMPLETE — 2026-03-26)*
+### Phase 87 — Granary & Food Supply *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Phase 86 accepts a `foodSupply_Q` parameter that activates famine mechanics,
 but there is no module that actually tracks grain reserves or computes this value.  Polities
@@ -7001,7 +7016,7 @@ scales with demographic change.  The host calls `triggerHarvest` each season, ca
 
 ---
 
-### Phase 86 — Population Dynamics & Demographics *(COMPLETE — 2026-03-26)*
+### Phase 86 — Population Dynamics & Demographics *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polities have a static `population` integer. Phase-81 migration moves people
 between polities, but there is no mechanism for natural population growth, disease or famine
@@ -7033,7 +7048,7 @@ parameter, linking to a future granary system without requiring one.
 
 ---
 
-### Phase 85 — Religion & Faith Systems *(COMPLETE — 2026-03-26)*
+### Phase 85 — Religion & Faith Systems *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polities have politics, economics, espionage, and war, but no mechanism for
 religious identity or faith-driven events. Named faiths, conversion pressure, heresy risk,
@@ -7065,7 +7080,7 @@ incite religious unrest). No Entity fields; no kernel changes.
 
 ---
 
-### Phase 84 — Siege Warfare *(COMPLETE — 2026-03-26)*
+### Phase 84 — Siege Warfare *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Phase 69 resolves open-field battles between formations, but there is no mechanism
 for sieges — prolonged operations against fortified polities where the attacker encircles,
@@ -7096,7 +7111,7 @@ routes) and Phase-78 (winter penalties) can be injected by the host without dire
 
 ---
 
-### Phase 83 — Trade Routes & Inter-Polity Commerce *(COMPLETE — 2026-03-26)*
+### Phase 83 — Trade Routes & Inter-Polity Commerce *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polities have treasuries and Phase-72 generative economics, but no world-scale
 mechanism for wealth to flow between them along physical routes. Phase-80 trade pacts exist
@@ -7124,7 +7139,7 @@ pact multiplies income by `TREATY_TRADE_BONUS_Q`. No Entity fields; no kernel ch
 
 ---
 
-### Phase 82 — Espionage & Intelligence Networks *(COMPLETE — 2026-03-26)*
+### Phase 82 — Espionage & Intelligence Networks *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** All polity-to-polity interaction is open and explicit. There is no mechanism for
 covert operations — infiltrating rivals, stealing intelligence, weakening treaties from the
@@ -7153,7 +7168,7 @@ No Entity fields; no kernel changes.
 
 ---
 
-### Phase 81 — Migration & Displacement *(COMPLETE — 2026-03-26)*
+### Phase 81 — Migration & Displacement *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polity populations are static. Despite famine (Phase 78), plague (Phases 56/73),
 war (Phase 61), and feudal oppression (Phase 79), no people ever move between polities.
@@ -7182,7 +7197,7 @@ pressure produce zero flows; `applyMigrationFlows` never sets population below z
 
 ---
 
-### Phase 80 — Diplomacy & Treaties *(COMPLETE — 2026-03-26)*
+### Phase 80 — Diplomacy & Treaties *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** Polities can be at war or in alliance (Phase 61), but these are simple flags. There
 is no mechanism for formal bilateral agreements — non-aggression pacts, trade deals, peace
@@ -7216,7 +7231,7 @@ after ~117 daily steps without reinforcement.
 
 ---
 
-### Phase 79 — Feudal Bonds & Vassal Tribute *(COMPLETE — 2026-03-26)*
+### Phase 79 — Feudal Bonds & Vassal Tribute *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** The simulation has polities (Phase 61) and renown (Phase 75) but no mechanism for
 lord-vassal relationships. There is no way to model tribute flows, military levies, or the
@@ -7250,7 +7265,7 @@ record; `computeDailyTribute` with treasury 365 000 and rate q(0.10) returns 100
 
 ---
 
-### Phase 78 — Seasonal Calendar & Agricultural Cycle *(COMPLETE — 2026-03-26)*
+### Phase 78 — Seasonal Calendar & Agricultural Cycle *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** The simulation has weather (Phase 18), disease spread (Phase 56/73), and polity
 economics (Phase 61), but no time axis that drives seasonal variation. Every in-game day is
@@ -7280,7 +7295,7 @@ visits all four seasons exactly once; `deriveSeasonalWeatherBias("winter", 1.0)`
 
 ---
 
-### Phase 77 — Dynasty & Succession *(COMPLETE — 2026-03-26)*
+### Phase 77 — Dynasty & Succession *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** When a ruler or faction leader dies, there is no mechanism to determine who
 inherits their position. Kinship (Phase 76) tracks family structure and Renown (Phase 75)
@@ -7308,7 +7323,7 @@ Phase 61 (Polity) via `applySuccessionToPolity`.
 
 ---
 
-### Phase 76 — Kinship & Lineage *(COMPLETE — 2026-03-26)*
+### Phase 76 — Kinship & Lineage *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** No mechanism links entities by birth, parentage, or marriage. The relationship
 graph (Phase 42) supports a "family" bond label but has no structured parent/child hierarchy,
@@ -7339,7 +7354,7 @@ cousins (shared grandparent, two-sibling branches) and `null` for unrelated enti
 
 ---
 
-### Phase 75 — Entity Renown & Legend Registry *(COMPLETE — 2026-03-26)*
+### Phase 75 — Entity Renown & Legend Registry *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** The Chronicle (Phase 45) records what happened; Phase 74 renders those events as
 cultural prose. But there is no persistent *reputation score* — no way for the simulation to
@@ -7374,7 +7389,7 @@ returns a positive delta for a heroic faction and a negative delta for the same 
 
 ---
 
-### Phase 74 — Simulation Trace → Narrative Prose *(COMPLETE — 2026-03-26)*
+### Phase 74 — Simulation Trace → Narrative Prose *(M4 VALIDATED — 2026-03-26)*
 
 **The gap:** `narrative-render.ts` (Phase 45) renders `ChronicleEntry` events to neutral
 prose.  There is no cultural-tone variation: every culture produces identical sentences.
@@ -7440,7 +7455,7 @@ lead-time (WASM kernel).
 
 ---
 
-### CE-1 · npm Publish + Subpath Exports Map — **COMPLETE** (2026-03-19)
+### CE-1 · npm Publish + Subpath Exports Map — **M4 VALIDATED** (2026-03-19)
 
 **Published as:** [`@its-not-rocket-science/ananke`](https://www.npmjs.com/package/@its-not-rocket-science/ananke)
 
@@ -7468,7 +7483,7 @@ one-line installs.  Versions are pinnable.  TypeScript declarations are included
 
 ---
 
-### CE-2 · `createWorld()` Convenience Factory — **COMPLETE** (2026-03-19)
+### CE-2 · `createWorld()` Convenience Factory — **M4 VALIDATED** (2026-03-19)
 
 **Problem:** Spawning a `WorldState` currently requires ~30 lines of boilerplate
 (`generateIndividual`, `defaultIntent`, `defaultCondition`, `defaultInjury`, `v3`, `loadout`,
@@ -7502,7 +7517,7 @@ quickstarts become trivial.
 
 ---
 
-### CE-3 · JSON Scenario Schema + `loadScenario()` — **COMPLETE** (2026-03-19)
+### CE-3 · JSON Scenario Schema + `loadScenario()` — **M4 VALIDATED** (2026-03-19)
 
 **Problem:** Godot GDScript and Unity C# cannot import TypeScript.  They need a
 data-only way to define scenarios (entity composition, archetype, weapon, position, tick
@@ -7541,7 +7556,7 @@ Builder HTML tool.
 
 ---
 
-### CE-4 · `src/index.ts` Stable-API Barrel — **COMPLETE** (2026-03-20)
+### CE-4 · `src/index.ts` Stable-API Barrel — **M4 VALIDATED** (2026-03-20)
 
 **Problem:** No single entry point re-exports the Stable tier.  Adopters must know which
 internal module to reach into, which exposes them to Internal-tier breakage.
@@ -7565,7 +7580,7 @@ export { ReplayRecorder, serializeReplay,
 
 ---
 
-### CE-5 · WebAssembly Kernel *(COMPLETE — all 4 phases)*
+### CE-5 · WebAssembly Kernel *(M4 VALIDATED — all 4 phases)*
 
 **Problem:** `ananke-godot-reference` and `ananke-unity-reference` currently require a
 Node.js sidecar process running alongside the game engine.  This adds latency (IPC round
@@ -7653,7 +7668,7 @@ ship first — they unblock companion projects immediately with no WASM required
 
 ---
 
-### CE-6 · WebSocket Upgrade for World Server — **COMPLETE** (2026-03-20)
+### CE-6 · WebSocket Upgrade for World Server — **M4 VALIDATED** (2026-03-20)
 
 **Problem:** `tools/world-server.ts` (reference implementation) uses HTTP polling.  The
 browser client polls every 1.5 seconds, causing visible lag and unnecessary bandwidth at
@@ -7675,7 +7690,7 @@ high entity counts.  Production use of `ananke-world-ui` requires push-based sta
 
 ---
 
-### CE-7 · Multi-threading / WebWorker Support *(COMPLETE)*
+### CE-7 · Multi-threading / WebWorker Support *(M4 VALIDATED)*
 
 **Problem:** `stepWorld` is single-threaded.  At 1 000+ entities the 20 Hz real-time budget
 is broken (Item 9 benchmarks: 64 ms/tick at 1 000 entities vs. 50 ms budget).  Official
@@ -7707,7 +7722,7 @@ for `Worker` + `SharedArrayBuffer` approach in browser environments.
 
 ---
 
-### CE-8 · Visual Debugging Tools *(COMPLETE)*
+### CE-8 · Visual Debugging Tools *(M4 VALIDATED)*
 
 **Problem:** Diagnosing simulation behaviour requires reading raw `WorldState` JSON or adding
 `console.log` to the kernel.  There is no visual way to inspect force vectors, hit zones,
@@ -7729,7 +7744,7 @@ tool becomes large enough to warrant it.
 
 ---
 
-### CE-9 · Binary World-State Diffing + Incremental Snapshots *(COMPLETE)*
+### CE-9 · Binary World-State Diffing + Incremental Snapshots *(M4 VALIDATED)*
 
 **Problem:** `serializeReplay` stores full state each tick.  A 30-day campaign at 1 Hz
 polity ticks generates thousands of snapshots; JSON serialisation of a 1 000-entity world
@@ -7754,7 +7769,7 @@ fields per tick instead of full polity snapshot.
 
 ---
 
-### CE-10 · Pre-built AI Behaviour Tree Library *(COMPLETE)*
+### CE-10 · Pre-built AI Behaviour Tree Library *(M4 VALIDATED)*
 
 **Problem:** `buildAICommands` / `decideCommandsForEntity` is functional but low-level.
 Every adopter re-implements flank, retreat, and protect-ally logic independently, with no
@@ -7787,7 +7802,7 @@ use `eventSeed` with the entity id and current tick as salt.
 
 ---
 
-### CE-11 · Network Replication Reference Implementation *(COMPLETE)*
+### CE-11 · Network Replication Reference Implementation *(M4 VALIDATED)*
 
 **Problem:** Ananke's deterministic core is ideal for lock-step multiplayer, but there is
 no reference showing how to implement command propagation, state reconciliation, or latency
@@ -7814,7 +7829,7 @@ demonstrating:
 
 ---
 
-### CE-12 · Data-Driven Entity Catalog *(COMPLETE)*
+### CE-12 · Data-Driven Entity Catalog *(M4 VALIDATED)*
 
 **Problem:** Archetypes, weapons, and armour are hard-coded TypeScript constants.  Adding
 a new species or weapon requires recompiling the library.  Content creators — level
@@ -7854,7 +7869,7 @@ Runtime modding (CE-16) depends on this catalog layer.
 
 ---
 
-### CE-13 · Property-Based Testing with fast-check *(COMPLETE)*
+### CE-13 · Property-Based Testing with fast-check *(M4 VALIDATED)*
 
 **Problem:** Unit tests validate specific inputs.  For a physics engine, the more dangerous
 class of bug is an invariant violation — negative energy, shock outside [0, 1], consciousness
@@ -7883,7 +7898,7 @@ after death — that no specific test exercises.
 
 ---
 
-### CE-14 · Socio-Economic Campaign Layer → Stable Promotion *(COMPLETE)*
+### CE-14 · Socio-Economic Campaign Layer → Stable Promotion *(M4 VALIDATED)*
 
 **Problem:** The polity, tech-diffusion, and emotional-contagion systems (Phases 61, 67, 65)
 are currently Tier 2 (Experimental).  Their API can change between minor versions.  This
@@ -7904,7 +7919,7 @@ and be confident it will not break on a patch release.
 
 ---
 
-### CE-15 · Dynamic Terrain + Cover System *(COMPLETE)*
+### CE-15 · Dynamic Terrain + Cover System *(M4 VALIDATED)*
 
 **Context:** Fire, smoke, acid, radiation, and extreme cold are already modelled by
 Phase 60 (Environmental Hazard Zones).  What is missing is *structural* terrain interaction:
@@ -7928,7 +7943,7 @@ cover that reduces incoming damage, and terrain that changes state during a simu
 
 ---
 
-### CE-16 · Modding Support *(COMPLETE)*
+### CE-16 · Modding Support *(M4 VALIDATED)*
 
 **Problem:** Power users want to define custom species, weapons, AI behaviours, and event
 hooks without forking the library.  Deterministic multiplayer requires that all clients
@@ -7959,7 +7974,7 @@ overrides require explicit opt-in and manual review.
 
 ---
 
-### CE-17 · Browser-Based Simulation Playground *(COMPLETE — 2026-03-25)*
+### CE-17 · Browser-Based Simulation Playground *(M4 VALIDATED — 2026-03-25)*
 
 **Problem (external feedback, 2026-03-25):** Potential adopters want to evaluate Ananke's
 physics depth *before* writing any code.  The existing Species Forge / Culture Forge editors
@@ -7988,7 +8003,7 @@ control is instantaneous — no server required.
 
 ---
 
-### CE-18 · External Agent Interface *(COMPLETE — 2026-03-26)*
+### CE-18 · External Agent Interface *(M4 VALIDATED — 2026-03-26)*
 
 **Problem (external feedback batch 3, 2026-03-26):** All current AI control flows through
 `decideCommandsForEntity` inside the simulation loop.  External agents — reinforcement
@@ -8059,7 +8074,7 @@ Two items from external feedback (batch 1) were reviewed and rejected as redunda
 The batch presented Phases 78–84 and community metrics (2,400 stars, 87 universities,
 DARPA contracts, 501(c)(3) foundation) as already complete.  **None of this is real.**
 The project is at v0.1.16, recently published, with 3,912 tests and a solo developer.
-These items were not added as "COMPLETE".
+These items were not added as "M4 VALIDATED".
 
 | Item | Feedback proposal | Disposition |
 |------|------------------|-------------|
@@ -8098,7 +8113,7 @@ The following starter READMEs for companion GitHub projects live in `docs/compan
 
 ---
 
-## Platform Hardening — **ALL COMPLETE** (2026-03-19)
+## Platform Hardening — **ALL M4 VALIDATED** (2026-03-19)
 
 > **Context:** External review of the v0.1 architecture identified that Ananke's core technology
 > is mature and validated, but the project is "mid-transition from powerful codebase to adoptable
@@ -8112,7 +8127,7 @@ items sharpen and extend them based on concrete external critique.
 
 ---
 
-### PH-1 · API Tiering — Stable / Advanced / Internal — **COMPLETE** (2026-03-19)
+### PH-1 · API Tiering — Stable / Advanced / Internal — **M4 VALIDATED** (2026-03-19)
 
 **Problem (external review):** `src/index.ts` exports a very large surface.  Adopters cannot
 tell what is truly stable, what is experimental, and what they rely on at their own risk.
@@ -8136,7 +8151,7 @@ without reading implementation source.
 
 ---
 
-### PH-2 · Versioning Policy Unification — **COMPLETE** (2026-03-19)
+### PH-2 · Versioning Policy Unification — **M4 VALIDATED** (2026-03-19)
 
 **Problem (external review):** `docs/versioning.md` says the authoritative version is a commit
 hash and there is no semver automation, while `CHANGELOG.md` presents `0.1.0` and says the
@@ -8158,7 +8173,7 @@ my package.json?" in under 60 seconds.
 
 ---
 
-### PH-3 · Minimal Host Integration Contract — **COMPLETE** (2026-03-19)
+### PH-3 · Minimal Host Integration Contract — **M4 VALIDATED** (2026-03-19)
 
 **Problem (external review):** The onboarding guide is good, but it still points engineers at
 internal source files (`src/units.ts`, `src/types.ts`, specific sim modules) rather than a
@@ -8181,7 +8196,7 @@ your own risk is still blurry."
 
 ---
 
-### PH-4 · Save / Replay / Bridge Contract Tests — **COMPLETE** (2026-03-19)
+### PH-4 · Save / Replay / Bridge Contract Tests — **M4 VALIDATED** (2026-03-19)
 
 **Problem (external review):** "Given how central determinism and replay are, I'd add golden
 compatibility tests for serialized world state, serialized replay, and representative
@@ -8203,7 +8218,7 @@ update in the same PR — making breakage visible and intentional.
 
 ---
 
-### PH-5 · Bridge as First-Class Supported Surface — **COMPLETE** (2026-03-19)
+### PH-5 · Bridge as First-Class Supported Surface — **M4 VALIDATED** (2026-03-19)
 
 **Problem (external review):** The bridge engine has interpolation, extrapolation, body-plan
 mapping, and condition blending — "substantial enough that it deserves explicit compatibility
@@ -8227,7 +8242,7 @@ as auxiliary glue rather than a first-class supported surface.
 
 ---
 
-### PH-6 · Entity / WorldState Core vs. Extensions Split — **COMPLETE** (2026-03-19)
+### PH-6 · Entity / WorldState Core vs. Extensions Split — **M4 VALIDATED** (2026-03-19)
 
 **Problem (external review):** "`Entity` and `WorldState` are already central gravity wells.
 Adding one field changes behaviour in unexpected places."  The versioning doc correctly treats
@@ -8251,7 +8266,7 @@ requires at every tick vs. which are opt-in subsystem state.
 
 ---
 
-### PH-7 · Benchmark Operational Guide — **COMPLETE** (2026-03-19)
+### PH-7 · Benchmark Operational Guide — **M4 VALIDATED** (2026-03-19)
 
 **Problem (external review):** The performance report is honest about the 500 vs. 1 000 entity
 cliff and dense-scenario spatial-index tradeoffs, but it stops short of giving adopters
@@ -8273,7 +8288,7 @@ entity caps, feature toggles, supported real-time envelope."
 
 ---
 
-### PH-8 · Emergent Validation as Flagship Trust Artifact — **COMPLETE** (2026-03-19)
+### PH-8 · Emergent Validation as Flagship Trust Artifact — **M4 VALIDATED** (2026-03-19)
 
 **Problem (external review):** "The emergent validation suite is one of the most persuasive
 parts of the repo because it tests distributions and multi-system behaviour rather than isolated
@@ -8312,7 +8327,7 @@ README and linked from every release — not buried inside `tools/`.
 
 ---
 
-### PA-1 · Documentation Reconciliation & Architecture Map ✅ COMPLETE
+### PA-1 · Documentation Reconciliation & Architecture Map ✅ M4 VALIDATED
 
 **Problem:** At Ananke's current scale, documentation drift is a trust problem.  Parts of
 `docs/project-overview.md` still reference companion projects as a next priority while ROADMAP
@@ -8427,7 +8442,7 @@ into any Ananke-powered host without touching source code.
 
 ---
 
-### PA-5 · Campaign ↔ Tactical Terrain Bridge ✅ COMPLETE
+### PA-5 · Campaign ↔ Tactical Terrain Bridge ✅ M4 VALIDATED
 
 **Problem:** The repo has strong tactical and campaign systems but they operate as separate
 silos.  There is no formal layer translating strategic map state into tactical battle parameters
@@ -8448,7 +8463,7 @@ and have the result automatically integrated into campaign state through a docum
 
 ---
 
-### PA-6 · Unified Atmosphere Model: Wind, Precipitation & Propagation ✅ COMPLETE
+### PA-6 · Unified Atmosphere Model: Wind, Precipitation & Propagation ✅ M4 VALIDATED
 
 **Problem:** Projectile drift, flame/gas distortion, acoustic masking, scent propagation,
 visibility degradation, and traction changes are each simulated independently.  A single
@@ -8468,7 +8483,7 @@ gas hazards, hearing range, and terrain traction without separate per-system con
 
 ---
 
-### PA-7 · Advanced Non-Visual Sensory Systems ✅ COMPLETE
+### PA-7 · Advanced Non-Visual Sensory Systems ✅ M4 VALIDATED
 
 **Problem:** The perception system is strong for vision and hearing but shallow for non-human
 sensing.  Given that species/xenobiology is a major Ananke theme, echolocation, electroreception,
@@ -8490,7 +8505,7 @@ vision fallback; a shark-equivalent detects bleeding prey by electroreception.
 
 ---
 
-### PA-8 · Host Integration SDKs ✅ COMPLETE
+### PA-8 · Host Integration SDKs ✅ M4 VALIDATED
 
 **Problem:** The Godot and Unity reference repos prove possibility but are not production SDKs.
 The friction from "reference" to "integrable in a day" remains high.
@@ -8513,7 +8528,7 @@ following a 15-minute guide, with no Ananke source reading required.
 
 ---
 
-### PA-9 · Simulation Cookbook (Task-Oriented Recipes) ✅ COMPLETE (v0.1.58)
+### PA-9 · Simulation Cookbook (Task-Oriented Recipes) ✅ M4 VALIDATED (v0.1.58)
 
 **Problem:** The documentation is rich but dense and theory-oriented.  Time-to-first-success
 for a new developer is too high.
@@ -8533,7 +8548,7 @@ simulation within 30 minutes using only the cookbook.
 
 ---
 
-### PA-10 · Deterministic Networking Kit ✅ COMPLETE (v0.1.59)
+### PA-10 · Deterministic Networking Kit ✅ M4 VALIDATED (v0.1.59)
 
 **Problem:** Determinism is one of Ananke's strongest differentiators, but "lockstep-friendly"
 is conceptual rather than productized.  There are no concrete tools for authoritative lockstep,
@@ -8630,7 +8645,7 @@ in under 5 minutes, and see physics-grounded outcomes with no Ananke source read
 
 ---
 
-### PM-2 · Package-Boundary Enforcement in CI ✅ COMPLETE
+### PM-2 · Package-Boundary Enforcement in CI ✅ M4 VALIDATED
 
 **Problem:** PA-2 Phase 1 published four `@ananke/*` package stubs, but nothing prevents
 source files from importing across package boundaries.  The architecture is a declaration,
@@ -8651,7 +8666,7 @@ fails CI before merge.
 
 ---
 
-### PM-3 · Supported-Recipes Matrix ✅ COMPLETE
+### PM-3 · Supported-Recipes Matrix ✅ M4 VALIDATED
 
 **Problem:** The cookbook, module index, host contract, and STABLE_API.md are four separate
 documents covering overlapping ground.  A first-time adopter still has to triangulate across
@@ -8674,7 +8689,7 @@ layer can read one table and reach the correct entry point without opening more 
 
 ---
 
-### PM-4 · Release Discipline Dashboard ✅ COMPLETE
+### PM-4 · Release Discipline Dashboard ✅ M4 VALIDATED
 
 **Problem:** The project has semver messaging, changelog, schema fixtures, benchmark
 regression, and emergent validation — but they are separate artefacts run at different
@@ -8697,7 +8712,7 @@ a releasable state, with a human-readable audit trail.
 
 ---
 
-### PM-5 · Deterministic Conformance Suite for Third-Party Hosts ✅ COMPLETE
+### PM-5 · Deterministic Conformance Suite for Third-Party Hosts ✅ M4 VALIDATED
 
 **Problem:** PA-10 ships `hashWorldState`, `diffReplays`, and the replay CLI.  But there
 is no visible "host integration certification" suite that third-party SDK authors can run
@@ -8719,7 +8734,7 @@ and get a pass/fail report with per-fixture detail before shipping.
 
 ---
 
-### PM-6 · Content-Pack Registry Format ✅ COMPLETE
+### PM-6 · Content-Pack Registry Format ✅ M4 VALIDATED
 
 **Problem:** Content packs are distributable and validated, but there is no metadata
 standard governing compatibility ranges, stability tiers, checksums, licensing, or
@@ -8743,7 +8758,7 @@ and a host can verify it is compatible before loading it.
 
 ---
 
-### PM-7 · API Deprecation Framework ✅ COMPLETE
+### PM-7 · API Deprecation Framework ✅ M4 VALIDATED
 
 **Problem:** STABLE_API.md defines tiers but has no lifecycle mechanism.  There is no way
 to mark an export as deprecated, guide users to a replacement, or auto-surface that
