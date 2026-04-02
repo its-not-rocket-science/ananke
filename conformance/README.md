@@ -8,7 +8,9 @@ reference TypeScript engine.
 
 | File | Kind | What it tests |
 |------|------|---------------|
-| `state-hash.json` | `state-hash` | `hashWorldState` output for a known WorldState |
+| `state-hash.json` | `state-hash` | `hashWorldState` output for a canonical idle baseline |
+| `state-hash-regression.json` | `state-hash` | Extended hash checkpoints across an AI-driven timeline |
+| `phase-order.json` | `phase-order` | Stable kernel phase ordering contract |
 | `replay-parity.json` | `replay-parity` | Per-tick hash trace when re-simulating a recorded replay |
 | `command-round-trip.json` | `command-round-trip` | CommandMap wire encoding and field semantics |
 | `bridge-snapshot.json` | `bridge-snapshot` | `serializeBridgeFrame` output shape and invariants |

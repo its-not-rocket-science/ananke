@@ -6,6 +6,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.6] — 2026-04-02
+
+### Changed
+
+- Added runtime conformance regression harness coverage in `test/conformance-runtime.test.ts` to validate phase-order stability and execute all state-hash fixtures as deterministic checkpoints.
+- Added `phase-order.json` conformance fixture and runner support for the new `phase-order` fixture kind.
+- Expanded state-hash coverage with a second fixture (`state-hash-regression.json`) covering AI-driven checkpoints at ticks 0/1/5/10/20.
+- Refactored conformance fixture generation to use shared state-hash fixture builders for maintainable fixture expansion.
+- Bumped package version to `0.2.6` and synced lockfile.
+
+---
+
 ## [0.2.5] — 2026-04-02
 
 ### Changed

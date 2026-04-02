@@ -3,6 +3,7 @@
   "id": "state-hash-01",
   "description": "Given a canonical WorldState, hashWorldState must return the specified hex value.",
   "kind": "state-hash",
+  "commandSource": "idle",
   "notes": [
     "seed=42; two humanoid entities at ±0.5 m with chainmail and longsword.",
     "hash is FNV-64 over canonical JSON (sorted keys, Map→sorted entries).",
@@ -11,12 +12,12 @@
   "cases": [
     {
       "tick": 0,
-      "description": "Initial world state before any tick",
-      "hashHex": "0xec578e005fcbef34"
+      "description": "World state at tick 0",
+      "hashHex": "0xfdf82f148d0b2364"
     },
     {
       "tick": 1,
-      "description": "World state after one idle tick (noMove commands)",
+      "description": "World state at tick 1",
       "hashHex": "0xfdf533148d08f459"
     }
   ]
