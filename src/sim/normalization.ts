@@ -3,6 +3,7 @@ import { defaultAction } from "./action.js";
 import { defaultIntent } from "./intent.js";
 import { buildLimbStates } from "./limb.js";
 import { DEFAULT_PERCEPTION } from "./sensory.js";
+import type { Armour } from "../equipment.js";
 import type { Entity } from "./entity.js";
 import type { WorldState } from "./world.js";
 
@@ -51,7 +52,7 @@ export function normalizeEntityInPlace(e: Entity): void {
   }
 
   if (!e.armourState) {
-    const ablativeItems = e.loadout.items.filter(it => it.kind === "armour" && it.ablative);
+    const ablativeItems = e.loadout.items.filter((it): it is Armour => it.kind === "armour" && !!(it as Armour).ablative);
     if (ablativeItems.length > 0) {
       e.armourState = new Map(ablativeItems.map(it => [it.id, { resistRemaining_J: it.resist_J as number }]));
     }

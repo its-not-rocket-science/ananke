@@ -28,7 +28,7 @@ import { mkHumanoidEntity, mkWorld } from "../src/sim/testing";
 import { stepDowntime } from "../src/downtime";
 import { stepWorld } from "../src/sim/kernel";
 import { TUNING } from "../src/sim/tuning";
-import { Armour, STARTER_WEAPONS } from "../src";
+import { type Armour, STARTER_WEAPONS } from "../src/equipment";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
