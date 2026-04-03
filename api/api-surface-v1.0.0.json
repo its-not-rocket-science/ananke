@@ -1,0 +1,366 @@
+{
+  "exports": [
+    {
+      "name": "AnankeScenario",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "AnankeScenarioEntity",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "AnimationHints",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "clampQ",
+      "kind": "function",
+      "params": [
+        {
+          "name": "x",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "lo",
+          "type": "number",
+          "optional": true
+        },
+        {
+          "name": "hi",
+          "type": "number",
+          "optional": true
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "Command",
+      "kind": "type",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "CommandMap",
+      "kind": "type",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "createWorld",
+      "kind": "function",
+      "params": [
+        {
+          "name": "seed",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "entities",
+          "type": "EntitySpec[]",
+          "optional": false
+        }
+      ],
+      "returnType": "WorldState"
+    },
+    {
+      "name": "deriveAnimationHints",
+      "kind": "function",
+      "params": [
+        {
+          "name": "entity",
+          "type": "Entity",
+          "optional": false
+        }
+      ],
+      "returnType": "AnimationHints"
+    },
+    {
+      "name": "deserializeReplay",
+      "kind": "function",
+      "params": [
+        {
+          "name": "json",
+          "type": "string",
+          "optional": false
+        }
+      ],
+      "returnType": "Replay"
+    },
+    {
+      "name": "Entity",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "EntitySpec",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "extractRigSnapshots",
+      "kind": "function",
+      "params": [
+        {
+          "name": "world",
+          "type": "WorldState",
+          "optional": false
+        }
+      ],
+      "returnType": "RigSnapshot[]"
+    },
+    {
+      "name": "from",
+      "kind": "value",
+      "params": [],
+      "returnType": "{ m: (x: number) => number; s: (x: number) => number; kg: (x: number) => number; N: (x: number) => number; W: (x: number) => number; J: (x: number) => number; mps: (x: number) => number; mps2: (x: number) => number; }"
+    },
+    {
+      "name": "G_mps2",
+      "kind": "value",
+      "params": [],
+      "returnType": "number"
+    },
+    {
+      "name": "I32",
+      "kind": "type",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "IndividualAttributes",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "KernelContext",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "loadScenario",
+      "kind": "function",
+      "params": [
+        {
+          "name": "json",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "returnType": "WorldState"
+    },
+    {
+      "name": "mulDiv",
+      "kind": "function",
+      "params": [
+        {
+          "name": "a",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "b",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "div",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "q",
+      "kind": "function",
+      "params": [
+        {
+          "name": "x",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "Q",
+      "kind": "type",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "qDiv",
+      "kind": "function",
+      "params": [
+        {
+          "name": "a",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "b",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "qMul",
+      "kind": "function",
+      "params": [
+        {
+          "name": "a",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "b",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "Replay",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "ReplayFrame",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "ReplayRecorder",
+      "kind": "class",
+      "params": [
+        {
+          "name": "world",
+          "type": "WorldState",
+          "optional": false
+        }
+      ],
+      "returnType": "ReplayRecorder"
+    },
+    {
+      "name": "replayTo",
+      "kind": "function",
+      "params": [
+        {
+          "name": "replay",
+          "type": "Replay",
+          "optional": false
+        },
+        {
+          "name": "targetTick",
+          "type": "number",
+          "optional": false
+        },
+        {
+          "name": "ctx",
+          "type": "KernelContext",
+          "optional": false
+        }
+      ],
+      "returnType": "WorldState"
+    },
+    {
+      "name": "RigSnapshot",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    },
+    {
+      "name": "SCALE",
+      "kind": "value",
+      "params": [],
+      "returnType": "{ Q: number; m: number; s: number; kg: number; N: number; W: number; J: number; mps: number; mps2: number; }"
+    },
+    {
+      "name": "serializeReplay",
+      "kind": "function",
+      "params": [
+        {
+          "name": "replay",
+          "type": "Replay",
+          "optional": false
+        }
+      ],
+      "returnType": "string"
+    },
+    {
+      "name": "sqrtQ",
+      "kind": "function",
+      "params": [
+        {
+          "name": "xQ",
+          "type": "number",
+          "optional": false
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "stepWorld",
+      "kind": "function",
+      "params": [
+        {
+          "name": "world",
+          "type": "WorldState",
+          "optional": false
+        },
+        {
+          "name": "cmds",
+          "type": "CommandMap",
+          "optional": false
+        },
+        {
+          "name": "ctx",
+          "type": "KernelContext",
+          "optional": false
+        }
+      ],
+      "returnType": "void"
+    },
+    {
+      "name": "to",
+      "kind": "value",
+      "params": [],
+      "returnType": "{ m: (x: number) => number; s: (x: number) => number; kg: (x: number) => number; N: (x: number) => number; W: (x: number) => number; J: (x: number) => number; mps: (x: number) => number; mps2: (x: number) => number; }"
+    },
+    {
+      "name": "validateScenario",
+      "kind": "function",
+      "params": [
+        {
+          "name": "json",
+          "type": "unknown",
+          "optional": false
+        }
+      ],
+      "returnType": "string[]"
+    },
+    {
+      "name": "WorldState",
+      "kind": "interface",
+      "params": [],
+      "returnType": "any"
+    }
+  ],
+  "tsconfig": "tsconfig.build.json"
+}

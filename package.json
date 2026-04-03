@@ -341,7 +341,10 @@
     "benchmark:run": "node dist/tools/benchmark-dashboard/run.js",
     "benchmark:history": "node dist/tools/benchmark-dashboard/publish-history.js",
     "benchmark:dashboard": "node dist/tools/benchmark-dashboard/generate-dashboard.js",
-    "benchmark:budget": "node dist/tools/benchmark-dashboard/check-budget.js"
+    "benchmark:budget": "node dist/tools/benchmark-dashboard/check-budget.js",
+    "extract-api-surface": "node dist/tools/api-surface.js --out=api/api-surface-v1.0.0.json",
+    "check-api-diff": "node dist/tools/api-diff-check.js --base=api-surface-main.json --head=api-surface-pr.json",
+    "check-semver": "node dist/tools/semver-check.js --baseSurface=api-surface-main.json --headSurface=api-surface-pr.json --basePackage=package-main.json --headPackage=package.json"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
