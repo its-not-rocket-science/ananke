@@ -1,0 +1,11 @@
+{
+  "large-battle": {
+    "minTicksPerSec": 90
+  },
+  "memory-stress": {
+    "maxHeapMB": 512
+  },
+  "small-skirmish": {
+    "minTicksPerSec": 300
+  }
+}

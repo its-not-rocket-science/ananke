@@ -1,0 +1,87 @@
+name: Performance Regression
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main", "master"]
+
+jobs:
+  benchmark-main:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Sample 1 in 10 commits on main
+        id: sampler
+        run: |
+          HEX="${GITHUB_SHA: -1}"
+          DEC=$((16#$HEX))
+          if [ $((DEC % 10)) -ne 0 ]; then
+            echo "run_bench=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping benchmark for commit $GITHUB_SHA"
+          else
+            echo "run_bench=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run benchmark suite
+        if: steps.sampler.outputs.run_bench == 'true'
+        run: |
+          node dist/tools/benchmark-dashboard/run.js
+          node dist/tools/benchmark-dashboard/publish-history.js
+          node dist/tools/benchmark-dashboard/generate-dashboard.js
+      - name: Commit perf artifacts
+        if: steps.sampler.outputs.run_bench == 'true'
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add benchmarks/history benchmarks/results docs/perf/index.html
+          git diff --cached --quiet || git commit -m "chore(perf): update benchmark history"
+          git push
+
+  perf-budget-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Run benchmark + budget check
+        id: perf
+        continue-on-error: true
+        run: |
+          node dist/tools/benchmark-dashboard/run.js
+          node dist/tools/benchmark-dashboard/check-budget.js
+      - name: Comment budget result
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const state = "${{ steps.perf.outcome }}";
+            const body = state === "success"
+              ? "✅ Performance budget passed."
+              : "❌ Performance budget failed. Maintainer override required.";
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+      - name: Enforce maintainer override on failure
+        if: steps.perf.outcome != 'success'
+        run: |
+          echo "Performance budget violation. Require maintainer override label to proceed."
+          exit 1
