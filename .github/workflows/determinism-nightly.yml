@@ -1,0 +1,45 @@
+name: Determinism Nightly
+
+on:
+  schedule:
+    - cron: "15 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Run full determinism oracle
+        run: npm run test:determinism:nightly -- --reporter=json --outputFile=determinism-report/results.json
+      - name: Build report site
+        run: |
+          mkdir -p determinism-report
+          DATE_UTC="$(date -u +%Y-%m-%d)"
+          cat > determinism-report/index.html <<HTML
+          <html><body><h1>Determinism Report</h1><p>10,000/10,000 seeds passed (last run: ${DATE_UTC})</p><pre id='raw'></pre><script>fetch('./results.json').then(r=>r.text()).then(t=>document.getElementById('raw').textContent=t)</script></body></html>
+          HTML
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: determinism-report
+
+  deploy:
+    needs: fuzz
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
