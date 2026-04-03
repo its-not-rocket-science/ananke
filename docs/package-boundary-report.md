@@ -1,20 +1,20 @@
 # Package Boundary Report
 
-Generated: 2026-04-02T13:58:05.057Z
+Generated: 2026-04-03T00:49:11.307Z
 
 ## Summary
 
-- Source files scanned: 213
-- Files mapped to package: 200
+- Source files scanned: 216
+- Files mapped to package: 203
 - Unmapped files: 13
-- Hard violations: 86
+- Hard violations: 87
 - Suspicious imports (warning mode): 60
 
 ## Cross-package import matrix
 
 | From \ To | core | combat | campaign | content |
 |---|---:|---:|---:|---:|
-| core | self | 50 | 25 | 11 |
+| core | self | 50 | 26 | 11 |
 | combat | 214 | self | 15 | 7 |
 | campaign | 154 | 18 | self | 5 |
 | content | 60 | 13 | 14 | self |
@@ -75,19 +75,18 @@ Generated: 2026-04-02T13:58:05.057Z
 - `src/sim/kernel.ts:31` imports `./formation.js` → `src/sim/formation.ts` (core → combat).
 - `src/sim/kernel.ts:32` imports `./occlusion.js` → `src/sim/occlusion.ts` (core → combat).
 - `src/sim/kernel.ts:33` imports `./frontage.js` → `src/sim/frontage.ts` (core → combat).
-- `src/sim/kernel.ts:35` imports `./density.js` → `src/sim/density.ts` (core → combat).
-- `src/sim/kernel.ts:41` imports `./morale.js` → `src/sim/morale.ts` (core → combat).
-- `src/sim/kernel.ts:48` imports `./knockback.js` → `src/sim/knockback.ts` (core → combat).
-- `src/sim/kernel.ts:49` imports `./hydrostatic.js` → `src/sim/hydrostatic.ts` (core → combat).
-- `src/sim/kernel.ts:50` imports `./cone.js` → `src/sim/cone.ts` (core → combat).
-- `src/sim/kernel.ts:52` imports `./thermoregulation.js` → `src/sim/thermoregulation.ts` (core → campaign).
-- `src/sim/kernel.ts:53` imports `./nutrition.js` → `src/sim/nutrition.ts` (core → campaign).
-- `src/sim/kernel.ts:54` imports `./toxicology.js` → `src/sim/toxicology.ts` (core → campaign).
-- `src/sim/kernel.ts:55` imports `./systemic-toxicology.js` → `src/sim/systemic-toxicology.ts` (core → campaign).
-- `src/sim/kernel.ts:60` imports `./weather.js` → `src/sim/weather.ts` (core → campaign).
-- `src/sim/kernel.ts:69` imports `./grapple.js` → `src/sim/grapple.ts` (core → combat).
-- `src/sim/kernel.ts:78` imports `./weapon_dynamics.js` → `src/sim/weapon_dynamics.ts` (core → combat).
-- `src/sim/kernel.ts:87` imports `./ranged.js` → `src/sim/ranged.ts` (core → combat).
+- `src/sim/kernel.ts:42` imports `./morale.js` → `src/sim/morale.ts` (core → combat).
+- `src/sim/kernel.ts:49` imports `./knockback.js` → `src/sim/knockback.ts` (core → combat).
+- `src/sim/kernel.ts:50` imports `./hydrostatic.js` → `src/sim/hydrostatic.ts` (core → combat).
+- `src/sim/kernel.ts:51` imports `./cone.js` → `src/sim/cone.ts` (core → combat).
+- `src/sim/kernel.ts:53` imports `./thermoregulation.js` → `src/sim/thermoregulation.ts` (core → campaign).
+- `src/sim/kernel.ts:54` imports `./nutrition.js` → `src/sim/nutrition.ts` (core → campaign).
+- `src/sim/kernel.ts:55` imports `./toxicology.js` → `src/sim/toxicology.ts` (core → campaign).
+- `src/sim/kernel.ts:56` imports `./systemic-toxicology.js` → `src/sim/systemic-toxicology.ts` (core → campaign).
+- `src/sim/kernel.ts:61` imports `./weather.js` → `src/sim/weather.ts` (core → campaign).
+- `src/sim/kernel.ts:70` imports `./grapple.js` → `src/sim/grapple.ts` (core → combat).
+- `src/sim/kernel.ts:79` imports `./weapon_dynamics.js` → `src/sim/weapon_dynamics.ts` (core → combat).
+- `src/sim/kernel.ts:88` imports `./ranged.js` → `src/sim/ranged.ts` (core → combat).
 - `src/sim/limb.ts:14` imports `./injury.js` → `src/sim/injury.ts` (core → combat).
 - `src/sim/step/energy.ts:8` imports `../../equipment.js` → `src/equipment.ts` (core → combat).
 - `src/sim/step/injury.ts:5` imports `../../equipment.js` → `src/equipment.ts` (core → combat).
@@ -96,6 +95,8 @@ Generated: 2026-04-02T13:58:05.057Z
 - `src/sim/step/morale.ts:23` imports `../morale.js` → `src/sim/morale.ts` (core → combat).
 - `src/sim/step/movement.ts:13` imports `../impairment.js` → `src/sim/impairment.ts` (core → combat).
 - `src/sim/step/movement.ts:14` imports `../../equipment.js` → `src/equipment.ts` (core → combat).
+- `src/sim/step/phases/prepare-phase.ts:4` imports `../../density.js` → `src/sim/density.ts` (core → combat).
+- `src/sim/step/phases/prepare-phase.ts:6` imports `../../weather.js` → `src/sim/weather.ts` (core → campaign).
 - `src/sim/step/substances.ts:4` imports `../substance.js` → `src/sim/substance.ts` (core → campaign).
 - `src/sim/team.ts:3` imports `../faction.js` → `src/faction.ts` (core → combat).
 - `src/sim/team.ts:4` imports `../party.js` → `src/party.ts` (core → combat).
