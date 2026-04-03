@@ -19,3 +19,5 @@ export * from "./narrative.js";
 export * from "./narrative-stress.js";
 export * from "./metrics.js";
 export * from "./arena.js";
+export * from "./narrative/combat-logger.js";
+export * from "./narrative/plausibility.js";

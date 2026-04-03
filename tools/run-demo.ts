@@ -45,6 +45,7 @@ import {
   describeCombatOutcome,
   type NarrativeConfig,
 } from "../src/narrative.js";
+import { describeAction } from "../src/narrative/combat-logger.js";
 import { Entity } from "../src/sim/entity.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -719,28 +720,84 @@ function scenarioNarrative(): void {
   }
 
   const events = collecting.events;
+  const narrativeMode = process.env.ANANKE_NARRATIVE_MODE === "debug" ? "debug" : "prose";
 
   console.log(`\n${"═".repeat(60)}`);
   console.log("  Combat Narrative (Phase 18) — same 2v2 brawl, human-readable");
+  console.log(`  Narrative Mode: ${narrativeMode} (set ANANKE_NARRATIVE_MODE=debug for raw-ish logs)`);
   console.log(`  seed=42  entities: you(1/t1), your ally(2/t1), 2× enemies`);
   console.log(`${"═".repeat(60)}`);
 
-  // ── Terse log ────────────────────────────────────────────────────────────────
-  console.log("\n── Terse log (hits, KOs, deaths, fractures only) ──");
-  const terseCfg: NarrativeConfig = { verbosity: "terse", nameMap, weaponProfiles };
-  const terseLines = buildCombatLog(events, terseCfg);
-  for (const line of terseLines) console.log(`  ${line}`);
-  if (terseLines.length === 0) console.log("  (no notable events)");
+  if (narrativeMode === "debug") {
+    console.log("\n── Debug-like trace view ──");
+    for (const ev of events.slice(0, 24)) {
+      console.log(`  [t${ev.tick}] ${ev.kind} ${JSON.stringify(ev)}`);
+    }
+    if (events.length > 24) console.log(`  … (${events.length - 24} more events)`);
+  } else {
+    // ── Terse log ──────────────────────────────────────────────────────────────
+    console.log("\n── Terse log (hits, KOs, deaths, fractures only) ──");
+    const terseCfg: NarrativeConfig = { verbosity: "terse", nameMap, weaponProfiles };
+    const terseLines = buildCombatLog(events, terseCfg);
+    for (const line of terseLines) console.log(`  ${line}`);
+    if (terseLines.length === 0) console.log("  (no notable events)");
 
-  // ── Normal log ───────────────────────────────────────────────────────────────
-  console.log("\n── Normal log (adds blocks, parries, misses, grapple) ──");
-  const normalCfg: NarrativeConfig = { verbosity: "normal", nameMap, weaponProfiles };
-  const normalLines = buildCombatLog(events, normalCfg);
-  // Print first 20 lines to keep output manageable
-  const shown = normalLines.slice(0, 20);
-  for (const line of shown) console.log(`  ${line}`);
-  if (normalLines.length > 20) {
-    console.log(`  … (${normalLines.length - 20} more lines at normal verbosity)`);
+    // ── Cinematic samples via Narrative Consistency layer ─────────────────────
+    console.log("\n── Narrative Mode (cinematic samples) ──");
+    const cinematicSamples = events
+      .filter(ev => ev.kind === TraceKinds.Attack || ev.kind === TraceKinds.ProjectileHit)
+      .slice(0, 6)
+      .map(ev => {
+        if (ev.kind === TraceKinds.Attack) {
+          const action = {
+            kind: "melee" as const,
+            hit: !ev.blocked && !ev.parried && !ev.shieldBlocked,
+            damage: Math.max(0, Math.trunc(ev.energy_J / 10)),
+            blocked: ev.blocked,
+            parried: ev.parried,
+            shieldBlocked: ev.shieldBlocked,
+            region: String(ev.region),
+          };
+          const actionContext = {
+            ...(nameMap.get(ev.attackerId) ? { attackerName: nameMap.get(ev.attackerId)! } : {}),
+            ...(nameMap.get(ev.targetId) ? { targetName: nameMap.get(ev.targetId)! } : {}),
+            ...(ev.weaponId ? { weaponName: ev.weaponId } : {}),
+          };
+          return describeAction(
+            action,
+            actionContext,
+            { verbosity: "cinematic" },
+          );
+        }
+        const rangedAction = {
+          kind: "ranged" as const,
+          hit: ev.hit,
+          suppressed: ev.suppressed,
+          ...(ev.region ? { region: String(ev.region) } : {}),
+        };
+        const rangedContext = {
+          ...(nameMap.get(ev.shooterId) ? { attackerName: nameMap.get(ev.shooterId)! } : {}),
+          ...(nameMap.get(ev.targetId) ? { targetName: nameMap.get(ev.targetId)! } : {}),
+          ...(ev.weaponId ? { weaponName: ev.weaponId } : {}),
+          distance_m: ev.distance_m,
+        };
+        return describeAction(
+          rangedAction,
+          rangedContext,
+          { verbosity: "cinematic" },
+        );
+      });
+    for (const line of cinematicSamples) console.log(`  ${line}`);
+
+    // ── Normal log ─────────────────────────────────────────────────────────────
+    console.log("\n── Normal log (adds blocks, parries, misses, grapple) ──");
+    const normalCfg: NarrativeConfig = { verbosity: "normal", nameMap, weaponProfiles };
+    const normalLines = buildCombatLog(events, normalCfg);
+    const shown = normalLines.slice(0, 20);
+    for (const line of shown) console.log(`  ${line}`);
+    if (normalLines.length > 20) {
+      console.log(`  … (${normalLines.length - 20} more lines at normal verbosity)`);
+    }
   }
 
   // ── Injury summaries ─────────────────────────────────────────────────────────

@@ -1,0 +1,9 @@
+{
+  "id": "ananke-narrative-export",
+  "name": "Ananke Narrative Export",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Exports Ananke simulation and narrative consistency outputs to markdown notes.",
+  "author": "Ananke",
+  "isDesktopOnly": false
+}

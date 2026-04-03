@@ -21,3 +21,5 @@ export * from "./bridge/index.js";
 
 export * from "./world-factory.js";
 export * from "./scenario.js";
+
+export * from "./navigation/causal-chain.js";

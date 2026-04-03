@@ -1,0 +1,24 @@
+{
+  "name": "simulate_battle_and_explain",
+  "description": "Run a seeded Ananke battle simulation, score narrative plausibility, and return grounded narrative logs.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "seed": { "type": "integer", "description": "Simulation seed to execute." },
+      "desiredBeat": {
+        "type": "string",
+        "enum": ["heroic_near_win", "clean_victory", "tragic_loss", "upset"],
+        "description": "Narrative outcome target."
+      },
+      "verbosity": {
+        "type": "string",
+        "enum": ["tactical", "cinematic"],
+        "description": "Narrative log style."
+      },
+      "heroEntityId": { "type": "integer", "description": "Primary hero entity ID." }
+    },
+    "required": ["seed", "desiredBeat", "verbosity", "heroEntityId"],
+    "additionalProperties": false
+  }
+}
