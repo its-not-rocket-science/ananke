@@ -1,0 +1,42 @@
+name: Semver Check
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  semver:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Prepare main branch snapshot
+        run: |
+          git fetch origin main
+          git worktree add /tmp/ananke-main origin/main
+          node dist/tools/api-surface.js --out=api-surface-pr.json
+          node dist/tools/api-surface.js --root=/tmp/ananke-main --out=/tmp/ananke-main/api-surface-main.json
+          cp /tmp/ananke-main/api-surface-main.json ./api-surface-main.json
+          cp /tmp/ananke-main/package.json ./package-main.json
+
+      - name: Enforce semantic versioning against Tier 1 changes
+        run: |
+          node dist/tools/semver-check.js \
+            --baseSurface=api-surface-main.json \
+            --headSurface=api-surface-pr.json \
+            --basePackage=package-main.json \
+            --headPackage=package.json
