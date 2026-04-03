@@ -11,6 +11,13 @@ export interface WorldRuntimeState {
   partyRegistry?: PartyRegistry;
   relationshipGraph?: RelationshipGraph;
   nutritionAccum?: number;
+  contentRegistry?: {
+    packs: Map<string, unknown>;
+    archetypes: Map<string, unknown>;
+    weapons: Map<string, unknown>;
+    armour: Map<string, unknown>;
+    terrain: Map<string, unknown>;
+  };
 }
 
 /**

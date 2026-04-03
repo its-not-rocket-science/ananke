@@ -15,6 +15,8 @@ import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve, extname, basename } from "node:path";
 import { createHash } from "node:crypto";
 import { validatePack, loadPack, type AnankePackManifest } from "../src/content-pack.js";
+import { loadContentPack } from "../src/content/loader.js";
+import { runContentSemanticChecks } from "../src/content/validator.js";
 import { diffReplayJson } from "../src/netcode.js";
 import { q } from "../src/units.js";
 
@@ -197,9 +199,36 @@ function cmdReplayDiff(args: string[]): void {
   process.exit(1);
 }
 
+async function cmdContentValidate(args: string[]): Promise<void> {
+  const filePath = args[0];
+  if (!filePath) {
+    console.error("Usage: ananke validate <content-pack.json>");
+    process.exit(1);
+  }
+
+  try {
+    const pack = await loadContentPack(resolve(filePath));
+    const warnings = runContentSemanticChecks(pack);
+    console.log(JSON.stringify({
+      ok: true,
+      pack: `${pack.name}@${pack.version}`,
+      schemaErrors: [],
+      semanticWarnings: warnings,
+    }, null, 2));
+    process.exit(0);
+  } catch (error) {
+    console.log(JSON.stringify({
+      ok: false,
+      schemaErrors: [{ path: "$", message: String(error) }],
+      semanticWarnings: [],
+    }, null, 2));
+    process.exit(1);
+  }
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
-function main(): void {
+async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const cmd  = argv[0];
 
@@ -233,6 +262,9 @@ function main(): void {
           process.exit(1);
       }
       break;
+    case "validate":
+      await cmdContentValidate(argv.slice(1));
+      break;
 
     default:
       console.error(`Unknown command: ${cmd}`);
@@ -245,10 +277,11 @@ function printHelp(): void {
   console.log("Ananke CLI");
   console.log("");
   console.log("Commands:");
+  console.log("  validate <file.json>                       — validate a content pack (schema + semantic checks)");
   console.log("  pack validate <file.json>                  — validate a pack manifest");
   console.log("  pack bundle <directory> [out.json]         — merge JSON files into one pack");
   console.log("  pack load <file.json>                      — load a pack and report registered ids");
   console.log("  replay diff <replay-a.json> <replay-b.json> — find the first tick divergence between two replays");
 }
 
-main();
+void main();

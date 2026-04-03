@@ -1,0 +1,10 @@
+{
+  "name": "@its-not-rocket-science/ananke-cli",
+  "version": "0.2.9",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "ananke": "../../dist/tools/pack-cli.js",
+    "content-validator": "../../dist/tools/content-validator.js"
+  }
+}

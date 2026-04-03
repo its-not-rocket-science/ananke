@@ -1,0 +1,76 @@
+{
+  "$schema": "../../schema/content-pack.schema.json",
+  "name": "sci-fi",
+  "version": "1.0.0",
+  "registry": {
+    "compatRange": ">=0.1.69"
+  },
+  "archetypes": [
+    {
+      "id": "orbital_marine",
+      "base": "SERVICE_ROBOT",
+      "overrides": {
+        "stature_m": 1.9
+      }
+    }
+  ],
+  "weapons": [
+    {
+      "id": "pulse_rifle",
+      "name": "Pulse Rifle",
+      "mass_kg": 3.8,
+      "damage": {
+        "surfaceFrac": 0.2,
+        "internalFrac": 0.55,
+        "structuralFrac": 0.15,
+        "bleedFactor": 0.05,
+        "penetrationBias": 0.8
+      },
+      "energyType": "plasma",
+      "range_m": 280,
+      "bulk": 0.3
+    },
+    {
+      "id": "rail_carbine",
+      "name": "Rail Carbine",
+      "mass_kg": 4.2,
+      "damage": {
+        "surfaceFrac": 0.1,
+        "internalFrac": 0.45,
+        "structuralFrac": 0.3,
+        "bleedFactor": 0.1,
+        "penetrationBias": 0.9
+      },
+      "energyType": "kinetic",
+      "range_m": 500,
+      "bulk": 0.3
+    }
+  ],
+  "armour": [
+    {
+      "id": "kinetic_shield",
+      "name": "Kinetic Shield",
+      "mass_kg": 2.5,
+      "resist_J": 500,
+      "protectedDamageMul": 0.4,
+      "coverageByRegion": {
+        "torso": 0.9,
+        "arms": 0.6
+      },
+      "shield": true,
+      "bulk": 0.4
+    }
+  ],
+  "terrain": [
+    {
+      "id": "vacuum_hull",
+      "name": "Vacuum Hull",
+      "tags": [
+        "metal",
+        "slippery"
+      ],
+      "tractionMul": 0.85,
+      "cover": 0.1
+    }
+  ]
+}
