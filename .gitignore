@@ -43,6 +43,11 @@ Thumbs.db
 # Local crib notes — untracked
 crib_notes.txt
 
+# Generated release dashboard — volatile timestamps/durations change every run.
+# Generate locally with: npm run release-check:quick
+docs/release-dashboard.md
+docs/release-report.json
+
 # External dataset files — raw data too large and/or binary to commit.
 # Only the README.md index file is tracked; actual dataset files are local-only.
 # Pattern: ignore everything inside docs/unavailable-resources/ EXCEPT README.md
