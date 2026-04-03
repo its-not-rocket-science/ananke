@@ -82,8 +82,18 @@ jobs:
         with:
           script: |
             const fs = require('node:fs');
-            const body = fs.readFileSync('api-diff-report.md', 'utf8');
             const marker = '<!-- ananke-api-diff -->';
+            const reportPath = 'api-diff-report.md';
+
+            const body = fs.existsSync(reportPath)
+              ? fs.readFileSync(reportPath, 'utf8')
+              : [
+                  '⚠️ API diff report was not generated.',
+                  '',
+                  'A prior step in this job likely failed before `api-diff-report.md` could be written.',
+                  'See the workflow logs for the first failing step.',
+                ].join('\n');
+
             const finalBody = `${marker}\n${body}`;
 
             const comments = await github.paginate(github.rest.issues.listComments, {
