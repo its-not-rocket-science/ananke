@@ -1,0 +1,334 @@
+{
+  "exports": [
+    {
+      "name": "AnankeScenario",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "AnankeScenarioEntity",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "AnimationHints",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "clampQ",
+      "kind": "const",
+      "params": [
+        {
+          "name": "x",
+          "type": "number"
+        },
+        {
+          "name": "lo",
+          "type": "number"
+        },
+        {
+          "name": "hi",
+          "type": "number"
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "Command",
+      "kind": "type",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "CommandMap",
+      "kind": "type",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "createWorld",
+      "kind": "function",
+      "params": [
+        {
+          "name": "seed",
+          "type": "number"
+        },
+        {
+          "name": "entities",
+          "type": "EntitySpec[]"
+        }
+      ],
+      "returnType": "import(\"/workspace/ananke/src/index\").WorldState"
+    },
+    {
+      "name": "deriveAnimationHints",
+      "kind": "function",
+      "params": [
+        {
+          "name": "entity",
+          "type": "Entity"
+        }
+      ],
+      "returnType": "import(\"/workspace/ananke/src/model3d\").AnimationHints"
+    },
+    {
+      "name": "deserializeReplay",
+      "kind": "function",
+      "params": [
+        {
+          "name": "json",
+          "type": "string"
+        }
+      ],
+      "returnType": "import(\"/workspace/ananke/src/replay\").Replay"
+    },
+    {
+      "name": "Entity",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "EntitySpec",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "extractRigSnapshots",
+      "kind": "function",
+      "params": [
+        {
+          "name": "world",
+          "type": "WorldState"
+        }
+      ],
+      "returnType": "import(\"/workspace/ananke/src/model3d\").RigSnapshot[]"
+    },
+    {
+      "name": "from",
+      "kind": "const",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "G_mps2",
+      "kind": "const",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "I32",
+      "kind": "type",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "IndividualAttributes",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "KernelContext",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "loadScenario",
+      "kind": "function",
+      "params": [
+        {
+          "name": "json",
+          "type": "unknown"
+        }
+      ],
+      "returnType": "import(\"/workspace/ananke/src/index\").WorldState"
+    },
+    {
+      "name": "mulDiv",
+      "kind": "const",
+      "params": [
+        {
+          "name": "a",
+          "type": "number"
+        },
+        {
+          "name": "b",
+          "type": "number"
+        },
+        {
+          "name": "div",
+          "type": "number"
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "q",
+      "kind": "const",
+      "params": [
+        {
+          "name": "x",
+          "type": "number"
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "Q",
+      "kind": "type",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "qDiv",
+      "kind": "const",
+      "params": [
+        {
+          "name": "a",
+          "type": "number"
+        },
+        {
+          "name": "b",
+          "type": "number"
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "qMul",
+      "kind": "const",
+      "params": [
+        {
+          "name": "a",
+          "type": "number"
+        },
+        {
+          "name": "b",
+          "type": "number"
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "Replay",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "ReplayFrame",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "ReplayRecorder",
+      "kind": "class",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "replayTo",
+      "kind": "function",
+      "params": [
+        {
+          "name": "replay",
+          "type": "Replay"
+        },
+        {
+          "name": "targetTick",
+          "type": "number"
+        },
+        {
+          "name": "ctx",
+          "type": "KernelContext"
+        }
+      ],
+      "returnType": "import(\"/workspace/ananke/src/index\").WorldState"
+    },
+    {
+      "name": "RigSnapshot",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "SCALE",
+      "kind": "const",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "serializeReplay",
+      "kind": "function",
+      "params": [
+        {
+          "name": "replay",
+          "type": "Replay"
+        }
+      ],
+      "returnType": "string"
+    },
+    {
+      "name": "sqrtQ",
+      "kind": "const",
+      "params": [
+        {
+          "name": "xQ",
+          "type": "number"
+        }
+      ],
+      "returnType": "number"
+    },
+    {
+      "name": "stepWorld",
+      "kind": "function",
+      "params": [
+        {
+          "name": "world",
+          "type": "WorldState"
+        },
+        {
+          "name": "cmds",
+          "type": "CommandMap"
+        },
+        {
+          "name": "ctx",
+          "type": "KernelContext"
+        }
+      ],
+      "returnType": "void"
+    },
+    {
+      "name": "to",
+      "kind": "const",
+      "params": [],
+      "returnType": null
+    },
+    {
+      "name": "validateScenario",
+      "kind": "function",
+      "params": [
+        {
+          "name": "json",
+          "type": "unknown"
+        }
+      ],
+      "returnType": "string[]"
+    },
+    {
+      "name": "WorldState",
+      "kind": "interface",
+      "params": [],
+      "returnType": null
+    }
+  ],
+  "tsconfig": "tsconfig.build.json"
+}
