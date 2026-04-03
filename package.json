@@ -330,7 +330,9 @@
     "check-stable-api": "node dist/tools/check-stable-api.js",
     "check-boundaries:report": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md",
     "example:first-hour": "node dist/examples/guided-first-hour.js",
-    "check-maturity-evidence": "node tools/check-maturity-evidence.mjs"
+    "check-maturity-evidence": "node tools/check-maturity-evidence.mjs",
+    "test:determinism": "npm run build:wasm:all && node tools/run-determinism-tests.mjs test/determinism/fuzz-against-wasm.spec.ts test/determinism/regression.spec.ts",
+    "test:determinism:nightly": "DETERMINISM_WORLD_STATES=10000 DETERMINISM_COMMANDS_PER_STATE=1000 npm run test:determinism -- --seed=1337"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

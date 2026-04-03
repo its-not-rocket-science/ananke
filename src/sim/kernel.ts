@@ -90,6 +90,7 @@ import {
 import { getSkill } from "./skills.js";
 
 import { TICK_HZ } from "./tick.js";
+import { assertNoFloatUsageInProduction } from "../determinism.js";
 
 // Phase 2 extension: swing momentum carry
 const SWING_MOMENTUM_MAX   = q(0.12) as Q;  // max +12% energy bonus at full momentum
@@ -167,6 +168,7 @@ function shieldBlocksSegment(
 }
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
+  assertNoFloatUsageInProduction(world);
   const tuning = ctx.tuning ?? TUNING.tactical;
 
   const trace = ctx.trace ?? nullTrace;

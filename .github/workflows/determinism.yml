@@ -1,0 +1,20 @@
+name: Determinism
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  regression:
+    name: Determinism regression gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test:determinism -- --run test/determinism/regression.spec.ts --seed=1337
