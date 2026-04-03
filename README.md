@@ -1,6 +1,7 @@
 # Ananke — Programmer's Guide
 
 ![CI](../../actions/workflows/ci.yml/badge.svg)
+[![Mod of the Week](https://img.shields.io/badge/Mod%20of%20the%20Week-Submit%20Yours-blueviolet)](docs/mod-of-the-week.md)
 
 > **Package:** `@its-not-rocket-science/ananke`  
 > **Stable API contract:** [`STABLE_API.md`](STABLE_API.md)
@@ -118,3 +119,5 @@ These are intentionally separated from onboarding because they may use Tier 2/Ti
 - [`docs/versioning.md`](docs/versioning.md)
 - [`docs/performance.md`](docs/performance.md)
 - [`docs/emergent-validation-report.md`](docs/emergent-validation-report.md)
+- [`docs/golden-path-improvement-plan.md`](docs/golden-path-improvement-plan.md)
+- [`docs/mod-of-the-week.md`](docs/mod-of-the-week.md)
