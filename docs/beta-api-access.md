@@ -5,6 +5,8 @@ Tier 2 and Tier 3 modules are available for advanced users who need early access
 ## Risk warning
 
 > ⚠️ Tier 2/3 APIs are not semver-stable and may change in minor or patch releases.
+>
+> Tier 1 stability dashboard target remains: **Tier 1 API Health ✅ 0 breaking changes in 90 days**.
 
 If you consume Tier 2/3 APIs in production:
 

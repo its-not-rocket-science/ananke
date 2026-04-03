@@ -26,8 +26,9 @@ jobs:
 
       - name: Prepare main branch snapshot
         run: |
-          git fetch origin main
-          git worktree add /tmp/ananke-main origin/main
+          BASE_REF="${{ github.base_ref }}"
+          git fetch origin "$BASE_REF"
+          git worktree add /tmp/ananke-main "origin/$BASE_REF"
           node dist/tools/api-surface.js --out=api-surface-pr.json
           node dist/tools/api-surface.js --root=/tmp/ananke-main --out=/tmp/ananke-main/api-surface-main.json
           cp /tmp/ananke-main/api-surface-main.json ./api-surface-main.json

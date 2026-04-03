@@ -27,6 +27,7 @@ export function step(world: WorldState): WorldState {
 - `api-diff.yml` compares Tier 1 API surface on PR branch vs `main`.
 - Any Tier 1 breaking change (kind/param/type/removal) fails CI unless the PR carries a matching major version bump.
 - `semver-check.yml` ensures version bump matches API change category.
+- API health badge: **Tier 1 API Health ✅ 0 breaking changes in 90 days**.
 
 ## Compatibility matrix
 
