@@ -66,14 +66,17 @@ jobs:
 
       - name: Run API policy checks
         run: |
+          set +e
           node dist/tools/api-diff-check.js \
             --base=api-surface-main.json \
             --head=api-surface-pr.json \
             --allowNew=${{ steps.approval.outputs.approved }} \
             --baseVersionMajor=${{ steps.versions.outputs.base_major }} \
             --headVersionMajor=${{ steps.versions.outputs.head_major }} \
-            > api-diff-report.md
+            > api-diff-report.md 2>&1
+          status=$?
           cat api-diff-report.md
+          exit $status
 
       - name: Comment API diff on PR
         if: always()

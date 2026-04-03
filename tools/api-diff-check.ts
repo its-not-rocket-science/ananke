@@ -39,6 +39,14 @@ function main(): void {
   }
 
   if (hardFailures.length > 0) {
+    console.log("");
+    console.log("### Merge blockers");
+    for (const failure of hardFailures) {
+      console.log(`- ${failure}`);
+    }
+  }
+
+  if (hardFailures.length > 0) {
     for (const failure of hardFailures) {
       console.error(failure);
     }
