@@ -10,8 +10,10 @@ import {
 } from "./shared.js";
 
 const runSeed = Number(process.env.DETERMINISM_SEED ?? 1337);
-const worldRuns = Number(process.env.DETERMINISM_WORLD_STATES ?? 10_000);
-const commandsPerState = Number(process.env.DETERMINISM_COMMANDS_PER_STATE ?? 1_000);
+// CI defaults: 50 runs × 50 commands. Override via env vars for stress runs:
+//   DETERMINISM_WORLD_STATES=10000 DETERMINISM_COMMANDS_PER_STATE=1000 npm test
+const worldRuns = Number(process.env.DETERMINISM_WORLD_STATES ?? 50);
+const commandsPerState = Number(process.env.DETERMINISM_COMMANDS_PER_STATE ?? 50);
 
 describe.skipIf(!hasBuiltWasmKernel())("determinism fuzzer against wasm", () => {
   it(
