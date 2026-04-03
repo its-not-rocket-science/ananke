@@ -1,3 +1,5 @@
+import "./determinism/no-float.js";
+
 // ── Tier 1 — Stable host API (minimal contract) ─────────────────────────────
 // This is the only import path hosts should treat as semver-stable:
 //   import { createWorld, stepWorld, q, SCALE } from "@its-not-rocket-science/ananke"

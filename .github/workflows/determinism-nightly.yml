@@ -1,0 +1,55 @@
+name: Determinism Nightly
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+jobs:
+  determinism-nightly:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build TS + WASM
+        run: |
+          npm run build
+          npm run build:wasm:all
+
+      - name: Run determinism fuzzer
+        run: npm run test:determinism -- --run test/determinism/fuzz-against-wasm.spec.ts
+        env:
+          DETERMINISM_WORLD_STATES: "10000"
+          DETERMINISM_COMMAND_SEQUENCES: "1000"
+
+      - name: Build report page
+        run: |
+          mkdir -p determinism-report
+          cp fixtures/determinism/fuzzer-last-run.json determinism-report/index.json
+          cat > determinism-report/index.html <<'HTML'
+          <!doctype html><html><body><h1>Ananke Determinism Report</h1><pre id="out"></pre><script>
+          fetch('./index.json').then(r=>r.json()).then(j=>{document.getElementById('out').textContent=JSON.stringify(j,null,2);});
+          </script></body></html>
+          HTML
+
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./determinism-report
+          destination_dir: determinism-report
