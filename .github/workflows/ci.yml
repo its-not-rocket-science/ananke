@@ -25,7 +25,10 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        # Use `npm install` rather than `npm ci` so that branches adding a new
+        # packages/* workspace without regenerating the lock file do not hard-fail.
+        # Strict lock-file enforcement is applied in publish.yml before any release.
+        run: npm install
 
       - name: Type check
         run: tsc --noEmit -p tsconfig.build.json
