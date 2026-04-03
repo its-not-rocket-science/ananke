@@ -47,6 +47,47 @@ function parseArgs(argv: string[]): Record<string, string> {
   return options;
 }
 
+function resolveTsModule(fromFile: string, specifier: string): string | null {
+  if (!specifier.startsWith(".")) return null;
+  const absolute = path.resolve(path.dirname(fromFile), specifier);
+  const candidates = [
+    absolute,
+    `${absolute}.ts`,
+    `${absolute}.tsx`,
+    path.join(absolute, "index.ts"),
+  ];
+  for (const candidate of candidates) {
+    if (ts.sys.fileExists(candidate)) return candidate;
+  }
+  return null;
+}
+
+function collectTier1Modules(entryAbsPath: string): Set<string> {
+  const queue = [entryAbsPath];
+  const seen = new Set<string>();
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    if (seen.has(current)) continue;
+    seen.add(current);
+
+    const sourceText = ts.sys.readFile(current);
+    if (!sourceText) continue;
+    const sourceFile = ts.createSourceFile(current, sourceText, ts.ScriptTarget.Latest, true);
+
+    for (const statement of sourceFile.statements) {
+      if (!ts.isExportDeclaration(statement) || !statement.moduleSpecifier) continue;
+      const moduleText = statement.moduleSpecifier.getText(sourceFile).slice(1, -1);
+      const resolved = resolveTsModule(current, moduleText);
+      if (resolved && !seen.has(resolved)) {
+        queue.push(resolved);
+      }
+    }
+  }
+
+  return seen;
+}
+
 export function extractApiSurface(rootDir: string, entry = "src/index.ts"): ApiSurface {
   const tsconfigPath = ts.findConfigFile(rootDir, ts.sys.fileExists, "tsconfig.build.json")
     ?? ts.findConfigFile(rootDir, ts.sys.fileExists, "tsconfig.json");
@@ -65,6 +106,12 @@ export function extractApiSurface(rootDir: string, entry = "src/index.ts"): ApiS
   const checker = program.getTypeChecker();
 
   const entryAbsPath = path.resolve(rootDir, entry);
+  const tier1Modules = collectTier1Modules(entryAbsPath);
+  for (const modulePath of tier1Modules) {
+    if (!program.getSourceFile(modulePath)) {
+      throw new Error(`Tier 1 re-export module was not included by tsconfig: ${modulePath}`);
+    }
+  }
   const sourceFile = program.getSourceFile(entryAbsPath);
   if (!sourceFile) {
     throw new Error(`Entrypoint not found in program: ${entryAbsPath}`);
