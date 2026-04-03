@@ -55,13 +55,19 @@ function main(): void {
   console.log(`Required bump: ${expected}`);
   console.log(`Version bump: ${actual} (${baseVersion.major}.${baseVersion.minor}.${baseVersion.patch} -> ${headVersion.major}.${headVersion.minor}.${headVersion.patch})`);
 
-  if (actual === "none") {
-    console.error("Version must be incremented for any PR merged to main.");
+  if (expected !== "none" && actual === "none") {
+    console.error(`Version must be incremented by at least ${expected} when Tier 1 API changes are present.`);
     process.exit(1);
     return;
   }
 
-  const rank = { patch: 1, minor: 2, major: 3 } as const;
+  if (expected === "none") {
+    console.log("No Tier 1 API changes detected; version bump is optional.");
+    console.log("Semver policy check passed.");
+    return;
+  }
+
+  const rank = { none: 0, patch: 1, minor: 2, major: 3 } as const;
   if (rank[actual] < rank[expected]) {
     console.error(`Semver mismatch: expected at least ${expected} bump for current Tier 1 API changes.`);
     process.exit(1);

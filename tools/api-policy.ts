@@ -112,9 +112,10 @@ export function diffApiSurface(base: ApiSurface, head: ApiSurface): ApiChange[] 
   return changes;
 }
 
-export function requiredBump(changes: ApiChange[]): "patch" | "minor" | "major" {
+export function requiredBump(changes: ApiChange[]): "none" | "patch" | "minor" | "major" {
   if (changes.some((change) => change.severity === "major")) return "major";
   if (changes.some((change) => change.severity === "minor")) return "minor";
+  if (changes.length === 0) return "none";
   return "patch";
 }
 
