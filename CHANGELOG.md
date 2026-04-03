@@ -6,6 +6,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.12] — 2026-04-03
+
+### Changed
+
+- Added forward-compatible binary world serialization in `src/serialization/binary.ts` with versioned headers, checksum validation, incremental snapshot support, and compressed payload mode.
+- Added time-travel controls in `src/history/timetravel.ts` with tick-ring recording, `rewind`, and `fork` helpers for deterministic branching workflows.
+- Added autosave orchestration in `src/history/autosave.ts` with Node filesystem and browser IndexedDB storage adapters plus crash-recovery loading.
+- Added runnable examples for time travel debugging, campaign branching, and campaign autosave recovery.
+- Added serialization regression coverage for round-trip parity, fuzzed checksum validation, incremental snapshots, and v1→v2 migration handling.
+- Bumped package version to `0.2.12` and synced lockfile.
+
+---
+
 ## [0.2.9] — 2026-04-02
 
 ### Changed
