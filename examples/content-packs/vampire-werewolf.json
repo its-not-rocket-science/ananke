@@ -1,0 +1,60 @@
+{
+  "$schema": "../../schema/content-pack.schema.json",
+  "name": "vampire-werewolf",
+  "version": "1.0.0",
+  "registry": {
+    "compatRange": ">=0.1.69"
+  },
+  "archetypes": [
+    {
+      "id": "night_vampire",
+      "base": "HUMAN_BASE",
+      "overrides": {
+        "stature_m": 1.84
+      },
+      "abilities": [
+        "life_steal"
+      ]
+    },
+    {
+      "id": "moon_werewolf",
+      "base": "HUMAN_BASE",
+      "overrides": {
+        "stature_m": 1.95
+      },
+      "abilities": [
+        "regeneration"
+      ]
+    }
+  ],
+  "weapons": [
+    {
+      "id": "vampire_claws",
+      "name": "Vampire Claws",
+      "mass_kg": 0.2,
+      "damage": {
+        "surfaceFrac": 0.45,
+        "internalFrac": 0.25,
+        "structuralFrac": 0.1,
+        "bleedFactor": 0.9,
+        "penetrationBias": 0.3
+      },
+      "lifeSteal": 0.2,
+      "bulk": 0.3
+    },
+    {
+      "id": "werewolf_fangs",
+      "name": "Werewolf Fangs",
+      "mass_kg": 0.3,
+      "damage": {
+        "surfaceFrac": 0.4,
+        "internalFrac": 0.35,
+        "structuralFrac": 0.15,
+        "bleedFactor": 0.8,
+        "penetrationBias": 0.25
+      },
+      "regeneration": 0.15,
+      "bulk": 0.3
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "$schema": "../../schema/content-pack.schema.json",
+  "name": "fantasy-starter",
+  "version": "1.0.0",
+  "registry": {
+    "compatRange": ">=0.1.69"
+  },
+  "archetypes": [
+    {
+      "id": "fantasy_knight",
+      "base": "KNIGHT_INFANTRY",
+      "overrides": {
+        "stature_m": 1.82
+      }
+    },
+    {
+      "id": "fantasy_archer",
+      "base": "HUMAN_BASE",
+      "overrides": {
+        "stature_m": 1.76
+      }
+    },
+    {
+      "id": "fantasy_rogue",
+      "base": "HUMAN_BASE",
+      "overrides": {
+        "stature_m": 1.7
+      }
+    }
+  ],
+  "weapons": [
+    {
+      "id": "iron_longsword",
+      "name": "Iron Longsword",
+      "mass_kg": 1.4,
+      "damage": {
+        "surfaceFrac": 0.4,
+        "internalFrac": 0.3,
+        "structuralFrac": 0.2,
+        "bleedFactor": 0.5,
+        "penetrationBias": 0.3
+      },
+      "bulk": 0.3
+    },
+    {
+      "id": "oak_bow",
+      "name": "Oak Bow",
+      "mass_kg": 0.9,
+      "damage": {
+        "surfaceFrac": 0.3,
+        "internalFrac": 0.25,
+        "structuralFrac": 0.15,
+        "bleedFactor": 0.45,
+        "penetrationBias": 0.2
+      },
+      "bulk": 0.3
+    },
+    {
+      "id": "steel_dagger",
+      "name": "Steel Dagger",
+      "mass_kg": 0.4,
+      "damage": {
+        "surfaceFrac": 0.35,
+        "internalFrac": 0.2,
+        "structuralFrac": 0.1,
+        "bleedFactor": 0.6,
+        "penetrationBias": 0.25
+      },
+      "bulk": 0.3
+    },
+    {
+      "id": "warhammer",
+      "name": "Warhammer",
+      "mass_kg": 2.3,
+      "damage": {
+        "surfaceFrac": 0.2,
+        "internalFrac": 0.35,
+        "structuralFrac": 0.4,
+        "bleedFactor": 0.2,
+        "penetrationBias": 0.5
+      },
+      "bulk": 0.3
+    },
+    {
+      "id": "spear",
+      "name": "Spear",
+      "mass_kg": 1.8,
+      "damage": {
+        "surfaceFrac": 0.28,
+        "internalFrac": 0.32,
+        "structuralFrac": 0.2,
+        "bleedFactor": 0.5,
+        "penetrationBias": 0.35
+      },
+      "bulk": 0.3
+    }
+  ],
+  "armour": [
+    {
+      "id": "chainmail",
+      "name": "Chainmail",
+      "mass_kg": 10.0,
+      "resist_J": 230,
+      "protectedDamageMul": 0.6,
+      "coverageByRegion": {
+        "torso": 0.8,
+        "arms": 0.4
+      },
+      "bulk": 0.4
+    },
+    {
+      "id": "leather_jerkin",
+      "name": "Leather Jerkin",
+      "mass_kg": 4.2,
+      "resist_J": 120,
+      "protectedDamageMul": 0.75,
+      "coverageByRegion": {
+        "torso": 0.7
+      },
+      "bulk": 0.4
+    }
+  ]
+}

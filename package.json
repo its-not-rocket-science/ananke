@@ -182,6 +182,10 @@
       "import": "./dist/src/content-pack.js",
       "types": "./dist/src/content-pack.d.ts"
     },
+    "./content": {
+      "import": "./dist/src/content/index.js",
+      "types": "./dist/src/content/index.d.ts"
+    },
     "./terrain-bridge": {
       "import": "./dist/src/terrain-bridge.js",
       "types": "./dist/src/terrain-bridge.d.ts"
@@ -238,6 +242,7 @@
     "schema/world.schema.json",
     "schema/replay.schema.json",
     "schema/pack.schema.json",
+    "schema/content-pack.schema.json",
     "CHANGELOG.md",
     "STABLE_API.md",
     "docs/stable-api-manifest.json"

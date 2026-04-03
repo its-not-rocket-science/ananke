@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://its-not-rocket-science.github.io/ananke/schema/content-pack.schema.json",
+  "title": "ContentPack",
+  "type": "object",
+  "required": ["name", "version"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+(\\.\\d+)?$" },
+    "description": { "type": "string" },
+    "registry": {
+      "type": "object",
+      "properties": {
+        "compatRange": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "weapons": { "type": "array", "items": { "$ref": "#/$defs/WeaponEntry" } },
+    "armour": { "type": "array", "items": { "$ref": "#/$defs/ArmourEntry" } },
+    "archetypes": { "type": "array", "items": { "$ref": "#/$defs/ArchetypeEntry" } },
+    "terrain": { "type": "array", "items": { "$ref": "#/$defs/TerrainEntry" } }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "WeaponDamageProfile": {
+      "type": "object",
+      "required": ["surfaceFrac", "internalFrac", "structuralFrac", "bleedFactor", "penetrationBias"],
+      "properties": {
+        "surfaceFrac": { "type": "number", "minimum": 0, "maximum": 1 },
+        "internalFrac": { "type": "number", "minimum": 0, "maximum": 1 },
+        "structuralFrac": { "type": "number", "minimum": 0, "maximum": 1 },
+        "bleedFactor": { "type": "number", "minimum": 0, "maximum": 1 },
+        "penetrationBias": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "WeaponEntry": {
+      "type": "object",
+      "required": ["id", "name", "mass_kg", "damage"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "mass_kg": { "type": "number", "exclusiveMinimum": 0 },
+        "damage": { "$ref": "#/$defs/WeaponDamageProfile" }
+      },
+      "additionalProperties": true
+    },
+    "ArmourEntry": {
+      "type": "object",
+      "required": ["id", "name", "mass_kg", "resist_J", "protectedDamageMul", "coverageByRegion"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "mass_kg": { "type": "number", "exclusiveMinimum": 0 },
+        "resist_J": { "type": "number", "exclusiveMinimum": 0 },
+        "protectedDamageMul": { "type": "number", "minimum": 0, "maximum": 1 },
+        "coverageByRegion": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 } }
+      },
+      "additionalProperties": true
+    },
+    "ArchetypeEntry": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "base": { "type": "string" },
+        "overrides": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "TerrainEntry": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "tractionMul": { "type": "number", "minimum": 0 },
+        "cover": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    }
+  }
+}

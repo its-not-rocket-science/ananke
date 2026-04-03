@@ -1,0 +1,11 @@
+name: content-validator
+description: Validate an Ananke content pack using schema and semantic checks.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: npx ananke validate ${{ inputs.pack_path }}
+inputs:
+  pack_path:
+    description: Path to content pack JSON
+    required: true
