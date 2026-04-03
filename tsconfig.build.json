@@ -3,22 +3,25 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": ".",
-
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "Bundler",
-
     "declaration": true,
     "declarationMap": false,
     "sourceMap": false,
-
     "rewriteRelativeImportExtensions": true,
-
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "skipLibCheck": true,
     "noEmitOnError": true
   },
-  "include": ["src/**/*", "tools/**/*", "examples/**/*"],
+  "include": [
+    "src/**/*",
+    "tools/**/*",
+    "examples/**/*",
+    "benchmarks/**/*"
+  ],
   "exclude": [
     "node_modules",
     "dist",

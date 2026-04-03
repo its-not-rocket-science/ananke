@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8" /><title>Ananke Performance Dashboard</title>
+<style>body{font-family:Arial;margin:24px} table{border-collapse:collapse;width:100%} td,th{border:1px solid #ddd;padding:8px} .alert{font-weight:700;margin:8px 0}</style>
+</head>
+<body>
+<h1>Ananke Performance Dashboard</h1>
+<p class="alert">✅ Stable (0.0% vs 19bbed7)</p>
+<canvas id="chart" width="1000" height="280"></canvas>
+<h2>Current vs baseline (large battle)</h2>
+<table><thead><tr><th>Adapter</th><th>Ticks/sec</th><th>Ananke Ratio</th><th>Delta vs Adapter</th></tr></thead><tbody><tr><td>Ananke</td><td>101.1</td><td>1.00x</td><td>0.0%</td></tr>
+<tr><td>GridSage (public snapshot)</td><td>0.0</td><td>0.00x</td><td>10105.0%</td></tr>
+<tr><td>Unity DOTS (C#/WASM minimal)</td><td>0.0</td><td>0.00x</td><td>10105.0%</td></tr>
+<tr><td>Hand-rolled JS O(N²)</td><td>43.7</td><td>2.31x</td><td>131.4%</td></tr></tbody></table>
+<script>
+const points = [{"commit":"19bbed7","ticks":101.05012594427919},{"commit":"19bbed7","ticks":101.05012594427919}];
+const canvas = document.getElementById('chart');
+const ctx = canvas.getContext('2d');
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.strokeStyle='#0055cc'; ctx.lineWidth=2;
+const max = Math.max(...points.map(p=>p.ticks), 1);
+points.forEach((p,i)=>{ const x = 40 + (i*Math.max(1,(canvas.width-60)/Math.max(1,points.length-1))); const y = canvas.height-30-((p.ticks/max)*(canvas.height-60)); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+ctx.stroke();
+ctx.fillStyle='#333'; ctx.fillText('ticks/sec over time (last 100 commits)', 40, 18);
+</script>
+</body>
+</html>
