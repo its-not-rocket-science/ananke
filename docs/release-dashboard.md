@@ -10,13 +10,13 @@
 
 ## Consistency status
 
-- Overall: **PASS**
+- Overall: **FAIL**
 - Latest changelog version: **0.2.9** (2026-04-02)
-- Package version: **0.2.9**
+- Package version: **0.2.11**
 
 ### Current inconsistencies
 
-- None detected.
+- Version mismatch: CHANGELOG latest is 0.2.9 but package.json is 0.2.11.
 
 ## Latest releases (from CHANGELOG)
 
