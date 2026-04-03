@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ananke Hub</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --surface: #141b34;
+      --surface-2: #1b2444;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --brand: #60a5fa;
+      --ok: #22c55e;
+      --warn: #fbbf24;
+      --danger: #ef4444;
+      --border: #293354;
+      --chip: #27345e;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #0a0f1d 0%, #0b1020 100%);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: grid;
+      gap: 1rem;
+    }
+
+    .card {
+      background: rgba(20, 27, 52, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.9rem;
+    }
+
+    h1, h2, h3 { margin: 0 0 .5rem; }
+    h1 { font-size: 1.45rem; }
+    h2 { font-size: 1.05rem; }
+    h3 { font-size: .95rem; }
+    .muted { color: var(--muted); font-size: .9rem; }
+
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: .65rem;
+      margin-top: .75rem;
+    }
+
+    .role-btn {
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      border-radius: 10px;
+      padding: .75rem;
+      text-align: left;
+      cursor: pointer;
+    }
+    .role-btn.active { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+    .role-title { font-weight: 700; margin-bottom: .35rem; }
+    .role-btn ul { padding-left: 1.1rem; margin: 0; }
+    .role-btn li { color: var(--muted); font-size: .8rem; }
+
+    .toolbar {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav {
+      display: flex;
+      gap: .45rem;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      background: var(--chip);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      padding: .35rem .65rem;
+      font-size: .8rem;
+      cursor: pointer;
+    }
+    .chip.active { border-color: var(--brand); color: #dbeafe; }
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: .75rem;
+    }
+
+    .metric-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+    .metric { background: #0d1530; border: 1px solid var(--border); border-radius: 8px; padding: .55rem; }
+    .metric .label { font-size: .72rem; color: var(--muted); }
+    .metric .value { font-size: 1rem; font-weight: 700; margin-top: .15rem; }
+
+    textarea, input, select {
+      width: 100%;
+      background: #0d1530;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .5rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    textarea { min-height: 150px; resize: vertical; }
+
+    .btn {
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      border-radius: 8px;
+      padding: .45rem .7rem;
+      cursor: pointer;
+      font-size: .85rem;
+    }
+    .btn.primary { border-color: var(--brand); }
+
+    .row { display: flex; gap: .45rem; flex-wrap: wrap; }
+    .status-dot { width: .65rem; height: .65rem; border-radius: 999px; display: inline-block; margin-right: .4rem; }
+
+    .placeholder-view {
+      height: 200px;
+      background: radial-gradient(circle at 30% 25%, #1f3b75 0%, #111a35 60%, #0d1530 100%);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+    .entity {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: #93c5fd;
+      box-shadow: 0 0 16px rgba(96,165,250,.8);
+      transition: transform .2s linear;
+    }
+
+    .small { font-size: .8rem; color: var(--muted); }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card">
+      <h1>Ananke Hub</h1>
+      <p class="muted">Unified dashboard for Game Developer, ML Researcher, Hobbyist, and Storyteller workflows.</p>
+      <div id="roleSelector" class="role-grid"></div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <div>
+          <h2 id="activeRoleTitle">Role: Game Developer</h2>
+          <div id="activeRoleHint" class="muted">Benchmarks, determinism tests, save/load demo.</div>
+        </div>
+        <div class="nav" id="roleNav"></div>
+      </div>
+    </section>
+
+    <section class="panel-grid" id="sharedPanels"></section>
+    <section class="panel-grid" id="rolePanels"></section>
+  </div>
+
+  <script>
+    const ROLE_CONFIG = {
+      gameDev: {
+        label: 'Game Developer',
+        hint: 'Benchmarks, determinism tests, save/load demo.',
+        nav: ['Benchmarks', 'Determinism Tests', 'Save/Load Demo'],
+        bullets: ['Benchmarks', 'Determinism tests', 'Save/load demo']
+      },
+      mlResearcher: {
+        label: 'ML Researcher',
+        hint: 'Python colab, batch inference, leaderboard.',
+        nav: ['Python Colab', 'Batch Inference', 'Leaderboard'],
+        bullets: ['Python colab', 'Batch inference', 'Leaderboard']
+      },
+      hobbyist: {
+        label: 'Hobbyist',
+        hint: 'Live demo, content pack builder, mod showcase.',
+        nav: ['Live Demo', 'Content Pack Builder', 'Mod Showcase'],
+        bullets: ['Live demo', 'Content pack builder', 'Mod showcase']
+      },
+      storyteller: {
+        label: 'Storyteller',
+        hint: 'Narrative logs, plausibility scorer, Obsidian export.',
+        nav: ['Narrative Logs', 'Plausibility Scorer', 'Obsidian Export'],
+        bullets: ['Narrative logs', 'Plausibility scorer', 'Obsidian export']
+      }
+    };
+
+    const state = {
+      role: 'gameDev',
+      nav: 'Benchmarks',
+      loadedPanels: new Set()
+    };
+
+    const roleSelector = document.getElementById('roleSelector');
+    const roleNav = document.getElementById('roleNav');
+    const sharedPanels = document.getElementById('sharedPanels');
+    const rolePanels = document.getElementById('rolePanels');
+
+    function renderRoleSelector() {
+      roleSelector.innerHTML = '';
+      Object.entries(ROLE_CONFIG).forEach(([key, cfg]) => {
+        const btn = document.createElement('button');
+        btn.className = `role-btn ${state.role === key ? 'active' : ''}`;
+        btn.innerHTML = `
+          <div class="role-title">${cfg.label}</div>
+          <ul>${cfg.bullets.map((item) => `<li>${item}</li>`).join('')}</ul>
+        `;
+        btn.onclick = () => {
+          state.role = key;
+          state.nav = cfg.nav[0];
+          render();
+        };
+        roleSelector.appendChild(btn);
+      });
+    }
+
+    function renderRoleNav() {
+      const cfg = ROLE_CONFIG[state.role];
+      roleNav.innerHTML = '';
+      cfg.nav.forEach((item) => {
+        const chip = document.createElement('button');
+        chip.className = `chip ${state.nav === item ? 'active' : ''}`;
+        chip.textContent = item;
+        chip.onclick = () => {
+          state.nav = item;
+          render();
+        };
+        roleNav.appendChild(chip);
+      });
+      document.getElementById('activeRoleTitle').textContent = `Role: ${cfg.label}`;
+      document.getElementById('activeRoleHint').textContent = cfg.hint;
+    }
+
+    // Shared WebComponents
+    class SimulationViewerPanel extends HTMLElement {
+      connectedCallback() {
+        this.innerHTML = `
+          <div class="card">
+            <h3>Real-time Simulation Viewer</h3>
+            <p class="small">Reuses hobbyist debugger-style live viewport for cross-role learning.</p>
+            <div class="placeholder-view" id="simView">
+              <div class="entity" style="left:10%;top:18%"></div>
+              <div class="entity" style="left:38%;top:55%;background:#fca5a5"></div>
+              <div class="entity" style="left:66%;top:35%;background:#86efac"></div>
+            </div>
+          </div>
+        `;
+        const entities = this.querySelectorAll('.entity');
+        let t = 0;
+        const timer = setInterval(() => {
+          t += 0.12;
+          entities.forEach((el, idx) => {
+            const x = Math.sin(t + idx) * 22;
+            const y = Math.cos((t * 0.8) + idx) * 16;
+            el.style.transform = `translate(${x}px, ${y}px)`;
+          });
+        }, 180);
+        this._cleanup = () => clearInterval(timer);
+      }
+      disconnectedCallback() { this._cleanup?.(); }
+    }
+
+    class SeedEditorPanel extends HTMLElement {
+      connectedCallback() {
+        this.innerHTML = `
+          <div class="card">
+            <h3>Seed / Command Editor</h3>
+            <p class="small">Edit scenario seeds and command scripts; import/export JSON.</p>
+            <textarea id="seedJson">{
+  "seed": "ananke-hub-2026",
+  "commands": [
+    { "tick": 10, "type": "spawn", "unit": "infantry" },
+    { "tick": 25, "type": "move", "target": [16, 8] }
+  ]
+}</textarea>
+            <div class="row" style="margin-top:.5rem">
+              <button class="btn" id="importBtn">Import JSON</button>
+              <button class="btn" id="exportBtn">Export JSON</button>
+            </div>
+            <div id="seedMsg" class="small" style="margin-top:.5rem"></div>
+          </div>
+        `;
+        const area = this.querySelector('#seedJson');
+        const msg = this.querySelector('#seedMsg');
+        this.querySelector('#importBtn').onclick = () => {
+          try {
+            JSON.parse(area.value);
+            msg.textContent = 'JSON parsed successfully.';
+          } catch (err) {
+            msg.textContent = `Invalid JSON: ${err.message}`;
+          }
+        };
+        this.querySelector('#exportBtn').onclick = () => {
+          const blob = new Blob([area.value], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'ananke-seed.json';
+          a.click();
+          URL.revokeObjectURL(url);
+          msg.textContent = 'Exported ananke-seed.json';
+        };
+      }
+    }
+
+    class TelemetryPanel extends HTMLElement {
+      connectedCallback() {
+        this.innerHTML = `
+          <div class="card">
+            <h3>Performance Telemetry</h3>
+            <div class="metric-row">
+              <div class="metric"><div class="label">ticks / sec</div><div class="value" id="ticks">20.0</div></div>
+              <div class="metric"><div class="label">memory (MB)</div><div class="value" id="mem">178</div></div>
+              <div class="metric"><div class="label">frame time (ms)</div><div class="value" id="frame">8.1</div></div>
+            </div>
+          </div>
+        `;
+        const ticks = this.querySelector('#ticks');
+        const mem = this.querySelector('#mem');
+        const frame = this.querySelector('#frame');
+        const timer = setInterval(() => {
+          ticks.textContent = (19.6 + Math.random() * 0.8).toFixed(2);
+          mem.textContent = (172 + Math.random() * 18).toFixed(0);
+          frame.textContent = (7.6 + Math.random() * 1.4).toFixed(2);
+        }, 1200);
+        this._cleanup = () => clearInterval(timer);
+      }
+      disconnectedCallback() { this._cleanup?.(); }
+    }
+
+    customElements.define('simulation-viewer-panel', SimulationViewerPanel);
+    customElements.define('seed-editor-panel', SeedEditorPanel);
+    customElements.define('telemetry-panel', TelemetryPanel);
+
+    // Lazy role panel registry (load on demand)
+    const panelLoaders = {
+      gameDev: () => {
+        class GameDevPanel extends HTMLElement {
+          connectedCallback() {
+            this.innerHTML = `
+              <div class="card">
+                <h3>API Stability Tracker</h3>
+                <p class="small">Tier status for integration confidence.</p>
+                <p><span class="status-dot" style="background:var(--ok)"></span>Tier 1 (Stable)</p>
+                <p><span class="status-dot" style="background:var(--warn)"></span>Tier 2 (Limited changes)</p>
+                <p><span class="status-dot" style="background:var(--danger)"></span>Tier 3 (Experimental)</p>
+              </div>
+              <div class="card">
+                <h3>Developer Actions</h3>
+                <div class="row">
+                  <button class="btn">Run benchmarks</button>
+                  <button class="btn">Run determinism tests</button>
+                  <button class="btn">Open save/load demo</button>
+                </div>
+              </div>
+            `;
+          }
+        }
+        customElements.define('game-dev-panel', GameDevPanel);
+      },
+      mlResearcher: () => {
+        class MlResearcherPanel extends HTMLElement {
+          connectedCallback() {
+            this.innerHTML = `
+              <div class="card">
+                <h3>TensorBoard Integration</h3>
+                <p class="small">Scalars synced: <strong>episode_length</strong>, <strong>reward</strong>.</p>
+                <div class="metric-row">
+                  <div class="metric"><div class="label">episode_length</div><div class="value">142.7</div></div>
+                  <div class="metric"><div class="label">reward</div><div class="value">0.83</div></div>
+                  <div class="metric"><div class="label">step</div><div class="value">1,245k</div></div>
+                </div>
+                <p class="small" style="margin-top:.5rem">Open TensorBoard: <a href="#" aria-disabled="true">/runs/latest</a></p>
+              </div>
+              <div class="card">
+                <h3>ML Workflow</h3>
+                <div class="row">
+                  <button class="btn">Launch Python Colab</button>
+                  <button class="btn">Batch inference</button>
+                  <button class="btn">Sync GitHub leaderboard</button>
+                </div>
+              </div>
+            `;
+          }
+        }
+        customElements.define('ml-researcher-panel', MlResearcherPanel);
+      },
+      hobbyist: () => {
+        class HobbyistPanel extends HTMLElement {
+          connectedCallback() {
+            this.innerHTML = `
+              <div class="card">
+                <h3>Mod of the Week</h3>
+                <p class="small">RSS (GitHub Discussions): curated weekly highlight.</p>
+                <ul>
+                  <li><strong>Floating Isles Pack</strong> — biomes + sky-bridges</li>
+                  <li><strong>Village Drama AI</strong> — social conflict behaviors</li>
+                </ul>
+                <button class="btn">Refresh RSS</button>
+              </div>
+              <div class="card">
+                <h3>Hobbyist Actions</h3>
+                <div class="row">
+                  <button class="btn">Open live demo</button>
+                  <button class="btn">Content pack builder</button>
+                  <button class="btn">Browse mod showcase</button>
+                </div>
+              </div>
+            `;
+          }
+        }
+        customElements.define('hobbyist-panel', HobbyistPanel);
+      },
+      storyteller: () => {
+        class StorytellerPanel extends HTMLElement {
+          connectedCallback() {
+            this.innerHTML = `
+              <div class="card">
+                <h3>Story Tools</h3>
+                <p class="small">Narrative logs + plausibility score + export pipeline.</p>
+                <div class="metric-row">
+                  <div class="metric"><div class="label">plausibility</div><div class="value">91/100</div></div>
+                  <div class="metric"><div class="label">active threads</div><div class="value">7</div></div>
+                  <div class="metric"><div class="label">log size</div><div class="value">2.1 MB</div></div>
+                </div>
+                <div class="row" style="margin-top:.5rem">
+                  <button class="btn primary">This battle's novel</button>
+                  <button class="btn">Export to Obsidian</button>
+                </div>
+              </div>
+              <div class="card">
+                <h3>Storyteller Actions</h3>
+                <div class="row">
+                  <button class="btn">Open narrative logs</button>
+                  <button class="btn">Run plausibility scorer</button>
+                  <button class="btn">Generate markdown export</button>
+                </div>
+              </div>
+            `;
+          }
+        }
+        customElements.define('storyteller-panel', StorytellerPanel);
+      }
+    };
+
+    function ensureRolePanelLoaded(role) {
+      if (state.loadedPanels.has(role)) return;
+      panelLoaders[role]();
+      state.loadedPanels.add(role);
+    }
+
+    function renderSharedPanels() {
+      sharedPanels.innerHTML = '';
+      sharedPanels.append(
+        document.createElement('simulation-viewer-panel'),
+        document.createElement('seed-editor-panel'),
+        document.createElement('telemetry-panel')
+      );
+    }
+
+    function renderRolePanels() {
+      ensureRolePanelLoaded(state.role);
+      rolePanels.innerHTML = '';
+      const tagMap = {
+        gameDev: 'game-dev-panel',
+        mlResearcher: 'ml-researcher-panel',
+        hobbyist: 'hobbyist-panel',
+        storyteller: 'storyteller-panel'
+      };
+      rolePanels.appendChild(document.createElement(tagMap[state.role]));
+    }
+
+    function render() {
+      renderRoleSelector();
+      renderRoleNav();
+      renderSharedPanels();
+      renderRolePanels();
+    }
+
+    render();
+  </script>
+</body>
+</html>
