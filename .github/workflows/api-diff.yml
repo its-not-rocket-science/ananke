@@ -45,8 +45,10 @@ jobs:
       - name: Read package versions
         id: versions
         run: |
-          echo "head_major=$(node -p \"require('./package.json').version.split('.')[0]\")" >> "$GITHUB_OUTPUT"
-          echo "base_major=$(node -p \"require('/tmp/ananke-main/package.json').version.split('.')[0]\")" >> "$GITHUB_OUTPUT"
+          echo -n "head_major=" >> "$GITHUB_OUTPUT"
+          node -e "console.log(require('./package.json').version.split('.')[0])" >> "$GITHUB_OUTPUT"
+          echo -n "base_major=" >> "$GITHUB_OUTPUT"
+          node -e "console.log(require('/tmp/ananke-main/package.json').version.split('.')[0])" >> "$GITHUB_OUTPUT"
 
       - name: Check API addition approval comment
         id: approval
