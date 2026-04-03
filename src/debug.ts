@@ -11,6 +11,7 @@ import type { Vec3 } from "./sim/vec3.js";
 import type { Q } from "./units.js";
 import type { TraceEvent } from "./sim/trace.js";
 import { TraceKinds } from "./sim/kinds.js";
+import { explainOutcome, type Explanation, type ExplanationContext, type TickRange } from "./navigation/causal-chain.js";
 
 // ─── Motion vectors ───────────────────────────────────────────────────────────
 
@@ -155,4 +156,19 @@ export function extractConditionSamples(world: WorldState): ConditionSample[] {
     fluidLoss:    e.injury.fluidLoss,
     dead:         e.injury.dead,
   }));
+}
+
+
+// ─── Causal chain explanations ───────────────────────────────────────────────
+
+/**
+ * Convenience adapter for debugger UIs that need a reasoned explanation
+ * for an entity outcome over a tick range.
+ */
+export function explainOutcomeFromTrace(
+  entityId: number,
+  tickRange: TickRange,
+  context: ExplanationContext,
+): Explanation {
+  return explainOutcome(entityId, tickRange, context);
 }
