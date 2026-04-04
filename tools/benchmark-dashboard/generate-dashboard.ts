@@ -11,7 +11,7 @@ function loadHistory(): BenchmarkRun[] {
 }
 
 function pickAnankeTicks(run: BenchmarkRun, scenarioId: string): number {
-  const measurement = run.measurements.find((m) => m.adapterId === "ananke" && m.scenarioId === scenarioId);
+  const measurement = run.measurements.find((m) => m.adapterId === "ananke-ts" && m.scenarioId === scenarioId);
   return measurement?.ticksPerSec ?? 0;
 }
 
@@ -37,7 +37,7 @@ function buildHtml(history: BenchmarkRun[]): string {
 
   const latest = trimmed.at(-1);
   const latestRows = latest?.measurements.filter((m) => m.scenarioId === "large-battle") ?? [];
-  const ananke = latestRows.find((row) => row.adapterId === "ananke");
+  const ananke = latestRows.find((row) => row.adapterId === "ananke-ts");
 
   const rows = latestRows.map((row) => {
     const ratio = ananke && row.ticksPerSec > 0 ? ananke.ticksPerSec / row.ticksPerSec : 0;
@@ -54,7 +54,7 @@ function buildHtml(history: BenchmarkRun[]): string {
 <h1>Ananke Performance Dashboard</h1>
 <p class="alert">${regressionLabel(trimmed)}</p>
 <canvas id="chart" width="1000" height="280"></canvas>
-<h2>Current vs baseline (large battle)</h2>
+<h2>Current vs baseline (large battle, TS reference)</h2>
 <table><thead><tr><th>Adapter</th><th>Ticks/sec</th><th>Ananke Ratio</th><th>Delta vs Adapter</th></tr></thead><tbody>${rows}</tbody></table>
 <script>
 const points = ${JSON.stringify(points)};
