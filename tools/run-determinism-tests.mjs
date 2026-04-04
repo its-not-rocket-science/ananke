@@ -28,6 +28,11 @@ for (let i = 0; i < raw.length; i++) {
     files.push(a);
     continue;
   }
+  // Jest compat: --runInBand → Vitest single-fork serial execution
+  if (a === "--runInBand") {
+    pass.push("--pool=forks", "--poolOptions.forks.singleFork=true");
+    continue;
+  }
   pass.push(a);
 }
 
