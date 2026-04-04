@@ -6,6 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.11] — 2026-04-04
+
+### Fixed
+
+- Corrected Windows-specific doubled-path bug in `tools/generate-release-dashboard.mjs` (replaced `.pathname` with `fileURLToPath` to avoid `C:\C:\...` on Windows).
+- Removed `docs/release-dashboard.md` from `.gitignore`; the file is fully deterministic (derived from `CHANGELOG.md` and `package.json` only, no timestamps) and must be committed for the CI freshness check to work.
+- Fixed API diff workflow: handle missing `docs/api-diff-report.md` gracefully in PR comment step; relax semver enforcement when the Tier-1 API surface is unchanged; correct version-output quoting in the API diff workflow.
+
+---
+
+## [0.2.10] — 2026-04-03
+
+### Added
+
+- Automated Tier-1 API surface governance in CI (`enforce-api-surface.yml`): generates an API diff on every PR, posts a comment summarising additions/removals, and fails the build when breaking changes are detected without a major-version bump.
+- Semver policy check script (`scripts/check-semver-policy.sh`) that gates merges requiring incompatible API changes.
+
+### Fixed
+
+- Switched all non-publish CI workflows from `npm ci` to `npm install` so branches adding new workspace packages do not hard-fail before a lockfile regeneration commit.
+- Synced `package-lock.json` with the `packages/cli` workspace that was added in v0.2.x.
+
+---
+
 ## [0.2.9] — 2026-04-02
 
 ### Changed

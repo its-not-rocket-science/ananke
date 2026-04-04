@@ -2,8 +2,9 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const repoRoot = resolve(new URL('.', import.meta.url).pathname, '..');
+const repoRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const changelogPath = resolve(repoRoot, 'CHANGELOG.md');
 const packageJsonPath = resolve(repoRoot, 'package.json');
 const dashboardPath = resolve(repoRoot, 'docs/release-dashboard.md');

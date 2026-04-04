@@ -10,18 +10,20 @@
 
 ## Consistency status
 
-- Overall: **FAIL**
-- Latest changelog version: **0.2.9** (2026-04-02)
+- Overall: **PASS**
+- Latest changelog version: **0.2.11** (2026-04-04)
 - Package version: **0.2.11**
 
 ### Current inconsistencies
 
-- Version mismatch: CHANGELOG latest is 0.2.9 but package.json is 0.2.11.
+- None detected.
 
 ## Latest releases (from CHANGELOG)
 
 | Version | Date |
 | --- | --- |
+| 0.2.11 | 2026-04-04 |
+| 0.2.10 | 2026-04-03 |
 | 0.2.9 | 2026-04-02 |
 | 0.2.8 | 2026-04-02 |
 | 0.2.7 | 2026-04-02 |
@@ -30,8 +32,6 @@
 | 0.2.4 | 2026-04-02 |
 | 0.2.3 | 2026-04-02 |
 | 0.2.2 | 2026-04-02 |
-| 0.2.1 | 2026-04-02 |
-| 0.2.0 | 2026-04-02 |
 
 ## Automation design
 
