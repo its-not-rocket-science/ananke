@@ -1,0 +1,29 @@
+name: wasm-build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-wasm:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - name: Cache wasm artifacts
+        uses: actions/cache@v4
+        with:
+          path: wasm
+          key: wasm-${{ runner.os }}-${{ hashFiles('as/**/*.ts', 'as/asconfig.json') }}
+      - run: npm run build:wasm:core
+      - run: npm run build
+      - run: npm run test:determinism -- --runInBand

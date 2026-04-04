@@ -6,6 +6,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.3.0] — 2026-04-04
+
+### Added
+
+- Added a new AssemblyScript WASM core in `as/world.ts`, `as/combat.ts`, `as/movement.ts`, and `as/ananke-core.ts`, compiled to `wasm/ananke-core.wasm` via `npm run build:wasm:core`.
+- Added TypeScript↔WASM bridge (`src/wasm/bridge.ts`) with automatic TS fallback and new bridge tests (`test/wasm/bridge.test.ts`).
+- Added WASM benchmark runner (`tools/wasm-benchmark.ts`), WASM adapter (`benchmarks/adapters/wasm.ts`), and generated comparison output support under `benchmarks/results/wasm-vs-ts-*.json`.
+- Added cross-platform CI workflow `.github/workflows/wasm-build.yml` for Linux/macOS/Windows WASM builds and determinism fuzzing.
+- Added advanced WASM integration docs and runnable examples (`docs/wasm-integration.md`, `examples/wasm-node.ts`, `examples/wasm-browser.html`).
+
+---
+
 ## [0.2.11] — 2026-04-04
 
 ### Fixed

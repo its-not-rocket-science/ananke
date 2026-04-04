@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.2.11",
+  "version": "0.3.0",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -330,7 +330,7 @@
     "build:wasm": "asc as/units.ts --outFile dist/as/units.wasm --textFile dist/as/units.wat --runtime stub --optimize",
     "build:wasm:push": "asc as/push.ts --outFile dist/as/push.wasm --textFile dist/as/push.wat --runtime stub --optimize --initialMemory 1",
     "build:wasm:injury": "asc as/injury.ts --outFile dist/as/injury.wasm --textFile dist/as/injury.wat --runtime stub --optimize --initialMemory 1",
-    "build:wasm:all": "npm run build:wasm && npm run build:wasm:push && npm run build:wasm:injury",
+    "build:wasm:all": "npm run build:wasm && npm run build:wasm:push && npm run build:wasm:injury && npm run build:wasm:core",
     "test:wasm": "npm run build:wasm:all && vitest run test/as/",
     "check-stable-api": "node dist/tools/check-stable-api.js",
     "check-boundaries:report": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md",
@@ -344,7 +344,9 @@
     "benchmark:budget": "node dist/tools/benchmark-dashboard/check-budget.js",
     "extract-api-surface": "node dist/tools/api-surface.js --out=api/api-surface-v1.0.0.json",
     "check-api-diff": "node dist/tools/api-diff-check.js --base=api-surface-main.json --head=api-surface-pr.json",
-    "check-semver": "node dist/tools/semver-check.js --baseSurface=api-surface-main.json --headSurface=api-surface-pr.json --basePackage=package-main.json --headPackage=package.json"
+    "check-semver": "node dist/tools/semver-check.js --baseSurface=api-surface-main.json --headSurface=api-surface-pr.json --basePackage=package-main.json --headPackage=package.json",
+    "build:wasm:core": "asc as/ananke-core.ts --outFile wasm/ananke-core.wasm --runtime stub --optimize --noAssert",
+    "benchmark": "node dist/tools/wasm-benchmark.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

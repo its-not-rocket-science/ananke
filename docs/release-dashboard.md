@@ -11,8 +11,8 @@
 ## Consistency status
 
 - Overall: **PASS**
-- Latest changelog version: **0.2.11** (2026-04-04)
-- Package version: **0.2.11**
+- Latest changelog version: **0.3.0** (2026-04-04)
+- Package version: **0.3.0**
 
 ### Current inconsistencies
 
@@ -22,6 +22,7 @@
 
 | Version | Date |
 | --- | --- |
+| 0.3.0 | 2026-04-04 |
 | 0.2.11 | 2026-04-04 |
 | 0.2.10 | 2026-04-03 |
 | 0.2.9 | 2026-04-02 |
@@ -31,7 +32,6 @@
 | 0.2.5 | 2026-04-02 |
 | 0.2.4 | 2026-04-02 |
 | 0.2.3 | 2026-04-02 |
-| 0.2.2 | 2026-04-02 |
 
 ## Automation design
 
