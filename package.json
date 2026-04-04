@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.2.11",
+  "version": "0.3.0",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -344,7 +344,9 @@
     "benchmark:budget": "node dist/tools/benchmark-dashboard/check-budget.js",
     "extract-api-surface": "node dist/tools/api-surface.js --out=api/api-surface-v1.0.0.json",
     "check-api-diff": "node dist/tools/api-diff-check.js --base=api-surface-main.json --head=api-surface-pr.json",
-    "check-semver": "node dist/tools/semver-check.js --baseSurface=api-surface-main.json --headSurface=api-surface-pr.json --basePackage=package-main.json --headPackage=package.json"
+    "check-semver": "node dist/tools/semver-check.js --baseSurface=api-surface-main.json --headSurface=api-surface-pr.json --basePackage=package-main.json --headPackage=package.json",
+    "build:wasm:core": "node -e \"require('fs').mkdirSync('wasm',{recursive:true})\" && asc as/ananke-core.ts --outFile wasm/ananke-core.wasm --runtime stub --optimize --noAssert",
+    "benchmark": "node dist/tools/benchmark-dashboard/run.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

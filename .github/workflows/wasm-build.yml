@@ -1,0 +1,39 @@
+name: wasm-build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-wasm:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Cache wasm artifacts
+        uses: actions/cache@v4
+        with:
+          path: wasm
+          key: ${{ runner.os }}-wasm-${{ hashFiles('as/**/*.ts', 'as/asconfig.json', 'package-lock.json') }}
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build
+
+      - name: Build WASM backends
+        run: npm run build:wasm:all && npm run build:wasm:core
+
+      - name: Run determinism fuzzer against WASM backend
+        run: npm run test:determinism -- --seed=1337

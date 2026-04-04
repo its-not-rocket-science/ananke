@@ -12,16 +12,30 @@ function gitOrUnknown(cmd: string): string {
   }
 }
 
-function buildOutputPath(dateISO: string): string {
+function parseBackendFilter(): string | undefined {
+  const arg = process.argv.find((entry) => entry.startsWith("--backend="));
+  return arg?.split("=")[1];
+}
+
+function buildOutputPath(dateISO: string, backend?: string): string {
   const day = dateISO.slice(0, 10);
+  if (backend === "wasm" || backend === "ts") return `benchmarks/results/wasm-vs-ts-${day}.json`;
   return `benchmarks/results/baseline-${day}.json`;
 }
 
 async function main(): Promise<void> {
+  const backend = parseBackendFilter();
+  const selectedAdapters = adapters.filter((adapter) => {
+    if (!backend) return true;
+    if (backend === "wasm") return adapter.id === "ananke-wasm" || adapter.id === "ananke-ts";
+    if (backend === "ts") return adapter.id === "ananke-ts";
+    return true;
+  });
+
   const measurements: ScenarioMeasurement[] = [];
 
   for (const scenario of scenarios) {
-    for (const adapter of adapters) {
+    for (const adapter of selectedAdapters) {
       const result = await adapter.run(scenario);
       if (!result) continue;
       const measurement: ScenarioMeasurement = {
@@ -48,7 +62,7 @@ async function main(): Promise<void> {
   };
 
   mkdirSync("benchmarks/results", { recursive: true });
-  writeFileSync(buildOutputPath(generatedAt), JSON.stringify(payload, null, 2));
+  writeFileSync(buildOutputPath(generatedAt, backend), JSON.stringify(payload, null, 2));
   writeFileSync("benchmarks/results/latest.json", JSON.stringify(payload, null, 2));
 
   console.log(`Wrote ${measurements.length} measurements.`);

@@ -4,8 +4,8 @@ import type { BaselineAdapter } from "./types.js";
 const now = () => performance.now();
 
 export const anankeAdapter: BaselineAdapter = {
-  id: "ananke",
-  label: "Ananke",
+  id: "ananke-ts",
+  label: "Ananke TS",
   async run(scenario) {
     const world = scenario.setup();
     const warmup = scenario.warmupTicks ?? 0;
