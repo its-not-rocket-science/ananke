@@ -14,7 +14,7 @@ This dashboard converts maturity claims into explicit, machine-checkable evidenc
 | AI, perception, cognition | M3 Hardened | `>=3` subsystem tests plus behaviour invariant coverage (no M4 validation artifact required yet). | `test/ai_system.test.ts`, `test/perception_phase4.test.ts`, `test/cognition.test.ts`, `test/behavior-trees.test.ts`. |
 | Campaign/world simulation | M3 Hardened | `>=3` campaign/world tests and at least one deterministic snapshot/fixture artifact. | `test/campaign.test.ts`, `test/world-generation.test.ts`, `test/scenarios.test.ts`, `test/snapshots/kernel_behaviour_snapshot.json`. |
 | Bridge/replay/integration surfaces | M4 Validated | `>=3` bridge/replay/netcode tests, `>=2` replay/bridge conformance fixtures, bridge contract artifact. | `test/bridge/integration.test.ts`, `test/replay.test.ts`, `test/netcode.test.ts`, `conformance/replay-parity.json`, `conformance/bridge-snapshot.json`, `docs/bridge-contract.md`. |
-| Tooling/benchmarks/release checks | M4 Validated | Performance regression test, release artifact(s), and coverage signal in CI. | `test/performance.test.ts`, `docs/release-report.json`, `docs/release-dashboard.md`, `npm run test:coverage`. |
+| Tooling/benchmarks/release checks | M4 Validated | Performance regression test, release artifact(s), and coverage signal in CI. | `test/performance.test.ts`, `docs/release-dashboard.md`, `npm run test:coverage`. |
 
 ## Gap list (claims that still exceed evidence quality)
 
