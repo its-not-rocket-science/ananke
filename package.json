@@ -351,7 +351,8 @@
     "check-api-diff": "node dist/tools/api-diff-check.js --base=api-surface-main.json --head=api-surface-pr.json",
     "check-semver": "node dist/tools/semver-check.js --baseSurface=api-surface-main.json --headSurface=api-surface-pr.json --basePackage=package-main.json --headPackage=package.json",
     "build:wasm:core": "asc as/ananke-core.ts --outFile wasm/ananke-core.wasm --runtime stub --optimize --noAssert",
-    "benchmark": "node dist/tools/wasm-benchmark.js"
+    "benchmark": "node dist/tools/wasm-benchmark.js",
+    "docs:api": "node tools/generate-api-docs.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

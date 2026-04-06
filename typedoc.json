@@ -1,0 +1,15 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs/api",
+  "tsconfig": "tsconfig.json",
+  "readme": "none",
+  "plugin": [],
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "categorizeByGroup": true,
+  "githubPages": false,
+  "navigationLinks": {
+    "Try it (CodeSandbox)": "https://codesandbox.io/s/github/its-not-rocket-science/ananke/tree/main/examples/reference/tactical-duel"
+  }
+}
