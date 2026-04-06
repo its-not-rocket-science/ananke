@@ -1,0 +1,57 @@
+name: Security report (public fallback)
+description: Use this only if GitHub Security Advisories/email are unavailable
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ Please prefer private disclosure:
+
+        1. GitHub Security Advisories: Security → Advisories → Report a vulnerability
+        2. Email: security@its-not-rocket-science.dev
+
+        Use this public form only when private channels are unavailable.
+
+  - type: input
+    id: affected_version
+    attributes:
+      label: Affected version
+      placeholder: "e.g. 3.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Estimated severity
+      options:
+        - P1 (critical/high)
+        - P2 (medium)
+        - Unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Vulnerability summary
+      description: Briefly describe the issue and impact
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Include proof-of-concept and exact steps
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: contact
+    attributes:
+      label: Private contact details
+      description: Provide a secure contact method for coordinated disclosure
+    validations:
+      required: true
