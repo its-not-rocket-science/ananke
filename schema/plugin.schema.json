@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ananke.dev/schema/plugin.schema.json",
+  "title": "Ananke Plugin Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "hooks", "dependencies", "permissions"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique plugin id (typically npm-style)",
+      "pattern": "^[a-z0-9][a-z0-9-]*(?:/[a-z0-9][a-z0-9-]*)?$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Plugin semver version",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z-.]+)?(?:\\+[0-9A-Za-z-.]+)?$"
+    },
+    "hooks": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "Dependent plugin ids mapped to semver ranges",
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      },
+      "default": {}
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "read:worldState",
+          "write:worldState",
+          "read:events",
+          "write:telemetry",
+          "write:artifacts"
+        ]
+      },
+      "uniqueItems": true
+    }
+  },
+  "examples": [
+    {
+      "id": "ananke-plugin-achievements",
+      "version": "1.0.0",
+      "hooks": ["beforeStep", "afterDamage"],
+      "dependencies": {},
+      "permissions": ["read:worldState"]
+    }
+  ]
+}

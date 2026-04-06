@@ -1,0 +1,7 @@
+{
+  "id": "ananke-plugin-logger",
+  "version": "1.0.0",
+  "hooks": ["beforeStep", "afterStep", "afterDamage"],
+  "dependencies": {},
+  "permissions": ["read:worldState", "write:artifacts", "write:telemetry"]
+}
