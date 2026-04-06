@@ -1,0 +1,9 @@
+{
+  "name": "tactics-duel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "cd ../../.. && npm run build && node examples/games/tactics-duel/server.mjs",
+    "validate": "cd ../../.. && node dist/tools/validate-games/run-validation.js --game=tactics-duel"
+  }
+}
