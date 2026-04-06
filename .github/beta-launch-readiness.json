@@ -1,0 +1,36 @@
+{
+  "release": "v1.0.0-beta.1",
+  "lastUpdated": "2026-04-06",
+  "owners": ["release-manager", "qa-lead"],
+  "technicalReadiness": {
+    "testMatrixPassed": false,
+    "determinismFuzzer10000Passed": false,
+    "performanceBudgetPassed": false,
+    "memoryLeakSoak48hPassed": false,
+    "wasmBackendDeterministic": false
+  },
+  "apiStability": {
+    "tier1ExportsFrozen": false,
+    "tier1FunctionsHaveJSDocExamples": false,
+    "deprecationPolicyDocumented": true,
+    "deprecationPolicyDoc": "docs/api-lifecycle.md"
+  },
+  "documentation": {
+    "learningPathsComplete": false,
+    "apiReferenceGeneratedSearchable": false,
+    "videoTutorialPublished": false,
+    "videoUrl": ""
+  },
+  "adoptionReadiness": {
+    "externalPrototypeCount": 0,
+    "p1BugsLast14Days": 0,
+    "discordActiveMembers": 0,
+    "evidence": []
+  },
+  "legalGovernance": {
+    "licenseValidated": true,
+    "claCompleteIfRequired": false,
+    "securityPolicyPublished": true,
+    "securityPolicyPath": "SECURITY.md"
+  }
+}

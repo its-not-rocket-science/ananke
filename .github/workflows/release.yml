@@ -35,6 +35,12 @@ jobs:
             exit 1
           fi
 
+      - name: Beta launch readiness gate (v1.0.0-beta.* only)
+        if: startsWith(github.ref_name, 'v1.0.0-beta.')
+        run: |
+          npm run build
+          node tools/check-beta-readiness.mjs --file=.github/beta-launch-readiness.json
+
       - name: Run full release checks (CI + determinism + benchmarks)
         run: bash release/run-release-checks.sh
 
