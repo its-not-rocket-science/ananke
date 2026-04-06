@@ -1,0 +1,11 @@
+{
+  "generatedAt": "2026-04-06T15:42:00.634Z",
+  "measures": [
+    {
+      "backend": "ts-optimized",
+      "scenario": "epic-battle",
+      "tickMs": 0.6455517666666668,
+      "ticksPerSec": 1549.0624480257272
+    }
+  ]
+}
