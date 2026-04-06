@@ -8,3 +8,6 @@ export * from "./sim/ai/behavior-trees.js";
 export * from "./snapshot.js";
 export * from "./parallel.js";
 export * from "./modding.js";
+export * from "./serialization/binary.js";
+export * from "./history/timetravel.js";
+export * from "./history/autosave.js";
