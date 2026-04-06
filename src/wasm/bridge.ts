@@ -12,6 +12,7 @@ export interface AnankeWasmBridge {
   backend: "wasm" | "ts";
   world_create: (seed: number) => number;
   world_step: (commands: Int32Array) => number;
+  world_stepBatch?: (commands: Int32Array, commandCount: number) => number;
   world_extractSnapshot: () => WasmSnapshotEntity[];
 }
 
@@ -63,15 +64,31 @@ export async function initAnankeWasm(): Promise<AnankeWasmBridge> {
     const instance = await WebAssembly.instantiate(bytes, {});
     const ex = instance.instance.exports as unknown as CoreExports;
 
+    let commandPtr = 0;
+    let commandCapacity = 0;
+
+    function ensureCommandBuffer(commandsLength: number): number {
+      if (commandsLength <= commandCapacity && commandPtr !== 0) return commandPtr;
+      commandPtr = ex.alloc(commandsLength * Int32Array.BYTES_PER_ELEMENT);
+      commandCapacity = commandsLength;
+      return commandPtr;
+    }
+
     return {
       backend: "wasm",
       world_create(seed: number) {
         return ex.world_create(seed | 0);
       },
       world_step(commands: Int32Array) {
-        const ptr = ex.alloc(commands.byteLength);
+        const ptr = ensureCommandBuffer(commands.length);
         new Int32Array(ex.memory.buffer, ptr, commands.length).set(commands);
         return ex.world_step(ptr, Math.trunc(commands.length / 3));
+      },
+      world_stepBatch(commands: Int32Array, commandCount: number) {
+        const used = Math.max(0, Math.min(commands.length, commandCount * 3));
+        const ptr = ensureCommandBuffer(used);
+        new Int32Array(ex.memory.buffer, ptr, used).set(commands.subarray(0, used));
+        return ex.world_step(ptr, Math.trunc(used / 3));
       },
       world_extractSnapshot() {
         const count = ex.world_step(ex.alloc(0), 0);

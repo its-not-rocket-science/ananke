@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220">
+  <rect width="900" height="220" fill="#0f172a"/>
+  <text x="16" y="24" fill="#e2e8f0" font-size="16">After optimizations (sampled profile)</text>
+  <rect x="20" y="50" width="270" height="28" fill="#ef4444"/><text x="28" y="69" fill="white" font-size="12">Spatial hash resolve 27%</text>
+  <rect x="20" y="84" width="180" height="28" fill="#f59e0b"/><text x="28" y="103" fill="white" font-size="12">Batch command apply 18%</text>
+  <rect x="20" y="118" width="140" height="28" fill="#84cc16"/><text x="28" y="137" fill="black" font-size="12">SIMD-like integrate 14%</text>
+  <rect x="20" y="152" width="70" height="28" fill="#22c55e"/><text x="28" y="171" fill="black" font-size="12">GC 7%</text>
+</svg>

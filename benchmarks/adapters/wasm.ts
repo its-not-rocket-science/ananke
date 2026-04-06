@@ -19,10 +19,12 @@ export const wasmAdapter: BaselineAdapter = {
     }
 
     const warmup = scenario.warmupTicks ?? 0;
-    for (let i = 0; i < warmup; i++) bridge.world_step(commands);
+    const step = bridge.world_stepBatch ?? ((cmds: Int32Array, count: number) => bridge.world_step(cmds.subarray(0, count * 3)));
+
+    for (let i = 0; i < warmup; i++) step(commands, Math.trunc(commands.length / 3));
 
     const t0 = now();
-    for (let i = 0; i < scenario.ticks; i++) bridge.world_step(commands);
+    for (let i = 0; i < scenario.ticks; i++) step(commands, Math.trunc(commands.length / 3));
     const elapsedMs = now() - t0;
     const tickMs = elapsedMs / scenario.ticks;
 
