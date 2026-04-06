@@ -5,15 +5,16 @@
 </head>
 <body>
 <h1>Ananke Performance Dashboard</h1>
-<p class="alert">✅ Stable (0.0% vs 19bbed7)</p>
+<p class="alert">✅ Stable (0.0% vs 5c07c75)</p>
 <canvas id="chart" width="1000" height="280"></canvas>
 <h2>Current vs baseline (large battle)</h2>
-<table><thead><tr><th>Adapter</th><th>Ticks/sec</th><th>Ananke Ratio</th><th>Delta vs Adapter</th></tr></thead><tbody><tr><td>Ananke</td><td>101.1</td><td>1.00x</td><td>0.0%</td></tr>
-<tr><td>GridSage (public snapshot)</td><td>0.0</td><td>0.00x</td><td>10105.0%</td></tr>
-<tr><td>Unity DOTS (C#/WASM minimal)</td><td>0.0</td><td>0.00x</td><td>10105.0%</td></tr>
-<tr><td>Hand-rolled JS O(N²)</td><td>43.7</td><td>2.31x</td><td>131.4%</td></tr></tbody></table>
+<table><thead><tr><th>Adapter</th><th>Ticks/sec</th><th>Ananke Ratio</th><th>Delta vs Adapter</th></tr></thead><tbody><tr><td>Ananke</td><td>148.7</td><td>1.00x</td><td>0.0%</td></tr>
+<tr><td>Ananke (WASM core)</td><td>593537.0</td><td>0.00x</td><td>-100.0%</td></tr>
+<tr><td>GridSage (public snapshot)</td><td>0.0</td><td>0.00x</td><td>14872.5%</td></tr>
+<tr><td>Unity DOTS (C#/WASM minimal)</td><td>0.0</td><td>0.00x</td><td>14872.5%</td></tr>
+<tr><td>Hand-rolled JS O(N²)</td><td>62.9</td><td>2.36x</td><td>136.5%</td></tr></tbody></table>
 <script>
-const points = [{"commit":"19bbed7","ticks":101.05012594427919},{"commit":"19bbed7","ticks":101.05012594427919}];
+const points = [{"commit":"19bbed7","ticks":101.05012594427919},{"commit":"5c07c75","ticks":148.72526104519017},{"commit":"5c07c75","ticks":148.72526104519017}];
 const canvas = document.getElementById('chart');
 const ctx = canvas.getContext('2d');
 ctx.clearRect(0,0,canvas.width,canvas.height);
