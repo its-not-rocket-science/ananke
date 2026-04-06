@@ -231,6 +231,10 @@
     "docs/host-contract.md",
     "docs/integration-primer.md",
     "docs/bridge-contract.md",
+    "docs/plugins/README.md",
+    "docs/plugins/hooks.md",
+    "docs/plugins/publishing.md",
+    "docs/plugins/security-model.md",
     "docs/performance.md",
     "docs/release-dashboard.md",
     "docs/versioning.md",
@@ -243,6 +247,7 @@
     "schema/replay.schema.json",
     "schema/pack.schema.json",
     "schema/content-pack.schema.json",
+    "schema/plugin.schema.json",
     "CHANGELOG.md",
     "STABLE_API.md",
     "docs/stable-api-manifest.json"
