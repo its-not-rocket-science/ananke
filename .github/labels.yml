@@ -1,0 +1,23 @@
+- name: good first issue
+  color: "7057ff"
+  description: Friendly starter task for first-time contributors
+
+- name: help wanted
+  color: "008672"
+  description: Maintainers are actively seeking external contributions
+
+- name: mentored
+  color: "5319e7"
+  description: Maintainer support is available in issue comments
+
+- name: determinism
+  color: "1d76db"
+  description: Deterministic behavior, replay parity, or fixed-point correctness
+
+- name: performance
+  color: "fbca04"
+  description: Benchmark impact, throughput, or memory-performance work
+
+- name: security
+  color: "b60205"
+  description: Security-sensitive issue handling

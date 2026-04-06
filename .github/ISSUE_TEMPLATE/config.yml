@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/its-not-rocket-science/ananke/security/advisories/new
+    about: Please use private disclosure for security issues.
   - name: Architecture questions and design discussions
     url: https://github.com/its-not-rocket-science/ananke/discussions
     about: For questions about architecture, design decisions, or usage that are not bugs — use Discussions.

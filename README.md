@@ -3,6 +3,7 @@
 ![CI](../../actions/workflows/ci.yml/badge.svg)
 ![Determinism](https://img.shields.io/badge/Determinism-%E2%9C%85%2010%2C000%2F10%2C000%20seeds%20passed%20(last%20run%3A%202026--04--03)-brightgreen)
 [![Mod of the Week](https://img.shields.io/badge/Mod%20of%20the%20Week-Submit%20Yours-blueviolet)](docs/mod-of-the-week.md)
+![Top Contributor](https://img.shields.io/badge/Top%20Contributor-April%202026%20TBD-gold)
 
 > **Package:** `@its-not-rocket-science/ananke`  
 > **Stable API contract:** [`STABLE_API.md`](STABLE_API.md)
