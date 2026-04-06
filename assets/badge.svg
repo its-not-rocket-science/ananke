@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="40" role="img" aria-label="Powered by Ananke">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect rx="8" width="220" height="40" fill="url(#bg)"/>
+  <circle cx="20" cy="20" r="8" fill="#22d3ee"/>
+  <text x="36" y="25" fill="#ffffff" font-family="Inter,Arial,sans-serif" font-size="14">Powered by Ananke</text>
+</svg>

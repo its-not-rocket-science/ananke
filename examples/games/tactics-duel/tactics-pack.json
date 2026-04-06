@@ -1,0 +1,47 @@
+{
+  "$schema": "../../../schema/content-pack.schema.json",
+  "name": "tactics-duel-pack",
+  "version": "1.0.0",
+  "registry": {
+    "compatRange": ">=0.1.69"
+  },
+  "archetypes": [
+    { "id": "td_knight", "base": "KNIGHT_INFANTRY", "overrides": { "stature_m": 1.85 } },
+    { "id": "td_archer", "base": "HUMAN_BASE", "overrides": { "stature_m": 1.75 } },
+    { "id": "td_mage", "base": "HUMAN_BASE", "overrides": { "stature_m": 1.7 } }
+  ],
+  "weapons": [
+    {
+      "id": "td_sword",
+      "name": "Duel Sword",
+      "mass_kg": 1.3,
+      "damage": { "surfaceFrac": 0.35, "internalFrac": 0.28, "structuralFrac": 0.2, "bleedFactor": 0.45, "penetrationBias": 0.25 },
+      "bulk": 0.3
+    },
+    {
+      "id": "td_bow",
+      "name": "Compact Bow",
+      "mass_kg": 0.8,
+      "damage": { "surfaceFrac": 0.28, "internalFrac": 0.2, "structuralFrac": 0.1, "bleedFactor": 0.4, "penetrationBias": 0.2 },
+      "bulk": 0.3
+    },
+    {
+      "id": "td_focus",
+      "name": "Arcane Focus",
+      "mass_kg": 0.6,
+      "damage": { "surfaceFrac": 0.25, "internalFrac": 0.35, "structuralFrac": 0.15, "bleedFactor": 0.3, "penetrationBias": 0.4 },
+      "bulk": 0.25
+    }
+  ],
+  "armour": [
+    {
+      "id": "td_robe",
+      "name": "Arena Robe",
+      "mass_kg": 2.1,
+      "resist_J": 75,
+      "protectedDamageMul": 0.88,
+      "coverageByRegion": { "torso": 0.6 },
+      "bulk": 0.2
+    }
+  ]
+}
