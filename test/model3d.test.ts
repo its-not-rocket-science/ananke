@@ -80,6 +80,70 @@ describe("deriveMassDistribution", () => {
 
     expect(headDist.cogOffset_m.y).toBeGreaterThan(footDist.cogOffset_m.y);
   });
+
+  it("explicit metadata overrides naming heuristics", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.bodyPlan = {
+      id: "override_heuristics",
+      segments: [{
+        id: "leftFoot",
+        parent: null,
+        mass_kg: 5000,
+        exposureWeight: {},
+        renderSpatial: {
+          canonicalAnchor: "head",
+          lateralSide: "center",
+          verticalPosition: "crown",
+          rigRole: "head",
+          centerOfMassHint: { yFrac: 0.92 },
+        },
+      }],
+      locomotion: { type: "biped" },
+      cnsLayout: { type: "centralized" },
+    };
+    const stature_m = e.attributes.morphology.stature_m / SCALE.m;
+    expect(deriveMassDistribution(e).cogOffset_m.y).toBeCloseTo(stature_m * 0.92, 3);
+  });
+
+  it("unusual body plans stay stable via explicit metadata", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.bodyPlan = {
+      id: "floating_ring",
+      segments: [
+        {
+          id: "orbitA",
+          parent: null,
+          mass_kg: 2000,
+          exposureWeight: {},
+          renderSpatial: {
+            canonicalAnchor: "custom",
+            lateralSide: "left",
+            verticalPosition: "upper",
+            rigRole: "appendage",
+            centerOfMassHint: { xFrac: -0.45, yFrac: 0.66 },
+          },
+        },
+        {
+          id: "orbitB",
+          parent: null,
+          mass_kg: 2000,
+          exposureWeight: {},
+          renderSpatial: {
+            canonicalAnchor: "custom",
+            lateralSide: "right",
+            verticalPosition: "upper",
+            rigRole: "appendage",
+            centerOfMassHint: { xFrac: 0.45, yFrac: 0.66 },
+          },
+        },
+      ],
+      locomotion: { type: "distributed" },
+      cnsLayout: { type: "distributed" },
+    };
+    const dist = deriveMassDistribution(e);
+    expect(dist.cogOffset_m.x).toBeCloseTo(0, 5);
+    expect(dist.cogOffset_m.y).toBeGreaterThan(0);
+  });
 });
 
 // ── deriveInertiaTensor ───────────────────────────────────────────────────────
@@ -145,6 +209,20 @@ describe("deriveInertiaTensor", () => {
     const I = deriveInertiaTensor(e);
     // For planar case (z=0): I_roll = Σm(x²+y²) = I_yaw + I_pitch
     expect(I.roll_kgm2).toBeCloseTo(I.yaw_kgm2 + I.pitch_kgm2, 5);
+  });
+
+  it("legacy plan naming heuristics remain backward compatible", () => {
+    const e = mkHumanoidEntity(1, 1, 0, 0);
+    e.bodyPlan = {
+      id: "legacy_wings",
+      segments: [
+        { id: "leftWing", parent: null, mass_kg: 2000, exposureWeight: {} },
+        { id: "rightWing", parent: null, mass_kg: 2000, exposureWeight: {} },
+      ],
+      locomotion: { type: "flight" },
+      cnsLayout: { type: "centralized" },
+    };
+    expect(deriveInertiaTensor(e).yaw_kgm2).toBeGreaterThan(0);
   });
 });
 

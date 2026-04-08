@@ -115,9 +115,74 @@ export interface BodySegment {
    * Absent or 0 = no intrinsic resistance.
    */
   intrinsicArmor_J?: number;
+
+  // ── Phase 14B: render-facing spatial metadata ────────────────────────────
+
+  /**
+   * Optional explicit spatial metadata used by render bridges and inertial
+   * estimators.  When omitted, consumers may fall back to legacy ID-based
+   * heuristics for backward compatibility.
+   */
+  renderSpatial?: BodySegmentRenderSpatial;
 }
 
 export type BodySegmentId = BodySegment["id"];
+
+export type BodySegmentLateralSide = "left" | "right" | "center";
+export type BodySegmentVerticalPosition = "crown" | "high" | "upper" | "mid" | "lower" | "ground";
+export type BodySegmentRigRole =
+  | "head"
+  | "neck"
+  | "torso"
+  | "abdomen"
+  | "pelvis"
+  | "shoulder"
+  | "arm_upper"
+  | "arm_lower"
+  | "hand"
+  | "leg_upper"
+  | "leg_lower"
+  | "foot"
+  | "tail"
+  | "wing"
+  | "appendage"
+  | "core";
+
+export interface BodySegmentRenderSpatial {
+  /**
+   * Canonical rig anchor.  This is renderer-facing metadata; hosts may map
+   * anchors to skeleton sockets or IK handles.
+   */
+  canonicalAnchor:
+    | "head"
+    | "neck"
+    | "shoulder"
+    | "chest"
+    | "spine"
+    | "pelvis"
+    | "hip"
+    | "limb"
+    | "extremity"
+    | "tail_base"
+    | "tail_tip"
+    | "wing_root"
+    | "core"
+    | "custom";
+  /** Lateral side for bilateral layouts. */
+  lateralSide?: BodySegmentLateralSide;
+  /** Coarse vertical tier in the canonical body frame. */
+  verticalPosition?: BodySegmentVerticalPosition;
+  /** Rig semantic role used for bridge mapping and defaults. */
+  rigRole?: BodySegmentRigRole;
+  /**
+   * Optional direct centre-of-mass hint in canonical stature fractions.
+   * Values are clamped by consumers to [-1, 1] for x and [0, 1] for y.
+   */
+  centerOfMassHint?: {
+    xFrac?: number;
+    yFrac?: number;
+  };
+}
 
 // ─── body plan ───────────────────────────────────────────────────────────────
 
