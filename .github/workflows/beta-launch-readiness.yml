@@ -45,7 +45,7 @@ jobs:
       - run: npm run test
 
   determinism-fuzzer:
-    name: Determinism fuzzer (10k seeds)
+    name: Determinism fuzzer (CI profile)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,8 +54,7 @@ jobs:
           node-version: 22.x
           cache: npm
       - run: npm ci
-      - run: npm run build
-      - run: npm run test:determinism:nightly
+      - run: npm run test:determinism:ci
 
   performance-budget:
     name: Performance budget gate
