@@ -14,6 +14,10 @@ import { eventSeed } from "./sim/seeds.js";
 import { makeRng }   from "./rng.js";
 import type { NarrativeConfig } from "./narrative.js";
 import { resolveSignal } from "./competence/interspecies.js";
+import type { FactionRegistry } from "./faction.js";
+import type { RelationshipGraph, RelationshipEventType } from "./relationships.js";
+import { recordRelationshipEvent } from "./relationships.js";
+import type { CampaignState } from "./campaign.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -59,6 +63,18 @@ export interface DialogueContext {
   tick:                 number;
   sharedFaction?:       boolean;   // bonus applied when initiator and target share a faction
   priorFailedAttempts?: number;    // failed persuasion attempts (penalty accumulator)
+  /** Initiator standing with target's faction (q(0.5)=neutral). */
+  factionStanding_Q?:   Q;
+  /** Existing interpersonal trust between initiator and target. */
+  relationshipTrust_Q?: Q;
+  /** Existing interpersonal affinity (-q(1.0)..q(1.0)). */
+  relationshipAffinity_Q?: Q;
+  /** Initiator fame axis from renown registry. */
+  initiatorRenown_Q?:   Q;
+  /** Initiator dark reputation axis from renown registry. */
+  initiatorInfamy_Q?:   Q;
+  /** Campaign pressure on target (siege, attrition, isolation). */
+  campaignPressure_Q?:  Q;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -89,6 +105,17 @@ export const SURRENDER_THRESHOLD: Q = q(0.40);
  * the target interprets the attempt as an insult and escalates.
  */
 export const ESCALATE_THRESHOLD: Q = q(0.20);
+export const STANDING_NEUTRAL_Q: Q = q(0.50);
+export const RELATIONSHIP_NEUTRAL_AFFINITY_Q: Q = q(0);
+export const INTIMIDATE_REPUTATION_WEIGHT_Q: Q = q(0.20);
+export const PERSUADE_STANDING_WEIGHT_Q: Q = q(0.20);
+export const PERSUADE_TRUST_WEIGHT_Q: Q = q(0.20);
+export const PERSUADE_AFFINITY_WEIGHT_Q: Q = q(0.10);
+export const PERSUADE_RENOWN_WEIGHT_Q: Q = q(0.15);
+export const SURRENDER_PRESSURE_WEIGHT_Q: Q = q(0.20);
+export const NEGOTIATE_STANDING_WEIGHT_Q: Q = q(0.30);
+export const NEGOTIATE_TRUST_WEIGHT_Q: Q = q(0.20);
+export const NEGOTIATE_AFFINITY_WEIGHT_Q: Q = q(0.10);
 
 // ── RNG salts ─────────────────────────────────────────────────────────────────
 
@@ -123,6 +150,45 @@ function learningBonus(attentionDepth: number): Q {
   return clampQ(Math.max(0, attentionDepth - 4) * 250, 0, q(0.20)) as Q;
 }
 
+function signedMulQ(value_Q: Q, weight_Q: Q): Q {
+  return Math.trunc((value_Q * weight_Q) / SCALE.Q) as Q;
+}
+
+function standingCenteredQ(standing_Q?: Q): Q {
+  return ((standing_Q ?? STANDING_NEUTRAL_Q) - STANDING_NEUTRAL_Q) as Q;
+}
+
+function persuasionSocialModifier(ctx: DialogueContext): Q {
+  const standingBonus = signedMulQ(standingCenteredQ(ctx.factionStanding_Q), PERSUADE_STANDING_WEIGHT_Q);
+  const trustBonus = signedMulQ(
+    ((ctx.relationshipTrust_Q ?? STANDING_NEUTRAL_Q) - STANDING_NEUTRAL_Q) as Q,
+    PERSUADE_TRUST_WEIGHT_Q,
+  );
+  const affinityBonus = signedMulQ(
+    (ctx.relationshipAffinity_Q ?? RELATIONSHIP_NEUTRAL_AFFINITY_Q),
+    PERSUADE_AFFINITY_WEIGHT_Q,
+  );
+  const renownDelta = ((ctx.initiatorRenown_Q ?? q(0)) - (ctx.initiatorInfamy_Q ?? q(0))) as Q;
+  const renownBonus = signedMulQ(renownDelta, PERSUADE_RENOWN_WEIGHT_Q);
+  return (standingBonus + trustBonus + affinityBonus + renownBonus) as Q;
+}
+
+function intimidationReputationModifier(ctx: DialogueContext): Q {
+  const profile = Math.max(ctx.initiatorRenown_Q ?? q(0), ctx.initiatorInfamy_Q ?? q(0)) as Q;
+  return signedMulQ(profile, INTIMIDATE_REPUTATION_WEIGHT_Q);
+}
+
+function negotiationSocialBias(ctx: DialogueContext): Q {
+  const standingBias = signedMulQ(standingCenteredQ(ctx.factionStanding_Q), NEGOTIATE_STANDING_WEIGHT_Q);
+  const trustCentered = ((ctx.relationshipTrust_Q ?? STANDING_NEUTRAL_Q) - STANDING_NEUTRAL_Q) as Q;
+  const trustBias = signedMulQ(trustCentered, NEGOTIATE_TRUST_WEIGHT_Q);
+  const affinityBias = signedMulQ(
+    (ctx.relationshipAffinity_Q ?? RELATIONSHIP_NEUTRAL_AFFINITY_Q),
+    NEGOTIATE_AFFINITY_WEIGHT_Q,
+  );
+  return (standingBias + trustBias + affinityBias) as Q;
+}
+
 // ── Probability computation ───────────────────────────────────────────────────
 
 /**
@@ -146,6 +212,7 @@ export function dialogueProbability(
         forceFrac
           + target.condition.fearQ!
           - target.attributes.resilience.distressTolerance
+          + intimidationReputationModifier(ctx)
           - leaderRed,
         0, SCALE.Q,
       );
@@ -163,6 +230,7 @@ export function dialogueProbability(
         dynamicBase
           + learningBonus(target.attributes.perception?.attentionDepth ?? 0)
           + (ctx.sharedFaction ? PERSUADE_FACTION_BONUS : 0)
+          + persuasionSocialModifier(ctx)
           - (failed * PERSUADE_FAILURE_PENALTY),
         0, SCALE.Q,
       );
@@ -184,12 +252,21 @@ export function dialogueProbability(
 
     case "surrender":
       // Returns non-zero only when target's fear exceeds the acceptance threshold.
-      return clampQ(target.condition.fearQ! - SURRENDER_THRESHOLD, 0, SCALE.Q);
+      return clampQ(
+        target.condition.fearQ!
+          + signedMulQ((ctx.campaignPressure_Q ?? q(0)), SURRENDER_PRESSURE_WEIGHT_Q)
+          - SURRENDER_THRESHOLD,
+        0,
+        SCALE.Q,
+      );
 
     case "negotiate": {
       const given    = action.offer.giving.reduce((s, i)    => s + i.value, 0);
       const received = action.offer.receiving.reduce((s, i) => s + i.value, 0);
-      return given > received ? SCALE.Q : 0;
+      const total = Math.max(1, given + received);
+      const baseUtility_Q = Math.trunc(((given - received) * SCALE.Q) / total) as Q;
+      const adjusted = (baseUtility_Q + negotiationSocialBias(ctx)) as Q;
+      return adjusted > 0 ? SCALE.Q : 0;
     }
 
     case "signal":
@@ -303,6 +380,93 @@ export function applyDialogueOutcome(
   if (outcome.setSurrendered) {
     target.condition.surrendered = true;
   }
+}
+
+export interface DialogueStateAdapters {
+  factionRegistry?: FactionRegistry;
+  relationshipGraph?: RelationshipGraph;
+  campaign?: CampaignState;
+}
+
+export interface DialogueStateReport {
+  reputationDelta_Q: Q;
+  relationshipEvent?: RelationshipEventType;
+  campaignLogEntry?: string;
+}
+
+function applyFactionDelta(
+  registry: FactionRegistry,
+  actorId: number,
+  factionId: string | undefined,
+  delta_Q: Q,
+): void {
+  if (!factionId || delta_Q === 0) return;
+  let reps = registry.entityReputations.get(actorId);
+  if (!reps) {
+    reps = new Map<string, Q>();
+    registry.entityReputations.set(actorId, reps);
+  }
+  const current = reps.get(factionId) ?? STANDING_NEUTRAL_Q;
+  reps.set(factionId, clampQ((current + delta_Q) as Q, 0, SCALE.Q) as Q);
+}
+
+/**
+ * Apply dialogue outcome to broader campaign/faction/relationship state.
+ * All state holders are optional and explicitly injected by host code.
+ */
+export function applyDialogueState(
+  action: DialogueAction,
+  outcome: DialogueOutcome,
+  ctx: DialogueContext,
+  state: DialogueStateAdapters,
+): DialogueStateReport {
+  applyDialogueOutcome(outcome, ctx.target);
+
+  let reputationDelta_Q = q(0) as Q;
+  let relationshipEvent: RelationshipEventType | undefined;
+  let campaignLogEntry: string | undefined;
+
+  if (outcome.result === "success") {
+    if (action.kind === "surrender") {
+      reputationDelta_Q = q(0.05) as Q;
+      relationshipEvent = "saved";
+      campaignLogEntry = `Entity ${ctx.target.id} surrendered to entity ${ctx.initiator.id}.`;
+    } else if (action.kind === "negotiate") {
+      reputationDelta_Q = q(0.04) as Q;
+      relationshipEvent = "gift_given";
+    } else if (action.kind === "persuade") {
+      reputationDelta_Q = q(0.02) as Q;
+      relationshipEvent = "bonded";
+    } else if (action.kind === "intimidate") {
+      reputationDelta_Q = q(-0.03) as Q;
+      relationshipEvent = "insult";
+    }
+  } else if (outcome.result === "failure" || outcome.result === "escalate") {
+    if (action.kind === "negotiate" || action.kind === "persuade") {
+      relationshipEvent = "insult";
+    }
+  }
+
+  if (state.factionRegistry) {
+    applyFactionDelta(state.factionRegistry, ctx.initiator.id, ctx.target.faction, reputationDelta_Q);
+  }
+
+  if (state.relationshipGraph && relationshipEvent) {
+    recordRelationshipEvent(state.relationshipGraph, ctx.initiator.id, ctx.target.id, {
+      tick: ctx.tick,
+      type: relationshipEvent,
+      magnitude_Q: outcome.result === "success" ? q(0.20) : q(0.10),
+    });
+  }
+
+  if (state.campaign && campaignLogEntry) {
+    state.campaign.log.push({
+      worldTime_s: state.campaign.worldTime_s,
+      text: campaignLogEntry,
+    });
+  }
+
+  return { reputationDelta_Q, relationshipEvent, campaignLogEntry };
 }
 
 // ── Narrative ─────────────────────────────────────────────────────────────────
