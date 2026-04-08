@@ -466,7 +466,10 @@ export function applyDialogueState(
     });
   }
 
-  return { reputationDelta_Q, relationshipEvent, campaignLogEntry };
+  const report: DialogueStateReport = { reputationDelta_Q };
+  if (relationshipEvent !== undefined) report.relationshipEvent = relationshipEvent;
+  if (campaignLogEntry !== undefined) report.campaignLogEntry = campaignLogEntry;
+  return report;
 }
 
 // ── Narrative ─────────────────────────────────────────────────────────────────
