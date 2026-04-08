@@ -92,6 +92,11 @@ import { getSkill } from "./skills.js";
 
 import { TICK_HZ } from "./tick.js";
 import { assertNoFloatUsageInProduction } from "../determinism.js";
+import { resolveAttack as resolveAttackFromResolver } from "./resolvers/attack-resolver.js";
+import { resolveShoot as resolveShootFromResolver } from "./resolvers/shoot-resolver.js";
+import { resolveGrappleCommand as resolveGrappleCommandFromResolver, resolveBreakBind as resolveBreakBindFromResolver } from "./resolvers/grapple-resolver.js";
+import { resolveTreat as resolveTreatFromResolver } from "./resolvers/treat-resolver.js";
+import { resolveActivation as resolveActivationFromResolver, applyPayload as applyPayloadFromResolver, applyCapabilityEffect as applyCapabilityEffectFromResolver } from "./resolvers/capability-resolver.js";
 
 // Phase 2 extension: swing momentum carry
 const SWING_MOMENTUM_MAX   = q(0.12) as Q;  // max +12% energy bonus at full momentum
@@ -413,6 +418,33 @@ function resolveCapabilityHitSegment(
 
 /* ------------------ Combat ------------------ */
 function resolveAttack(world: WorldState,
+  attacker: Entity,
+  cmd: AttackCommand,
+  tuning: SimulationTuning,
+  index: WorldIndex,
+  impacts: ImpactEvent[],
+  spatial: SpatialIndex,
+  trace: TraceSink,
+  ctx: KernelContext,
+): void {
+  resolveAttackFromResolver({
+    world,
+    attacker,
+    cmd,
+    tuning,
+    index,
+    impacts,
+    spatial,
+    trace,
+    ctx,
+    resolveTargetHitSegment,
+    regionCoverageQ,
+    shieldBlocksSegment,
+    armourCoversHit,
+  });
+}
+
+function resolveAttack_legacy(world: WorldState,
   attacker: Entity,
   cmd: AttackCommand,
   tuning: SimulationTuning,
@@ -847,6 +879,18 @@ function resolveGrappleCommand(
   impacts: ImpactEvent[],
   trace: TraceSink,
 ): void {
+  resolveGrappleCommandFromResolver({ world, entity: e, command: c, tuning, index, impacts, trace });
+}
+
+function resolveGrappleCommand_legacy(
+  world: WorldState,
+  e: Entity,
+  c: GrappleCommand,
+  tuning: SimulationTuning,
+  index: WorldIndex,
+  impacts: ImpactEvent[],
+  trace: TraceSink,
+): void {
   const target = index.byId.get(c.targetId);
   if (!target || target.injury.dead) return;
 
@@ -886,6 +930,16 @@ function resolveGrappleCommand(
  * The bind always clears if the partner entity is dead or no longer present.
  */
 function resolveBreakBind(
+  world: WorldState,
+  e: Entity,
+  intensity: Q,
+  index: WorldIndex,
+  trace: TraceSink,
+): void {
+  resolveBreakBindFromResolver({ world, entity: e, intensity, index, trace });
+}
+
+function resolveBreakBind_legacy(
   world: WorldState,
   e: Entity,
   intensity: Q,
@@ -951,6 +1005,32 @@ function isqrtBig(n: bigint): bigint {
 }
 
 function resolveShoot(
+  world: WorldState,
+  shooter: Entity,
+  cmd: ShootCommand,
+  tuning: SimulationTuning,
+  index: WorldIndex,
+  impacts: ImpactEvent[],
+  trace: TraceSink,
+  ctx: KernelContext,
+): void {
+  resolveShootFromResolver({
+    world,
+    shooter,
+    cmd,
+    tuning,
+    impacts,
+    trace,
+    ctx,
+    target: index.byId.get(cmd.targetId),
+    resolveTargetHitSegment,
+    shieldBlocksSegment,
+    regionCoverageQ,
+    armourCoversHit,
+  });
+}
+
+function resolveShoot_legacy(
   world: WorldState,
   shooter: Entity,
   cmd: ShootCommand,
@@ -1588,6 +1668,17 @@ function resolveTreat(
   trace: TraceSink,
   ctx: KernelContext,
 ): void {
+  resolveTreatFromResolver({ world, treater, cmd, index, trace, ctx });
+}
+
+function resolveTreat_legacy(
+  world: WorldState,
+  treater: Entity,
+  cmd: TreatCommand,
+  index: WorldIndex,
+  trace: TraceSink,
+  ctx: KernelContext,
+): void {
   if (treater.injury.dead) return;
 
   const target = index.byId.get(cmd.targetId);
@@ -1696,6 +1787,21 @@ const CAPABILITY_WEAPON_DEFAULT: Weapon = {
  * magical from technological effects at this level.
  */
 export function applyPayload(
+  world: WorldState,
+  actor: Entity,
+  target: Entity,
+  payload: EffectPayload,
+  trace: TraceSink,
+  tick: number,
+  effectId: string,
+): void {
+  applyPayloadFromResolver(world, actor, target, payload, trace, tick, effectId, {
+    resolveCapabilityHitSegment,
+    applyImpactToInjury,
+  });
+}
+
+export function applyPayload_legacy(
   world: WorldState,
   actor: Entity,
   target: Entity,
@@ -1831,6 +1937,20 @@ export function applyCapabilityEffect(
   trace: TraceSink,
   tick: number,
 ): void {
+  applyCapabilityEffectFromResolver(world, actor, targetId, effect, trace, tick, {
+    resolveCapabilityHitSegment,
+    applyImpactToInjury,
+  });
+}
+
+export function applyCapabilityEffect_legacy(
+  world: WorldState,
+  actor: Entity,
+  targetId: number | undefined,
+  effect: CapabilityEffect,
+  trace: TraceSink,
+  tick: number,
+): void {
   const payloads: EffectPayload[] = Array.isArray(effect.payload)
     ? effect.payload
     : [effect.payload];
@@ -1896,6 +2016,19 @@ export function applyCapabilityEffect(
  * Validates suppression, range, and cost; handles cast time via pendingActivation.
  */
 function resolveActivation(
+  world: WorldState,
+  actor: Entity,
+  cmd: ActivateCommand,
+  ctx: KernelContext,
+  trace: TraceSink,
+  tick: number,
+): void {
+  resolveActivationFromResolver(world, actor, cmd, ctx, trace, tick, (effect) => {
+    applyCapabilityEffect(world, actor, cmd.targetId, effect, trace, tick);
+  });
+}
+
+function resolveActivation_legacy(
   world: WorldState,
   actor: Entity,
   cmd: ActivateCommand,
