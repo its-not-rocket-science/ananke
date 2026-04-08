@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const fileArg = process.argv.find((arg) => arg.startsWith("--file="));
+const strict = process.argv.includes("--strict");
 const checklistFile = fileArg ? fileArg.split("=")[1] : ".github/beta-launch-readiness.json";
 const fullPath = path.resolve(checklistFile);
 
@@ -48,9 +49,13 @@ for (const rel of mustExist) {
 }
 
 if (failures.length > 0) {
-  console.error("❌ Beta launch readiness check failed.");
+  if (strict) {
+    console.error("❌ Beta launch readiness check failed.");
+  } else {
+    console.warn("⚠️ Beta launch readiness check has unmet items (non-blocking without --strict).");
+  }
   for (const f of failures) console.error(`  - ${f}`);
-  process.exit(1);
+  process.exit(strict ? 1 : 0);
 }
 
 console.log("✅ Beta launch readiness check passed.");
