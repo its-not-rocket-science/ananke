@@ -82,6 +82,25 @@ See [`STABLE_API.md`](STABLE_API.md) and [`docs/stable-api-manifest.json`](docs/
 
 ---
 
+
+## Companion starter kits (Unity/Godot)
+
+The companion engine integrations have been upgraded from reference-only docs to **developer-ready starter kits** in:
+
+- `docs/companion-projects/ananke-godot-reference/README.md`
+- `docs/companion-projects/ananke-unity-reference/README.md`
+
+Each starter kit now provides a minimal verified path for new adopters:
+
+1. install dependencies
+2. run a deterministic simulated encounter
+3. see rendered output in-engine
+4. inspect bridge/replay artifacts
+
+Both kits also document stable bridge/host API assumptions and include a known-limitations section for production planning.
+
+---
+
 ## Advanced and internal paths (not first-hour)
 
 These are intentionally separated from onboarding because they may use Tier 2/Tier 3 or internal file-level imports.
