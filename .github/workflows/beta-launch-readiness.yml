@@ -2,12 +2,15 @@ name: Beta Launch Readiness
 
 on:
   workflow_dispatch:
+  release:
+    types: [published, prereleased]
   pull_request:
     branches: [main, master]
     paths:
       - ".github/workflows/beta-launch-readiness.yml"
       - ".github/beta-launch-readiness.json"
       - "docs/releases/v1.0.0-beta.1-readiness-checklist.md"
+      - "docs/releases/v1.0.0-beta.1-announcements.md"
       - "tools/check-beta-readiness.mjs"
       - "tools/**"
       - "src/**"
@@ -17,6 +20,9 @@ on:
   push:
     tags:
       - "v1.0.0-beta.*"
+
+permissions:
+  contents: read
 
 jobs:
   technical-matrix:
@@ -114,7 +120,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22.x
-      - run: node tools/check-beta-readiness.mjs --file=.github/beta-launch-readiness.json
+      - run: npm ci
+      - run: npm run check:beta-readiness
+      - name: Verify release artifacts are present
+        run: |
+          test -f docs/releases/v1.0.0-beta.1-readiness-checklist.md
+          test -f docs/releases/v1.0.0-beta.1-announcements.md
 
   release-gate:
     name: release-gate
@@ -127,4 +138,8 @@ jobs:
       - api-stability
       - manual-attestation-gate
     steps:
-      - run: echo "✅ Beta launch readiness passed. Safe to announce v1.0.0-beta.1."
+      - run: |
+          echo "✅ Beta launch readiness passed. Safe to announce v1.0.0-beta.1."
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "✅ Release event passed all readiness gates."
+          fi
