@@ -1,6 +1,6 @@
 import type { WorldState } from "./world.js";
 import { ensureAnatomyRuntime, type Entity } from "./entity.js";
-import type { CommandMap, Command, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand, ShootCommand, TreatCommand, ActivateCommand } from "./commands.js";
+import type { CommandMap, AttackCommand, GrappleCommand, BreakGrappleCommand, BreakBindCommand, ShootCommand, TreatCommand, ActivateCommand } from "./commands.js";
 import type { CapabilityEffect, EffectPayload, FieldEffect } from "./capability.js";
 import type { KernelContext } from "./context.js";
 
@@ -9,7 +9,7 @@ import { DamageChannel } from "../channels.js";
 import { deriveArmourProfile, findWeapon, findShield, findRangedWeapon, findExoskeleton, findSensor, type Weapon, type Shield } from "../equipment.js";
 
 import { isCapabilityAvailable } from "./tech.js";
-import { deriveFunctionalState, hasAllDisabledFunctions } from "./impairment.js";
+import { deriveFunctionalState } from "./impairment.js";
 import { TUNING, type SimulationTuning } from "./tuning.js";
 import { type Vec3, vSub, vAdd } from "./vec3.js";
 import { resolveHit, shieldCovers, chooseArea, type HitArea } from "./combat.js";
@@ -39,15 +39,16 @@ import { TraceKinds } from "./kinds.js";
 import { type SensoryEnvironment, DEFAULT_SENSORY_ENV, canDetect } from "./sensory.js";
 import { runPreparePhase } from "./step/phases/prepare-phase.js";
 import { runCooldownsPhase } from "./step/phases/cooldowns-phase.js";
+import { runCapabilityPhase } from "./step/phases/capability-phase.js";
 import { FEAR_SURPRISE, isRouting, painBlocksAction } from "./morale.js";
+import { applyCommands, applyFunctionalGating, applyStandAndKO } from "./step/apply/intents.js";
+import { applyResolvedImpacts } from "./step/resolvers/impact-resolver.js";
+import { STEP_PHASE_ORDER } from "./step/pipeline.js";
 
 import { stepPushAndRepulsion } from "./step/push.js";
 import { stepMoraleForEntity } from "./step/morale.js";
 import { stepSubstances } from "./step/substances.js";
 import { stepEnergy } from "./step/energy.js";
-import { stepConcentration } from "./step/concentration.js";
-import { computeKnockback, applyKnockback } from "./knockback.js";
-import { computeTemporaryCavityMul, computeCavitationBleed } from "./hydrostatic.js";
 import { entityInCone, type ConeSpec } from "./cone.js";
 import { stepConditionsToInjury, stepInjuryProgression } from "./step/injury.js";
 import { stepCoreTemp, deriveTempModifiers, CORE_TEMP_NORMAL_Q } from "./thermoregulation.js";
@@ -172,6 +173,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   const tuning = ctx.tuning ?? TUNING.tactical;
 
   const trace = ctx.trace ?? nullTrace;
+  void STEP_PHASE_ORDER;
 
   const { cellSize_m, index, spatial } = runPreparePhase(world, ctx);
   const runtimeState = world.runtimeState!;
@@ -180,67 +182,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
   runCooldownsPhase(world, trace);
 
-  // Phase 12: resolve or interrupt pending capability activations (cast-time completion)
-  const CAST_INTERRUPT_SHOCK: Q = q(0.30) as Q;
-  for (const e of world.entities) {
-    if (!e.pendingActivation || e.injury.dead) continue;
-    if (e.injury.shock >= CAST_INTERRUPT_SHOCK) {
-      trace.onEvent({ kind: TraceKinds.CastInterrupted, tick: world.tick, entityId: e.id });
-      delete e.pendingActivation;
-    } else if (world.tick >= e.pendingActivation.resolveAtTick) {
-      const src = e.capabilitySources?.find(s => s.id === e.pendingActivation!.sourceId);
-      const eff = src?.effects.find(ef => ef.id === e.pendingActivation!.effectId);
-      if (src && eff) {
-        applyCapabilityEffect(world, e, e.pendingActivation.targetId, eff, trace, world.tick);
-        trace.onEvent({ kind: TraceKinds.CapabilityActivated, tick: world.tick, entityId: e.id, sourceId: src.id, effectId: eff.id });
-        // Phase 28: set up sustained emission for remaining ticks after cast completion
-        if (eff.sustainedTicks && eff.sustainedTicks > 1) {
-          e.action.sustainedEmission = {
-            sourceId: src.id,
-            effectId: eff.id,
-            ...(e.pendingActivation.targetId !== undefined ? { targetId: e.pendingActivation.targetId } : {}),
-            remainingTicks: eff.sustainedTicks - 1,
-          };
-        }
-      }
-      delete e.pendingActivation;
-    }
-  }
-
-  // Phase 12B: step active concentration auras (castTime_ticks = -1 ongoing effects)
-  for (const e of world.entities) {
-    if (!e.activeConcentration || e.injury.dead) continue;
-    stepConcentration (e, world, trace, world.tick);
-  }
-
-  // Phase 28: step sustained emission (breath weapons, flamethrowers, etc.)
-  for (const e of world.entities) {
-    if (!e.action.sustainedEmission || e.injury.dead) continue;
-    const em = e.action.sustainedEmission;
-    // Concentration break: shock interrupts sustained emission (same threshold as cast)
-    if (e.injury.shock >= CAST_INTERRUPT_SHOCK) {
-      trace.onEvent({ kind: TraceKinds.CastInterrupted, tick: world.tick, entityId: e.id });
-      delete e.action.sustainedEmission;
-      continue;
-    }
-    const src = e.capabilitySources?.find(s => s.id === em.sourceId);
-    const eff = src?.effects.find(ef => ef.id === em.effectId);
-    if (!src || !eff) { delete e.action.sustainedEmission; continue; }
-    // Deduct cost per tick; stop if reserve exhausted
-    const isBoundless = src.regenModel.type === "boundless";
-    if (!isBoundless) {
-      if (src.reserve_J < eff.cost_J) {
-        delete e.action.sustainedEmission;
-        continue;
-      }
-      src.reserve_J -= eff.cost_J;
-    }
-    applyCapabilityEffect(world, e, em.targetId, eff, trace, world.tick);
-    em.remainingTicks -= 1;
-    if (em.remainingTicks <= 0) {
-      delete e.action.sustainedEmission;
-    }
-  }
+  runCapabilityPhase(world, trace, { applyCapabilityEffect });
 
   for (const e of world.entities) {
     if (e.injury.dead) continue;
@@ -351,72 +293,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   // Phase 5: snapshot alive set before impacts are applied (used by morale step to detect ally deaths)
   const aliveBeforeTick = new Set(world.entities.filter(e => !e.injury.dead).map(e => e.id));
 
-  for (const ev of finalImpacts) {
-    const target = index.byId.get(ev.targetId);
-    if (!target || target.injury.dead) continue;
-
-    // Phase 12: temporary shield absorption from armourLayer capability effects
-    let effectiveEnergy = ev.energy_J;
-    if ((target.condition.shieldReserve_J ?? 0) > 0 &&
-        target.condition.shieldExpiry_tick !== undefined &&
-        world.tick <= target.condition.shieldExpiry_tick) {
-      const absorbed = Math.min(target.condition.shieldReserve_J!, effectiveEnergy);
-      target.condition.shieldReserve_J! -= absorbed;
-      effectiveEnergy -= absorbed;
-    }
-
-    if (effectiveEnergy > 0) {
-      // Phase 27: compute temporary-cavity multiplier from impact velocity
-      const region = ev.region;
-      const tempCavMul = ev.v_impact_mps
-        ? computeTemporaryCavityMul(ev.v_impact_mps, region)
-        : undefined;
-      applyImpactToInjury(
-        target,
-        ev.wpn,
-        effectiveEnergy,
-        region,
-        ev.protectedByArmour,
-        trace,
-        world.tick,
-        tempCavMul,
-      );
-      // Phase 27: cavitation bleed boost for fluid-saturated tissue
-      if (ev.v_impact_mps) {
-        const rs = target.injury.byRegion[region];
-        if (rs) {
-          rs.bleedingRate = computeCavitationBleed(ev.v_impact_mps, rs.bleedingRate, region) as Q;
-        }
-      }
-    }
-
-    // Phase 26: apply knockback impulse to the target
-    if (effectiveEnergy > 0 && (ev.massEff_kg ?? 0) > 0) {
-      const attacker = index.byId.get(ev.attackerId);
-      if (attacker) {
-        const kbResult = computeKnockback(effectiveEnergy, ev.massEff_kg!, target);
-        applyKnockback(target, kbResult, {
-          dx: target.position_m.x - attacker.position_m.x,
-          dy: target.position_m.y - attacker.position_m.y,
-        });
-      }
-    }
-
-    trace.onEvent({
-      kind: TraceKinds.Attack,
-      tick: world.tick,
-      attackerId: ev.attackerId,
-      targetId: ev.targetId,
-      weaponId: ev.weaponId,        // Phase 18
-      region: ev.region,
-      energy_J: ev.energy_J,
-      blocked: ev.blocked,
-      parried: ev.parried,
-      shieldBlocked: ev.shieldBlocked,
-      armoured: ev.protectedByArmour,
-      hitQuality: ev.hitQuality,
-    });
-  }
+  applyResolvedImpacts(world, index, finalImpacts, trace, { applyImpactToInjury });
 
   // Phase 12B: apply chain payloads from active field effects, then expire timed ones
   stepChainEffects(world, trace, world.tick);
@@ -533,122 +410,6 @@ function resolveCapabilityHitSegment(
   const sideBit = (seed & 1) as 0 | 1;
   return resolveTargetHitSegment(target, rng.q01(), sideBit);
 }
-
-function applyFunctionalGating(e: Entity, tuning: SimulationTuning): void {
-  const func = deriveFunctionalState(e, tuning);
-
-  // incapacity gates voluntary actions
-  if (!func.canAct) {
-    e.intent.defence = { mode: "none", intensity: q(0) };
-    e.intent.move = { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" };
-    // keep prone if already, and prefer prone for non-acting entities in tactical/sim
-    if (tuning.realism !== "arcade") e.condition.prone = true;
-    return;
-  }
-
-  // Phase 2A: pinned entities cannot use normal defence (only breakGrapple applies)
-  if (e.condition.pinned && tuning.realism !== "arcade") {
-    e.intent.defence = { mode: "none", intensity: q(0) };
-    e.condition.prone = true;
-  }
-
-  // Phase 2B: exhaustion collapse — when reserve is fully depleted, entity
-  // cannot maintain posture or active defence (tactical/sim only).
-  if (e.energy.reserveEnergy_J <= 0 && tuning.realism !== "arcade") {
-    e.condition.prone = true;
-    e.intent.defence = { mode: "none", intensity: q(0) };
-  }
-
-  // forced prone if cannot stand (tactical/sim)
-  if (!func.canStand && tuning.realism !== "arcade") e.condition.prone = true;
-
-  // hard limb disable hooks (tactical/sim)
-  if (tuning.realism !== "arcade") {
-    const armsOut = hasAllDisabledFunctions(
-      func,
-      "leftManipulation",
-      "rightManipulation",
-    );
-
-    if (armsOut && (e.intent.defence.mode === "block" || e.intent.defence.mode === "parry")) {
-      e.intent.defence = { mode: "none", intensity: q(0) };
-    }
-
-    const legsOut = hasAllDisabledFunctions(
-      func,
-      "leftLocomotion",
-      "rightLocomotion",
-    );
-
-    if (legsOut && e.intent.move.mode === "sprint") {
-      e.intent.move = { ...e.intent.move, mode: "walk" };
-    }
-  }
-}
-
-function applyCommands(e: Entity, commands: readonly Command[]): void {
-  e.intent.defence = { mode: "none", intensity: q(0) };
-
-  for (const c of commands) {
-    if (c.kind === "setProne") e.condition.prone = c.prone;
-    else if (c.kind === "move") e.intent.move = { dir: c.dir, intensity: c.intensity, mode: c.mode };
-    else if (c.kind === "defend") e.intent.defence = { mode: c.mode, intensity: clampQ(c.intensity, 0, SCALE.Q) };
-  }
-}
-
-function applyStandAndKO(e: Entity, tuning: SimulationTuning): void {
-  // KO: if below threshold, go unconscious (but do NOT mark dead)
-  const wasUnconscious = e.condition.unconsciousTicks > 0;
-
-  if (e.injury.consciousness <= tuning.unconsciousThreshold) {
-    if (!wasUnconscious) {
-      e.condition.unconsciousTicks = tuning.unconsciousBaseTicks;
-      e.condition.prone = true;
-      e.intent.defence = { mode: "none", intensity: q(0) };
-      e.intent.move = { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" };
-
-      // SIM: drop weapons
-      if (tuning.dropWeaponsOnUnconscious) {
-        e.loadout.items = e.loadout.items.filter(it => it.kind !== "weapon");
-      }
-    } else {
-      // keep them down
-      e.condition.prone = true;
-    }
-  }
-
-  // If unconscious, cannot act/stand
-  if (e.condition.unconsciousTicks > 0) {
-    e.intent.defence = { mode: "none", intensity: q(0) };
-    e.intent.move = { dir: { x: 0, y: 0, z: 0 }, intensity: q(0), mode: "walk" };
-    e.condition.prone = true;
-    return;
-  }
-
-  // Standing rules: if player wants to stand but is blocked, force prone
-  if (!e.intent.prone && e.condition.prone) {
-    if (tuning.realism === "arcade") {
-      e.condition.prone = false;
-      return;
-    }
-
-    if (e.condition.standBlockedTicks > 0) {
-      e.condition.prone = true;
-      return;
-    }
-
-    // Compute stand-up time based on leg damage + shock + fatigue + encumbrance
-    const func = deriveFunctionalState(e, tuning);
-    const slow = (SCALE.Q - func.mobilityMul); // 0..1
-    const extra = Math.trunc((slow * tuning.standUpMaxExtraTicks) / SCALE.Q);
-    const ticks = tuning.standUpBaseTicks + extra;
-
-    e.condition.standBlockedTicks = Math.max(1, ticks);
-    e.condition.prone = true;
-    e.intent.prone = true; // reflect forced state
-  }
-}
-
 
 /* ------------------ Combat ------------------ */
 function resolveAttack(world: WorldState,
