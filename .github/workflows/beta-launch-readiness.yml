@@ -97,15 +97,32 @@ jobs:
       - run: npm run build
       - run: npm run check-stable-api
       - run: npm run docs:api
-      - name: Tier 1 API diff since v0.1.69
+      - name: Tier 1 API diff since latest release tag
         run: |
-          git fetch --tags --force
-          git rev-parse -q --verify "refs/tags/v0.1.69" >/dev/null
-          git worktree add /tmp/ananke-v0169 "refs/tags/v0.1.69"
+          set -euo pipefail
+          git fetch --force --tags origin
+
+          BASE_TAG="$(git tag --list 'v*' --sort=-version:refname | head -n 1)"
+          if [ -z "$BASE_TAG" ]; then
+            echo "No release tags found; using origin/main as API baseline."
+            git fetch origin main
+            BASE_REF="origin/main"
+            BASE_DIR="/tmp/ananke-main"
+            BASE_SURFACE="/tmp/ananke-main/api-surface-main.json"
+          else
+            echo "Using ${BASE_TAG} as API baseline."
+            BASE_REF="refs/tags/${BASE_TAG}"
+            BASE_DIR="/tmp/ananke-${BASE_TAG#v}"
+            BASE_SURFACE="${BASE_DIR}/api-surface-${BASE_TAG#v}.json"
+          fi
+
+          rm -rf "${BASE_DIR}"
+          git worktree add "${BASE_DIR}" "${BASE_REF}"
+
           node dist/tools/api-surface.js --out=api-surface-current.json
-          node dist/tools/api-surface.js --root=/tmp/ananke-v0169 --out=/tmp/ananke-v0169/api-surface-v0169.json
+          node dist/tools/api-surface.js --root="${BASE_DIR}" --out="${BASE_SURFACE}"
           node dist/tools/api-diff-check.js \
-            --base=/tmp/ananke-v0169/api-surface-v0169.json \
+            --base="${BASE_SURFACE}" \
             --head=api-surface-current.json \
             --allowNew=false \
             --baseVersionMajor=1 \
