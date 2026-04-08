@@ -5,9 +5,18 @@ import { q, SCALE } from "../src/units.js";
 import {
   computeItemValue,
   armourConditionQ,
+  conditionToWearQ,
+  toMarketValue,
   applyWear,
   resolveDrops,
+  resolveDropsDetailed,
   evaluateTradeOffer,
+  evaluateTradeOfferDetailed,
+  mergeIntoInventory,
+  createEconomyReport,
+  examplePostBattleLootFlow,
+  exampleRepairReuseLoop,
+  exampleSettlementTradeFlow,
   totalInventoryValue,
   WEAR_PENALTY_THRESHOLD,
   WEAR_FUMBLE_THRESHOLD,
@@ -49,6 +58,9 @@ describe("item value", () => {
     const cq = armourConditionQ(arm_leather.resist_J, arm_leather.resist_J);
     expect(cq).toBe(q(1.0));
   });
+  it("conditionToWearQ maps pristine condition to zero wear", () => {
+    expect(conditionToWearQ(q(1.0))).toBe(q(0));
+  });
 
   it("armourConditionQ scales with damage (half resist → ~q(0.50))", () => {
     const cq = armourConditionQ(arm_leather.resist_J, Math.floor(arm_leather.resist_J / 2));
@@ -77,6 +89,13 @@ describe("item value", () => {
     const ivPlate   = computeItemValue(arm_plate);
     const ivLeather = computeItemValue(arm_leather);
     expect(ivPlate.baseValue).toBeGreaterThan(ivLeather.baseValue);
+  });
+
+  it("toMarketValue discounts worn gear but retains salvage floor", () => {
+    const pristine = toMarketValue(computeItemValue(wpn_longsword, q(0)));
+    const broken = toMarketValue(computeItemValue(wpn_longsword, q(1.0)));
+    expect(pristine.buyValue).toBeGreaterThan(broken.buyValue);
+    expect(broken.buyValue).toBeGreaterThan(0);
   });
 });
 
@@ -185,6 +204,18 @@ describe("drop resolution", () => {
     const b = resolveDrops(entity, 999, extra);
     expect(a).toEqual(b);
   });
+  it("resolveDropsDetailed returns grouped guaranteed/probabilistic results", () => {
+    const entity = mkHumanoidEntity(1, 1, 0, 0);
+    entity.injury.dead = true;
+    entity.loadout = { items: [wpn_club] };
+    const extra: DropTable = { guaranteed: ["coin"], probabilistic: [{ itemId: "gem", chance_Q: q(1.0) }] };
+    const detailed = resolveDropsDetailed(entity, 5, extra);
+    expect(detailed.preventedByState).toBe(false);
+    expect(detailed.guaranteed).toContain("wpn_club");
+    expect(detailed.guaranteed).toContain("coin");
+    expect(detailed.probabilistic).toContain("gem");
+    expect(detailed.dropped).toEqual([...detailed.guaranteed, ...detailed.probabilistic]);
+  });
 
   it("dead entity drops all equipped weapons and armour", () => {
     const entity = mkHumanoidEntity(1, 1, 0, 0);
@@ -274,6 +305,70 @@ describe("trade evaluation", () => {
       want: [{ itemId: "bandage", count: 3, unitValue: 1 }],
     };
     expect(evaluateTradeOffer(offer, inventory)).toEqual(evaluateTradeOffer(offer, inventory));
+  });
+
+  it("evaluateTradeOfferDetailed reports shortages and give/want subtotals", () => {
+    const inventory: ItemInventory = new Map([
+      ["bandage", { count: 1, unitValue: 1 }],
+    ]);
+    const offer: TradeOffer = {
+      give: [{ itemId: "dagger", count: 1, unitValue: 15 }],
+      want: [{ itemId: "bandage", count: 3, unitValue: 1 }],
+    };
+    const detailed = evaluateTradeOfferDetailed(offer, inventory);
+    expect(detailed.feasible).toBe(false);
+    expect(detailed.giveValue).toBe(15);
+    expect(detailed.wantValue).toBe(3);
+    expect(detailed.shortages).toEqual([{ itemId: "bandage", missingCount: 2 }]);
+  });
+});
+
+describe("host-facing examples", () => {
+  it("post-battle loot flow produces a tagged report", () => {
+    const entity = mkHumanoidEntity(1, 1, 0, 0);
+    entity.injury.dead = true;
+    entity.loadout = { items: [wpn_club] };
+    const report = examplePostBattleLootFlow(entity, 9, () => 4);
+    expect(report.label).toBe("post_battle_loot");
+    expect(report.tags).toContain("loot");
+    expect(report.totals.grossValue).toBeGreaterThan(0);
+  });
+
+  it("repair/reuse loop shows positive net when wear is reduced", () => {
+    const report = exampleRepairReuseLoop(wpn_club, q(0.70), q(0.10));
+    expect(report.label).toBe("repair_reuse_loop");
+    expect(report.totals.netValue).toBeGreaterThan(0);
+  });
+
+  it("settlement/shop flow exposes feasibility details for host UI", () => {
+    const inventory: ItemInventory = new Map([
+      ["coin", { count: 5, unitValue: 1 }],
+      ["bandage", { count: 2, unitValue: 2 }],
+    ]);
+    const offer: TradeOffer = {
+      give: [{ itemId: "torch", count: 1, unitValue: 4 }],
+      want: [{ itemId: "coin", count: 6, unitValue: 1 }],
+    };
+    const result = exampleSettlementTradeFlow(offer, inventory);
+    expect(result.feasible).toBe(false);
+    expect(result.shortages).toEqual([{ itemId: "coin", missingCount: 1 }]);
+  });
+
+  it("mergeIntoInventory and createEconomyReport support settlement stock summaries", () => {
+    const inventory: ItemInventory = new Map();
+    mergeIntoInventory(
+      inventory,
+      [{ itemId: "grain", count: 10 }, { itemId: "ore", count: 2 }],
+      (id) => id === "grain" ? 2 : 6,
+    );
+    const report = createEconomyReport(
+      "shop_stock",
+      [...inventory.entries()].map(([itemId, v]) => ({ itemId, count: v.count })),
+      (id) => inventory.get(id)?.unitValue ?? 0,
+      ["settlement", "shop"],
+    );
+    expect(report.totals.grossValue).toBe(32);
+    expect(report.tags).toContain("shop");
   });
 });
 
