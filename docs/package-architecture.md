@@ -1,337 +1,121 @@
-# Ananke — Modular Package Architecture
+# Ananke package architecture: actual state vs plan
 
-> **Status: Enforced in CI (incremental)** — package boundaries are now checked from source imports via `tools/check-package-boundaries.ts`, with hard-fail on `@ananke/core` upward dependencies and a generated report at `docs/package-boundary-report.md`.
->
-> Remaining non-core boundary drift is tracked in warning mode and is remediated in batches.
+This document reconciles the modular package design with what is **currently** in this repository.
 
----
+## TL;DR
 
-## Problem
-
-`@its-not-rocket-science/ananke` ships 41 subpath exports in a single package.
-A host that only needs tactical combat transitively depends on feudal succession,
-epidemic simulation, and monetary policy.  A renderer integration author has no
-clean way to depend only on the bridge layer.
+- The repository is still built and published primarily as a **single monolith package**: `@its-not-rocket-science/ananke`.  
+- `packages/*` workspaces exist, but the main domain packages are currently **Phase 1 stubs** that re-export monolith subpaths; they are not independent codebases yet.  
+- Boundary tooling exists and runs, but boundary violations are still present, so modular boundaries are **partially enforced** rather than fully achieved.
 
 ---
 
-## Package Overview
+## 1) Current state (what is true today)
 
-| Package | Stability | Description | Key entry point(s) |
-|---------|-----------|-------------|-------------------|
-| `@ananke/core` | **Stable** | Kernel, entity model, fixed-point units, RNG, replay, shared damage channels | `"@ananke/core"` |
-| `@ananke/combat` | Experimental | Combat resolution, anatomy, grapple, ranged, competence | `"@ananke/combat"` |
-| `@ananke/campaign` | Experimental | World simulation — polity, economy, social, demography | `"@ananke/campaign"` |
-| `@ananke/content` | Experimental | Species, equipment catalogue, archetypes, crafting | `"@ananke/content"` |
-| `@ananke/bridge` | Experimental | Renderer bridge, interpolation, animation hints *(Phase 2)* | `"@ananke/bridge"` |
-| `@its-not-rocket-science/ananke` | **Meta-package** | Re-exports all of the above for backwards compatibility | unchanged |
+### Build and publish model
 
-> `@ananke/bridge` is not yet a standalone stub — bridge exports are part of
-> `@ananke/core` until Phase 2 adds a dedicated `"./bridge"` subpath to the
-> monolith.
+- Root `package.json` defines the package name as `@its-not-rocket-science/ananke` and includes the full export surface from `dist/src/*`.  
+- Root publish config is public and root packaging is driven by the root `files` list and root build scripts (`npm run build` compiles `tsconfig.build.json`).  
+- The root package currently exposes **56 export entries** (including `"."` and many subpaths).
 
+### Repository layout reality
 
+- Most implementation source remains under the monolith `src/` tree.
+- Workspaces are declared as `packages/*`, with these folders present:
+  - `packages/core`
+  - `packages/combat`
+  - `packages/campaign`
+  - `packages/content`
+  - `packages/cli`
+- `packages/core|combat|campaign|content` each contain only:
+  - `package.json`
+  - `index.js`
+  - `index.d.ts`
 
-## Enforcement (source of truth)
+### Current architecture diagram (monolith-first)
 
-- **Config:** `tools/package-boundaries.config.json` defines file ownership and allowed package edges.
-- **Checker:** `tools/check-package-boundaries.ts` parses TypeScript AST imports (`import`, `export ... from`, dynamic `import()`, `require()`, and `import("...")` types).
-- **Reports:** `npm run check-boundaries:report` updates `docs/package-boundary-report.md`.
-- **CI gate:** `npm run check-boundaries:ci` regenerates the report and enforces regression caps (`--max-hard`, `--max-suspicious`) so drift fails fast while remediation is in progress.
+```mermaid
+flowchart LR
+  Host[Consumer app] --> Mono[@its-not-rocket-science/ananke]
+  Mono --> Dist[dist/src/* exports]
+  Dist --> Src[src/* monolith implementation]
 
-Strict modes:
-- `--strict`: fail on hard violations only (used in CI for immediate anti-drift).
-- `--strict-all`: fail on any disallowed cross-package import (used when tightening migration phases).
+  subgraph Workspace wrappers (Phase 1)
+    Core[@ananke/core]
+    Combat[@ananke/combat]
+    Campaign[@ananke/campaign]
+    Content[@ananke/content]
+  end
 
----
-
-## Package Dependency Graph
-
-```
-@ananke/core
-    │
-    ├── @ananke/combat      (peer: @ananke/core)
-    ├── @ananke/campaign    (peer: @ananke/core)
-    ├── @ananke/content     (peer: @ananke/core)
-    └── @ananke/bridge      (peer: @ananke/core)   [Phase 2]
-
-@its-not-rocket-science/ananke  (meta: re-exports all four)
+  Core --> Mono
+  Combat --> Mono
+  Campaign --> Mono
+  Content --> Mono
 ```
 
 ---
 
-## Monolith Subpath → Package Mapping
+## 2) Partially implemented state (in progress now)
 
-### @ananke/core
+### What is implemented
 
-| Monolith subpath | Notes |
-|-----------------|-------|
-| `"."` | Entire main export — kernel, entity, units, RNG, replay, bridge |
+- A modular ownership/dependency model is defined in `tools/package-boundaries.config.json` (`@ananke/core`, `@ananke/combat`, `@ananke/campaign`, `@ananke/content`).
+- Boundary checking tooling exists (`tools/check-package-boundaries.ts`) and report generation is wired via `npm run check-boundaries:report`.
+- Workspace packages (`@ananke/core|combat|campaign|content`) are usable import targets, but they are intentionally thin re-export shims.
 
-### @ananke/combat
+### What is only partial (not fully shipped)
 
-| Monolith subpath | Notes |
-|-----------------|-------|
-| `"./combat"` | resolveHit, resolveBlock, CombatContext |
-| `"./anatomy"` | BodyPlan, AnatomyRegion, injury regions |
-| `"./competence"` | skill contest resolution, interspecies signalling |
-| `"./wasm-kernel"` | WASM-accelerated combat math |
-
-### @ananke/campaign
-
-| Monolith subpath | Notes |
-|-----------------|-------|
-| `"./campaign"` | Campaign layer, strategic tick |
-| `"./polity"` | Polity, stepPolityDay, tech diffusion |
-| `"./social"` | Social relationships |
-| `"./narrative"` | Narrative event system |
-| `"./narrative-prose"` | Prose generation |
-| `"./renown"` | Fame and reputation |
-| `"./kinship"` | Family trees, genealogy |
-| `"./succession"` | Inheritance rules |
-| `"./calendar"` | In-world calendar and date tracking |
-| `"./feudal"` | Feudal hierarchy |
-| `"./diplomacy"` | Treaties and diplomatic acts |
-| `"./migration"` | Population movement |
-| `"./espionage"` | Espionage and spycraft |
-| `"./trade-routes"` | Trade route simulation |
-| `"./siege"` | Siege warfare mechanics |
-| `"./faith"` | Religion and doctrine |
-| `"./demography"` | Population simulation |
-| `"./granary"` | Food storage and distribution |
-| `"./epidemic"` | Disease spread |
-| `"./infrastructure"` | Buildings and construction |
-| `"./unrest"` | Civil unrest |
-| `"./research"` | Technology research |
-| `"./taxation"` | Tax collection |
-| `"./military-campaign"` | Military campaign mechanics |
-| `"./governance"` | Governance and edicts |
-| `"./resources"` | Resource management |
-| `"./climate"` | Climate and weather effects |
-| `"./famine"` | Famine simulation |
-| `"./containment"` | Disease containment |
-| `"./mercenaries"` | Mercenary companies |
-| `"./wonders"` | Wonders and monuments |
-| `"./monetary"` | Monetary policy and currency |
-
-### @ananke/content
-
-| Monolith subpath | Notes |
-|-----------------|-------|
-| `"./species"` | Species definitions, stat profiles |
-| `"./catalog"` | Equipment and item catalogue |
-| `"./character"` | Character generation and archetypes |
-| `"./crafting"` | Crafting recipes, workshops, manufacturing |
+- Boundary conformance is not complete: current report still shows hard and suspicious violations, and unmapped files.
+- The modular packages are not yet source-owning packages; they forward imports to the monolith package.
+- `packages/*` are therefore **meaningfully populated only as compatibility wrappers**, not as fully separated implementation modules.
 
 ---
 
-## Source File → Package Mapping (Phase 2 migration)
+## 3) Planned future state (target)
 
-### @ananke/core
-```
-src/units.ts
-src/rng.ts
-src/types.ts
-src/replay.ts
-src/channels.ts
-src/sim/entity.ts
-src/sim/kernel.ts
-src/sim/seeds.ts
-src/sim/world.ts
-src/sim/kinds.ts
-src/sim/condition.ts
-src/sim/body.ts
-src/sim/bodyplan.ts
-src/sim/limb.ts
-src/sim/tick.ts
-src/sim/indexing.ts
-src/sim/events.ts
-src/sim/commands.ts
-src/sim/commandBuilders.ts
-src/sim/context.ts
-src/sim/intent.ts
-src/sim/vec3.ts
-src/sim/spatial.ts
-src/sim/skills.ts
-src/sim/traits.ts
-src/sim/terrain.ts
-src/sim/action.ts
-src/sim/step/           (all 10 step files)
-src/bridge/             (all 5 bridge files)
-src/presets.ts
-src/generate.ts
-src/derive.ts
-src/describe.ts
-src/traits.ts
-src/metrics.ts
-src/dist.ts
-src/wasm-kernel.ts
-```
+### Target outcomes
 
-### @ananke/combat
-```
-src/sim/combat.ts
-src/sim/injury.ts
-src/sim/wound-aging.ts
-src/sim/medical.ts
-src/sim/morale.ts
-src/sim/grapple.ts
-src/sim/ranged.ts
-src/sim/stamina.ts      (if present)
-src/sim/impairment.ts
-src/sim/knockback.ts
-src/sim/cover.ts
-src/sim/cone.ts
-src/sim/formation.ts
-src/sim/formation-combat.ts
-src/sim/formation-unit.ts
-src/sim/frontage.ts
-src/sim/density.ts
-src/sim/occlusion.ts
-src/sim/ai/             (all 8 AI files)
-src/combat.ts
-src/equipment.ts
-src/weapons.ts
-src/anatomy/            (all 5 anatomy files)
-src/competence/         (all 13 competence files)
-src/arena.ts
-src/dialogue.ts
-src/party.ts
-src/faction.ts
-src/downtime.ts
-```
+- Each `@ananke/*` domain package owns its source and build output directly.
+- Cross-package dependencies follow the declared DAG (core at base, domain packages depending on core/content as designed).
+- The monolith remains available as a compatibility meta-package that re-exports modular packages.
 
-### @ananke/campaign
-```
-src/campaign.ts
-src/campaign-layer.ts
-src/polity.ts
-src/polity-vassals.ts
-src/social.ts
-src/relationships.ts
-src/relationships-effects.ts
-src/emotional-contagion.ts
-src/narrative.ts
-src/narrative-layer.ts
-src/narrative-prose.ts
-src/narrative-render.ts
-src/narrative-stress.ts
-src/story-arcs.ts
-src/quest.ts
-src/quest-generators.ts
-src/chronicle.ts
-src/legend.ts
-src/mythology.ts
-src/renown.ts
-src/kinship.ts
-src/succession.ts
-src/calendar.ts
-src/feudal.ts
-src/diplomacy.ts
-src/migration.ts
-src/espionage.ts
-src/trade-routes.ts
-src/siege.ts
-src/faith.ts
-src/demography.ts
-src/granary.ts
-src/epidemic.ts
-src/infrastructure.ts
-src/unrest.ts
-src/research.ts
-src/taxation.ts
-src/military-campaign.ts
-src/governance.ts
-src/resources.ts
-src/climate.ts
-src/famine.ts
-src/containment.ts
-src/mercenaries.ts
-src/wonders.ts
-src/monetary.ts
-src/collective-activities.ts
-src/economy.ts
-src/economy-gen.ts
-src/tech-diffusion.ts
-src/culture.ts
-src/settlement.ts
-src/settlement-services.ts
-src/channels.ts
-src/inheritance.ts
-src/progression.ts
-src/sim/disease.ts
-src/sim/aging.ts
-src/sim/sleep.ts
-src/sim/mount.ts
-src/sim/hazard.ts
-src/sim/nutrition.ts
-src/sim/thermoregulation.ts
-src/sim/toxicology.ts
-src/sim/systemic-toxicology.ts
-src/sim/substance.ts
-src/sim/weather.ts
-src/sim/biome.ts
-src/sim/tech.ts
-```
+### Target architecture diagram (modular-first)
 
-### @ananke/content
-```
-src/species.ts
-src/catalog.ts
-src/character.ts
-src/archetypes.ts
-src/crafting/           (all 5 crafting files)
-src/inventory.ts
-src/item-durability.ts
-src/snapshot.ts
-src/world-generation.ts
-src/world-factory.ts
-src/scenario.ts
-src/modding.ts
-src/lod.ts
-src/model3d.ts
+```mermaid
+flowchart TD
+  Core[@ananke/core]
+  Content[@ananke/content]
+  Combat[@ananke/combat]
+  Campaign[@ananke/campaign]
+  Bridge[@ananke/bridge]
+
+  Combat --> Core
+  Combat --> Content
+  Campaign --> Core
+  Campaign --> Content
+  Content --> Core
+  Bridge --> Core
+
+  Meta[@its-not-rocket-science/ananke (meta-package)] --> Core
+  Meta --> Combat
+  Meta --> Campaign
+  Meta --> Content
+  Meta --> Bridge
 ```
 
 ---
 
-## Phase 2: Source Migration Plan
+## 4) Notes on `packages/*` workspace population
 
-1. **Create workspace package directories** with their own `tsconfig.build.json`.
-2. **Move source files** from `src/` into `packages/NAME/src/` following the table above.
-3. **Update internal imports** — use `@ananke/core` etc. instead of relative paths that cross
-   package boundaries.
-4. **Wire inter-package dependencies** — `@ananke/combat` lists `@ananke/core` as a dependency.
-5. **Update the monolith meta-package** (`@its-not-rocket-science/ananke`) to re-export from
-   the five sub-packages instead of from `src/`.
-6. **Verify** that all existing tests pass without modification (test paths remain unchanged).
+`package.json` declares `"workspaces": ["packages/*"]`. In the current repository state:
 
-The most complex step is (3) — identifying which imports cross package boundaries.  A planned
-tool (`tools/check-package-boundaries.ts`) will analyse the import graph and report violations.
+- `packages/core`, `packages/combat`, `packages/campaign`, and `packages/content` are present but mostly stub wrappers (re-export only).
+- `packages/cli` exists but is marked `private: true` and points at root `dist/tools/*` binaries.
+- This means workspaces are present and useful for import-path migration, but they are **not yet independently implemented package modules**.
 
 ---
 
-## What Changes for Package Consumers
+## 5) Practical interpretation for adopters
 
-### Phase 1 (now — stubs)
-```typescript
-// Before (monolith)
-import { resolveHit } from "@its-not-rocket-science/ananke/combat";
-
-// After (modular stub — same bundle size, cleaner import path)
-import { resolveHit } from "@ananke/combat";
-```
-
-### Phase 2 (source migration — smaller bundles)
-```typescript
-// Same import — but now @ananke/combat has no campaign dependency
-import { resolveHit } from "@ananke/combat";
-```
-
-The import path is the same in Phase 1 and Phase 2; only the bundle contents change.
-
----
-
-## Backwards Compatibility
-
-`@its-not-rocket-science/ananke` will remain published indefinitely as a meta-package.
-All 41 subpath exports will continue to work.  Existing hosts do not need to migrate.
+- Treat today’s setup as a **monolith with modular entry-point aliases**.
+- Expect true modularization benefits (stronger isolation and clearer independent package ownership) only after Phase 2 source migration and boundary cleanup are completed.
