@@ -217,6 +217,10 @@
     "./tier3": {
       "import": "./dist/src/tier3.js",
       "types": "./dist/src/tier3.d.ts"
+    },
+    "./data-governance": {
+      "import": "./dist/src/data-governance.js",
+      "types": "./dist/src/data-governance.d.ts"
     }
   },
   "workspaces": [
