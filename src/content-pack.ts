@@ -472,7 +472,7 @@ export function validatePack(manifest: unknown): PackValidationError[] {
 
   const checksum = (m["registry"] as Record<string, unknown> | undefined)?.["checksum"];
   if (typeof checksum === "string" && /^[0-9a-f]{64}$/.test(checksum)) {
-    const computed = computePackChecksum(m as AnankePackManifest);
+    const computed = computePackChecksum(m as unknown as AnankePackManifest);
     if (computed !== checksum) {
       errors.push({
         path: "$.registry.checksum",
