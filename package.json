@@ -354,7 +354,8 @@
     "build:wasm:core": "asc as/ananke-core.ts --outFile wasm/ananke-core.wasm --runtime stub --optimize --noAssert",
     "benchmark": "node dist/tools/wasm-benchmark.js",
     "docs:api": "node tools/generate-api-docs.mjs",
-    "check:beta-readiness": "node tools/check-beta-readiness.mjs --file=.github/beta-launch-readiness.json"
+    "check:beta-readiness": "node tools/check-beta-readiness.mjs --file=.github/beta-launch-readiness.json",
+    "run:proof-of-use": "node dist/tools/proof-of-use-slice.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
