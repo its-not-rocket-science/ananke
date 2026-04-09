@@ -112,7 +112,7 @@ The full symbol table is in [`STABLE_API.md`](../STABLE_API.md).
 
 ### Pre-1.0 note
 
-> **Design principle:** The project is currently at `0.1.x`.  Tier 1 exports behave as Stable
+> **Design principle:** The project is currently in the pre-1.0 (`0.x`) line.  Tier 1 exports behave as Stable
 > within the `0.x` line — they will not break without a minor-version bump and a migration
 > guide.  The `1.0` release will lock the Tier 1 surface under full semver guarantees.
 

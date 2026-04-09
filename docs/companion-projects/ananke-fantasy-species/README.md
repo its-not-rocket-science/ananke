@@ -1,6 +1,6 @@
 # ananke-fantasy-species
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Data only](https://img.shields.io/badge/simulation%20code-none-brightgreen)
 ![Status](https://img.shields.io/badge/status-wanted-lightgrey)
@@ -39,7 +39,7 @@ This is a **pure data package**. It contains no simulation code, no kernel modif
 
 | Dependency | Version | Notes |
 |-----------|---------|-------|
-| Ananke | 0.1.0+ | Kernel + type definitions |
+| Ananke | package.json version range (workspace) | Kernel + type definitions |
 | Node.js | 18+ | Only needed if you run the tests |
 
 Install alongside Ananke:

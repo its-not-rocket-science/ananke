@@ -1,6 +1,6 @@
 # ananke-language-forge
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
 ![LLM](https://img.shields.io/badge/LLM-OpenAI%20%7C%20Anthropic%20%7C%20local-ff6b35)
@@ -54,7 +54,7 @@ Separating this into a companion project keeps Ananke's core deterministic and d
 | Dependency | Minimum version | Notes |
 |-----------|----------------|-------|
 | Node.js | 18 | |
-| Ananke | 0.1.0 | For campaign export types |
+| Ananke | package.json version (workspace) | For campaign export types |
 | LLM API key | — | OpenAI, Anthropic, or a local server (see below) |
 
 This project does not run the Ananke simulation — it reads exported campaign JSON. Ananke itself does not need to be installed unless you want to generate exports programmatically (see [Ananke inputs consumed](#ananke-inputs-consumed)).

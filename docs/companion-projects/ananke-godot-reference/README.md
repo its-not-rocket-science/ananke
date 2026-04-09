@@ -1,6 +1,6 @@
 # ananke-godot-reference
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![Godot](https://img.shields.io/badge/Godot-4.2%2B-478cbf?logo=godotengine&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)

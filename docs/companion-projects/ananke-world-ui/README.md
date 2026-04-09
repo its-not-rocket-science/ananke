@@ -1,6 +1,6 @@
 # ananke-world-ui
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![SvelteKit](https://img.shields.io/badge/SvelteKit-2.x-ff3e00?logo=svelte&logoColor=white)
 ![Three.js](https://img.shields.io/badge/Three.js-r165%2B-000000?logo=threedotjs&logoColor=white)
@@ -59,7 +59,7 @@ These are product decisions with their own release cycle and UX opinions. Coupli
 |-----------|----------------|-------|
 | Node.js | 18 | |
 | npm | 9 | |
-| Ananke | 0.1.0 | Cloned alongside this repo |
+| Ananke | package.json version (workspace) | Cloned alongside this repo |
 
 Clone Ananke into a sibling directory before cloning this project:
 

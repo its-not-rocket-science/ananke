@@ -137,7 +137,7 @@ scenario-package/
     "maturity": "calibrated"
   },
   "engine": {
-    "anankeVersion": ">=0.1.0",
+    "anankeVersion": ">=<current-ananke-version>",
     "determinismMode": "lockstep",
     "tickRate": 20
   },
