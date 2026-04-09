@@ -173,6 +173,33 @@ function recoveryMedical(): KernelParityScenario {
   };
 }
 
+function breakBindRecovery(): KernelParityScenario {
+  return {
+    name: "break bind recovery",
+    ticks: 10,
+    createWorld: () => {
+      const a = mkHumanoidEntity(1, 1, 0, 0);
+      const b = mkHumanoidEntity(2, 2, to.m(0.6), 0);
+      a.loadout.items = [STARTER_WEAPONS.find((w) => w.id === "wpn_longsword")!];
+      b.loadout.items = [STARTER_WEAPONS.find((w) => w.id === "wpn_club")!];
+      a.action.weaponBindPartnerId = 2;
+      b.action.weaponBindPartnerId = 1;
+      a.action.weaponBindTicks = 5;
+      b.action.weaponBindTicks = 5;
+      return mkWorld(808, [a, b]);
+    },
+    createContext: () => ({ ...BASE_CTX }),
+    commandsAtTick: (tick) => {
+      if (tick === 0) {
+        return new Map([[1, [{ kind: "breakBind", intensity: q(1) }]]]);
+      }
+      return new Map([
+        [1, [{ kind: "attackNearest", mode: "swing", intensity: q(1), weaponId: "wpn_longsword" }]],
+      ]);
+    },
+  };
+}
+
 export const KERNEL_PARITY_SCENARIOS: readonly KernelParityScenario[] = [
   meleeDuel(),
   rangedDuel(),
@@ -181,4 +208,5 @@ export const KERNEL_PARITY_SCENARIOS: readonly KernelParityScenario[] = [
   capabilityHeavy(),
   moraleRouting(),
   recoveryMedical(),
+  breakBindRecovery(),
 ];
