@@ -8,6 +8,7 @@ import {
   instantiatePackScenario,
   clearPackRegistry,
   semverSatisfies,
+  computePackChecksum,
   ANANKE_ENGINE_VERSION,
   type AnankePackManifest,
 } from "../src/content-pack.js";
@@ -206,6 +207,23 @@ describe("loadPack", () => {
     expect(second.packId).toBe(`test-pack-idem@1.0.0`);
   });
 
+  it("rejects duplicate load for same packId when manifest content differs", () => {
+    const packIdName = "test-pack-dup-conflict";
+    const first: AnankePackManifest = {
+      name: packIdName,
+      version: "1.0.0",
+      weapons: [makeWeapon(uid("dup_a"))],
+    };
+    const second: AnankePackManifest = {
+      name: packIdName,
+      version: "1.0.0",
+      weapons: [makeWeapon(uid("dup_b"))],
+    };
+    expect(loadPack(first).errors).toHaveLength(0);
+    const duplicate = loadPack(second);
+    expect(duplicate.errors.some(e => /already loaded with different content fingerprint/.test(e.message))).toBe(true);
+  });
+
   it("stores scenarios in the pack registry", () => {
     const archId = uid("arch_scen");
     const weapId = uid("w_scen");
@@ -218,6 +236,27 @@ describe("loadPack", () => {
     };
     const result = loadPack(pack);
     expect(result.scenarioIds).toContain("duel_test");
+  });
+
+  it("does not keep failed packs in registry after partial registration failure", () => {
+    const duplicateWeaponId = uid("partial_weapon");
+    const priming: AnankePackManifest = {
+      name: "partial-primer",
+      version: "1.0.0",
+      weapons: [makeWeapon(duplicateWeaponId)],
+    };
+    expect(loadPack(priming).errors).toHaveLength(0);
+
+    const failing: AnankePackManifest = {
+      name: "partial-fail",
+      version: "1.0.0",
+      weapons: [makeWeapon(duplicateWeaponId)],
+      scenarios: [makeScenario("should_not_register", uid("arch_missing"), duplicateWeaponId)],
+    };
+    const result = loadPack(failing);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(getLoadedPack("partial-fail@1.0.0")).toBeUndefined();
+    expect(getPackScenario("partial-fail@1.0.0", "should_not_register")).toBeUndefined();
   });
 });
 
@@ -403,6 +442,14 @@ describe("validatePack — registry block", () => {
     expect(errors.some(e => e.path === "$.registry.compatRange")).toBe(true);
   });
 
+  it("rejects malformed compatRange", () => {
+    const errors = validatePack({
+      name: "x", version: "1.0.0",
+      registry: { compatRange: ">=bad.range" },
+    });
+    expect(errors.some(e => e.path === "$.registry.compatRange" && /valid semver range/.test(e.message))).toBe(true);
+  });
+
   it("accepts compatible compatRange with compound range", () => {
     const errors = validatePack({
       name: "x", version: "1.0.0",
@@ -443,10 +490,24 @@ describe("validatePack — registry block", () => {
     expect(errors.some(e => e.path === "$.registry.checksum")).toBe(true);
   });
 
-  it("accepts valid 64-char hex checksum", () => {
-    const hex64 = "a".repeat(64);
+  it("rejects checksum mismatch", () => {
     const errors = validatePack({
-      name: "x", version: "1.0.0",
+      name: "x",
+      version: "1.0.0",
+      registry: { checksum: "a".repeat(64) },
+    });
+    expect(errors.some(e => e.path === "$.registry.checksum" && /checksum mismatch/.test(e.message))).toBe(true);
+  });
+
+  it("accepts valid 64-char hex checksum", () => {
+    const base: AnankePackManifest = {
+      name: "x",
+      version: "1.0.0",
+      registry: { checksum: "" },
+    };
+    const hex64 = computePackChecksum(base);
+    const errors = validatePack({
+      ...base,
       registry: { checksum: hex64 },
     });
     expect(errors).toHaveLength(0);
