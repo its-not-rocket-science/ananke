@@ -6,6 +6,17 @@
 > For export-surface discoverability guidance, see
 > [`docs/export-audit.md`](export-audit.md).
 
+## Four-layer discovery path
+
+Use this order to keep onboarding narrow while preserving the full API surface:
+
+1. **Layer A — First hour**: `"."` only (prove deterministic stepping/replay quickly).
+2. **Layer B — Host app**: add host-facing integration modules (`"./host-loop"`, `"./netcode"`, `"./schema"`, bridge modules).
+3. **Layer C — Campaign builder**: add domain modules in bundles (`"./campaign"`, `"./polity"`, social/narrative/economy extensions).
+4. **Layer D — Advanced research/content**: content pipeline + specialist surfaces (`"./content-pack"`, `"./conformance"`, `"./tier2"`, `"./tier3"`).
+
+For full rationale and doc-map recommendations, see [`docs/small-feeling-package-strategy.md`](small-feeling-package-strategy.md).
+
 Choose your entry point based on what you need:
 
 - **Duel / tactical combat** → `"."` + `"./combat"`
