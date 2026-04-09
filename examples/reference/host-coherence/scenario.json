@@ -1,0 +1,12 @@
+{
+  "id": "reference-host-skirmish",
+  "seed": 9001,
+  "maxTicks": 240,
+  "tractionCoeff": 0.9,
+  "entities": [
+    { "id": 1, "teamId": 1, "archetype": "KNIGHT_INFANTRY", "weapon": "wpn_longsword", "armour": "arm_mail", "x_m": -1.1, "y_m": -0.25 },
+    { "id": 2, "teamId": 1, "archetype": "AMATEUR_BOXER", "weapon": "wpn_club", "x_m": -0.7, "y_m": 0.25 },
+    { "id": 3, "teamId": 2, "archetype": "KNIGHT_INFANTRY", "weapon": "wpn_longsword", "armour": "arm_mail", "x_m": 1.1, "y_m": -0.25 },
+    { "id": 4, "teamId": 2, "archetype": "AMATEUR_BOXER", "weapon": "wpn_club", "x_m": 0.7, "y_m": 0.25 }
+  ]
+}

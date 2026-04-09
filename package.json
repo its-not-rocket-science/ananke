@@ -376,7 +376,9 @@
     "check-version-sync": "node tools/sync-version.mjs --check",
     "run:proof-of-use:extended": "node dist/tools/proof-of-use-extended.js",
     "check-boundaries:strict-all": "node dist/tools/check-package-boundaries.js --strict-all",
-    "check-boundaries:ci": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md --max-hard=84 --max-suspicious=60"
+    "check-boundaries:ci": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md --max-hard=84 --max-suspicious=60",
+    "ref:host-coherence": "node dist/examples/reference/host-coherence/index.js",
+    "ref:host-coherence:web": "node examples/reference/host-coherence/server.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
