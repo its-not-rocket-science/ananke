@@ -38,11 +38,19 @@
       "import": "./dist/src/campaign-layer.js",
       "types": "./dist/src/campaign-layer.d.ts"
     },
+    "./campaign-layer": {
+      "import": "./dist/src/campaign-layer.js",
+      "types": "./dist/src/campaign-layer.d.ts"
+    },
     "./social": {
       "import": "./dist/src/social.js",
       "types": "./dist/src/social.d.ts"
     },
     "./narrative": {
+      "import": "./dist/src/narrative-layer.js",
+      "types": "./dist/src/narrative-layer.d.ts"
+    },
+    "./narrative-layer": {
       "import": "./dist/src/narrative-layer.js",
       "types": "./dist/src/narrative-layer.d.ts"
     },
@@ -175,6 +183,10 @@
       "types": "./dist/src/monetary.d.ts"
     },
     "./schema": {
+      "import": "./dist/src/schema-migration.js",
+      "types": "./dist/src/schema-migration.d.ts"
+    },
+    "./schema-migration": {
       "import": "./dist/src/schema-migration.js",
       "types": "./dist/src/schema-migration.d.ts"
     },
