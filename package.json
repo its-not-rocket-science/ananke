@@ -355,9 +355,10 @@
     "benchmark": "node dist/tools/wasm-benchmark.js",
     "docs:api": "npm run sync-version && node tools/generate-api-docs.mjs",
     "check:beta-readiness": "node tools/check-beta-readiness.mjs --file=.github/beta-launch-readiness.json",
-    "run:proof-of-use": "node dist/tools/proof-of-use-slice.js",
+    "run:proof-of-use": "node dist/tools/proof-of-use-stable.js",
     "sync-version": "node tools/sync-version.mjs --write",
-    "check-version-sync": "node tools/sync-version.mjs --check"
+    "check-version-sync": "node tools/sync-version.mjs --check",
+    "run:proof-of-use:extended": "node dist/tools/proof-of-use-extended.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

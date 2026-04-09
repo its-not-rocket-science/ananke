@@ -1,82 +1,70 @@
 # Proof-of-use vertical slice (first-party)
 
 ## Goal
-This slice demonstrates Ananke as a coherent host-facing product by connecting six user-visible stages in one flow:
+Demonstrate Ananke as a coherent host-facing product while making the import contract explicit:
 
-1. world creation
-2. scenario loading
-3. simulation stepping
-4. bridge output
-5. replay capture
-6. outcome summary + basic inspection UI
+- **Stable proof-of-use:** Tier 1 root + clearly labeled optional Tier 2.
+- **Extended proof-of-use:** richer behavior that intentionally uses internal modules.
 
-Run it with:
+## Entrypoints
+
+- `tools/proof-of-use-stable.ts` — stable-host path reference implementation.
+- `tools/proof-of-use-extended.ts` — richer internal-demo implementation.
+- `tools/proof-of-use-slice.ts` — backward-compatible alias that runs the stable tool.
+
+## Run commands
 
 ```bash
 npm run build
 npm run run:proof-of-use
+npm run run:proof-of-use:extended
 ```
 
-Artifacts are written to `artifacts/proof-of-use/`.
+Artifacts are written to:
+
+- `artifacts/proof-of-use/stable/`
+- `artifacts/proof-of-use/extended/`
 
 ---
 
-## Architecture (stable-path first)
+## What “stable proof-of-use” means
 
-The slice intentionally uses the stable host path where possible.
+A proof-of-use counts as **stable** when it:
 
-- **Scenario input**: `examples/scenarios/proof-of-use-duel.json`.
-- **Scenario loading**: `loadScenario()` from `src/index.ts`.
-- **World creation**: `loadScenario()` calls `createWorld()` internally from the stable host surface.
-- **Stepping**: `stepWorld()` from `src/index.ts`.
-- **Bridge frame extraction**: `serializeBridgeFrame()` from `src/host-loop.ts` (stable bridge contract).
-- **Replay capture**: `ReplayRecorder` + `serializeReplay()` from `src/replay.ts`.
-- **Replay verification**: `replayTo()` used to confirm deterministic reconstruction at final tick.
-- **Inspection UI**: generated static HTML with a tick slider + table over serialized bridge frames.
+1. uses Tier 1 root exports (`src/index.ts`) for world creation/stepping/replay,
+2. treats any non-root usage as **explicitly optional Tier 2**,
+3. avoids silent internal imports from `src/sim/*`, and
+4. documents any unavoidable non-Tier-1 dependency in output + docs.
 
-Execution entrypoint: `tools/proof-of-use-slice.ts`.
+In `proof-of-use-stable.ts`:
 
----
-
-## Friction points encountered and how they were solved
-
-1. **`loadScenario()` derives per-entity seed from `id`, not scenario-level seed.**
-   - Friction: It is not obvious from scenario JSON that entity randomness comes from `id` values.
-   - Resolution in slice: entity IDs are fixed and explicit; architecture note calls this out.
-
-2. **No single host-level orchestrator that bundles step + bridge + replay in one API.**
-   - Friction: host code repeats loop glue (commands, recorder, bridge serialization).
-   - Resolution in slice: the tool composes these pieces explicitly and emits one output folder.
-
-3. **Scenario-level AI policy configuration is not part of schema.**
-   - Friction: AI presets currently live in runner code instead of scenario data.
-   - Resolution in slice: fixed rule (`lineInfantry` vs `skirmisher`) is embedded in the runner.
-
-4. **Inspection UI primitives are absent in the package.**
-   - Friction: bridge frames exist but no built-in inspector to navigate ticks.
-   - Resolution in slice: generate a tiny self-contained HTML inspector from captured frames.
-
-5. **Replay parity checks require manual comparison strategy.**
-   - Friction: no helper that returns parity diagnostics across key state domains.
-   - Resolution in slice: simple injury-state comparison is performed and surfaced in summary end reason.
+- Tier 1 root is used for `loadScenario`, `stepWorld`, `q`, `SCALE`, replay utilities, and host types.
+- `serializeBridgeFrame` comes from `src/host-loop.ts` and is called out as optional Tier 2.
+- command policy is host-authored (`nearest-enemy`) rather than internal AI imports.
 
 ---
 
-## Missing platform affordances revealed by the slice
+## Stable vs extended behavior
 
-1. Host-facing `runScenarioSlice()` API that accepts scenario + command policy and returns frames/replay/summary.
-2. Declarative scenario schema support for AI policy selection.
-3. Built-in deterministic replay parity utility with structured diff output.
-4. Built-in inspection UI package (or JSON-to-UI adapter) for bridge frames.
-5. Stronger artifact manifest format for multi-file run outputs.
+| Capability | Stable tool | Extended tool |
+|---|---|---|
+| Scenario loading | Tier 1 root | Tier 1 root |
+| Simulation stepping | Tier 1 root | Tier 1 root |
+| Replay capture + replay verification | Tier 1 root | Tier 1 root |
+| Bridge frame serialization | Optional Tier 2 (`host-loop`) | Optional Tier 2 (`host-loop`) |
+| Command policy | Host-authored nearest-enemy policy | Internal tactical AI presets |
+| Internal `src/sim/*` imports | No | Yes (intentional) |
+| Routing morale end-condition | No (casualty/KO/maxTicks) | Yes (`isRouting`) |
+
+For full import-level audit details, see:
+
+- `docs/architecture/proof-of-use-import-classification.md`
 
 ---
 
-## Follow-up tasks (ranked by leverage)
+## Why keep an extended version
 
-1. **High leverage**: Add `runScenarioSlice()` to stable host API (single call to run and capture all artifacts).
-2. **High leverage**: Extend scenario schema with optional team/entity policy fields so behavior is data-driven.
-3. **Medium leverage**: Add `verifyReplayParity(replay, targetTick)` helper returning machine-readable diffs.
-4. **Medium leverage**: Publish a first-party `@ananke/inspector` static viewer consuming bridge frames.
-5. **Lower leverage**: Standardize artifact manifest JSON (`artifacts.json`) for CI and tooling pickup.
+The extended runner is useful for first-party experimentation and richer demos, but it is **not** a stable host contract exemplar. Keeping both tools makes the tradeoff explicit:
 
+- stable tool = migration-safe onboarding reference,
+- extended tool = feature-rich internal experimentation.
