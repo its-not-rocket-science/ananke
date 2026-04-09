@@ -4,6 +4,12 @@ This document specifies how Ananke state is serialised for persistence, replay, 
 network transport.  All formats are deterministic: the same simulation state always
 produces the same bytes.
 
+> **Status legend used in this document**
+>
+> - **Shipped**: implemented today and exported from a public package entrypoint.
+> - **Partial**: implemented, but scoped to advanced/internal surfaces or only partly wired.
+> - **Planned**: roadmap intent; not available in current runtime behavior.
+
 ---
 
 ## 1. Concepts
@@ -51,7 +57,7 @@ serialises `Map<K, V>` as an array of `[K, V]` pairs:
 > Note: `runtimeState.nutritionAccum` is represented as a scalar field in v0.1.  If a `Map`
 > field is added in a future version, its pairs will use the array format above.
 
-### 2.4 Version stamping
+### 2.4 Version stamping (**Shipped**)
 
 Always call `stampSnapshot(world, "world")` before persisting.  This adds
 `_ananke_version` and `_schema` fields that enable forward migration:
@@ -77,10 +83,13 @@ check conformance programmatically before calling `stepWorld`.
 
 ---
 
-## 3. Binary Diff Format
+## 3. Binary Diff Format (**Partial**, `@experimental`)
 
 For tick-to-tick state synchronisation (multiplayer, streaming), use the binary
 diff format implemented in `src/snapshot.ts`.
+
+> `@experimental`: this API is exported from `@its-not-rocket-science/ananke/tier3`
+> (advanced/internal surface), not the Tier-1 root entrypoint.
 
 ### 3.1 Encoding
 
@@ -124,9 +133,12 @@ include wall-clock timestamps or random nonces in diff payloads.
 
 ---
 
-## 4. Multiplayer Message Protocol
+## 4. Multiplayer Message Protocol (**Planned**)
 
 For lockstep multiplayer, hosts exchange command frames rather than full state.
+Ananke does **not** currently ship a canonical lockstep wire-message module with these
+exact message kinds; treat this section as protocol guidance/roadmap for host
+integrators.
 
 ### 4.1 Message types
 
@@ -166,15 +178,17 @@ A full structural hash is more robust but expensive; use it only on resync.
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 4.4 Transport encoding
+### 4.4 Transport encoding (**Planned**)
 
 Use JSON for development and debugging.  For production, encode wire messages
 as CBOR (RFC 8949) or MessagePack for ~30% size reduction.  The message
 structure is identical; only the outer encoding changes.
 
+> Planned note: CBOR/MessagePack helpers are not currently exported from core packages.
+
 ---
 
-## 5. Save File Recommendations
+## 5. Save File Recommendations (current guidance)
 
 | Scenario | Format | Compression |
 |----------|--------|-------------|
@@ -186,7 +200,7 @@ structure is identical; only the outer encoding changes.
 
 ---
 
-## 6. Migration
+## 6. Migration (**Shipped**, with planned paths)
 
 Load a save and bring it to the current schema version before simulating:
 
@@ -197,7 +211,7 @@ import {
 
 function loadSave(json: string): WorldState {
   const raw      = JSON.parse(json) as Record<string, unknown>;
-  const migrated = migrateWorld(raw);          // no-op until 0.2 is released
+  const migrated = migrateWorld(raw);          // currently identity unless migrations are registered
   const errors   = validateSnapshot(migrated);
   if (errors.length > 0) {
     throw new Error(`Invalid save: ${errors.map(e => `${e.path}: ${e.message}`).join("; ")}`);
@@ -207,3 +221,32 @@ function loadSave(json: string): WorldState {
 ```
 
 See `docs/migration-monolith-to-modular.md` for package-level migration guidance.
+
+---
+
+## 7. Helper audit (docs vs implementation)
+
+| Helper | Where implemented | Exported entrypoint(s) | Classification |
+|--------|-------------------|------------------------|----------------|
+| `diffWorldState` | `src/snapshot.ts` | `@its-not-rocket-science/ananke/tier3` | implemented and exported |
+| `packDiff` | `src/snapshot.ts` | `@its-not-rocket-science/ananke/tier3` | implemented and exported |
+| `unpackDiff` | `src/snapshot.ts` | `@its-not-rocket-science/ananke/tier3` | implemented and exported |
+| `applyDiff` | `src/snapshot.ts` | `@its-not-rocket-science/ananke/tier3` | implemented and exported |
+| `stampSnapshot` | `src/schema-migration.ts` | `@its-not-rocket-science/ananke/schema` | implemented and exported |
+| `validateSnapshot` | `src/schema-migration.ts` | `@its-not-rocket-science/ananke/schema` | implemented and exported |
+| `migrateWorld` | `src/schema-migration.ts` | `@its-not-rocket-science/ananke/schema` | implemented and exported |
+
+Notes:
+- The four diff helpers are **not** on the Tier-1 root (`@its-not-rocket-science/ananke`); they are Tier-3.
+- `migrateWorld` is implemented now; default behavior is effectively identity until additional migration paths are registered.
+
+## 8. Protocol feature status table
+
+| Protocol feature | Status | Notes |
+|------------------|--------|-------|
+| JSON world snapshot persistence (`stampSnapshot` metadata) | shipped | Stable via `@its-not-rocket-science/ananke/schema`. |
+| Snapshot validation (`validateSnapshot`) | shipped | Structural validation for core world fields. |
+| Schema migration API (`migrateWorld`) | partial | API + migration registry are shipped; built-in migration chains are limited today. |
+| Binary snapshot diffs (`diffWorldState`/`packDiff`/`unpackDiff`/`applyDiff`) | partial | Implemented and exported via Tier-3 advanced surface (`@experimental`). |
+| Canonical lockstep wire message kinds (`cmd`/`ack`/`resync`/`hash_mismatch`) | planned | Documented target protocol; host-specific implementations today. |
+| Canonical CBOR/MessagePack transport helpers | planned | Recommended encoding strategy, not a shipped helper API yet. |
