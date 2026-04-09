@@ -119,11 +119,24 @@ Ananke is likely the wrong fit if non-deterministic behavior is acceptable and r
 
 ## Further reading
 
-- [`docs/onboarding.md`](docs/onboarding.md)
-- [`docs/programmers-guide.md`](docs/programmers-guide.md)
-- [`docs/project-overview.md`](docs/project-overview.md)
-- [`docs/versioning.md`](docs/versioning.md)
-- [`docs/performance.md`](docs/performance.md)
-- [`docs/emergent-validation-report.md`](docs/emergent-validation-report.md)
-- [`docs/host-contract.md`](docs/host-contract.md)
-- [`docs/bridge-contract.md`](docs/bridge-contract.md)
+- **Layer A — First hour**
+  - [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md)
+  - [`STABLE_API.md`](STABLE_API.md)
+- **Layer B — Host app**
+  - [`docs/host-contract.md`](docs/host-contract.md)
+  - [`docs/bridge-contract.md`](docs/bridge-contract.md)
+  - [`docs/wire-protocol.md`](docs/wire-protocol.md)
+- **Layer C — Campaign builder**
+  - [`docs/module-index.md`](docs/module-index.md)
+  - [`docs/project-overview.md`](docs/project-overview.md)
+  - [`docs/recipes-matrix.md`](docs/recipes-matrix.md)
+- **Layer D — Advanced research/content**
+  - [`docs/small-feeling-package-strategy.md`](docs/small-feeling-package-strategy.md)
+  - [`docs/content-pack-threat-model.md`](docs/content-pack-threat-model.md)
+  - [`docs/conformance/README.md`](docs/conformance/README.md)
+- Additional references:
+  - [`docs/onboarding.md`](docs/onboarding.md)
+  - [`docs/programmers-guide.md`](docs/programmers-guide.md)
+  - [`docs/versioning.md`](docs/versioning.md)
+  - [`docs/performance.md`](docs/performance.md)
+  - [`docs/emergent-validation-report.md`](docs/emergent-validation-report.md)
