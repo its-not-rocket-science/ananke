@@ -42,8 +42,8 @@ jobs:
       - name: Test with coverage
         run: npm run test:coverage
 
-      - name: Check package boundaries (warning mode)
-        run: npm run check-boundaries:report
+      - name: Check package boundaries (strict core gate + report)
+        run: npm run check-boundaries:ci
 
       - name: Check release dashboard freshness
         run: npm run check-release-dashboard
