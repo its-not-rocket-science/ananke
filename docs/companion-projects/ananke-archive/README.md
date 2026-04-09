@@ -1,6 +1,6 @@
 # ananke-archive
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Stack](https://img.shields.io/badge/stack-Node%20%2B%20SQLite-orange)
 ![Status](https://img.shields.io/badge/status-wanted-lightgrey)

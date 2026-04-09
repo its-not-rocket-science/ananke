@@ -9,7 +9,7 @@
 **Short answer: put the semver tag in your `package.json`.**
 
 ```json
-{ "dependencies": { "ananke": "^0.1.0" } }
+{ "dependencies": { "ananke": "^<current-ananke-version>" } }
 ```
 
 If you need byte-for-byte replay determinism across patch releases, also record the
@@ -27,8 +27,8 @@ Ananke uses **semantic versioning (semver)** as the public contract:
 | Minor (`0.x.0`) | Additive changes: new exports, new optional fields, new simulation phases.  **Tier 1 (Stable) exports are not broken.**  Tier 2 (Experimental) exports may change with a `CHANGELOG.md` entry |
 | Major (`x.0.0`) | Breaking changes to Tier 1 exports.  A migration guide accompanies every major bump |
 
-> **Pre-1.0 note:** The project is currently at `0.1.0`.  Tier 1 exports will not break
-> within the `0.x` line without a minor-version bump and a migration guide in `CHANGELOG.md`.
+> **Pre-1.0 note:** While the project major is `0`, Tier 1 exports do not break
+> within the current minor line without a documented minor-version bump and a migration guide in `CHANGELOG.md`.
 > The `1.0` release will lock the Tier 1 surface under full semver guarantees.
 
 ---

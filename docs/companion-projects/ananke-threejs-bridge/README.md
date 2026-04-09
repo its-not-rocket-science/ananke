@@ -1,6 +1,6 @@
 # ananke-threejs-bridge
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![Three.js](https://img.shields.io/badge/Three.js-r165%2B-000000?logo=threedotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff?logo=vite&logoColor=white)
@@ -42,7 +42,7 @@ The result is the lowest-friction way to demonstrate Ananke: share a URL, open a
 |-----------|----------------|-------|
 | Node.js | 18 | Build tooling only; not in the browser bundle |
 | npm | 9 | Bundled with Node.js 18 |
-| Ananke | 0.1.0 | Cloned alongside this repo |
+| Ananke | package.json version (workspace) | Cloned alongside this repo |
 
 Clone Ananke into a sibling directory before cloning this project:
 

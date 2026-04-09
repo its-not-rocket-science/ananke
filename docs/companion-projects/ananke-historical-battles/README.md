@@ -1,6 +1,6 @@
 # ananke-historical-battles
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Vitest-2.x-6e9f18?logo=vitest&logoColor=white)
 ![Scale](https://img.shields.io/badge/scale-10–200%20entities-blue)
@@ -40,7 +40,7 @@ The scenarios are also useful as reference implementations for anyone building t
 
 | Dependency | Version | Notes |
 |-----------|---------|-------|
-| Ananke | 0.1.0+ | Kernel + arena DSL + validation framework |
+| Ananke | package.json version range (workspace) | Kernel + arena DSL + validation framework |
 | Node.js | 18+ | |
 
 ```
