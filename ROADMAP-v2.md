@@ -4,7 +4,7 @@
 - Version: **v0.1.69**
 - Lifecycle: **pre-alpha**
 - Adoption: **0 external users**
-- Packaging: **no npm package published yet**
+- Packaging: **repository is publish-configured; npm registry publish status should be externally verified**
 - Delivery risk: **high internal churn and no stable 1.0 release line**
 
 This roadmap replaces maturity-level framing with **quarterly milestones** tied to concrete user outcomes and deficiency closure.
