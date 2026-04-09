@@ -1,23 +1,34 @@
-# Ananke — Programmer's Guide
+# Ananke
 
 ![CI](../../actions/workflows/ci.yml/badge.svg)
 ![Determinism](https://img.shields.io/badge/Determinism-%E2%9C%85%2010%2C000%2F10%2C000%20seeds%20passed%20(last%20run%3A%202026--04--03)-brightgreen)
-[![Mod of the Week](https://img.shields.io/badge/Mod%20of%20the%20Week-Submit%20Yours-blueviolet)](docs/mod-of-the-week.md)
-![Top Contributor](https://img.shields.io/badge/Top%20Contributor-April%202026%20TBD-gold)
 
 > **Package:** `@its-not-rocket-science/ananke`  
 > **Stable API contract:** [`STABLE_API.md`](STABLE_API.md)
 
-Ananke is a deterministic, fixed-point simulation engine for combat and world-state replay.  
-Given the same seed and command stream, results are bit-for-bit reproducible.
+Ananke is a deterministic simulation engine for combat and world-state replay.
+Given the same seed and command stream, it produces bit-for-bit reproducible results.
 
 ---
 
-## Golden path (new adopters, first 60 minutes)
+## What it is
 
-This is the **only recommended onboarding path** for first-time users. It uses **Tier 1 stable root exports only**.
+Ananke provides a fixed-point simulation kernel with:
 
-1. Install dependencies and build:
+- deterministic stepping (`stepWorld`)
+- reproducible world creation and scenario loading
+- replay capture and playback
+- host/renderer bridge snapshots for downstream visualization
+
+It is designed for lockstep networking, replay-heavy workflows, and integrations where reproducibility is non-negotiable.
+
+---
+
+## Golden path
+
+For first-time adopters, use this path and stay on Tier 1 root exports.
+
+1. Install and build:
 
    ```bash
    npm install
@@ -30,7 +41,7 @@ This is the **only recommended onboarding path** for first-time users. It uses *
    npm run example:first-hour
    ```
 
-3. Re-run once to confirm determinism:
+3. Run it again to confirm deterministic output:
 
    ```bash
    npm run example:first-hour
@@ -40,7 +51,7 @@ This is the **only recommended onboarding path** for first-time users. It uses *
 
    - [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md)
 
-### Minimal host loop (Tier 1 only)
+Minimal Tier 1 host loop:
 
 ```ts
 import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
@@ -61,9 +72,9 @@ for (let tick = 0; tick < 180; tick++) {
 
 ---
 
-## Stable API quick reference (Tier 1)
+## Stable API
 
-Import only from the package root:
+Import Tier 1 only from the package root:
 
 ```ts
 import { ... } from "@its-not-rocket-science/ananke";
@@ -71,60 +82,14 @@ import { ... } from "@its-not-rocket-science/ananke";
 
 Tier 1 includes:
 
-- Fixed-point utilities (`q`, `SCALE`, conversion helpers)
-- Host types (`Entity`, `WorldState`, `Command`, `CommandMap`, `KernelContext`)
-- World/scenario creation (`createWorld`, `loadScenario`, `validateScenario`)
-- Stepping (`stepWorld`)
-- Replay/serialization (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`)
-- Bridge extraction (`extractRigSnapshots`, `deriveAnimationHints`)
+- fixed-point utilities (`q`, `SCALE`, conversion helpers)
+- host types (`Entity`, `WorldState`, `Command`, `CommandMap`, `KernelContext`)
+- creation/loading (`createWorld`, `loadScenario`, `validateScenario`)
+- stepping (`stepWorld`)
+- replay and serialization (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`)
+- bridge extraction (`extractRigSnapshots`, `deriveAnimationHints`)
 
-See [`STABLE_API.md`](STABLE_API.md) and [`docs/stable-api-manifest.json`](docs/stable-api-manifest.json) for the source of truth.
-
----
-
-
-## Companion starter kits (Unity/Godot)
-
-The companion engine integrations have been upgraded from reference-only docs to **developer-ready starter kits** in:
-
-- `docs/companion-projects/ananke-godot-reference/README.md`
-- `docs/companion-projects/ananke-unity-reference/README.md`
-
-Each starter kit now provides a minimal verified path for new adopters:
-
-1. install dependencies
-2. run a deterministic simulated encounter
-3. see rendered output in-engine
-4. inspect bridge/replay artifacts
-
-Both kits also document stable bridge/host API assumptions and include a known-limitations section for production planning.
-
----
-
-## Advanced and internal paths (not first-hour)
-
-These are intentionally separated from onboarding because they may use Tier 2/Tier 3 or internal file-level imports.
-
-### Advanced examples
-
-- `examples/quickstart-combat.ts`
-- `examples/quickstart-campaign.ts`
-- `examples/quickstart-species.ts`
-- `examples/lockstep-server.ts`
-- `examples/rollback-client.ts`
-- `examples/reference/**`
-
-### Advanced docs
-
-- [`docs/integration-primer.md`](docs/integration-primer.md)
-- [`docs/cookbook.md`](docs/cookbook.md)
-- [`docs/recipes-matrix.md`](docs/recipes-matrix.md)
-- [`docs/host-contract.md`](docs/host-contract.md)
-- [`docs/bridge-contract.md`](docs/bridge-contract.md)
-
----
-
-## API stability tiers
+Stability tiers:
 
 | Tier | Guarantee | Import style |
 |---|---|---|
@@ -132,13 +97,33 @@ These are intentionally separated from onboarding because they may use Tier 2/Ti
 | **Tier 2 — Experimental** | May change in minor releases | `@its-not-rocket-science/ananke/tier2` or domain subpaths |
 | **Tier 3 — Internal** | No stability guarantee | `@its-not-rocket-science/ananke/tier3` and internal subpaths |
 
+Source of truth:
+
+- [`STABLE_API.md`](STABLE_API.md)
+- [`docs/stable-api-manifest.json`](docs/stable-api-manifest.json)
+
+---
+
+## When to use it
+
+Use Ananke when you need:
+
+- deterministic simulation across machines/runs
+- replayability for debugging, analytics, or adjudication
+- physics-grounded combat/state progression instead of ad hoc rules
+- a kernel that can be integrated into Unity, Godot, web, or custom hosts
+
+Ananke is likely the wrong fit if non-deterministic behavior is acceptable and reproducibility is not a requirement.
+
 ---
 
 ## Further reading
 
+- [`docs/onboarding.md`](docs/onboarding.md)
+- [`docs/programmers-guide.md`](docs/programmers-guide.md)
 - [`docs/project-overview.md`](docs/project-overview.md)
 - [`docs/versioning.md`](docs/versioning.md)
 - [`docs/performance.md`](docs/performance.md)
 - [`docs/emergent-validation-report.md`](docs/emergent-validation-report.md)
-- [`docs/golden-path-improvement-plan.md`](docs/golden-path-improvement-plan.md)
-- [`docs/mod-of-the-week.md`](docs/mod-of-the-week.md)
+- [`docs/host-contract.md`](docs/host-contract.md)
+- [`docs/bridge-contract.md`](docs/bridge-contract.md)
