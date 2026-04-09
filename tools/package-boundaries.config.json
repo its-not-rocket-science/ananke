@@ -6,6 +6,7 @@
       "src/types.ts",
       "src/replay.ts",
       "src/netcode.ts",
+      "src/channels.ts",
       "src/presets.ts",
       "src/generate.ts",
       "src/derive.ts",
@@ -133,7 +134,6 @@
       "src/culture.ts",
       "src/settlement.ts",
       "src/settlement-services.ts",
-      "src/channels.ts",
       "src/inheritance.ts",
       "src/progression.ts",
       "src/schema-migration.ts",
@@ -171,8 +171,16 @@
   },
   "allowedDeps": {
     "@ananke/core": [],
-    "@ananke/combat": ["@ananke/core", "@ananke/content"],
-    "@ananke/campaign": ["@ananke/core", "@ananke/content"],
-    "@ananke/content": ["@ananke/core"]
+    "@ananke/combat": [
+      "@ananke/core",
+      "@ananke/content"
+    ],
+    "@ananke/campaign": [
+      "@ananke/core",
+      "@ananke/content"
+    ],
+    "@ananke/content": [
+      "@ananke/core"
+    ]
   }
 }

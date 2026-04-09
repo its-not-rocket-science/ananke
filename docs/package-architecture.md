@@ -1,8 +1,8 @@
 # Ananke — Modular Package Architecture
 
-> **Status: Phase 1 complete** — Package stubs with re-exports are published.
-> Phase 2 (source migration) moves code into individual packages so combat has
-> no campaign dependency at the module level.
+> **Status: Enforced in CI (incremental)** — package boundaries are now checked from source imports via `tools/check-package-boundaries.ts`, with hard-fail on `@ananke/core` upward dependencies and a generated report at `docs/package-boundary-report.md`.
+>
+> Remaining non-core boundary drift is tracked in warning mode and is remediated in batches.
 
 ---
 
@@ -19,7 +19,7 @@ clean way to depend only on the bridge layer.
 
 | Package | Stability | Description | Key entry point(s) |
 |---------|-----------|-------------|-------------------|
-| `@ananke/core` | **Stable** | Kernel, entity model, fixed-point units, RNG, replay | `"@ananke/core"` |
+| `@ananke/core` | **Stable** | Kernel, entity model, fixed-point units, RNG, replay, shared damage channels | `"@ananke/core"` |
 | `@ananke/combat` | Experimental | Combat resolution, anatomy, grapple, ranged, competence | `"@ananke/combat"` |
 | `@ananke/campaign` | Experimental | World simulation — polity, economy, social, demography | `"@ananke/campaign"` |
 | `@ananke/content` | Experimental | Species, equipment catalogue, archetypes, crafting | `"@ananke/content"` |
@@ -29,6 +29,19 @@ clean way to depend only on the bridge layer.
 > `@ananke/bridge` is not yet a standalone stub — bridge exports are part of
 > `@ananke/core` until Phase 2 adds a dedicated `"./bridge"` subpath to the
 > monolith.
+
+
+
+## Enforcement (source of truth)
+
+- **Config:** `tools/package-boundaries.config.json` defines file ownership and allowed package edges.
+- **Checker:** `tools/check-package-boundaries.ts` parses TypeScript AST imports (`import`, `export ... from`, dynamic `import()`, `require()`, and `import("...")` types).
+- **Reports:** `npm run check-boundaries:report` updates `docs/package-boundary-report.md`.
+- **CI gate:** `npm run check-boundaries:ci` regenerates the report and enforces regression caps (`--max-hard`, `--max-suspicious`) so drift fails fast while remediation is in progress.
+
+Strict modes:
+- `--strict`: fail on hard violations only (used in CI for immediate anti-drift).
+- `--strict-all`: fail on any disallowed cross-package import (used when tightening migration phases).
 
 ---
 
@@ -70,7 +83,7 @@ clean way to depend only on the bridge layer.
 |-----------------|-------|
 | `"./campaign"` | Campaign layer, strategic tick |
 | `"./polity"` | Polity, stepPolityDay, tech diffusion |
-| `"./social"` | Social relationships, dialogue |
+| `"./social"` | Social relationships |
 | `"./narrative"` | Narrative event system |
 | `"./narrative-prose"` | Prose generation |
 | `"./renown"` | Fame and reputation |
@@ -120,6 +133,7 @@ src/units.ts
 src/rng.ts
 src/types.ts
 src/replay.ts
+src/channels.ts
 src/sim/entity.ts
 src/sim/kernel.ts
 src/sim/seeds.ts

@@ -358,7 +358,9 @@
     "run:proof-of-use": "node dist/tools/proof-of-use-stable.js",
     "sync-version": "node tools/sync-version.mjs --write",
     "check-version-sync": "node tools/sync-version.mjs --check",
-    "run:proof-of-use:extended": "node dist/tools/proof-of-use-extended.js"
+    "run:proof-of-use:extended": "node dist/tools/proof-of-use-extended.js",
+    "check-boundaries:strict-all": "node dist/tools/check-package-boundaries.js --strict-all",
+    "check-boundaries:ci": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md --max-hard=84 --max-suspicious=60"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
