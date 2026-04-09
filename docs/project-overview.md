@@ -22,7 +22,7 @@ npm install @its-not-rocket-science/ananke
 ```
 
 ```typescript
-import { stepWorld, mkWorld, q, SCALE } from "@its-not-rocket-science/ananke";
+import { stepWorld, createWorld, q, SCALE } from "@its-not-rocket-science/ananke";
 ```
 
 Requires **Node ≥ 18**. TypeScript declarations are included — no `@types/` package needed.
@@ -49,14 +49,14 @@ Choose the path that matches your immediate need.  Ignore the rest until you nee
 
 **Install:** `npm install @its-not-rocket-science/ananke`
 
-**Minimal imports:** `stepWorld`, `mkWorld`, `q`, `SCALE`, `generateIndividual`
+**Minimal imports:** `createWorld`, `stepWorld`, `q`, `SCALE`
 
 **30-minute quickstart:** Run `tools/vertical-slice.ts` (`npm run run:vertical-slice`).
 A Knight fights a Brawler across three seeds, producing a physics-grounded combat log.
 Read `docs/host-contract.md` for the stable integration surface, then
 `docs/integration-primer.md` for data-flow diagrams and type glossary.
 
-**Key entry points:** `stepWorld()`, `resolveHit()`, `generateIndividual()`, `mkKnight()`
+**Key entry points:** `createWorld()`, `stepWorld()` (+ Tier 2/3 subpaths as needed)
 
 **What to ignore for now:** Phases 56–67 (campaign-scale systems), all `tools/` except `vertical-slice.ts`
 

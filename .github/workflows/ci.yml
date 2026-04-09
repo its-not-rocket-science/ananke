@@ -36,6 +36,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Check Tier-1 imports in docs and examples
+        run: npm run check-docs-tier1-imports
+
       - name: Reference app smoke test
         run: npx vitest run test/reference-tactical-duel-smoke.test.ts
 
