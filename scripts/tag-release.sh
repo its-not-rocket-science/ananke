@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/tag-release.sh
 #
-# Bumps the package version, syncs ANANKE_ENGINE_VERSION, commits, and pushes
+# Bumps the package version, regenerates runtime version source-of-truth files, commits, and pushes
 # the git tag that triggers the publish workflow.
 #
 # Usage:
@@ -18,7 +18,7 @@
 # What it does:
 #   1. Validates the working tree is clean
 #   2. Bumps version with `npm version` (no git tag yet)
-#   3. Syncs ANANKE_ENGINE_VERSION in src/content-pack.ts
+#   3. Regenerates src/version.ts from package.json version
 #   4. Rebuilds so the dist reflects the new version
 #   5. Commits the version bump
 #   6. Pushes the commit + tag → triggers publish.yml
@@ -44,21 +44,9 @@ npm version "$BUMP" --no-git-tag-version
 NEW_VERSION=$(node -p "require('./package.json').version")
 echo "  New version: $NEW_VERSION"
 
-# ── Sync ANANKE_ENGINE_VERSION ────────────────────────────────────────────────
-echo "→ Syncing ANANKE_ENGINE_VERSION in src/content-pack.ts…"
-# Use node to do the replacement so it works on both Linux and macOS
-node -e "
-  const fs = require('fs');
-  const file = 'src/content-pack.ts';
-  const src = fs.readFileSync(file, 'utf8');
-  const updated = src.replace(
-    /export const ANANKE_ENGINE_VERSION = \"[^\"]+\"/,
-    \`export const ANANKE_ENGINE_VERSION = \"\${process.argv[1]}\"\`
-  );
-  if (src === updated) { console.error('❌ ANANKE_ENGINE_VERSION not found in ' + file); process.exit(1); }
-  fs.writeFileSync(file, updated, 'utf8');
-  console.log('  ANANKE_ENGINE_VERSION =', process.argv[1]);
-" "$NEW_VERSION"
+# ── Sync generated runtime version file ────────────────────────────────────────
+echo "→ Syncing src/version.ts from package.json…"
+npm run sync-version
 
 # ── Update lock file ─────────────────────────────────────────────────────────
 echo "→ Updating package-lock.json…"
@@ -82,7 +70,7 @@ fi
 
 # ── Commit and tag ────────────────────────────────────────────────────────────
 echo "→ Committing version bump…"
-git add package.json package-lock.json src/content-pack.ts dist/
+git add package.json package-lock.json src/version.ts dist/
 git commit -m "chore: release v${NEW_VERSION}"
 
 echo "→ Tagging v${NEW_VERSION}…"

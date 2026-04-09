@@ -33,6 +33,17 @@ Ananke uses **semantic versioning (semver)** as the public contract:
 
 ---
 
+
+## Canonical runtime version source
+
+Runtime compatibility checks use `ANANKE_ENGINE_VERSION` from `src/version.ts`, which is
+a generated file.  The **only authoritative source** is `package.json` `"version"`; run
+`npm run sync-version` to regenerate `src/version.ts` after any version bump.
+
+CI enforces this with `npm run check-version-sync` to prevent drift between publish
+versioning, runtime compat checks, and generated docs/tooling outputs.
+
+---
 ## API stability tiers
 
 Every export in `src/index.ts` is tagged with a stability tier.
