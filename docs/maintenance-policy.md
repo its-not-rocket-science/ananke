@@ -168,7 +168,7 @@ checklist.  The short version:
 3. `npm run audit-deprecations -- --check` — no overdue symbols
 4. `npm run generate-module-index && npm run generate-recipes-matrix` — docs reconciled
 5. `npm run verify-corpus` — all corpus entries pass
-6. `CHANGELOG.md` entry written; version bumped in `package.json` and `ANANKE_ENGINE_VERSION`
+6. `CHANGELOG.md` entry written; version bumped in `package.json` and `src/version.ts` regenerated via `npm run sync-version`
 7. `npm publish --access public`
 
 ---

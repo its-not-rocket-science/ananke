@@ -46,7 +46,7 @@
 - [ ] `CHANGELOG.md` entry written under the new version number
 - [ ] Entry includes: what changed, number of tests, coverage snapshot, build status
 - [ ] `package.json` `"version"` field bumped (patch / minor / major as appropriate)
-- [ ] `ANANKE_ENGINE_VERSION` in `src/content-pack.ts` updated to match `package.json`
+- [ ] `npm run sync-version` has regenerated `src/version.ts` from `package.json`
 - [ ] If Tier 1 API changed: migration guide included in `CHANGELOG.md`
 - [ ] If `BRIDGE_SCHEMA_VERSION` changed: sidecar update issue filed
 
