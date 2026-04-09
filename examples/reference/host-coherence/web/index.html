@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ananke Reference Host Coherence</title>
+    <style>
+      body { font-family: Inter, system-ui, sans-serif; margin: 24px; color: #111; }
+      .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+      button { border: 1px solid #d0d0d0; border-radius: 8px; padding: 8px 10px; background: #fff; cursor: pointer; }
+      button:hover { background: #f7f7f7; }
+      .panel { border: 1px solid #ececec; border-radius: 12px; padding: 14px; margin-top: 12px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #f1f1f1; }
+      .muted { color: #666; font-size: 13px; }
+      pre { background: #f8f8f8; border-radius: 8px; padding: 10px; overflow-x: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Reference Host Coherence App</h1>
+    <p class="muted">Scenario load → step loop → replay capture → bridge extraction → inspection → save/load.</p>
+
+    <div class="row">
+      <button id="load-scenario">Load Scenario</button>
+      <button id="step">Step Once</button>
+      <button id="run">Run 30 Steps</button>
+      <button id="run-terminal">Run To Terminal</button>
+      <button id="save">Save Session</button>
+      <button id="load">Load Session</button>
+      <button id="replay">Export Replay</button>
+      <input id="upload" type="file" accept="application/json" />
+    </div>
+
+    <div class="panel">
+      <strong id="headline">No scenario loaded.</strong>
+      <div id="summary" class="muted"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Inspection UI</h3>
+      <table>
+        <thead>
+          <tr><th>Entity</th><th>Team</th><th>Position</th><th>Consciousness</th><th>Dead</th></tr>
+        </thead>
+        <tbody id="entities"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h3>Bridge Extraction</h3>
+      <pre id="bridge">{}</pre>
+    </div>
+
+    <div class="panel">
+      <h3>Event Log</h3>
+      <pre id="events"></pre>
+    </div>
+
+    <script type="module" src="/examples/reference/host-coherence/web/main.js"></script>
+  </body>
+</html>
