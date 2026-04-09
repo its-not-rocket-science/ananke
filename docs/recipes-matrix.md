@@ -106,7 +106,7 @@ One table per domain.  Use this to pick the right entry point without reading mu
 | Run a 1v1 fight | `import { stepWorld } from "@its-not-rocket-science/ananke"` |
 | Build a strategy game | `import { stepPolityDay } from "@its-not-rocket-science/ananke/polity"` |
 | Design a creature | `import { SpeciesDefinition } from "@its-not-rocket-science/ananke/species"` |
-| Integrate with Unity / Godot | `import { serializeBridgeFrame } from "@its-not-rocket-science/ananke"` |
+| Integrate with Unity / Godot | `import { serializeBridgeFrame } from "@its-not-rocket-science/ananke/host-loop"` |
 | Add multiplayer | `import { hashWorldState } from "@its-not-rocket-science/ananke/netcode"` |
 | Save game state | `import { stampSnapshot } from "@its-not-rocket-science/ananke/schema"` |
 | Debug desyncs | `npx ananke replay diff a.json b.json` |

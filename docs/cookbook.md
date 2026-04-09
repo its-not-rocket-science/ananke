@@ -135,12 +135,11 @@ console.log(`200 ticks × 500 agents — ${ms} ms — ${alive} survivors`);
 **Steps:**
 
 ```typescript
-import { generateIndividual } from "@its-not-rocket-science/ananke";
-import type { Archetype } from "@its-not-rocket-science/ananke";
+import { generateSpeciesIndividual, type SpeciesDefinition } from "@its-not-rocket-science/ananke/species";
 import { q, SCALE } from "@its-not-rocket-science/ananke";
 
-// 1. Define an archetype — a prototype individual for your species.
-const GIANT_APE: Archetype = {
+// 1. Define a species with an archetype prototype.
+const GIANT_APE: SpeciesDefinition = {
   id:   "giant_ape",
   name: "Giant Ape",
   morphology: {
@@ -158,13 +157,13 @@ const GIANT_APE: Archetype = {
   },
 };
 
-// 2. Generate a deterministic individual from the archetype.
-//    Seed produces unique attribute scatter while staying within archetype bounds.
-const individual = generateIndividual(7, GIANT_APE);
+// 2. Generate a deterministic individual from the species definition.
+//    Seed produces unique attribute scatter while staying within species bounds.
+const individual = generateSpeciesIndividual(GIANT_APE, 7);
 
-console.log("Stature:", individual.morphology.stature_m / SCALE.m, "m");
-console.log("Mass:   ", individual.morphology.mass_kg   / 1000,    "kg");
-console.log("Strength:", individual.performance.muscularStrength_N / SCALE.N, "N");
+console.log("Stature:", individual.attributes.morphology.stature_m / SCALE.m, "m");
+console.log("Mass:   ", individual.attributes.morphology.mass_kg   / 1000,    "kg");
+console.log("Strength:", individual.attributes.performance.muscularStrength_N / SCALE.N, "N");
 ```
 
 **Expected output:**
@@ -186,11 +185,10 @@ Strength: 2840 N
 
 ```typescript
 import { createWorld, stepWorld, q, SCALE } from "@its-not-rocket-science/ananke";
-import type { Item } from "@its-not-rocket-science/ananke";
 
 // 1. Define a weapon item.
 //    Items use SI units: mass in SCALE.kg, reach in SCALE.m, edge in q(0..1).
-const GREATAXE: Item = {
+const GREATAXE = {
   id:         "wpn_greataxe",
   name:       "Greataxe",
   kind:       "weapon",
@@ -299,11 +297,11 @@ import {
   type PolityPair,
 } from "@its-not-rocket-science/ananke/polity";
 import { q } from "@its-not-rocket-science/ananke";
-import { TechEra } from "@its-not-rocket-science/ananke";
 
 // 1. Define two polities.
-const england  = createPolity("england",  "England",  "f_england",  ["loc_london"],  60_000, 3_000, TechEra.Medieval);
-const france   = createPolity("france",   "France",   "f_france",   ["loc_paris"],  120_000, 5_000, TechEra.Medieval);
+const MEDIEVAL_ERA = 2; // TechEra.Medieval
+const england  = createPolity("england",  "England",  "f_england",  ["loc_london"],  60_000, 3_000, MEDIEVAL_ERA);
+const france   = createPolity("france",   "France",   "f_france",   ["loc_paris"],  120_000, 5_000, MEDIEVAL_ERA);
 const registry = createPolityRegistry([england, france]);
 
 // 2. Connect them with a trade route.
@@ -749,15 +747,21 @@ assert(w1.entities[0]!.injury.shock === w2.entities[0]!.injury.shock); // always
 
 ### RNG in custom code
 
-Never use `Math.random()` in simulation logic.  Use `eventSeed` + `makeRng` instead:
+Never use `Math.random()` in simulation logic.  Use a deterministic PRNG seeded from stable inputs instead:
 
 ```typescript
-import { eventSeed, makeRng } from "@its-not-rocket-science/ananke";
+function xorshift32(seed: number): number {
+  let x = seed | 0;
+  x ^= x << 13;
+  x ^= x >>> 17;
+  x ^= x << 5;
+  return x >>> 0;
+}
 
 function rollCustomEvent(worldSeed: number, tick: number, entityId: number): boolean {
-  const seed = eventSeed(worldSeed, tick, entityId, 0, 99);
-  const rng  = makeRng(seed);
-  return rng() < 0.25; // 25% chance — deterministic per tick
+  const seed = (worldSeed ^ (tick * 0x9e3779b9) ^ entityId) >>> 0;
+  const value01 = xorshift32(seed) / 0x1_0000_0000;
+  return value01 < 0.25; // 25% chance — deterministic per tick
 }
 ```
 

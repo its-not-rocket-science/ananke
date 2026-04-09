@@ -105,7 +105,7 @@ Tag values:
 ### 3.2 Usage
 
 ```typescript
-import { diffWorldState, packDiff, unpackDiff, applyDiff } from "@its-not-rocket-science/ananke";
+import { diffWorldState, packDiff, unpackDiff, applyDiff } from "@its-not-rocket-science/ananke/tier3";
 
 // Sender
 const diff   = diffWorldState(prevState, nextState);
