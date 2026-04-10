@@ -80,8 +80,11 @@ Tier-1 is intentionally small:
 
 Source of truth:
 
+- [`docs/public-contract.md`](docs/public-contract.md)
 - [`STABLE_API.md`](STABLE_API.md)
 - [`docs/stable-api-manifest.json`](docs/stable-api-manifest.json)
+
+All subpath exports are shipped-but-not-Tier-1 unless explicitly documented as subpath-stable.
 
 ## What this project is not
 

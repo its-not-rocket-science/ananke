@@ -18,28 +18,28 @@ The previous revision of this file overstated Tier-1 status. The table below ref
 | `AnimationHints` | `@its-not-rocket-science/ananke` | Tier 1 | Type export. |
 | `RigSnapshot` | `@its-not-rocket-science/ananke` | Tier 1 | Type export. |
 | `SCALE`, `q`, `stepWorld`, `createWorld` | `@its-not-rocket-science/ananke` | Tier 1 | Used by runnable root quickstart below. |
-| `BridgeEngine` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | **Not** exported from root path. |
-| `BridgeConfig`, `BodyPlanMapping`, `SegmentMapping` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | Bridge config types. |
-| `InterpolatedState` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | Bridge interpolated output type. |
-| `derivePoseModifiers` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | From `model3d` via tier2 barrel. |
-| `deriveGrappleConstraint` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | From `model3d` via tier2 barrel. |
-| `deriveMassDistribution` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | From `model3d` via tier2 barrel. |
-| `deriveInertiaTensor` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | From `model3d` via tier2 barrel. |
-| `GrapplePoseConstraint`, `PoseModifier` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | Types from `model3d` via tier2 barrel. |
-| `MappedPoseModifier` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | Bridge mapped pose type. |
-| `validateMappingCoverage` | `@its-not-rocket-science/ananke/tier2` | Tier 2 | Mapping helper via `bridge/index`. |
+| `BridgeEngine` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | **Not** exported from root path. |
+| `BridgeConfig`, `BodyPlanMapping`, `SegmentMapping` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Bridge config types. |
+| `InterpolatedState` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Bridge interpolated output type. |
+| `derivePoseModifiers` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | From `model3d` via tier2 barrel. |
+| `deriveGrappleConstraint` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | From `model3d` via tier2 barrel. |
+| `deriveMassDistribution` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | From `model3d` via tier2 barrel. |
+| `deriveInertiaTensor` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | From `model3d` via tier2 barrel. |
+| `GrapplePoseConstraint`, `PoseModifier` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Types from `model3d` via tier2 barrel. |
+| `MappedPoseModifier` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Bridge mapped pose type. |
+| `validateMappingCoverage` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Mapping helper via `bridge/index`. |
 | `mkWorld`, `mkKnight` | _No package export path_ | Internal/test-only | Available in source (`src/sim/testing.ts`, `src/presets.ts`) but not package exports. |
 
 ### Tier promise
 
 - **Tier 1 promise:** only root import symbols listed in `docs/stable-api-manifest.json`.
-- **Tier 2 promise:** usable, but may change across minor versions; import explicitly from `/tier2`.
+- **shipped-but-not-Tier-1 (Tier 2) promise:** usable, but may change across minor versions; import explicitly from `/tier2`.
 
 ---
 
 ## 2) Behaviour contract (verified against source)
 
-### `BridgeEngine` lifecycle (Tier 2)
+### `BridgeEngine` lifecycle (shipped-but-not-Tier-1 (Tier 2))
 
 - `update(snapshots, motion?, condition?)` shifts `curr -> prev`, ingests a new `curr`, and advances internal tick/time bookkeeping.
 - `getInterpolatedState(entityId, renderTime_s)` returns `null` when no snapshot exists, otherwise an `InterpolatedState` built from `prev/curr`.
@@ -55,7 +55,7 @@ The previous revision of this file overstated Tier-1 status. The table below ref
 - `animation` booleans and `condition.dead` snap to `curr` at midpoint (`t >= SCALE.Q / 2`).
 - `grapple` also snaps at midpoint.
 
-### `InterpolatedState` shape (Tier 2)
+### `InterpolatedState` shape (shipped-but-not-Tier-1 (Tier 2))
 
 `entityId`, `teamId`, `position_m`, `velocity_mps`, `facing`, `animation`, `poseModifiers`, `grapple`, `condition`, `interpolationFactor`, `fromTick`, `toTick`.
 

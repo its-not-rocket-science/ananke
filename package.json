@@ -294,7 +294,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "ci": "npm run check-version-sync && npm run build && npm run test:coverage && npm run check-boundaries && npm run check-stable-api && npm run check-maturity-evidence",
+    "ci": "npm run check-version-sync && npm run build && npm run test:coverage && npm run check-boundaries && npm run check-stable-api && npm run check-maturity-evidence && npm run check-public-contract",
     "release-check": "node dist/tools/release-check.js",
     "release-check:quick": "node dist/tools/release-check.js --quick",
     "check-boundaries": "node dist/tools/check-package-boundaries.js",
@@ -381,7 +381,8 @@
     "ref:host-coherence:web": "node examples/reference/host-coherence/server.mjs",
     "check-docs-tier1-imports": "node tools/check-docs-tier1-imports.mjs",
     "check-doc-version-sync": "node tools/check-doc-version-sync.mjs",
-    "check-doc-ts-examples": "node tools/check-doc-ts-examples.mjs"
+    "check-doc-ts-examples": "node tools/check-doc-ts-examples.mjs",
+    "check-public-contract": "node dist/tools/check-public-contract.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
