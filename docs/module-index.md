@@ -2,8 +2,22 @@
 
 Canonical policy: `docs/public-contract.md`.
 
-- Tier-1 is **root only** (`@its-not-rocket-science/ananke`).
-- Subpaths are shipped-but-not-Tier-1 unless explicitly marked otherwise.
+- **Tier 1 stable** is root only (`@its-not-rocket-science/ananke`).
+- Subpaths default to **Shipped but undocumented** in the canonical inventory unless explicitly labeled otherwise.
+
+
+
+## Stability labels (taxonomy-bound)
+
+<!-- CONTRACT:STABILITY_LABELS:start -->
+```json
+[
+  { "kind": "subpath", "subject": ".", "status": "Tier 1 stable", "notes": "Root entrypoint" },
+  { "kind": "subpath", "subject": "./tier2", "status": "Experimental", "notes": "Tier-2 barrel" },
+  { "kind": "subpath", "subject": "./tier3", "status": "Internal", "notes": "Tier-3 barrel" }
+]
+```
+<!-- CONTRACT:STABILITY_LABELS:end -->
 
 ## Root-stable
 
@@ -77,8 +91,9 @@ Canonical policy: `docs/public-contract.md`.
 
 ### Subpath classification
 
-- **experimental**: every subpath except `./tier3`.
-- **internal**: `./tier3`.
-- **subpath-stable**: none declared at this time in the repo-level contract.
+- **Experimental**: `./tier2`.
+- **Internal**: `./tier3`.
+- **Shipped but undocumented**: all remaining exported subpaths (`./tier2` and `./tier3` excluded).
+- **Stable subpath**: none declared at this time in the repo-level contract.
 
 For bridge and wire-specific behavior docs, see `docs/bridge-contract.md` and `docs/wire-protocol.md`.

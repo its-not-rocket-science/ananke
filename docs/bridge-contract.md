@@ -7,9 +7,20 @@ For versioning policy see [`docs/versioning.md`](versioning.md) and [`STABLE_API
 
 ---
 
+
+<!-- CONTRACT:STABILITY_LABELS:start -->
+```json
+[
+  { "kind": "subpath", "subject": ".", "status": "Tier 1 stable", "notes": "Bridge helpers available on root" },
+  { "kind": "subpath", "subject": "./tier2", "status": "Experimental", "notes": "Bridge engine and mapping surface" },
+  { "kind": "symbol-group", "subject": "tier2:barrel-symbols", "status": "Experimental", "notes": "Tier-2 bridge-related exports" }
+]
+```
+<!-- CONTRACT:STABILITY_LABELS:end -->
+
 ## 1) Stability and import-path truth table
 
-The previous revision of this file overstated Tier-1 status. The table below reflects actual exports in `src/index.ts`, `src/tier2.ts`, and `src/bridge/index.ts`.
+The table below uses the canonical stability taxonomy and reflects actual exports in `src/index.ts`, `src/tier2.ts`, and `src/bridge/index.ts`.
 
 | Symbol | Import path | Tier | Notes |
 |---|---|---|---|
@@ -18,28 +29,28 @@ The previous revision of this file overstated Tier-1 status. The table below ref
 | `AnimationHints` | `@its-not-rocket-science/ananke` | Tier 1 | Type export. |
 | `RigSnapshot` | `@its-not-rocket-science/ananke` | Tier 1 | Type export. |
 | `SCALE`, `q`, `stepWorld`, `createWorld` | `@its-not-rocket-science/ananke` | Tier 1 | Used by runnable root quickstart below. |
-| `BridgeEngine` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | **Not** exported from root path. |
-| `BridgeConfig`, `BodyPlanMapping`, `SegmentMapping` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Bridge config types. |
-| `InterpolatedState` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Bridge interpolated output type. |
-| `derivePoseModifiers` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | From `model3d` via tier2 barrel. |
-| `deriveGrappleConstraint` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | From `model3d` via tier2 barrel. |
-| `deriveMassDistribution` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | From `model3d` via tier2 barrel. |
-| `deriveInertiaTensor` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | From `model3d` via tier2 barrel. |
-| `GrapplePoseConstraint`, `PoseModifier` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Types from `model3d` via tier2 barrel. |
-| `MappedPoseModifier` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Bridge mapped pose type. |
-| `validateMappingCoverage` | `@its-not-rocket-science/ananke/tier2` | shipped-but-not-Tier-1 (Tier 2) | Mapping helper via `bridge/index`. |
+| `BridgeEngine` | `@its-not-rocket-science/ananke/tier2` | Experimental | **Not** exported from root path. |
+| `BridgeConfig`, `BodyPlanMapping`, `SegmentMapping` | `@its-not-rocket-science/ananke/tier2` | Experimental | Bridge config types. |
+| `InterpolatedState` | `@its-not-rocket-science/ananke/tier2` | Experimental | Bridge interpolated output type. |
+| `derivePoseModifiers` | `@its-not-rocket-science/ananke/tier2` | Experimental | From `model3d` via tier2 barrel. |
+| `deriveGrappleConstraint` | `@its-not-rocket-science/ananke/tier2` | Experimental | From `model3d` via tier2 barrel. |
+| `deriveMassDistribution` | `@its-not-rocket-science/ananke/tier2` | Experimental | From `model3d` via tier2 barrel. |
+| `deriveInertiaTensor` | `@its-not-rocket-science/ananke/tier2` | Experimental | From `model3d` via tier2 barrel. |
+| `GrapplePoseConstraint`, `PoseModifier` | `@its-not-rocket-science/ananke/tier2` | Experimental | Types from `model3d` via tier2 barrel. |
+| `MappedPoseModifier` | `@its-not-rocket-science/ananke/tier2` | Experimental | Bridge mapped pose type. |
+| `validateMappingCoverage` | `@its-not-rocket-science/ananke/tier2` | Experimental | Mapping helper via `bridge/index`. |
 | `mkWorld`, `mkKnight` | _No package export path_ | Internal/test-only | Available in source (`src/sim/testing.ts`, `src/presets.ts`) but not package exports. |
 
 ### Tier promise
 
 - **Tier 1 promise:** only root import symbols listed in `docs/stable-api-manifest.json`.
-- **shipped-but-not-Tier-1 (Tier 2) promise:** usable, but may change across minor versions; import explicitly from `/tier2`.
+- **Experimental promise:** usable, but may change across minor versions; import explicitly from `/tier2`.
 
 ---
 
 ## 2) Behaviour contract (verified against source)
 
-### `BridgeEngine` lifecycle (shipped-but-not-Tier-1 (Tier 2))
+### `BridgeEngine` lifecycle (Experimental)
 
 - `update(snapshots, motion?, condition?)` shifts `curr -> prev`, ingests a new `curr`, and advances internal tick/time bookkeeping.
 - `getInterpolatedState(entityId, renderTime_s)` returns `null` when no snapshot exists, otherwise an `InterpolatedState` built from `prev/curr`.
@@ -55,7 +66,7 @@ The previous revision of this file overstated Tier-1 status. The table below ref
 - `animation` booleans and `condition.dead` snap to `curr` at midpoint (`t >= SCALE.Q / 2`).
 - `grapple` also snaps at midpoint.
 
-### `InterpolatedState` shape (shipped-but-not-Tier-1 (Tier 2))
+### `InterpolatedState` shape (Experimental)
 
 `entityId`, `teamId`, `position_m`, `velocity_mps`, `facing`, `animation`, `poseModifiers`, `grapple`, `condition`, `interpolationFactor`, `fromTick`, `toTick`.
 
