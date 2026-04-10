@@ -1,22 +1,22 @@
-# Completion Evidence Dashboard
+# Completion Evidence Dashboard (Artifact Status)
 
 _Date: 2026-04-02_
 
 This dashboard converts maturity claims into explicit, machine-checkable evidence requirements.
 
-## Evidence mapping table (claim → proof)
+## Evidence mapping table (status → proof)
 
-| Maturity dimension | Claim | Measurable criteria | Objective proof currently present |
+| Maturity dimension | Status | Measurable criteria | Objective proof currently present |
 |---|---|---|---|
-| Deterministic combat kernel | M4 Validated | `>=3` deterministic/kernel tests, phase-order invariant test, `>=2` conformance fixtures, validation dashboard artifact. | `test/kernel_determinism.test.ts`, `test/kernel_phase_order.test.ts`, `test/determinism.test.ts`, `test/invariants.test.ts`, `conformance/lockstep-sequence.json`, `conformance/phase-order.json`, `docs/dashboard/validation-dashboard.json`. |
-| Injury, medical, survivability | M4 Validated | `>=3` survivability tests, at least one published medical validation artifact. | `test/medical.test.ts`, `test/injury_totals.test.ts`, `test/wound-aging.test.ts`, `docs/validation-first-aid-saves-lives-2026-03-18T19-34-10.md`. |
-| Environment, hazards, climate | M4 Validated | `>=3` hazard/climate/thermoregulation tests, at least one thermoregulation validation artifact. | `test/hazards.test.ts`, `test/climate.test.ts`, `test/thermoregulation.test.ts`, `docs/validation-thermoregulation-core-stability-2026-03-18T00-07-52.md`. |
-| AI, perception, cognition | M3 Hardened | `>=3` subsystem tests plus behaviour invariant coverage (no M4 validation artifact required yet). | `test/ai_system.test.ts`, `test/perception_phase4.test.ts`, `test/cognition.test.ts`, `test/behavior-trees.test.ts`. |
-| Campaign/world simulation | M3 Hardened | `>=3` campaign/world tests and at least one deterministic snapshot/fixture artifact. | `test/campaign.test.ts`, `test/world-generation.test.ts`, `test/scenarios.test.ts`, `test/snapshots/kernel_behaviour_snapshot.json`. |
-| Bridge/replay/integration surfaces | M4 Validated | `>=3` bridge/replay/netcode tests, `>=2` replay/bridge conformance fixtures, bridge contract artifact. | `test/bridge/integration.test.ts`, `test/replay.test.ts`, `test/netcode.test.ts`, `conformance/replay-parity.json`, `conformance/bridge-snapshot.json`, `docs/bridge-contract.md`. |
-| Tooling/benchmarks/release checks | M4 Validated | Performance regression test, release artifact(s), and coverage signal in CI. | `test/performance.test.ts`, `docs/release-dashboard.md`, `npm run test:coverage`. |
+| Deterministic combat kernel | verified | `>=3` deterministic/kernel tests, phase-order invariant test, `>=2` conformance fixtures, validation dashboard artifact. | `test/kernel_determinism.test.ts`, `test/kernel_phase_order.test.ts`, `test/determinism.test.ts`, `test/invariants.test.ts`, `conformance/lockstep-sequence.json`, `conformance/phase-order.json`, `docs/dashboard/validation-dashboard.json`. |
+| Injury, medical, survivability | verified | `>=3` survivability tests, at least one published medical validation artifact. | `test/medical.test.ts`, `test/injury_totals.test.ts`, `test/wound-aging.test.ts`, `docs/validation-first-aid-saves-lives-2026-03-18T19-34-10.md`. |
+| Environment, hazards, climate | verified | `>=3` hazard/climate/thermoregulation tests, at least one thermoregulation validation artifact. | `test/hazards.test.ts`, `test/climate.test.ts`, `test/thermoregulation.test.ts`, `docs/validation-thermoregulation-core-stability-2026-03-18T00-07-52.md`. |
+| AI, perception, cognition | partially verified | `>=3` subsystem tests plus behaviour invariant coverage (no M4 validation artifact required yet). | `test/ai_system.test.ts`, `test/perception_phase4.test.ts`, `test/cognition.test.ts`, `test/behavior-trees.test.ts`. |
+| Campaign/world simulation | partially verified | `>=3` campaign/world tests and at least one deterministic snapshot/fixture artifact. | `test/campaign.test.ts`, `test/world-generation.test.ts`, `test/scenarios.test.ts`, `test/snapshots/kernel_behaviour_snapshot.json`. |
+| Bridge/replay/integration surfaces | verified | `>=3` bridge/replay/netcode tests, `>=2` replay/bridge conformance fixtures, bridge contract artifact. | `test/bridge/integration.test.ts`, `test/replay.test.ts`, `test/netcode.test.ts`, `conformance/replay-parity.json`, `conformance/bridge-snapshot.json`, `docs/bridge-contract.md`. |
+| Tooling/benchmarks/release checks | verified | Performance regression test, release artifact(s), and coverage signal in CI. | `test/performance.test.ts`, `docs/release-dashboard.md`, `npm run test:coverage`. |
 
-## Gap list (claims that still exceed evidence quality)
+## Gap list (statuses that still exceed evidence quality)
 
 1. **Coverage thresholds are still implicit**: we require `npm run test:coverage` to run, but no per-dimension minimum line/branch threshold is encoded yet.
 2. **Freshness/SLA is not yet enforced**: evidence files exist, but we do not fail when validation/release artifacts become stale by date.
