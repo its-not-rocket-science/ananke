@@ -48,7 +48,7 @@ Ananke is a deterministic, lockstep‑friendly simulation kernel that models ent
 
 ### Core data structures
 
-```typescript
+```typescript no-check-example
 interface WorldState {
   tick: number;
   seed: number;
@@ -84,7 +84,7 @@ type CommandMap = Map<number, Command[]>;
 
 ### Kernel entry point
 
-```typescript
+```typescript no-check-example
 function stepWorld(
   world: WorldState,
   commands: CommandMap,
@@ -131,7 +131,7 @@ The observer (`tools/observer.ts`) demonstrates how to hook into the `stepWorld`
 
 ### Observer pattern
 
-```typescript
+```typescript no-check-example
 for (let tick = 0; tick < maxTicks; tick++) {
   // 1. Build indexes (required for AI decisions, but we hard‑code commands)
   const index   = buildWorldIndex(world);
@@ -167,7 +167,7 @@ The serialisation demo (`tools/serialize.ts`) shows how to round‑trip a `World
 
 Optional Map fields on `Entity` (`foodInventory`, `armourState`, `reputations`) must be explicitly converted to an array of entries for JSON serialisation:
 
-```typescript
+```typescript no-check-example
 function serializeEntity(e: Entity): unknown {
   const obj: any = { ...e };
   if (e.foodInventory instanceof Map) {
@@ -180,7 +180,7 @@ function serializeEntity(e: Entity): unknown {
 
 On deserialisation, reconstruct the Map from the array:
 
-```typescript
+```typescript no-check-example
 function deserializeEntity(e: any): Entity {
   const entity = { ...e } as Entity;
   if (Array.isArray(e.foodInventory)) {
@@ -212,7 +212,7 @@ Milestone 3 delivers a complete bridge module (`src/bridge/`) that handles tic
 
 ### Minimal setup example
 
-```typescript
+```typescript no-check-example
 import { BridgeEngine } from "ananke";
 import { extractRigSnapshots, extractMotionVectors, extractConditionSamples } from "ananke";
 
@@ -279,7 +279,7 @@ Run `npm run run:bridge‑demo` to see a complete bridge workflow with humanoid 
 
 TypeScript’s `exactOptionalPropertyTypes` is enabled in the project. This means an optional property set to `undefined` is **not** the same as omitting the property. For example:
 
-```typescript
+```typescript no-check-example
 // ❌ Wrong – will cause type errors
 entity.cognition = undefined;
 

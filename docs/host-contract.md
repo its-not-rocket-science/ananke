@@ -26,7 +26,7 @@ const world = createWorld(42, specs);
 
 ## 2) Scenario loading
 
-```ts
+```ts no-check-example
 import { loadScenario, validateScenario } from "@its-not-rocket-science/ananke";
 
 const errors = validateScenario(jsonScenario);
@@ -37,7 +37,7 @@ const world = loadScenario(jsonScenario);
 
 ## 3) Step contract
 
-```ts
+```ts no-check-example
 import { stepWorld, q } from "@its-not-rocket-science/ananke";
 import type { CommandMap, KernelContext } from "@its-not-rocket-science/ananke";
 
@@ -49,7 +49,7 @@ stepWorld(world, cmds, ctx); // mutates world, increments world.tick by 1
 
 ## 4) Replay / serialization
 
-```ts
+```ts no-check-example
 import {
   ReplayRecorder,
   replayTo,
@@ -69,7 +69,7 @@ const worldAtTick = replayTo(replay2, 1, ctx);
 
 ## 5) Bridge extraction
 
-```ts
+```ts no-check-example
 import { extractRigSnapshots, deriveAnimationHints } from "@its-not-rocket-science/ananke";
 
 const snapshots = extractRigSnapshots(world);

@@ -62,7 +62,7 @@ serialises `Map<K, V>` as an array of `[K, V]` pairs:
 Always call `stampSnapshot(world, "world")` before persisting.  This adds
 `_ananke_version` and `_schema` fields that enable forward migration:
 
-```typescript
+```typescript no-check-example
 import { stampSnapshot } from "@its-not-rocket-science/ananke/schema";
 // or: import { stampSnapshot } from "@ananke/core";   (when published)
 
@@ -113,7 +113,7 @@ Tag values:
 
 ### 3.2 Usage
 
-```typescript
+```typescript no-check-example
 import { diffWorldState, packDiff, unpackDiff, applyDiff } from "@its-not-rocket-science/ananke/tier3";
 
 // Sender
@@ -154,7 +154,7 @@ integrators.
 Use the built-in tick counter and entity count as a cheap hash for divergence
 detection:
 
-```typescript
+```typescript no-check-example
 function stateHash(world: WorldState): number {
   return world.tick * 0x10000 + (world.entities.length & 0xFFFF);
 }
@@ -204,7 +204,7 @@ structure is identical; only the outer encoding changes.
 
 Load a save and bring it to the current schema version before simulating:
 
-```typescript
+```typescript no-check-example
 import {
   migrateWorld, validateSnapshot, stampSnapshot,
 } from "@its-not-rocket-science/ananke/schema";

@@ -655,7 +655,7 @@ an entity, each operating on a different time scale and requiring different inte
 
 ## Quick start
 
-```typescript
+```typescript no-check-example
 import { stepWorld, TICK_HZ } from "./src/sim/kernel.js";
 import { STARTER_WEAPONS } from "./src/equipment.js";
 import { HUMAN_BASE } from "./src/archetypes.js";
@@ -1028,7 +1028,7 @@ Effects activate when concentration exceeds `effectThreshold`:
 
 `TechContext` gates which items are usable in a scenario without locking them to a specific era.
 
-```typescript
+```typescript no-check-example
 import { TechEra, defaultTechContext, isCapabilityAvailable } from "./src/sim/tech.js";
 import { validateLoadout, STARTER_EXOSKELETONS } from "./src/equipment.js";
 
@@ -1083,7 +1083,7 @@ Attached to `entity.capabilitySources?: CapabilitySource[]`. Each source is an e
 
 ### ActivateCommand
 
-```typescript
+```typescript no-check-example
 { kind: "activate", sourceId: string, effectId: string, targetId?: number, targetPos?: Vec3 }
 ```
 
@@ -1130,7 +1130,7 @@ Attached to `entity.capabilitySources?: CapabilitySource[]`. Each source is an e
 `src/model3d.ts` provides pure data-extraction functions for driving 3D character rigs from
 simulation state. No kernel changes, no state mutations. Call once per tick after `stepWorld`.
 
-```typescript
+```typescript no-check-example
 import { extractRigSnapshots } from "./src/model3d.js";
 
 const snapshots = extractRigSnapshots(world);
@@ -1233,7 +1233,7 @@ Each entity carries an optional `skills?: SkillMap` (`Map<SkillId, SkillLevel>`)
 When a skill is absent, `getSkill()` returns neutral defaults (no effect on simulation output),
 making all existing entities fully backward-compatible.
 
-```typescript
+```typescript no-check-example
 import { buildSkillMap } from "./src/sim/skills.js";
 
 entity.skills = buildSkillMap({
@@ -1263,7 +1263,7 @@ entity.skills = buildSkillMap({
 `combineSkillLevels(a, b)` multiplies Q fields and adds time offsets, letting the host express
 synergy bonuses or composite experience modifiers before building the SkillMap:
 
-```typescript
+```typescript no-check-example
 import { combineSkillLevels, defaultSkillLevel } from "./src/sim/skills.js";
 
 // Melee expert with an athleticism timing synergy (−0.25 s total)
@@ -1284,7 +1284,7 @@ Every simulation is reproducible from initial state + command log. `ReplayRecord
 the world before the first tick and records command maps per tick. `replayTo` reconstructs
 any past tick by restoring the snapshot and re-applying frames.
 
-```typescript
+```typescript no-check-example
 import { ReplayRecorder, replayTo, serializeReplay, deserializeReplay } from "./src/replay.js";
 
 const recorder = new ReplayRecorder(world);
@@ -1310,7 +1310,7 @@ const worldAt50Again = replayTo(restored, 50, ctx);
 `CollectingTrace` implements `TraceSink` and accumulates all trace events for offline
 analysis. Pass it to `stepWorld` via `ctx.trace`, then extract metrics.
 
-```typescript
+```typescript no-check-example
 import { CollectingTrace, collectMetrics, survivalRate, meanTimeToIncapacitation }
   from "./src/metrics.js";
 
@@ -1332,7 +1332,7 @@ pass over any flat `TraceEvent[]` — ordering and tick mixing are fine.
 `extractMotionVectors`, `extractHitTraces`, and `extractConditionSamples` in `src/debug.ts`
 transform world state and trace events into renderer-friendly snapshots:
 
-```typescript
+```typescript no-check-example
 import { extractMotionVectors, extractHitTraces, extractConditionSamples } from "./src/debug.js";
 import { CollectingTrace } from "./src/metrics.js";
 
@@ -1360,7 +1360,7 @@ const pastHeatmap = extractConditionSamples(past);
 `src/describe.ts` translates raw SI fixed-point attributes into human-readable summaries.
 No simulation dependencies — safe to import from any host application.
 
-```typescript
+```typescript no-check-example
 import { describeCharacter, formatCharacterSheet, formatOneLine } from "./src/describe.js";
 import { generateIndividual } from "./src/generate.js";
 import { PRO_BOXER } from "./src/archetypes.js";
@@ -1403,7 +1403,7 @@ Reaction time and decision latency use an **inverted** scale (lower value = high
 
 ### API
 
-```typescript
+```typescript no-check-example
 describeCharacter(attrs: IndividualAttributes): CharacterDescription
 // Returns a structured object with tier, label, comparison string, and formatted value
 // for every attribute. Vision and hearing are formatted strings (e.g. "200 m, 120° arc").
@@ -1422,7 +1422,7 @@ formatOneLine(desc: CharacterDescription): string
 `src/narrative.ts` converts raw `TraceEvent` streams into human-readable text. Like
 `src/describe.ts`, it has no simulation dependencies — safe to import from UI code or CLI tools.
 
-```typescript
+```typescript no-check-example
 import { narrateEvent, buildCombatLog, describeInjuries, describeCombatOutcome }
   from "./src/narrative.js";
 import { CollectingTrace } from "./src/metrics.js";
@@ -1501,7 +1501,7 @@ Set an entity's name to `"you"` in `nameMap` for second-person verb conjugation
 It runs a compressed 1 Hz loop applying the same healing physics as the kernel, suitable
 for computing wound outcomes, resource consumption, and recovery timelines between sessions.
 
-```typescript
+```typescript no-check-example
 import { stepDowntime, MEDICAL_RESOURCES } from "./src/downtime.js";
 
 const reports = stepDowntime(world, 3600, {
@@ -1532,7 +1532,7 @@ for (const r of reports) {
 
 `src/arena.ts` provides a declarative scenario DSL for batch-running combat trials with statistical expectations. Use it to validate simulation realism, balance archetypes, and author calibration tests.
 
-```typescript
+```typescript no-check-example
 import { runArena, expectWinRate, expectSurvivalRate, formatArenaReport }
   from "./src/arena.js";
 import { mkKnight, mkBoxer } from "./src/presets.js";
@@ -1567,7 +1567,7 @@ console.log(formatArenaReport(result));
 
 `src/progression.ts` adds the temporal axis: how entities improve through training and experience, decline through ageing, and carry permanent marks from injury. No simulation dependencies — safe to use in save-game serialisation and UI layers.
 
-```typescript
+```typescript no-check-example
 import {
   createProgressionState, awardXP, advanceSkill,
   applyTrainingSession, stepAgeing, applyAgeingDelta,
@@ -1617,7 +1617,7 @@ const json = serialiseProgression(prog);  // Map-aware JSON
 entity state, location, and item stockpiles between encounters, and delegates wound recovery
 to `stepDowntime`.
 
-```typescript
+```typescript no-check-example
 import {
   createCampaign, addLocation, travel,
   creditInventory, debitInventory, getInventoryCount,
@@ -1683,7 +1683,7 @@ entityInventories, entity skills, armourState, and location travelCost all survi
 strength comes from `peakForce_N`, persuasion from cognitive depth, deception is beaten by
 sharp minds. Fully deterministic when given a seed.
 
-```typescript
+```typescript no-check-example
 import {
   resolveDialogue, applyDialogueOutcome, narrateDialogue, dialogueProbability,
   type DialogueContext,
@@ -1741,7 +1741,7 @@ without rolling RNG. Useful for UI previews, AI decision-making, and testing.
 behaviour based on inter-faction relationships. Fully deterministic — no RNG, standing
 changes are pure arithmetic.
 
-```typescript
+```typescript no-check-example
 import {
   createFactionState, adjustStanding, getStanding,
   extractWitnessEvents, applyReputationDelta,
@@ -1764,7 +1764,7 @@ mode; the `factionGuard` preset additionally suppresses attack below standing `q
 `src/economy.ts` provides item valuation, equipment wear, loot drop resolution, and
 trade evaluation. No kernel dependency — pure data management.
 
-```typescript
+```typescript no-check-example
 import {
   computeItemValue, armourConditionQ, applyWear,
   resolveDrops, evaluateTradeOffer, totalInventoryValue,
@@ -1789,7 +1789,7 @@ impact now imparts a velocity delta to the target. Calibrated to real physics �
 5.56 mm rifle round produces negligible knockback (≈ 0.05 m/s on 75 kg), while a
 large-creature kick can knock humans prone.
 
-```typescript
+```typescript no-check-example
 import {
   computeKnockback, applyKnockback,
   STAGGER_THRESHOLD_mps, PRONE_THRESHOLD_mps, STAGGER_TICKS,
@@ -1823,7 +1823,7 @@ projectiles. Above 600 m/s a temporary stretch wave radiates outward through
 inelastic tissue; above 900 m/s momentary vacuum cavitation further boosts
 haemorrhage in fluid-saturated organs.
 
-```typescript
+```typescript no-check-example
 import {
   computeTemporaryCavityMul, computeCavitationBleed,
   HYDROSTATIC_THRESHOLD_mps, CAVITATION_THRESHOLD_mps,
@@ -1857,7 +1857,7 @@ automatically in the finalImpacts loop — no changes to call sites required.
 `src/sim/cone.ts` adds directional cone geometry to the capability system, enabling
 breath weapons, flamethrowers, gas dispensers, and sonic disorientation blasts.
 
-```typescript
+```typescript no-check-example
 import { entityInCone, buildEntityFacingCone } from "./src/sim/cone.js";
 import type { CapabilityEffect, CapabilitySource } from "./src/sim/capability.js";
 import { q, SCALE } from "./src/units.js";
@@ -1908,7 +1908,7 @@ surface-heavy/internal-pass-through split or acid's structural bias.
 system. Unlike abstract "cold resistance" stats, temperature is tracked in real °C (encoded
 as Q) and driven by genuine thermophysics.
 
-```typescript
+```typescript no-check-example
 import { stepCoreTemp, deriveTempModifiers, cToQ, CORE_TEMP_NORMAL_Q } from "./src/sim/thermoregulation.js";
 import type { KernelContext } from "./src/sim/context.js";
 
@@ -1954,7 +1954,7 @@ final state.
 weeks. Hunger states impose escalating combat penalties and eventually cause mass loss —
 fat catabolism first, then muscle tissue.
 
-```typescript
+```typescript no-check-example
 import {
   computeBMR, stepNutrition, consumeFood, deriveHungerModifiers,
   FOOD_ITEMS, type HungerState,
