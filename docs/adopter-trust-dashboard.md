@@ -1,5 +1,7 @@
 # Adopter Trust Dashboard (Single-Page)
 
+> Canonical dashboard: `docs/trust-dashboard.md`. This page remains as a narrative companion.
+
 _Last updated: 2026-04-10 (UTC)_
 
 This dashboard is intentionally strict: if a claim is not currently enforced by a script, fixture, artifact, or CI workflow in this repo, it is marked **unverified**.

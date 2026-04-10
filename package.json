@@ -256,6 +256,7 @@
     "docs/versioning.md",
     "docs/emergent-validation-report.md",
     "docs/completion-evidence-dashboard.md",
+    "docs/trust-dashboard.md",
     "docs/package-architecture.md",
     "docs/migration-monolith-to-modular.md",
     "docs/wire-protocol.md",
@@ -294,7 +295,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "ci": "npm run check-version-sync && npm run build && npm run test:coverage && npm run check-boundaries && npm run check-stable-api && npm run check-maturity-evidence && npm run check-public-contract && npm run check-export-status-matrix",
+    "ci": "npm run check-version-sync && npm run build && npm run test:coverage && npm run check-boundaries && npm run check-stable-api && npm run check-maturity-evidence && npm run check-trust-dashboard-artifacts && npm run check-public-contract && npm run check-export-status-matrix",
     "release-check": "node dist/tools/release-check.js",
     "release-check:quick": "node dist/tools/release-check.js --quick",
     "check-boundaries": "node dist/tools/check-package-boundaries.js",
@@ -386,7 +387,8 @@
     "check:doc-examples": "node dist/tools/check-doc-examples.js",
     "generate-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --write",
     "check-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --check",
-    "test:first-hour-smoke": "npm run build && node tools/first-hour-smoke.mjs"
+    "test:first-hour-smoke": "npm run build && node tools/first-hour-smoke.mjs",
+    "check-trust-dashboard-artifacts": "node tools/check-trust-dashboard-artifacts.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
