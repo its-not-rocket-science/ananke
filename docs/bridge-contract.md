@@ -1,84 +1,40 @@
 # Ananke Bridge Contract
 
-> **This file is the source-of-truth contract for bridge-related symbols and import paths.**
-> The package name is `@its-not-rocket-science/ananke`.
+> **Source-of-truth for renderer bridge imports and stability.**
+> Package name: `@its-not-rocket-science/ananke`.
 
 For versioning policy see [`docs/versioning.md`](versioning.md) and [`STABLE_API.md`](../STABLE_API.md).
-
----
-
 
 <!-- CONTRACT:STABILITY_LABELS:start -->
 ```json
 [
-  { "kind": "subpath", "subject": ".", "status": "Tier 1 stable", "notes": "Bridge helpers available on root" },
-  { "kind": "subpath", "subject": "./tier2", "status": "Experimental", "notes": "Bridge engine and mapping surface" },
-  { "kind": "symbol-group", "subject": "tier2:barrel-symbols", "status": "Experimental", "notes": "Tier-2 bridge-related exports" }
+  { "kind": "subpath", "subject": ".", "status": "Tier 1 stable", "notes": "Root host API and stable bridge extraction helpers" },
+  { "kind": "subpath", "subject": "./tier2", "status": "Experimental", "notes": "Bridge runtime and mapping APIs" }
 ]
 ```
 <!-- CONTRACT:STABILITY_LABELS:end -->
 
-## 1) Stability and import-path truth table
+## 1) Import-path and stability truth table
 
-The table below uses the canonical stability taxonomy and reflects actual exports in `src/index.ts`, `src/tier2.ts`, and `src/bridge/index.ts`.
+| Symbol | Import path | Stability |
+|---|---|---|
+| `createWorld`, `stepWorld`, `q`, `SCALE` | `@its-not-rocket-science/ananke` | Tier 1 stable |
+| `extractRigSnapshots`, `deriveAnimationHints` | `@its-not-rocket-science/ananke` | Tier 1 stable |
+| `RigSnapshot`, `AnimationHints` | `@its-not-rocket-science/ananke` | Tier 1 stable |
+| `BridgeEngine` | `@its-not-rocket-science/ananke/tier2` | Experimental |
+| `BridgeConfig`, `BodyPlanMapping`, `SegmentMapping`, `InterpolatedState`, `MappedPoseModifier` | `@its-not-rocket-science/ananke/tier2` | Experimental |
+| `validateMappingCoverage` | `@its-not-rocket-science/ananke/tier2` | Experimental |
+| `derivePoseModifiers`, `deriveGrappleConstraint`, `deriveMassDistribution`, `deriveInertiaTensor` | `@its-not-rocket-science/ananke/tier2` | Experimental |
+| `PoseModifier`, `GrapplePoseConstraint` | `@its-not-rocket-science/ananke/tier2` | Experimental |
+| `mkWorld`, `mkKnight` | _No package export path_ | Internal/test-only |
 
-| Symbol | Import path | Tier | Notes |
-|---|---|---|---|
-| `extractRigSnapshots` | `@its-not-rocket-science/ananke` | Tier 1 | Root export (stable). |
-| `deriveAnimationHints` | `@its-not-rocket-science/ananke` | Tier 1 | Root export (stable). |
-| `AnimationHints` | `@its-not-rocket-science/ananke` | Tier 1 | Type export. |
-| `RigSnapshot` | `@its-not-rocket-science/ananke` | Tier 1 | Type export. |
-| `SCALE`, `q`, `stepWorld`, `createWorld` | `@its-not-rocket-science/ananke` | Tier 1 | Used by runnable root quickstart below. |
-| `BridgeEngine` | `@its-not-rocket-science/ananke/tier2` | Experimental | **Not** exported from root path. |
-| `BridgeConfig`, `BodyPlanMapping`, `SegmentMapping` | `@its-not-rocket-science/ananke/tier2` | Experimental | Bridge config types. |
-| `InterpolatedState` | `@its-not-rocket-science/ananke/tier2` | Experimental | Bridge interpolated output type. |
-| `derivePoseModifiers` | `@its-not-rocket-science/ananke/tier2` | Experimental | From `model3d` via tier2 barrel. |
-| `deriveGrappleConstraint` | `@its-not-rocket-science/ananke/tier2` | Experimental | From `model3d` via tier2 barrel. |
-| `deriveMassDistribution` | `@its-not-rocket-science/ananke/tier2` | Experimental | From `model3d` via tier2 barrel. |
-| `deriveInertiaTensor` | `@its-not-rocket-science/ananke/tier2` | Experimental | From `model3d` via tier2 barrel. |
-| `GrapplePoseConstraint`, `PoseModifier` | `@its-not-rocket-science/ananke/tier2` | Experimental | Types from `model3d` via tier2 barrel. |
-| `MappedPoseModifier` | `@its-not-rocket-science/ananke/tier2` | Experimental | Bridge mapped pose type. |
-| `validateMappingCoverage` | `@its-not-rocket-science/ananke/tier2` | Experimental | Mapping helper via `bridge/index`. |
-| `mkWorld`, `mkKnight` | _No package export path_ | Internal/test-only | Available in source (`src/sim/testing.ts`, `src/presets.ts`) but not package exports. |
+`BridgeEngine` is **not Tier-1 root**. Use `@its-not-rocket-science/ananke/tier2` and treat it as experimental.
 
-### Tier promise
+## 2) Minimum bridge integration (Tier 1 stable)
 
-- **Tier 1 promise:** only root import symbols listed in `docs/stable-api-manifest.json`.
-- **Experimental promise:** usable, but may change across minor versions; import explicitly from `/tier2`.
+This is the lowest-friction, stable path: run simulation, extract rig snapshots, and derive animation hints.
 
----
-
-## 2) Behaviour contract (verified against source)
-
-### `BridgeEngine` lifecycle (Experimental)
-
-- `update(snapshots, motion?, condition?)` shifts `curr -> prev`, ingests a new `curr`, and advances internal tick/time bookkeeping.
-- `getInterpolatedState(entityId, renderTime_s)` returns `null` when no snapshot exists, otherwise an `InterpolatedState` built from `prev/curr`.
-- If only one snapshot exists, bridge holds that snapshot.
-- If render time is older than previous tick, bridge holds previous.
-- If render time is newer than current tick:
-  - `extrapolationAllowed: false` => hold current.
-  - `extrapolationAllowed: true` => velocity-based extrapolated position.
-
-### Interpolation details
-
-- Numeric tracks are lerped in fixed-point Q-space.
-- `animation` booleans and `condition.dead` snap to `curr` at midpoint (`t >= SCALE.Q / 2`).
-- `grapple` also snaps at midpoint.
-
-### `InterpolatedState` shape (Experimental)
-
-`entityId`, `teamId`, `position_m`, `velocity_mps`, `facing`, `animation`, `poseModifiers`, `grapple`, `condition`, `interpolationFactor`, `fromTick`, `toTick`.
-
-Note: `condition` fields are `shockQ`, `fearQ`, `consciousness`, `fluidLoss`, and `dead`.
-
----
-
-## 3) Runnable quickstarts
-
-## 3.1 Tier-1 root quickstart (stable)
-
-```ts pseudocode
+```ts
 import {
   createWorld,
   stepWorld,
@@ -89,35 +45,53 @@ import {
 } from "@its-not-rocket-science/ananke";
 
 const world = createWorld(42, [
-  { id: 1, teamId: 1, seed: 101, archetype: "KNIGHT_INFANTRY", weaponId: "arming_sword" },
-  { id: 2, teamId: 2, seed: 202, archetype: "KNIGHT_INFANTRY", weaponId: "arming_sword", x_m: 1.0 },
+  { id: 1, teamId: 1, seed: 101, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword" },
+  { id: 2, teamId: 2, seed: 202, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword", x_m: 1.0 },
 ]);
 
 stepWorld(world, new Map(), { tractionCoeff: q(0.8) });
 
 const snapshots = extractRigSnapshots(world);
-const anim = deriveAnimationHints(world.entities[0]!);
+const hints = deriveAnimationHints(world.entities[0]!);
 
-console.log(snapshots.length, anim.idle / SCALE.Q);
+console.log({
+  snapshotCount: snapshots.length,
+  idle01: hints.idle / SCALE.Q,
+});
 ```
 
-## 3.2 Tier-2 bridge quickstart (explicitly unstable)
+## 3) Advanced bridge runtime (Experimental tier2)
 
-```ts pseudocode
+Use `BridgeEngine` when you need interpolation/extrapolation between simulation ticks.
+
+```ts
 import { createWorld, stepWorld, extractRigSnapshots, q, SCALE } from "@its-not-rocket-science/ananke";
-import { BridgeEngine, type BridgeConfig } from "@its-not-rocket-science/ananke/tier2";
+import {
+  BridgeEngine,
+  type BridgeConfig,
+  type BodyPlanMapping,
+  validateMappingCoverage,
+} from "@its-not-rocket-science/ananke/tier2";
 
-const cfg: BridgeConfig = {
-  mappings: [],
+const humanoidMapping: BodyPlanMapping = {
+  bodyPlanId: "humanoid",
+  segments: [{ segmentId: "head", boneName: "Head" }],
+};
+
+const missing = validateMappingCoverage(humanoidMapping, ["head", "torso"]);
+console.log("missingSegments", missing);
+
+const config: BridgeConfig = {
+  mappings: [humanoidMapping],
   defaultBoneName: "root",
   extrapolationAllowed: false,
 };
 
-const world = createWorld(42, [
-  { id: 1, teamId: 1, seed: 101, archetype: "KNIGHT_INFANTRY", weaponId: "arming_sword" },
+const world = createWorld(7, [
+  { id: 1, teamId: 1, seed: 11, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword" },
 ]);
 
-const engine = new BridgeEngine(cfg);
+const engine = new BridgeEngine(config);
 engine.setEntityBodyPlan(1, "humanoid");
 
 stepWorld(world, new Map(), { tractionCoeff: q(0.8) });
@@ -126,22 +100,37 @@ engine.update(extractRigSnapshots(world));
 stepWorld(world, new Map(), { tractionCoeff: q(0.8) });
 engine.update(extractRigSnapshots(world));
 
-const renderTime = engine.getLatestSimTime() - (1 / 40);
-const state = engine.getInterpolatedState(1, renderTime);
+const renderTime_s = engine.getLatestSimTime() - 1 / 40;
+const state = engine.getInterpolatedState(1, renderTime_s);
 
 if (state) {
-  const idle01 = state.animation.idle / SCALE.Q;
-  console.log(state.position_m.x, idle01);
+  console.log({
+    x_m: state.position_m.x / SCALE.m,
+    idle01: state.animation.idle / SCALE.Q,
+    fromTick: state.fromTick,
+    toTick: state.toTick,
+  });
 }
 ```
 
----
+### BridgeEngine behavior contract (Experimental)
 
-## 4) Non-contract symbols that appear in source but are not package contract
+- `update(snapshots, motion?, condition?)` shifts per-entity `curr` to `prev`, ingests new `curr`, and advances tick/time state.
+- `getInterpolatedState(entityId, renderTime_s)` returns `null` if the entity has no snapshots.
+- With only one snapshot for an entity, returned state is held (no interpolation).
+- If `renderTime_s <= prevTime_s`, previous snapshot is held.
+- If `renderTime_s >= currTime_s`:
+  - `extrapolationAllowed: false` => current snapshot is held.
+  - `extrapolationAllowed: true` => position extrapolates from current velocity.
+- Numeric tracks interpolate in fixed-point Q-space.
+- `animation.prone|unconscious|dead`, `condition.dead`, and `grapple` snap at midpoint (`t < SCALE.Q / 2` uses previous, otherwise current).
 
-These symbols are useful in repo-internal tests/examples but are **not** package exports and must not be treated as stable integration surface:
+## 4) Compile-tested reference example
 
-- `mkWorld` (`src/sim/testing.ts`)
-- `mkKnight` (`src/presets.ts`)
+- `examples/bridge-minimal.ts` is a compile-tested bridge example that uses only package export paths.
+- Run it after build:
 
-If you need a public constructor path for integrations, use Tier-1 `createWorld`.
+```bash
+npm run build
+node dist/examples/bridge-minimal.js
+```
