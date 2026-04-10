@@ -1,16 +1,16 @@
 # WASM integration (advanced)
 
-Ananke ships an AssemblyScript core (`wasm/ananke-core.wasm`) and a TypeScript bridge (`src/wasm/bridge.ts`).
+Ananke ships AssemblyScript WASM kernels (`dist/as/*.wasm`) and a public Node loader on the
+`@its-not-rocket-science/ananke/wasm-kernel` subpath.
 
 ## Node.js
 
 ```ts pseudocode
-import { initAnankeWasm } from "@its-not-rocket-science/ananke/dist/src/wasm/bridge.js";
+import { loadWasmKernel } from "@its-not-rocket-science/ananke/wasm-kernel";
 
-const bridge = await initAnankeWasm();
-bridge.world_create(1337);
-bridge.world_step(new Int32Array([0, 1, 0]));
-console.log(bridge.world_extractSnapshot()[0]);
+const kernel = await loadWasmKernel();
+const report = kernel.shadowStep(world, world.tick);
+console.log(report.summary);
 ```
 
 ## Browser
@@ -23,7 +23,9 @@ Bundle the bridge and embed the wasm binary as a module asset; initialize once p
 
 ## Fallback behavior
 
-`initAnankeWasm()` falls back to a TypeScript backend automatically if:
+`loadWasmKernel()` throws if WASM artifacts are missing (for example before
+`npm run build:wasm:all`). For hosts that want explicit fallback behavior, catch that error and
+continue with the TypeScript kernel path.
 
 - WebAssembly is unavailable
 - wasm loading fails

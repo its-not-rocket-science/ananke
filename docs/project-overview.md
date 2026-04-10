@@ -171,7 +171,7 @@ variance distributions, producing a unique entity with realistic physical spread
 
 ## Current implementation status
 
-**Phases 1–60 complete** (including Phase 6 Formation System, 2ext, 3ext, 8B, 8C, 10B, 10C, 11C, 12B, 31–60). Melee combat,
+**Phases 1–60 are implemented and integrated in-repo** (including Phase 6 Formation System, 2ext, 3ext, 8B, 8C, 10B, 10C, 11C, 12B, 31–60). Maturity labels and validation status are tracked separately in `docs/maturity-matrix.md`. Melee combat,
 grappling, stamina and exhaustion, weapon dynamics (including swing momentum carry), ranged
 and projectile combat (including aiming time, moving target penalty, suppression→AI behaviour,
 and ammo type overrides), injury, entity environmental hazards, movement physics, formation
