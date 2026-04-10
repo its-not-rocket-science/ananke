@@ -17,4 +17,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - run: npm run test:determinism -- --run test/determinism/regression.spec.ts --seed=1337
+      - name: Run determinism regression test (json)
+        run: npm run test:determinism -- --run test/determinism/regression.spec.ts --seed=1337 --reporter=json --outputFile=determinism-report/results.json
+      - name: Build determinism summary artifact
+        run: node tools/generate-determinism-summary.mjs --input=determinism-report/results.json --output=determinism-report/summary.json
+      - name: Upload determinism summary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: determinism-summary
+          path: determinism-report/summary.json
