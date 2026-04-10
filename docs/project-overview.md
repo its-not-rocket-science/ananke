@@ -21,7 +21,7 @@ built on top of that foundation and can be adopted independently.
 npm install @its-not-rocket-science/ananke
 ```
 
-```typescript
+```typescript pseudocode
 import { stepWorld, createWorld, q, SCALE } from "@its-not-rocket-science/ananke";
 ```
 

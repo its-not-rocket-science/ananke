@@ -77,7 +77,7 @@ written justification in `CHANGELOG.md`.
 
 **Migration registration:**
 
-```typescript
+```typescript pseudocode
 // src/schema-migration.ts
 registerMigration({
   from: "0.1.x",

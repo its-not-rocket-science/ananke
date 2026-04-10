@@ -40,7 +40,7 @@ jobs:
         run: npm run check-docs-tier1-imports
 
       - name: Typecheck TypeScript docs examples
-        run: npm run check-doc-ts-examples
+        run: npm run check:doc-examples
 
       - name: Reference app smoke test
         run: npx vitest run test/reference-tactical-duel-smoke.test.ts

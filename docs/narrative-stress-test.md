@@ -26,7 +26,7 @@ npm run build && node dist/tools/narrative-stress-cinema.js [seeds]
 
 A minimal scenario:
 
-```typescript
+```typescript pseudocode
 import {
   runNarrativeStressTest,
   formatStressTestReport,
@@ -92,7 +92,7 @@ console.log(formatStressTestReport(result));
 
 ### Beat predicate helpers
 
-```typescript
+```typescript pseudocode
 beatEntityDefeated(id)            // dead or consciousness ≤ 10 %
 beatEntitySurvives(id)            // alive and conscious
 beatTeamDefeated(teamId)          // every entity on team is down
@@ -383,7 +383,7 @@ Beats must fire within `[firstTick, lastTick]`. Use:
 Knights default to full plate. For rangers, samurai, gunslingers, gladiators,
 and most historical warriors, remove plate before returning the entity:
 
-```typescript
+```typescript pseudocode
 const hero = mkKnight(1, 1, 0, 0);
 hero.loadout.items = hero.loadout.items.filter(i => i.kind !== "armour");
 ```

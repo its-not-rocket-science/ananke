@@ -128,6 +128,8 @@ Copy this checklist into every PR description:
 - [ ] CHANGELOG.md updated if Stable or Experimental tier exports changed
 - [ ] README updated if the feature is user-facing (new phase, new tool, new quickstart)
 - [ ] ROADMAP updated if a planned item is completed
+- [ ] TypeScript snippets in `README.md` and `docs/**/*.md` are fenced as `ts example` or `ts pseudocode`
+- [ ] `npm run check:doc-examples` passes locally after docs edits
 
 ### Performance (check if touching kernel or AI path)
 - [ ] `npm run benchmark-check:strict` run locally; delta reported in PR description
@@ -270,4 +272,3 @@ Eligibility rules:
 - All merged external contributors are listed in `CONTRIBUTORS.md`.
 - Monthly “Top Contributor” is highlighted in `README.md` badge text.
 - Recognition criteria include: merged PR count, review quality, and regression-prevention impact.
-

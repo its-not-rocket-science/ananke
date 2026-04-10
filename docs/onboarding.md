@@ -43,7 +43,7 @@ Now write your own 10-line script that:
 
 ### Day 3 — Build a minimal game loop
 
-```typescript
+```typescript pseudocode
 import { stepWorld } from "ananke/src/kernel.js";
 import { WorldState, CommandMap } from "ananke/src/types.js";
 import { generateIndividual } from "ananke/src/generate.js";
@@ -72,7 +72,7 @@ the updated state.
 Every numeric attribute is a fixed-point integer, not a float.  Failing to account for this
 is the most common source of off-by-many-orders-of-magnitude bugs.
 
-```typescript
+```typescript pseudocode
 import { SCALE, q, qMul, mulDiv } from "ananke/src/units.js";
 
 // Physical: entity has peak force of 1.84 kN
@@ -141,7 +141,7 @@ npm run run:serialize
 
 Read `tools/serialize.ts` to understand the Map → array round-trip pattern:
 
-```typescript
+```typescript pseudocode
 // WorldState contains Map fields that don't survive JSON.stringify directly.
 // Use the helper:
 import { serializeWorldState, deserializeWorldState } from "ananke/src/campaign.js";
@@ -157,7 +157,7 @@ current kernel, but check your version) require a custom replacer/reviver.
 
 For UI integration:
 
-```typescript
+```typescript pseudocode
 import { formatCharacterSheet, formatOneLine } from "ananke/src/describe.ts";
 import { generateCombatNarrative } from "ananke/src/narrative.ts";
 

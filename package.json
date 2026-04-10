@@ -381,8 +381,9 @@
     "ref:host-coherence:web": "node examples/reference/host-coherence/server.mjs",
     "check-docs-tier1-imports": "node tools/check-docs-tier1-imports.mjs",
     "check-doc-version-sync": "node tools/check-doc-version-sync.mjs",
-    "check-doc-ts-examples": "node tools/check-doc-ts-examples.mjs",
-    "check-public-contract": "node dist/tools/check-public-contract.js"
+    "check-doc-ts-examples": "npm run check:doc-examples",
+    "check-public-contract": "node dist/tools/check-public-contract.js",
+    "check:doc-examples": "node dist/tools/check-doc-examples.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

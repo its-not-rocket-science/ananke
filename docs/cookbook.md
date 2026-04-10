@@ -37,7 +37,7 @@ If you can read and run one recipe in this document you can produce a working si
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 
 // 1. Create a world — world seed + entity list.
@@ -84,7 +84,7 @@ Entity 2 (team 2): dead
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 
 // 1. Create 500 entities across two teams.
@@ -134,7 +134,7 @@ console.log(`200 ticks × 500 agents — ${ms} ms — ${alive} survivors`);
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { generateSpeciesIndividual, type SpeciesDefinition } from "@its-not-rocket-science/ananke/species";
 import { q, SCALE } from "@its-not-rocket-science/ananke";
 
@@ -183,7 +183,7 @@ Strength: 2840 N
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q, SCALE } from "@its-not-rocket-science/ananke";
 
 // 1. Define a weapon item.
@@ -246,7 +246,7 @@ Dagger wielder shock:   0.95
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 // sidecar/src/main.ts — minimal 20 Hz sidecar
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 import { serializeBridgeFrame } from "@its-not-rocket-science/ananke/host-loop";
@@ -291,7 +291,7 @@ setInterval(() => {
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import {
   createPolity, createPolityRegistry, stepPolityDay,
   type PolityPair,
@@ -342,7 +342,7 @@ Day 90: England pop=60721 treasury=5140  France pop=121408 treasury=9380
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q, SCALE } from "@its-not-rocket-science/ananke";
 
 // 1. Define what you expect — a named scenario with a tolerance band.
@@ -422,7 +422,7 @@ RUNS=500 npm run run:what-if
 
 **Customise a scenario in `tools/what-if.ts`:**
 
-```typescript
+```typescript pseudocode
 {
   name: "My custom what-if",
   durationDays: 365,
@@ -451,7 +451,7 @@ RUNS=500 npm run run:what-if
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 import { serializeBridgeFrame } from "@its-not-rocket-science/ananke/host-loop";
 
@@ -516,7 +516,7 @@ for (let tick = 0; tick < 600; tick++) {
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 
 // 1. Create and advance a world.
@@ -571,7 +571,7 @@ Entity 1 shock — original: 1823   restored: 1823
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import {
   createWorld, stepWorld, q,
   ReplayRecorder, replayTo, serializeReplay, deserializeReplay,
@@ -666,7 +666,7 @@ Replay determinism check: ✅ identical
 
 **2. Load the pack at runtime:**
 
-```typescript
+```typescript pseudocode
 import { loadPack, listLoadedPacks } from "@its-not-rocket-science/ananke/content-pack";
 import { createWorld, q } from "@its-not-rocket-science/ananke";
 import { readFileSync } from "node:fs";
@@ -695,7 +695,7 @@ World created — entities: 2
 
 **3. Validate a pack before loading:**
 
-```typescript
+```typescript pseudocode
 import { validatePack } from "@its-not-rocket-science/ananke/content-pack";
 
 const errors = validatePack(manifest);
@@ -716,7 +716,7 @@ if (errors.length > 0) {
 
 All internal values use fixed-point integers.  Divide by the appropriate `SCALE` constant to get real SI values:
 
-```typescript
+```typescript pseudocode
 import { SCALE, q } from "@its-not-rocket-science/ananke";
 
 // Reading values:
@@ -736,7 +736,7 @@ Given the same seed and command sequence, `stepWorld` always produces identical 
 - Replay (recipe 11)
 - Server/client sync in multiplayer
 
-```typescript
+```typescript pseudocode
 // Two worlds with identical seed + commands produce identical output.
 const w1 = createWorld(42, entities);
 const w2 = createWorld(42, entities);
@@ -749,7 +749,7 @@ assert(w1.entities[0]!.injury.shock === w2.entities[0]!.injury.shock); // always
 
 Never use `Math.random()` in simulation logic.  Use a deterministic PRNG seeded from stable inputs instead:
 
-```typescript
+```typescript pseudocode
 function xorshift32(seed: number): number {
   let x = seed | 0;
   x ^= x << 13;

@@ -164,7 +164,7 @@ ws.onmessage = (ev) => {
 
 If you write your own sidecar, use the canonical serializer from the ananke package:
 
-```typescript
+```typescript pseudocode
 import { serializeBridgeFrame, type HostLoopConfig }
   from "@its-not-rocket-science/ananke/host-loop";
 import { stepWorld } from "@its-not-rocket-science/ananke";

@@ -15,7 +15,7 @@ When you need to retire a Tier 1 API:
 
 ### Example
 
-```ts
+```ts pseudocode
 /** @deprecated Use `stepWorld` instead. Will be removed in v2.0.0. */
 export function step(world: WorldState): WorldState {
   return stepWorld(world);

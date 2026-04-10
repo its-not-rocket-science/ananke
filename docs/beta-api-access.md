@@ -18,7 +18,7 @@ If you consume Tier 2/3 APIs in production:
 
 Use explicit subpath imports:
 
-```ts
+```ts pseudocode
 import { somethingExperimental } from "@its-not-rocket-science/ananke/tier2";
 import { unstableKernelHook } from "@its-not-rocket-science/ananke/tier3";
 ```

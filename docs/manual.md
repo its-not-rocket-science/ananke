@@ -28,7 +28,7 @@ Never put floating-point literals or `Math.random()` in simulation code.
 
 ### Minimal entity
 
-```typescript
+```typescript pseudocode
 import { generateIndividual } from "./src/generate.js";
 import { HUMAN_BASE } from "./src/archetypes.js";
 import { STARTER_WEAPONS } from "./src/equipment.js";
@@ -57,7 +57,7 @@ const fighter = {
 
 ### Using preset factories (Phase 15+)
 
-```typescript
+```typescript pseudocode
 import { mkBoxer, mkKnight, mkWrestler, mkOctopus } from "./src/presets.js";
 
 const proBoxer    = mkBoxer(1, 1, 0, 0, "pro");         // team 1 at (0,0)
@@ -69,7 +69,7 @@ const octopus     = mkOctopus(5, 2, to.m(2), 0);
 
 ### Using the historical weapons database
 
-```typescript
+```typescript pseudocode
 import { ALL_HISTORICAL_MELEE, ALL_HISTORICAL_RANGED, MEDIEVAL_RANGED } from "./src/weapons.js";
 
 const rapier    = ALL_HISTORICAL_MELEE.find(w => w.id === "wpn_rapier")!;
@@ -86,7 +86,7 @@ fighter.loadout.items = [rapier];
 
 ### Minimal loop
 
-```typescript
+```typescript pseudocode
 import { stepWorld, TICK_HZ } from "./src/sim/kernel.js";
 import { q } from "./src/units.js";
 
@@ -102,7 +102,7 @@ for (let i = 0; i < 5 * TICK_HZ; i++) {   // simulate 5 seconds
 
 ### Collecting trace events
 
-```typescript
+```typescript pseudocode
 import { CollectingTrace } from "./src/metrics.js";
 
 const tracer = new CollectingTrace();
@@ -116,7 +116,7 @@ tracer.clear();  // reset between runs
 
 ### KernelContext options
 
-```typescript
+```typescript pseudocode
 stepWorld(world, cmds, {
   tractionCoeff: q(0.9),           // surface friction (0 = ice, 1 = dry ground)
   trace: tracer,                    // TraceSink for all events
@@ -135,13 +135,13 @@ entity per tick are supported (e.g. attack + intent move).
 
 ### Melee attack
 
-```typescript
+```typescript pseudocode
 { kind: "attack", targetId: 2, weaponId: "wpn_rapier", intensity: q(1.0), mode: "strike" }
 ```
 
 ### Defence
 
-```typescript
+```typescript pseudocode
 { kind: "defend", mode: "parry",  intensity: q(0.8) }
 { kind: "defend", mode: "block",  intensity: q(1.0) }
 { kind: "defend", mode: "dodge",  intensity: q(0.6) }
@@ -149,14 +149,14 @@ entity per tick are supported (e.g. attack + intent move).
 
 ### Movement
 
-```typescript
+```typescript pseudocode
 { kind: "move", dir: { x: SCALE.m, y: 0, z: 0 }, intensity: q(1.0), mode: "sprint" }
 { kind: "move", dir: { x: SCALE.m, y: 0, z: 0 }, intensity: q(0.5), mode: "walk" }
 ```
 
 ### Ranged (shoot)
 
-```typescript
+```typescript pseudocode
 { kind: "shoot", targetId: 2, weaponId: "rng_handgun_9mm", intensity: q(1.0) }
 // optional ammo override:
 { kind: "shoot", targetId: 2, weaponId: "rng_assault_rifle", intensity: q(1.0), ammoId: "ammo_ap" }
@@ -164,7 +164,7 @@ entity per tick are supported (e.g. attack + intent move).
 
 ### Grapple
 
-```typescript
+```typescript pseudocode
 { kind: "grapple", targetId: 2, mode: "grab",  intensity: q(1.0) }  // start hold
 { kind: "grapple", targetId: 2, mode: "throw", intensity: q(1.0) }  // throw while holding
 { kind: "grapple", targetId: 2, mode: "choke", intensity: q(1.0) }  // choke hold
@@ -173,7 +173,7 @@ entity per tick are supported (e.g. attack + intent move).
 
 ### Medical treatment
 
-```typescript
+```typescript pseudocode
 { kind: "treat", targetId: 3, action: "tourniquet", regionId: "leftArm",
   equipmentId: "bandage", medicalSkill: q(1.0) }
 { kind: "treat", targetId: 3, action: "surgery", regionId: "torso",
@@ -182,7 +182,7 @@ entity per tick are supported (e.g. attack + intent move).
 
 ### Capability activation (magic/tech)
 
-```typescript
+```typescript pseudocode
 { kind: "activate", sourceId: "arcane_mana", effectId: "fireball", targetId: 2 }
 { kind: "activate", sourceId: "fusion_cell",  effectId: "force_shield" }
 ```
@@ -193,7 +193,7 @@ entity per tick are supported (e.g. attack + intent move).
 
 ### Injury
 
-```typescript
+```typescript pseudocode
 const e = world.entities.find(e => e.id === 2)!;
 
 e.injury.dead                    // boolean
@@ -213,14 +213,14 @@ torso.infectedTick     // -1 = none; >0 = tick infection started
 
 ### Kinematics
 
-```typescript
+```typescript pseudocode
 e.position_m.x   // fixed-point metres (divide by SCALE.m for real metres)
 e.velocity_mps.x // fixed-point m/s (divide by SCALE.mps for real m/s)
 ```
 
 ### Condition / morale
 
-```typescript
+```typescript pseudocode
 e.condition.fearQ           // Q: 0..SCALE.Q
 e.condition.suppressedTicks // int: ticks of active suppression
 e.condition.prone           // boolean
@@ -231,7 +231,7 @@ e.condition.pinned          // boolean
 
 ## 6. Combat analytics
 
-```typescript
+```typescript pseudocode
 import { collectMetrics, survivalRate, meanTimeToIncapacitation } from "./src/metrics.js";
 
 const m = collectMetrics(tracer.events);
@@ -252,7 +252,7 @@ meanTimeToIncapacitation(tracer.events, [1,2], 200)  // mean ticks; survivors �
 
 Convert trace events to human-readable text with `src/narrative.ts`. No kernel dependency.
 
-```typescript
+```typescript pseudocode
 import { narrateEvent, buildCombatLog, describeInjuries, describeCombatOutcome }
   from "./src/narrative.js";
 import { ALL_HISTORICAL_MELEE, ALL_HISTORICAL_RANGED } from "./src/weapons.js";
@@ -301,7 +301,7 @@ console.log(describeCombatOutcome(combatants, world.tick));
 
 Translate SI attributes into readable summaries (no sim dependency):
 
-```typescript
+```typescript pseudocode
 import { describeCharacter, formatCharacterSheet, formatOneLine } from "./src/describe.js";
 import { generateIndividual } from "./src/generate.js";
 import { PRO_BOXER } from "./src/archetypes.js";
@@ -324,7 +324,7 @@ Tier 3 anchors to `HUMAN_BASE` nominal values. Tier 6 is superhuman/mechanical/d
 
 Record any simulation and seek to any past tick:
 
-```typescript
+```typescript pseudocode
 import { ReplayRecorder, replayTo, serializeReplay, deserializeReplay } from "./src/replay.js";
 
 const recorder = new ReplayRecorder(world);
@@ -349,7 +349,7 @@ const same     = replayTo(restored, 100, ctx);  // identical to worldAt100
 The built-in AI system uses the same perception and decision pipeline as player-controlled
 entities, but driven by `AIPolicy` presets.
 
-```typescript
+```typescript pseudocode
 import { buildAICommands } from "./src/sim/ai/system.js";
 import { AI_PRESETS } from "./src/sim/ai/presets.js";
 import { buildSpatialIndex } from "./src/sim/spatial.js";
@@ -370,7 +370,7 @@ Available presets: `lineInfantry` (advances, attacks, seeks cover when suppresse
 
 ## 11. Technology eras and capability gating
 
-```typescript
+```typescript pseudocode
 import { TechEra, defaultTechContext } from "./src/sim/tech.js";
 import { validateLoadout } from "./src/equipment.js";
 
@@ -391,7 +391,7 @@ Contemporary → NearFuture → DeepSpace.
 Magic systems (`ArcaneMagic`, `DivineMagic`, `Psionics`, `Nanotech`) are not assigned to
 any era — opt in explicitly:
 
-```typescript
+```typescript pseudocode
 const ctx = defaultTechContext(TechEra.Medieval);
 ctx.available.add("ArcaneMagic");
 ctx.available.add("DivineMagic");
@@ -405,7 +405,7 @@ Magic and advanced technology resolve through the same engine primitives.
 A mana pool and a fusion reactor are both `CapabilitySource` with `reserve_J`.
 A fireball and a plasma grenade are both `impact` payloads with `DamageChannel.Thermal`.
 
-```typescript
+```typescript pseudocode
 import type { CapabilitySource } from "./src/sim/capability.js";
 import { DamageChannel } from "./src/channels.js";
 import { to, q } from "./src/units.js";
@@ -441,7 +441,7 @@ cmds.set(entity.id, [{ kind: "activate", sourceId: "arcane_mana", effectId: "fir
 
 ### Statistical sweep (50 seeds)
 
-```typescript
+```typescript pseudocode
 let wins = 0;
 for (let seed = 0; seed < 50; seed++) {
   const w = buildFreshWorld(seed);
@@ -453,7 +453,7 @@ console.log(`Win rate: ${(wins / 50 * 100).toFixed(0)}%`);
 
 ### Checking if a fight is over
 
-```typescript
+```typescript pseudocode
 function fightOver(world: WorldState): boolean {
   const teamsAlive = new Set(
     world.entities
@@ -466,7 +466,7 @@ function fightOver(world: WorldState): boolean {
 
 ### Applying a one-shot explosion
 
-```typescript
+```typescript pseudocode
 import { applyExplosion } from "./src/sim/kernel.js";
 import { v3 } from "./src/sim/vec3.js";
 import { to, SCALE } from "./src/units.js";
@@ -481,7 +481,7 @@ applyExplosion(world, v3(to.m(5), to.m(5), 0), {
 
 ### Fall damage
 
-```typescript
+```typescript pseudocode
 import { applyFallDamage } from "./src/sim/kernel.js";
 
 applyFallDamage(world, entityId, to.m(4), world.tick, tracer);  // 4-metre fall
@@ -493,7 +493,7 @@ applyFallDamage(world, entityId, to.m(4), world.tick, tracer);  // 4-metre fall
 
 `src/sim/testing.ts` provides `mkHumanoidEntity` and `mkWorld` for writing tests:
 
-```typescript
+```typescript pseudocode
 import { mkHumanoidEntity, mkWorld } from "./src/sim/testing.js";
 
 const attacker = mkHumanoidEntity(1, 1, 0, 0);      // id=1, team=1, at (0,0)

@@ -42,7 +42,7 @@ Use only Tier-1 root exports for your first integration.
 
 ## Golden path (Tier-1 only)
 
-```ts
+```ts example
 import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
 
 const world = createWorld(7, [
@@ -65,7 +65,7 @@ That loop is the integration baseline: create world, issue commands, step determ
 
 Import Tier-1 from root only:
 
-```ts
+```ts pseudocode
 import { ... } from "@its-not-rocket-science/ananke";
 ```
 

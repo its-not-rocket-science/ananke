@@ -40,7 +40,7 @@ species — only a `BodyPlan` and a matching `Archetype` baseline.
 
 ### Minimal humanoid-variant template
 
-```typescript
+```typescript pseudocode
 // my-species/bodyplan.ts
 import type { BodyPlan } from "ananke/src/sim/bodyplan.js";
 
@@ -64,7 +64,7 @@ export const MY_SPECIES_BODY_PLAN: BodyPlan = {
 
 ### Matching archetype baseline
 
-```typescript
+```typescript pseudocode
 // my-species/archetype.ts
 import type { Archetype } from "ananke/src/archetypes.js";
 import { q } from "ananke/src/units.js";
@@ -160,7 +160,7 @@ renderer-consumable data.  See `docs/bridge-api.md` for the full API reference.
 
 ### Minimal Unity adapter sketch
 
-```typescript
+```typescript pseudocode
 // Not a Unity file — this is a TypeScript data-extraction layer that outputs
 // a JSON blob your Unity C# code can consume via a WebSocket or named pipe.
 

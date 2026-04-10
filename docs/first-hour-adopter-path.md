@@ -2,7 +2,7 @@
 
 This path is for teams who want a **working deterministic loop in under 60 minutes** using only Tier 1 APIs from:
 
-```ts
+```ts pseudocode
 import { ... } from "@its-not-rocket-science/ananke";
 ```
 
@@ -55,7 +55,7 @@ You should see the same final tick, same casualty state, and identical replay fr
 
 Use this exact host shape in your game/server process:
 
-```ts
+```ts pseudocode
 import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
 
 const world = createWorld(7, [

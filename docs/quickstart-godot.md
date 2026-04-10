@@ -144,7 +144,7 @@ The `BridgeFrame` and `BridgeEntitySnapshot` types mirror the wire format exactl
 
 The sidecar uses `serializeBridgeFrame` from `@its-not-rocket-science/ananke/host-loop`:
 
-```typescript
+```typescript pseudocode
 import { serializeBridgeFrame } from "@its-not-rocket-science/ananke/host-loop";
 
 const frame = serializeBridgeFrame(world, { scenarioId: "my-scene", tickHz: 20 });
