@@ -37,6 +37,7 @@ Example:
 ```ts
 import { stampSnapshot, validateSnapshot } from "@its-not-rocket-science/ananke/schema";
 
+const world = {} as Parameters<typeof stampSnapshot>[0];
 const stamped = stampSnapshot(world, "world");
 const errors = validateSnapshot(stamped);
 if (errors.length > 0) throw new Error("invalid snapshot");
@@ -62,6 +63,8 @@ Example:
 ```ts
 import { ReplayRecorder, serializeReplay, deserializeReplay, replayTo } from "@its-not-rocket-science/ananke";
 
+const world = {} as ConstructorParameters<typeof ReplayRecorder>[0];
+const ctx = {} as Parameters<typeof replayTo>[2];
 const recorder = new ReplayRecorder(world);
 // ... record frames while stepping
 const json = serializeReplay(recorder.toReplay());
