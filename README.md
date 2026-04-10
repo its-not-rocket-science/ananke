@@ -6,52 +6,41 @@
 > **Package:** `@its-not-rocket-science/ananke`  
 > **Stable API contract:** [`STABLE_API.md`](STABLE_API.md)
 
-Ananke is a deterministic simulation engine for combat and world-state replay.
-Given the same seed and command stream, it produces bit-for-bit reproducible results.
+Ananke is a **deterministic combat simulation kernel**.
 
----
+If you run the same seed + same command stream, you get the same outcome. That is the core promise.
 
-## What it is
+## Start here (first 10 minutes)
 
-Ananke provides a fixed-point simulation kernel with:
+Use only Tier-1 root exports for your first integration.
 
-- deterministic stepping (`stepWorld`)
-- reproducible world creation and scenario loading
-- replay capture and playback
-- host/renderer bridge snapshots for downstream visualization
-
-It is designed for lockstep networking, replay-heavy workflows, and integrations where reproducibility is non-negotiable.
-
----
-
-## Golden path
-
-For first-time adopters, use this path and stay on Tier 1 root exports.
-
-1. Install and build:
+1. Install dependencies.
 
    ```bash
    npm install
+   ```
+
+2. Build once.
+
+   ```bash
    npm run build
    ```
 
-2. Run the guided first-hour example:
+3. Run the guided adopter example.
 
    ```bash
    npm run example:first-hour
    ```
 
-3. Run it again to confirm deterministic output:
+4. Run it again (same output = deterministic behavior confirmed).
 
    ```bash
    npm run example:first-hour
    ```
 
-4. Follow the full walkthrough:
+5. If you want the full walkthrough, continue with [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md).
 
-   - [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md)
-
-Minimal Tier 1 host loop:
+## Golden path (Tier-1 only)
 
 ```ts
 import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
@@ -70,73 +59,55 @@ for (let tick = 0; tick < 180; tick++) {
 }
 ```
 
----
+That loop is the integration baseline: create world, issue commands, step deterministically.
 
-## Stable API
+## Tier-1 API surface (stable)
 
-Import Tier 1 only from the package root:
+Import Tier-1 from root only:
 
 ```ts
 import { ... } from "@its-not-rocket-science/ananke";
 ```
 
-Tier 1 includes:
+Tier-1 is intentionally small:
 
 - fixed-point utilities (`q`, `SCALE`, conversion helpers)
 - host types (`Entity`, `WorldState`, `Command`, `CommandMap`, `KernelContext`)
-- creation/loading (`createWorld`, `loadScenario`, `validateScenario`)
+- world creation/scenario loading (`createWorld`, `loadScenario`, `validateScenario`)
 - stepping (`stepWorld`)
-- replay and serialization (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`)
+- replay serialization (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`)
 - bridge extraction (`extractRigSnapshots`, `deriveAnimationHints`)
-
-Stability tiers:
-
-| Tier | Guarantee | Import style |
-|---|---|---|
-| **Tier 1 — Stable** | Semver-protected (breaking changes require major bump) | `@its-not-rocket-science/ananke` |
-| **Tier 2 — Experimental** | May change in minor releases | `@its-not-rocket-science/ananke/tier2` or domain subpaths |
-| **Tier 3 — Internal** | No stability guarantee | `@its-not-rocket-science/ananke/tier3` and internal subpaths |
 
 Source of truth:
 
 - [`STABLE_API.md`](STABLE_API.md)
 - [`docs/stable-api-manifest.json`](docs/stable-api-manifest.json)
 
----
+## What this project is not
 
-## When to use it
+Ananke is **not**:
 
-Use Ananke when you need:
+- a game engine (rendering, scene graphs, input systems)
+- a complete networking stack
+- a batteries-included content pipeline
+- a no-code world builder
+- a guarantee that Tier-2/Tier-3 symbols will stay stable
 
-- deterministic simulation across machines/runs
-- replayability for debugging, analytics, or adjudication
-- physics-grounded combat/state progression instead of ad hoc rules
-- a kernel that can be integrated into Unity, Godot, web, or custom hosts
+If you need deterministic kernel behavior with host-controlled integration, it is a fit.
 
-Ananke is likely the wrong fit if non-deterministic behavior is acceptable and reproducibility is not a requirement.
+## Beyond the first integration
 
----
+After your first deterministic loop succeeds, then explore broader modules and ecosystem docs:
 
-## Further reading
+- [`docs/host-contract.md`](docs/host-contract.md)
+- [`docs/bridge-contract.md`](docs/bridge-contract.md)
+- [`docs/wire-protocol.md`](docs/wire-protocol.md)
+- [`docs/module-index.md`](docs/module-index.md)
+- [`docs/project-overview.md`](docs/project-overview.md)
+- [`docs/recipes-matrix.md`](docs/recipes-matrix.md)
 
-- **Layer A — First hour**
-  - [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md)
-  - [`STABLE_API.md`](STABLE_API.md)
-- **Layer B — Host app**
-  - [`docs/host-contract.md`](docs/host-contract.md)
-  - [`docs/bridge-contract.md`](docs/bridge-contract.md)
-  - [`docs/wire-protocol.md`](docs/wire-protocol.md)
-- **Layer C — Campaign builder**
-  - [`docs/module-index.md`](docs/module-index.md)
-  - [`docs/project-overview.md`](docs/project-overview.md)
-  - [`docs/recipes-matrix.md`](docs/recipes-matrix.md)
-- **Layer D — Advanced research/content**
-  - [`docs/small-feeling-package-strategy.md`](docs/small-feeling-package-strategy.md)
-  - [`docs/content-pack-threat-model.md`](docs/content-pack-threat-model.md)
-  - [`docs/conformance/README.md`](docs/conformance/README.md)
-- Additional references:
-  - [`docs/onboarding.md`](docs/onboarding.md)
-  - [`docs/programmers-guide.md`](docs/programmers-guide.md)
-  - [`docs/versioning.md`](docs/versioning.md)
-  - [`docs/performance.md`](docs/performance.md)
-  - [`docs/emergent-validation-report.md`](docs/emergent-validation-report.md)
+## Clean map
+
+- **Use Tier-1 if you are integrating.**
+- **Use Tier-2 if you are experimenting.**
+- **Read `project-overview` only after the first successful integration.**
