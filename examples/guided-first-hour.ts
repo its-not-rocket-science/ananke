@@ -13,6 +13,23 @@ import {
   type CommandMap,
 } from "../src/index.js";
 
+type FirstHourEntitySummary = {
+  id: number;
+  dead: boolean;
+  consciousness: number;
+};
+
+type FirstHourResult = {
+  seed: number;
+  maxTicks: number;
+  finalTick: number;
+  replayFrames: number;
+  replayFinalTick: number;
+  deterministicReplayMatch: boolean;
+  entities: FirstHourEntitySummary[];
+  success: boolean;
+};
+
 const seed = 7;
 const maxTicks = 180;
 
@@ -52,16 +69,26 @@ for (let tick = 0; tick < maxTicks; tick++) {
   if (everyoneDown) break;
 }
 
-const [entityA, entityB] = world.entities;
-console.log(`first-hour: tick=${world.tick}`);
-console.log(`entity-1 dead=${entityA?.injury.dead} consciousness=${entityA?.injury.consciousness}`);
-console.log(`entity-2 dead=${entityB?.injury.dead} consciousness=${entityB?.injury.consciousness}`);
-
 const replay = recorder.toReplay();
 const encoded = serializeReplay(replay);
 const decoded = deserializeReplay(encoded);
 const targetTick = decoded.frames[decoded.frames.length - 1]?.tick ?? 0;
 const replayWorld = replayTo(decoded, targetTick, { tractionCoeff: q(0.9) });
 
-console.log(`replay-frames=${decoded.frames.length}`);
-console.log(`replay-final-tick=${replayWorld.tick}`);
+const summary: FirstHourResult = {
+  seed,
+  maxTicks,
+  finalTick: world.tick,
+  replayFrames: decoded.frames.length,
+  replayFinalTick: replayWorld.tick,
+  deterministicReplayMatch: replayWorld.tick === world.tick,
+  entities: world.entities.map((entity) => ({
+    id: entity.id,
+    dead: entity.injury.dead,
+    consciousness: entity.injury.consciousness,
+  })),
+  success: decoded.frames.length > 0 && replayWorld.tick === world.tick,
+};
+
+console.log(`FIRST_HOUR_RESULT ${JSON.stringify(summary)}`);
+console.log(`FIRST_HOUR_SUCCESS ${summary.success ? "PASS" : "FAIL"}`);
