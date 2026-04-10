@@ -1,83 +1,123 @@
-# First-Hour Adopter Path (Stable API Only)
+# First-Hour Adopter Path (Deterministic + Measurable)
 
-This path is for teams who want a **working deterministic loop in under 60 minutes** using only Tier 1 APIs from:
+This is the only path a new adopter needs for the first 60 minutes.
 
-```ts pseudocode
-import { ... } from "@its-not-rocket-science/ananke";
-```
+- Entry example: `examples/guided-first-hour.ts`
+- Command: `npm run example:first-hour`
+- Validation command: `npm run test:first-hour-smoke`
 
-If you are new, start here before the deep docs.
+## First-hour success funnel
 
-The only first-hour runnable example is `examples/guided-first-hour.ts`. All other examples are advanced/reference paths.
-
-## Success checklist
-
-By the end of this hour you will:
-
-1. Install and build the project.
-2. Run one guided duel example.
-3. Verify deterministic replay with the same seed and commands.
-4. Know where to go next for advanced integration.
-
----
-
-## Step 1 (10 min): Install and build
+### Step 1 (10 min): Install and build
 
 ```bash
 npm install
 npm run build
 ```
 
-## Step 2 (15 min): Run the guided first-hour example
+### Step 2 (10 min): Run the guided example once
 
 ```bash
 npm run example:first-hour
 ```
 
-What this example proves:
+### Step 3 (10 min): Verify deterministic output markers
 
-- You can create a world from simple `EntitySpec` records.
-- You can step the world with explicit commands.
-- You can record + replay deterministic frames.
-
-## Step 3 (15 min): Validate deterministic output
-
-Run the same command twice:
+Run the smoke test:
 
 ```bash
-npm run example:first-hour
-npm run example:first-hour
+npm run test:first-hour-smoke
 ```
 
-You should see the same final tick, same casualty state, and identical replay frame count.
+This runs the example twice and fails if stable output markers are missing or if the payload changes.
 
-## Step 4 (20 min): Integrate the minimal host loop
+### Step 4 (10 min): Confirm success criteria
 
-Use this exact host shape in your game/server process:
+You are successful in the first hour only if all are true:
 
-```ts pseudocode
-import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
+1. `FIRST_HOUR_SUCCESS PASS` is printed by the example.
+2. `FIRST_HOUR_RESULT ...` is printed and parses as JSON.
+3. `deterministicReplayMatch` is `true`.
+4. `replayFrames` is greater than `0`.
+5. Two consecutive runs produce exactly identical `FIRST_HOUR_RESULT` JSON.
 
-const world = createWorld(7, [
-  { id: 1, teamId: 1, seed: 7001, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword", armourId: "arm_mail", x_m: -1.2 },
-  { id: 2, teamId: 2, seed: 7002, archetype: "HUMAN_BASE", weaponId: "wpn_club", x_m: 1.2 },
-]);
+## Exact expected output shape
 
-for (let tick = 0; tick < 180; tick++) {
-  const commands: CommandMap = new Map([
-    [1, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
-    [2, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
-  ]);
-  stepWorld(world, commands, { tractionCoeff: q(0.9) });
+`npm run example:first-hour` must print one line beginning with `FIRST_HOUR_RESULT ` followed by JSON in this shape:
+
+```json
+{
+  "seed": 7,
+  "maxTicks": 180,
+  "finalTick": 180,
+  "replayFrames": 180,
+  "replayFinalTick": 180,
+  "deterministicReplayMatch": true,
+  "entities": [
+    {
+      "id": 1,
+      "dead": false,
+      "consciousness": 12345
+    },
+    {
+      "id": 2,
+      "dead": true,
+      "consciousness": 0
+    }
+  ],
+  "success": true
 }
 ```
 
----
+Notes:
 
-## What to read next (advanced docs preserved)
+- `finalTick`, `replayFrames`, and `consciousness` values are deterministic for a given version + seed, but may differ across versions.
+- The shape and marker names are stable for first-hour verification.
 
-- Stable contract: [`STABLE_API.md`](../STABLE_API.md)
-- Full host integration details: [`docs/host-contract.md`](host-contract.md)
-- Architecture and deep technical notes: [`docs/integration-primer.md`](integration-primer.md)
-- Recipes catalog: [`docs/recipes-matrix.md`](recipes-matrix.md)
-- Cookbook walkthroughs: [`docs/cookbook.md`](cookbook.md)
+## Failure troubleshooting (exact)
+
+If first-hour verification fails, use this sequence:
+
+1. Build artifacts missing (`Cannot find dist/...`):
+
+   ```bash
+   npm run build
+   ```
+
+2. Example marker missing (`FIRST_HOUR_RESULT` not found):
+
+   ```bash
+   npm run example:first-hour
+   ```
+
+   Ensure output includes both marker lines:
+   - `FIRST_HOUR_RESULT ...`
+   - `FIRST_HOUR_SUCCESS PASS`
+
+3. Smoke test reports payload mismatch between runs:
+
+   ```bash
+   npm run test:first-hour-smoke
+   ```
+
+   Then re-run once more to confirm:
+
+   ```bash
+   npm run example:first-hour
+   npm run example:first-hour
+   ```
+
+   If payload differs, check for local modifications affecting seeds, command generation, or stepping inputs in `examples/guided-first-hour.ts`.
+
+4. Build errors (TypeScript):
+
+   ```bash
+   npm run build
+   ```
+
+   Fix reported errors and rerun until build succeeds.
+
+## Next step after first hour
+
+- **Game/server integrator next step:** implement your host tick loop contract in `docs/host-contract.md`.
+- **Renderer integrator next step:** implement frame extraction + interpolation flow in `docs/bridge-contract.md`.

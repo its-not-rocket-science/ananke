@@ -385,7 +385,8 @@
     "check-public-contract": "node dist/tools/check-public-contract.js",
     "check:doc-examples": "node dist/tools/check-doc-examples.js",
     "generate-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --write",
-    "check-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --check"
+    "check-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --check",
+    "test:first-hour-smoke": "npm run build && node tools/first-hour-smoke.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

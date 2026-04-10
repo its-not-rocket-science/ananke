@@ -41,19 +41,19 @@ Do **not** adopt it if you want a full game engine, visual editor, or turnkey ne
    npm run build
    ```
 
-2. Run the first-hour guided example.
+2. Run the guided first-hour example (prints deterministic markers).
 
    ```bash
    npm run example:first-hour
    ```
 
-3. Run it a second time to verify repeatability.
+3. Run the measurable smoke verification.
 
    ```bash
-   npm run example:first-hour
+   npm run test:first-hour-smoke
    ```
 
-4. Follow the linked first-hour path: [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md).
+4. Follow the first-hour funnel: [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md).
 
 Minimal deterministic loop:
 
@@ -112,25 +112,10 @@ These are available exports but outside the Tier-1 semver promise (unless separa
 
 Treat these surfaces as adopt-with-version-pinning.
 
-## Exact next docs to read
+## Next steps after the first hour
 
-After the 10-minute path, read in this order:
-
-1. [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md)
-2. [`docs/host-contract.md`](docs/host-contract.md)
-3. [`docs/public-contract.md`](docs/public-contract.md)
-4. [`docs/bridge-contract.md`](docs/bridge-contract.md)
-5. [`docs/wire-protocol.md`](docs/wire-protocol.md)
-6. [`docs/module-index.md`](docs/module-index.md)
-
-## Advanced surfaces
-
-These are intentionally secondary to kernel adoption:
-
-- ecosystem orientation: [`docs/project-overview.md`](docs/project-overview.md)
-- recipe lookup by use case: [`docs/recipes-matrix.md`](docs/recipes-matrix.md)
-- export maturity snapshot: [`docs/export-status-matrix.md`](docs/export-status-matrix.md)
-- performance and conformance tooling: [`docs/performance.md`](docs/performance.md), [`conformance/`](conformance)
+- Game/server integrator: [`docs/host-contract.md`](docs/host-contract.md)
+- Renderer integrator: [`docs/bridge-contract.md`](docs/bridge-contract.md)
 
 ## What this project is not
 
