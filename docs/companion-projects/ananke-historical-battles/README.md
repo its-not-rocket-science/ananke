@@ -160,7 +160,7 @@ ananke-historical-battles/
 
 Each scenario file exports two objects:
 
-```typescript
+```typescript pseudocode
 // src/scenarios/agincourt.ts
 import type { ArenaScenario } from "../../ananke/dist/src/arena.js";
 import type { DirectValidationScenario } from "../../ananke/dist/src/tools/validation.js";

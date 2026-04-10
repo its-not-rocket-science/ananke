@@ -4,7 +4,7 @@ Ananke ships an AssemblyScript core (`wasm/ananke-core.wasm`) and a TypeScript b
 
 ## Node.js
 
-```ts
+```ts pseudocode
 import { initAnankeWasm } from "@its-not-rocket-science/ananke/dist/src/wasm/bridge.js";
 
 const bridge = await initAnankeWasm();

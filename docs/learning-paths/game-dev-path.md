@@ -2,12 +2,16 @@
 
 ## Step 1 — Determinism basics
 
-```ts
-import { createWorld, stepWorld } from '@its-not-rocket-science/ananke';
+```ts example
+import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
 
-const world = createWorld({ seed: 42, tickRate: 20 });
-for (let i = 0; i < 10; i += 1) stepWorld(world, []);
-console.log(world.hash);
+const world = createWorld(42, [
+  { id: 1, teamId: 1, seed: 1001, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword", armourId: "arm_mail", x_m: -1 },
+  { id: 2, teamId: 2, seed: 1002, archetype: "HUMAN_BASE", weaponId: "wpn_club", x_m: 1 },
+]);
+const commands: CommandMap = new Map();
+for (let i = 0; i < 10; i += 1) stepWorld(world, commands, { tractionCoeff: q(0.9) });
+console.log(world.tick);
 ```
 
 Expected output:

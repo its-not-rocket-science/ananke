@@ -122,7 +122,7 @@ GET /runs?scenario=Pneumonic+Plague&minDeaths=50
 The ingest pipeline reads an Ananke replay file (`ReplayRecord[]`) and normalises it into the
 database.  Key Ananke types used:
 
-```typescript
+```typescript pseudocode
 import { ReplayRecord, ReplayRecorder } from "ananke/replay";
 import { serializeWorld }               from "ananke/serialize";
 ```

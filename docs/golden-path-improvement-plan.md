@@ -73,7 +73,7 @@ By end of Week 2, a new user should be able to:
 
 ### Proposed error shape
 
-```ts
+```ts pseudocode
 export type AnankeErrorCode = `E${number}`;
 
 export class AnankeError extends Error {

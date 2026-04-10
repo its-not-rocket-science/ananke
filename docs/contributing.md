@@ -49,7 +49,7 @@ Prefer external (companion repository) placement for:
 
 Every value that flows through `stepWorld` must use fixed-point integers:
 
-```typescript
+```typescript pseudocode
 // CORRECT — fixed-point
 const speed_Smps: number = mulDiv(baseSpeed, modifier, SCALE.Q);
 
@@ -64,7 +64,7 @@ where needed, but never in `src/sim/` or `src/kernel.ts`.
 
 All randomness must flow through `makeRng` seeded by `eventSeed`:
 
-```typescript
+```typescript pseudocode
 import { eventSeed, makeRng } from "./rng.js";
 
 const seed = eventSeed(world.seed, tick, entityA.id, entityB.id, SALT_MY_SYSTEM);
@@ -95,7 +95,7 @@ declarations.
 TypeScript's `exactOptionalPropertyTypes` flag is on.  Never assign `undefined` to an optional
 field — use a conditional spread instead:
 
-```typescript
+```typescript pseudocode
 // CORRECT
 return {
   ...base,
@@ -143,7 +143,7 @@ test/widget.test.ts        Unit tests; all exported functions covered
 
 Minimal module skeleton:
 
-```typescript
+```typescript pseudocode
 // src/sim/widget.ts
 
 import { type Q, SCALE, q, clampQ, mulDiv } from "../../src/units.js";

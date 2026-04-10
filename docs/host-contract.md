@@ -12,7 +12,7 @@ Anything not in Tier 1 must be imported from explicit Tier 2 / Tier 3 subpaths.
 
 ## 1) World creation
 
-```ts
+```ts pseudocode
 import { createWorld } from "@its-not-rocket-science/ananke";
 import type { EntitySpec } from "@its-not-rocket-science/ananke";
 
@@ -80,7 +80,7 @@ const hints = deriveAnimationHints(world.entities[0]!);
 
 Use explicit subpaths for non-stable APIs:
 
-```ts
+```ts pseudocode
 import { BridgeEngine } from "@its-not-rocket-science/ananke/tier2";
 import { resolveTacticalEngagement } from "@its-not-rocket-science/ananke/tier3";
 ```

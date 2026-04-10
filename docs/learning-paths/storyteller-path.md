@@ -2,10 +2,16 @@
 
 ## Step 1 — Narrative logs
 
-```ts
-import { generateNarrativeLog } from '@its-not-rocket-science/ananke/narrative';
+```ts example
+import { describeAction } from "@its-not-rocket-science/ananke/narrative";
 
-console.log(generateNarrativeLog({ seed: 99, turns: 3 }));
+const line = describeAction(
+  { kind: "melee", hit: true, damage: 14, region: "shield arm" },
+  { attackerName: "Captain Vela", targetName: "Marauder", weaponName: "spear" },
+  { verbosity: "cinematic" },
+);
+
+console.log(line);
 ```
 
 Expected output:
@@ -16,9 +22,12 @@ Turn 1: The shield wall bends, but does not break.
 
 ## Step 2 — Plausibility scoring
 
-```ts
+```ts example
 import { scorePlausibility } from '@its-not-rocket-science/ananke/narrative';
-console.log(scorePlausibility('The cavalry charge collapses under mud and fear.'));
+console.log(scorePlausibility(
+  { winnerTeamId: 1, rareEventRolls: [{ label: "mud-slide flank", chance: 0.3, happened: true }] },
+  { expectedWinnerTeamId: 1, desiredBeat: "clean_victory" },
+));
 ```
 
 Expected output:

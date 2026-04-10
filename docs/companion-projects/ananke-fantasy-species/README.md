@@ -57,7 +57,7 @@ git clone https://github.com/its-not-rocket-science/ananke-fantasy-species.git
 
 ## How to use
 
-```typescript
+```typescript pseudocode
 import { generateIndividual } from "../ananke/dist/src/generate.js";
 import { ELF_BODY_PLAN, ELF_WARRIOR_ARCHETYPE } from "../ananke-fantasy-species/dist/src/elf/index.js";
 
@@ -213,7 +213,7 @@ For truly non-humanoid species, refer to the quadruped and octopoid examples in 
 
 Every species must pass these two checks. The test runner is Vitest (same as Ananke).
 
-```typescript
+```typescript pseudocode
 // tests/elf.test.ts
 import { describe, it, expect } from "vitest";
 import { generateIndividual } from "../../ananke/dist/src/generate.js";

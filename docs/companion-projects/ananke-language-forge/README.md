@@ -112,7 +112,7 @@ The forge reads Ananke campaign exports produced by `serializeCampaign` (Tier 2 
 
 Per-entity linguistic intelligence score (`q(0)` to `q(1.0)`). Factions with high average linguistic intelligence develop more complex grammar and larger vocabularies. Factions with low scores tend toward simpler, more context-dependent communication.
 
-```typescript
+```typescript pseudocode
 // How it's read
 const avgLinguistic = faction.memberIds
   .map(id => world.entities.get(id)?.attributes?.cognition?.linguistic ?? SCALE.Q / 2)

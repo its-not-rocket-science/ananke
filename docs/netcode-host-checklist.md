@@ -32,7 +32,7 @@ participant applies exactly the same inputs at every tick.
 All inputs must be serialised into a `CommandMap` before being applied.
 A `CommandMap` is `Map<entityId: number, Command[]>`.
 
-```typescript
+```typescript pseudocode
 // The canonical command type
 import type { Command } from "@its-not-rocket-science/ananke";
 
@@ -56,7 +56,7 @@ const encoded = {
 
 ## 4. Desync detection with `hashWorldState`
 
-```typescript
+```typescript pseudocode
 import { hashWorldState } from "@its-not-rocket-science/ananke/netcode";
 
 // After each tick on each peer:
@@ -81,7 +81,7 @@ of the deterministic simulation core.
 
 When a desync is detected, the authoritative server sends a full world snapshot:
 
-```typescript
+```typescript pseudocode
 // Server
 import { serializeReplay } from "@its-not-rocket-science/ananke";
 
@@ -104,7 +104,7 @@ world = JSON.parse(snapshotJson);
 
 Record replays from both clients to diagnose persistent desyncs:
 
-```typescript
+```typescript pseudocode
 // Both peers record their replay
 import { ReplayRecorder, serializeReplay } from "@its-not-rocket-science/ananke";
 

@@ -67,7 +67,7 @@ Note: `condition` fields are `shockQ`, `fearQ`, `consciousness`, `fluidLoss`, an
 
 ## 3.1 Tier-1 root quickstart (stable)
 
-```ts
+```ts pseudocode
 import {
   createWorld,
   stepWorld,
@@ -92,7 +92,7 @@ console.log(snapshots.length, anim.idle / SCALE.Q);
 
 ## 3.2 Tier-2 bridge quickstart (explicitly unstable)
 
-```ts
+```ts pseudocode
 import { createWorld, stepWorld, extractRigSnapshots, q, SCALE } from "@its-not-rocket-science/ananke";
 import { BridgeEngine, type BridgeConfig } from "@its-not-rocket-science/ananke/tier2";
 
