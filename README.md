@@ -6,111 +6,140 @@
 > **Package:** `@its-not-rocket-science/ananke`  
 > **Stable API contract:** [`STABLE_API.md`](STABLE_API.md)
 
-Ananke is a **deterministic combat simulation kernel**.
+## What it is
 
-If you run the same seed + same command stream, you get the same outcome. That is the core promise.
+Ananke is a deterministic simulation kernel for host applications.
 
-## Start here (first 10 minutes)
+Core contract:
 
-Use only Tier-1 root exports for your first integration.
+- same initial world state
+- same command stream
+- same tick count
+- same engine version
 
-1. Install dependencies.
+=> same outcome.
+
+The package is designed so you can keep rendering, networking, persistence, and tooling in your own stack while delegating deterministic simulation to Ananke.
+
+## Why you would use it
+
+Use Ananke when you need deterministic simulation you can reproduce and verify:
+
+- lockstep or replayable simulation loops
+- authoritative host control over commands and timing
+- repeatable test fixtures for simulation behavior
+- strict root-import API for long-lived integrations
+
+Do **not** adopt it if you want a full game engine, visual editor, or turnkey networking/runtime platform.
+
+## 10-minute success path
+
+1. Install and build.
 
    ```bash
    npm install
-   ```
-
-2. Build once.
-
-   ```bash
    npm run build
    ```
 
-3. Run the guided adopter example.
+2. Run the first-hour guided example.
 
    ```bash
    npm run example:first-hour
    ```
 
-4. Run it again (same output = deterministic behavior confirmed).
+3. Run it a second time to verify repeatability.
 
    ```bash
    npm run example:first-hour
    ```
 
-5. If you want the full walkthrough, continue with [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md).
+4. Follow the linked first-hour path: [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md).
 
-## Golden path (Tier-1 only)
+Minimal deterministic loop:
 
 ```ts example
-import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
+import { createWorld, q, stepWorld, type CommandMap } from "@its-not-rocket-science/ananke";
 
-const world = createWorld(7, [
-  { id: 1, teamId: 1, seed: 7001, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword", armourId: "arm_mail", x_m: -1.2 },
-  { id: 2, teamId: 2, seed: 7002, archetype: "HUMAN_BASE", weaponId: "wpn_club", x_m: 1.2 },
+const world = createWorld(1337, [
+  { id: 1, teamId: 1, seed: 10, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword", armourId: "arm_mail", x_m: -1.2 },
+  { id: 2, teamId: 2, seed: 11, archetype: "HUMAN_BASE", weaponId: "wpn_club", x_m: 1.2 },
 ]);
 
-for (let tick = 0; tick < 180; tick++) {
-  const commands: CommandMap = new Map([
-    [1, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
-    [2, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
-  ]);
-  stepWorld(world, commands, { tractionCoeff: q(0.9) });
-}
+const commands: CommandMap = new Map([
+  [1, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
+  [2, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
+]);
+
+stepWorld(world, commands, { tractionCoeff: q(0.9) });
 ```
 
-That loop is the integration baseline: create world, issue commands, step deterministically.
+## Stable API promise
 
-## Tier-1 API surface (stable)
+For semver stability, import from the package root only:
 
-Import Tier-1 from root only:
-
-```ts pseudocode
-import { ... } from "@its-not-rocket-science/ananke";
+```ts
+import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
 ```
 
-Tier-1 is intentionally small:
+Tier-1 root exports are the stability boundary documented in:
 
-- fixed-point utilities (`q`, `SCALE`, conversion helpers)
-- host types (`Entity`, `WorldState`, `Command`, `CommandMap`, `KernelContext`)
-- world creation/scenario loading (`createWorld`, `loadScenario`, `validateScenario`)
-- stepping (`stepWorld`)
-- replay serialization (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`)
-- bridge extraction (`extractRigSnapshots`, `deriveAnimationHints`)
-
-Source of truth:
-
-- [`docs/public-contract.md`](docs/public-contract.md)
 - [`STABLE_API.md`](STABLE_API.md)
+- [`docs/public-contract.md`](docs/public-contract.md)
 - [`docs/stable-api-manifest.json`](docs/stable-api-manifest.json)
 
-All subpath exports are shipped-but-not-Tier-1 unless explicitly documented as subpath-stable.
+Subpath modules are shipped and supported, but are **not** part of the Tier-1 semver contract unless explicitly called out as stable.
+
+## What is actually stable today
+
+Stable today means Tier-1 root exports from `@its-not-rocket-science/ananke`:
+
+- fixed-point primitives and helpers (`q`, `SCALE`, related conversion/math utilities)
+- host-facing types (`Entity`, `WorldState`, `Command`, `CommandMap`, `KernelContext`)
+- deterministic world/scenario entry points (`createWorld`, `loadScenario`, `validateScenario`)
+- deterministic stepping (`stepWorld`)
+- replay helpers (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`)
+- bridge snapshot extraction (`extractRigSnapshots`, `deriveAnimationHints`)
+
+If you need long-term compatibility, keep production integrations on this root Tier-1 surface.
+
+## What is shipped but not semver-stable
+
+These are available exports but outside the Tier-1 semver promise (unless separately documented):
+
+- most subpath modules in `package.json#exports` (for example `./combat`, `./character`, `./tier2`, `./tier3`, `./netcode`, `./host-loop`)
+- emerging or advanced modules that may change shape between minor releases
+- exploratory integration helpers and higher-order systems
+
+Treat these surfaces as adopt-with-version-pinning.
+
+## Exact next docs to read
+
+After the 10-minute path, read in this order:
+
+1. [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md)
+2. [`docs/host-contract.md`](docs/host-contract.md)
+3. [`docs/public-contract.md`](docs/public-contract.md)
+4. [`docs/bridge-contract.md`](docs/bridge-contract.md)
+5. [`docs/wire-protocol.md`](docs/wire-protocol.md)
+6. [`docs/module-index.md`](docs/module-index.md)
+
+## Advanced surfaces
+
+These are intentionally secondary to kernel adoption:
+
+- ecosystem orientation: [`docs/project-overview.md`](docs/project-overview.md)
+- recipe lookup by use case: [`docs/recipes-matrix.md`](docs/recipes-matrix.md)
+- export maturity snapshot: [`docs/export-status-matrix.md`](docs/export-status-matrix.md)
+- performance and conformance tooling: [`docs/performance.md`](docs/performance.md), [`conformance/`](conformance)
 
 ## What this project is not
 
-Ananke is **not**:
+Ananke is not:
 
-- a game engine (rendering, scene graphs, input systems)
+- a rendering engine or scene graph
 - a complete networking stack
-- a batteries-included content pipeline
-- a no-code world builder
-- a guarantee that Tier-2/Tier-3 symbols will stay stable
+- a content-authoring GUI
+- a no-code simulation builder
+- a guarantee that every shipped subpath export is semver-stable
 
-If you need deterministic kernel behavior with host-controlled integration, it is a fit.
-
-## Beyond the first integration
-
-After your first deterministic loop succeeds, then explore broader modules and ecosystem docs:
-
-- [`docs/host-contract.md`](docs/host-contract.md)
-- [`docs/bridge-contract.md`](docs/bridge-contract.md)
-- [`docs/wire-protocol.md`](docs/wire-protocol.md)
-- [`docs/module-index.md`](docs/module-index.md)
-- [`docs/project-overview.md`](docs/project-overview.md)
-- [`docs/recipes-matrix.md`](docs/recipes-matrix.md)
-
-## Clean map
-
-- **Use Tier-1 if you are integrating.**
-- **Use Tier-2 if you are experimenting.**
-- **Read `project-overview` only after the first successful integration.**
+If you need deterministic simulation as a kernel inside a host-owned stack, it is likely a fit.
