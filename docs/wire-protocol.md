@@ -237,14 +237,14 @@ See `docs/migration-monolith-to-modular.md` for package-level migration guidance
 | `migrateWorld` | `src/schema-migration.ts` | `@its-not-rocket-science/ananke/schema` | implemented and exported |
 
 Notes:
-- The four diff helpers are **not** on the Tier-1 root (`@its-not-rocket-science/ananke`); they are Tier-3.
+- The four diff helpers are **not** on the Tier-1 root (`@its-not-rocket-science/ananke`); they are shipped-but-not-Tier-1 via Tier-3.
 - `migrateWorld` is implemented now; default behavior is effectively identity until additional migration paths are registered.
 
 ## 8. Protocol feature status table
 
 | Protocol feature | Status | Notes |
 |------------------|--------|-------|
-| JSON world snapshot persistence (`stampSnapshot` metadata) | shipped | Stable via `@its-not-rocket-science/ananke/schema`. |
+| JSON world snapshot persistence (`stampSnapshot` metadata) | shipped | Shipped via `@its-not-rocket-science/ananke/schema` (not Tier-1 root-stable). |
 | Snapshot validation (`validateSnapshot`) | shipped | Structural validation for core world fields. |
 | Schema migration API (`migrateWorld`) | partial | API + migration registry are shipped; built-in migration chains are limited today. |
 | Binary snapshot diffs (`diffWorldState`/`packDiff`/`unpackDiff`/`applyDiff`) | partial | Implemented and exported via Tier-3 advanced surface (`@experimental`). |
