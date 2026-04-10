@@ -7,7 +7,7 @@
 ## Purpose
 
 > **New to Ananke?** Start with [`docs/host-contract.md`](host-contract.md) — it covers the
-> complete stable integration surface with working code examples.  Return here for
+> current stable integration surface with working code examples. Return here for
 > architecture diagrams, type glossary, and integration gotchas.
 
 This document captures the technical insights, data‑flow diagrams, type glossaries, and gotchas discovered during the 2–4 week evaluation spike described in the ROADMAP’s **Deep Integration & Technical Onboarding** milestone. It is intended as an internal reference for engineers who will be integrating Ananke into a production game or simulation.
@@ -30,7 +30,7 @@ The full module index with all 41 exports is in [`docs/module-index.md`](module-
 | **Simulate a duel or battle** | `"@its-not-rocket-science/ananke"` (main) | `"…/combat"` for grapple, ranged, formation |
 | **Run a campaign / world simulation** | `"…"` + `"…/polity"` | `"…/campaign"` + whichever campaign extensions you need |
 | **Design a species or xenobiology** | `"…"` + `"…/species"` + `"…/anatomy"` | `"…/character"` for aging, sleep, disease |
-| **Drive a 3D renderer** | `"…"` (bridge exports are in main bundle) | See [`docs/bridge-contract.md`](bridge-contract.md) |
+| **Drive a 3D renderer** | `"…/host-loop"` for stable wire frames | Add `"…/tier2"` only if you need experimental bridge internals (`BridgeEngine`, mapping helpers) — see [`docs/bridge-contract.md`](bridge-contract.md) |
 | **Build a multiplayer host** | `"…"` (deterministic by design) | See [`docs/host-contract.md`](host-contract.md) for lockstep pattern |
 | **Add narrative / storytelling** | `"…/narrative"` + `"…/narrative-prose"` | `"…/renown"` for legend-building |
 | **Craft / economic simulation** | `"…/crafting"` + `"…/catalog"` | `"…/social"` for trade and faction effects |
