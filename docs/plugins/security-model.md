@@ -1,181 +1,273 @@
-# Plugin security model
+# Plugin Security Threat Model
 
-This document describes the **current** security posture of the Ananke plugin runtime and a conservative threat model for production deployers.
+This document defines the production threat model for loading Ananke plugins and maps risks to concrete controls.
+
+> **Security posture summary:** `loadPlugin(...)` is a capability-loading API, not a turnkey sandbox.
+> For trusted/internal plugins, the default runtime may be acceptable with guardrails.
+> For untrusted/third-party plugins, production deployments should use stronger isolation and policy controls than the defaults.
 
 ## Scope and assumptions
 
-- Scope: plugins loaded through `loadPlugin(...)` from `src/plugins/loader.ts`.
-- Host model: host application controls where plugin files come from, what permissions are declared in `plugin.json`, and what loader options are used.
-- Threat model: third-party plugin authors may be buggy or malicious.
-- Non-goals: this document does not claim formal isolation or side-channel resistance.
+### In scope
 
-## What is guaranteed today vs best practice
+- Plugin loading and execution through `loadPlugin(...)` in `src/plugins/loader.ts`.
+- Manifest-declared permissions from `plugin.json`.
+- Runtime API capabilities exposed to plugin code (`readWorldState`, `mutateWorld`, `emitTelemetry`, `writeArtifact`).
+- Host-side operational controls (timeouts, quotas, process isolation, filesystem layout, incident response).
 
-### Guaranteed by the current implementation
+### Out of scope
 
-The following statements are grounded in the current loader/runtime code:
+- Formal verification of sandbox correctness.
+- Side-channel resistance (timing/cache/CPU microarchitectural channels).
+- Supply-chain compromise of host dependencies outside the plugin subsystem.
 
-- Plugin code is evaluated with a minimal CommonJS sandbox (`module`, `exports`) using `node:vm` by default.
-- The default evaluator runs with a 100 ms VM execution timeout for initial module evaluation.
-- Runtime API methods enforce permission checks for:
-  - `mutateWorld` → requires `write:worldState`
-  - `emitTelemetry` → requires `write:telemetry`
-  - `writeArtifact` → requires `write:artifacts`
-- `readWorldState` returns a deep-frozen structured clone of input.
-- `writeArtifact` writes under `<artifactsRoot>/<pluginId>/<path>` (default root `.ananke-artifacts`).
-- Hosts can inject a custom `evaluator` (for example hardened Node sandbox adapters or browser worker evaluators).
+### Security assumptions
 
-### Recommended best practice (not guaranteed by default)
+- Plugin authors can be buggy, negligent, or malicious.
+- Plugin source may come from public registries.
+- Host application owns final policy decisions (what to load, where to execute, and with what privileges).
 
-The following are operational recommendations, not built-in hard guarantees:
+---
 
-- Treat `node:vm` as a convenience boundary, not a complete security boundary for hostile code.
-- For untrusted plugins, run them in stronger isolation (e.g., process/worker/container isolation with explicit IPC contracts and resource quotas).
-- Curate plugin supply chain (pin versions/hashes, review manifests/modules, and sign provenance where possible).
-- Add runtime controls missing from default loader path (CPU budgets beyond setup evaluation, memory limits, hook timeouts, telemetry/artifact rate limits).
-- Run high-risk deployments with least privilege OS/container permissions and separate service identities.
+## Assets and security objectives
+
+### Assets to protect
+
+- **Simulation integrity:** world-state correctness and expected game/runtime behavior.
+- **Host availability:** CPU, memory, I/O capacity, and event-loop responsiveness.
+- **Confidentiality of runtime data:** world state, event streams, secrets accidentally present in context, and generated artifacts.
+- **Artifact integrity:** downstream consumers should not be misled or compromised by plugin outputs.
+- **Operational trust:** telemetry quality, audit trail accuracy, and incident recovery capability.
+
+### Objectives
+
+- Prevent unauthorized access to privileged host capabilities.
+- Limit blast radius of malicious/buggy plugin code.
+- Detect and contain abuse quickly.
+- Preserve ability to disable/revoke problematic plugins without full service outage.
+
+---
 
 ## Trust boundaries
 
-Primary boundaries in the current architecture:
-
 1. **Plugin source boundary**
-   - Input: `plugin.json` and `index.js` loaded from disk.
-   - Risk: malicious code or mismatched permission claims from plugin package source.
+   - Boundary between host-controlled codebase and external plugin package (`plugin.json`, `index.js`).
+   - Threat: malicious payloads, deceptive manifests, dependency confusion, tampering in transit.
 
-2. **Evaluator boundary**
-   - Default: `node:vm` new context with minimal bindings.
-   - Optional: caller-supplied evaluator.
-   - Risk: escape/bypass potential depends on evaluator implementation quality.
+2. **Manifest-to-policy boundary**
+   - Plugin declares permissions; host decides whether to honor them.
+   - Threat: over-broad permissions granted without review.
 
-3. **Capability boundary (runtime API)**
-   - The host only exposes methods on `PluginRuntimeApi`.
-   - Risk: once a capability is granted in manifest, plugin can use it arbitrarily unless host adds additional policy checks.
+3. **Evaluator boundary**
+   - Default evaluator uses `node:vm` minimal CommonJS sandbox.
+   - Threat: evaluator escape, context confusion, unsafe API exposure.
 
-4. **Host state boundary**
-   - Plugins receive hook context objects and can mutate them through normal JavaScript semantics.
-   - `readWorldState` protects cloned reads, but does not prevent plugin CPU abuse or logic abuse.
+4. **Runtime capability boundary**
+   - Only methods on `PluginRuntimeApi` should be reachable.
+   - Threat: capability abuse once permission is granted.
 
-5. **Artifact filesystem boundary**
-   - `writeArtifact` restricts base directory by plugin id, but caller-controlled path segments still need operational controls.
+5. **Hook execution boundary**
+   - Plugin handlers execute inside host lifecycle (`runHook`).
+   - Threat: unbounded runtime, blocking, starvation, exception abuse.
 
-## Attacker goals
+6. **Artifact storage boundary**
+   - Plugin writes data into artifact filesystem namespace.
+   - Threat: disk exhaustion, path manipulation, poisoned outputs for downstream tools.
 
-A realistic malicious plugin may try to:
+7. **Telemetry boundary**
+   - Plugin can emit host-collected telemetry (if permitted).
+   - Threat: exfiltration channel, log/metric poisoning, operational blind spots.
 
-- Change simulation outcomes (integrity attack) through permitted hooks or world mutation permissions.
-- Exfiltrate sensitive data through telemetry, artifacts, or covert channels.
-- Deny service by heavy computation, unbounded loops in hook handlers, or excessive output generation.
-- Pivot to host-level capabilities (sandbox escape) to access filesystem/network/process APIs beyond intended runtime API.
-- Poison downstream consumers with malformed or misleading artifacts.
+---
 
-## Sandbox escape risks
+## Attacker model and capabilities
 
-Conservative position:
+Assume an attacker can publish and convince operators to load a plugin. Once loaded, attacker-controlled code can:
 
-- The default `node:vm` sandbox reduces accidental access to Node globals but should **not** be treated as a complete adversarial-code isolation mechanism.
-- The initial 100 ms timeout applies to module evaluation; it is not a full lifecycle execution governor for async/plugin hook behavior.
-- Any evaluator bug or unsafe host integration can reintroduce powerful primitives.
+- Execute arbitrary JavaScript **within the evaluator constraints**.
+- Run hook handlers repeatedly at lifecycle trigger points.
+- Use all granted runtime capabilities and intentionally stress their edge cases.
+- Craft high-entropy payloads, large objects, and malformed outputs.
+- Attempt to trigger evaluator/runtime bugs for sandbox escape.
+- Abuse expected channels (telemetry/artifacts) for covert exfiltration.
 
-Implications:
+Assume attacker **cannot** directly modify host binaries/config unless another vulnerability exists.
 
-- For untrusted plugins, isolation should be upgraded beyond in-process `node:vm` usage (separate process/worker/container, constrained IPC surface, and defense-in-depth at OS/runtime level).
+---
 
-## Denial-of-service risks
+## Threat analysis by category
 
-Current risks include:
+## 1) Sandbox escape
 
-- Hook handlers are awaited by `runHook` with no built-in per-hook timeout/cancellation in loader.
-- No built-in memory quotas for plugin objects/payloads.
-- No built-in rate limiting for telemetry or artifact writes.
-- A plugin can perform expensive computation during hook execution even without elevated permissions.
+### Risk
 
-Mitigations (operational):
+The default Node path uses in-process `node:vm` with minimal bindings. This reduces accidental access to host globals but should not be treated as a complete hostile-code isolation boundary.
 
-- Enforce per-hook wall-clock budgets and cancellation at the host scheduler layer.
-- Apply quotas: max artifacts, max bytes, max telemetry events, max payload sizes.
-- Isolate execution domains so one plugin cannot starve core simulation threads.
+### Consequences
 
-## Host capability abuse risks
+- Access to host process memory or APIs.
+- Filesystem/network/process execution beyond intended plugin API.
+- Full compromise of host trust domain.
 
-Even without sandbox escape, granted capabilities can be abused:
+### Controls
 
-- `write:worldState`: silent manipulation of simulation semantics.
-- `write:telemetry`: high-volume spam, data exfiltration, or metric poisoning.
-- `write:artifacts`: disk pressure, deceptive outputs, and potential path-manipulation attempts.
+- **Recommended for untrusted plugins:** out-of-process isolation (worker/process/container/VM) with explicit IPC protocol.
+- Restrict host OS/container privileges (filesystem, network egress, Linux capabilities, syscall surface where possible).
+- Keep evaluator/runtime patched and regression-tested with adversarial test corpus.
 
-Mitigations (operational):
+## 2) Host capability abuse
 
-- Principle of least privilege on manifest permissions.
-- Per-plugin policy overlays (allow/deny by hook, metric namespace, artifact path patterns, byte quotas).
-- Auditable logs correlating plugin id, hook name, and side effects.
+### Risk
 
-## Artifact-writing risks
+Even without sandbox escape, allowed API methods can be abused:
 
-`writeArtifact` currently resolves paths relative to `<artifactsRoot>/<pluginId>/...`. This gives useful namespacing, but deployers should assume additional risk until hardened by deployment policy:
+- `write:worldState`: integrity compromise and subtle gameplay manipulation.
+- `write:telemetry`: spam, poisoning, or covert leakage of sensitive context.
+- `write:artifacts`: disk abuse, misleading reports, malicious payload staging.
 
-- Unbounded artifact volume can exhaust disk.
-- Attacker-controlled filenames/content may confuse downstream parsers.
-- Path resolution semantics should be monitored to ensure output remains under intended root in all edge cases.
+### Controls
 
-Recommended hardening:
+- Permission minimization and explicit approval workflow per plugin.
+- Host policy overlays (allow-list metrics, artifact path patterns, hook-level gates).
+- Auditing that binds action to plugin ID + hook + timestamp.
 
-- Canonicalize and verify resolved artifact paths remain under approved root.
-- Enforce extension and content-type policies for machine-consumed artifacts.
-- Store artifacts on dedicated volumes with quotas and retention policies.
+## 3) Denial of service (DoS)
 
-## Browser vs Node differences
+### Risk
 
-### Node hosts (default loader path)
+- Expensive synchronous loops in hooks.
+- High-frequency hook abuse causing event-loop starvation.
+- Memory blowups via oversized payloads/artifacts.
+- Flooding telemetry/artifact outputs.
 
-- Default is in-process `node:vm` evaluation.
-- Strong isolation is not automatic; host must provide hardened evaluator and/or out-of-process architecture for untrusted code.
+### Controls
 
-### Browser hosts
+- Per-hook timeout and cancellation policy.
+- CPU/memory quotas and isolation boundaries.
+- Per-plugin rate/size quotas for telemetry and artifacts.
+- Circuit breakers / kill switches for misbehaving plugins.
 
-- Recommended model is dedicated Web Worker evaluation with proxied runtime API.
-- Browser workers can improve isolation from UI thread/state, but still require strict message validation, quota controls, and capability minimization.
+## 4) Artifact exfiltration and poisoning
 
-### Shared principle
+### Risk
 
-Across both environments, security depends more on **deployment isolation + explicit policy controls** than on API shape alone.
+Artifacts can become a data-exfiltration and downstream-attack channel.
 
-## Operational guidance: trusted vs untrusted plugins
+- Sensitive context serialized to files and exported by external systems.
+- Filename/content tricks that confuse parsers or operators.
+- Excess artifact churn masking malicious outputs.
 
-### Trusted/internal plugins
+### Controls
 
-Minimum posture:
+- Canonical path verification under approved root.
+- File extension/content-type policy for machine-consumed artifacts.
+- Quotas + retention windows + malware/content scanning where appropriate.
+- Segregated storage and reduced read access for consumers.
 
-- Keep permission lists minimal.
-- Keep audit logs for world mutations/telemetry/artifacts.
-- Run standard CI checks and version pinning.
+## 5) Telemetry exfiltration and poisoning
 
-### Untrusted/third-party plugins
+### Risk
 
-Recommended posture:
+Telemetry is an intentional output channel and can be abused for covert transfer or operational deception.
 
-- Do not run with default in-process evaluator alone.
-- Execute in separate trust domain (worker/process/container) with constrained IPC API.
-- Require pre-publication review and policy gates (permissions, artifact behavior, telemetry behavior).
-- Apply strict runtime quotas and kill-switch controls.
-- Maintain revocation/deny-list and rapid rollback path.
+### Controls
 
-## Production deployer checklist
+- Schema validation, size limits, namespace allow-listing.
+- Per-plugin event-rate quotas and anomaly detection.
+- Separate internal-only metrics from plugin-controlled streams.
 
-Use this checklist before enabling third-party plugins in production:
+---
 
-- [ ] Plugin source is pinned (immutable version + hash) and provenance reviewed.
-- [ ] Plugin permissions are least-privilege and justified per plugin.
-- [ ] Untrusted plugins are isolated beyond default `node:vm` (process/worker/container).
-- [ ] Per-hook timeout/cancellation policy is enforced by host runtime.
-- [ ] CPU/memory/throughput quotas are configured per plugin.
-- [ ] Telemetry writes are rate-limited and schema-validated.
-- [ ] Artifact writes are quota-limited and path-canonicalized under approved root.
-- [ ] Plugin activity is audit-logged (hook calls, mutations, telemetry, artifact writes, failures).
-- [ ] Incident controls exist (disable plugin, revoke package, rollback deployment).
-- [ ] Security review is repeated for evaluator/runtime upgrades.
+## Browser vs Node threat differences
 
-## Implementation evidence references
+## Node hosts
 
-- Loader/evaluator and runtime API enforcement: `src/plugins/loader.ts`
-- Permission model/types: `src/plugins/types.ts`
+- Default implementation path is in-process `node:vm` evaluation.
+- Primary risk: single-process compromise blast radius if evaluator boundary fails.
+- Strong recommendation for untrusted code: separate process/container with restricted OS permissions and explicit IPC API.
+
+## Browser hosts
+
+- Preferred model is dedicated Web Worker execution with message-passed runtime API.
+- Strength: better separation from UI thread by default.
+- Residual risks: message validation bugs, resource exhaustion in worker, data leakage through postMessage channels.
+
+## Shared principle
+
+In both environments, plugin security is primarily achieved by **defense in depth**: strict capability policy + isolation + quotas + monitoring + incident response.
+
+---
+
+## Trusted vs untrusted plugin deployment recommendations
+
+## Trusted/internal plugins (same organization, reviewed source)
+
+Minimum recommended controls:
+
+- Enforce least-privilege permissions.
+- CI validation and pinned versions.
+- Audit logs for mutations, telemetry, and artifact writes.
+- Operational kill switch.
+
+## Untrusted/third-party plugins (public/community source)
+
+Production recommended controls:
+
+- Do not rely on default in-process evaluator alone.
+- Run in isolated trust domain (process/container/worker with hardened IPC).
+- Apply strict runtime budgets (time, memory, output volume).
+- Require policy review before enablement.
+- Continuous monitoring + fast revocation/rollback path.
+
+---
+
+## Guaranteed today vs deployment hardening vs future work
+
+## Guaranteed today (based on current implementation)
+
+The following are implemented in `src/plugins/loader.ts` / `src/plugins/types.ts`:
+
+- Plugin evaluation uses minimal CommonJS sandbox with `node:vm` by default.
+- Initial module evaluation is constrained with a 100 ms VM timeout.
+- Runtime permission checks enforce:
+  - `mutateWorld` requires `write:worldState`
+  - `emitTelemetry` requires `write:telemetry`
+  - `writeArtifact` requires `write:artifacts`
+- `readWorldState` returns deep-frozen `structuredClone` data.
+- Artifacts are written under `<artifactsRoot>/<pluginId>/<path>`.
+- Host can provide custom `evaluator` option.
+
+## Recommended deployment hardening (not guaranteed by default)
+
+- Isolate untrusted plugins out of process.
+- Enforce per-hook timeout/cancellation and runtime budgets.
+- Enforce memory, telemetry, and artifact quotas.
+- Canonicalize and verify artifact paths remain under approved root.
+- Restrict telemetry schemas/namespaces.
+- Run with least-privilege OS/container identity.
+- Implement deny-list/revocation and one-click disable.
+
+## Future work (explicitly not complete today)
+
+- First-class built-in hook timeout/cancellation in core runtime.
+- Built-in quota manager for telemetry/artifacts and payload sizes.
+- Stronger default path canonicalization and artifact policy controls.
+- Optional signed plugin manifests/modules and provenance verification.
+- Security event stream spec for standardized audit integrations.
+
+---
+
+## Deployment checklist
+
+A standalone checklist is maintained in:
+
+- `docs/plugins/deployment-checklist.md`
+
+Use that checklist during production readiness and change reviews.
+
+---
+
+## Implementation evidence
+
+- `src/plugins/loader.ts`
+- `src/plugins/types.ts`
