@@ -11,6 +11,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - Normalized documentation version references to use `package.json` as canonical source, replaced stale hard-coded Ananke versions in companion docs, and added `npm run check-doc-version-sync` to catch future markdown drift.
+- Performed adopter-confidence docs hardening across README/first-hour/stable API/module/bridge/wire docs and added `docs/support-boundaries.md` to make maintainer promises, exclusions, and version-pinning guidance explicit.
 
 ---
 

@@ -5,6 +5,8 @@
 
 For versioning policy see [`docs/versioning.md`](versioning.md) and [`STABLE_API.md`](../STABLE_API.md).
 
+Maintainer support boundary details are in [`docs/support-boundaries.md`](support-boundaries.md).
+
 <!-- CONTRACT:STABILITY_LABELS:start -->
 ```json
 [
@@ -29,6 +31,8 @@ For versioning policy see [`docs/versioning.md`](versioning.md) and [`STABLE_API
 | `mkWorld`, `mkKnight` | _No package export path_ | Internal/test-only |
 
 `BridgeEngine` is **not Tier-1 root**. Use `@its-not-rocket-science/ananke/tier2` and treat it as experimental.
+
+If bridge correctness is production-critical, pin exact patch versions and re-run interpolation/mapping regression tests on every upgrade.
 
 ## 2) Minimum bridge integration (Tier 1 stable)
 

@@ -89,6 +89,8 @@ Tier-1 root exports are the stability boundary documented in:
 
 Subpath modules are shipped and supported, but are **not** part of the Tier-1 semver contract unless explicitly called out as stable.
 
+For explicit maintainer commitments and non-goals, see [`docs/support-boundaries.md`](docs/support-boundaries.md).
+
 ## What is actually stable today
 
 Stable today means Tier-1 root exports from `@its-not-rocket-science/ananke`:
@@ -101,6 +103,8 @@ Stable today means Tier-1 root exports from `@its-not-rocket-science/ananke`:
 - bridge snapshot extraction (`extractRigSnapshots`, `deriveAnimationHints`)
 
 If you need long-term compatibility, keep production integrations on this root Tier-1 surface.
+
+> Confidence note: first-hour checks are onboarding confidence signals, not a substitute for your own production regression suite.
 
 ## What is shipped but not semver-stable
 
