@@ -42,6 +42,9 @@ jobs:
       - name: Typecheck TypeScript docs examples
         run: npm run check:doc-examples
 
+      - name: Check docs for stale links and references
+        run: npm run check:docs
+
       - name: Reference app smoke test
         run: npx vitest run test/reference-tactical-duel-smoke.test.ts
 
