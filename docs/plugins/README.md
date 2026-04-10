@@ -2,6 +2,8 @@
 
 Ananke plugins are third-party extensions that register one or more runtime hooks (for example `beforeStep`, `afterStep`, `afterDamage`, or `matchEnd`) and run in a constrained runtime.
 
+> ⚠️ **Security caveat (public plugin loading):** `loadPlugin(...)` is not, by itself, a complete security boundary for hostile third-party code. If you load public/untrusted plugins, read `docs/plugins/security-model.md` and apply `docs/plugins/deployment-checklist.md` before production enablement.
+
 ## Write your first plugin in 10 minutes
 
 1. Create a folder under `plugins/`.
@@ -37,4 +39,4 @@ module.exports = {
 };
 ```
 
-See `docs/plugins/hooks.md` for the hook contract and `docs/plugins/publishing.md` for registry publication.
+See `docs/plugins/hooks.md` for the hook contract, `docs/plugins/publishing.md` for registry publication, and `docs/plugins/security-model.md` for production threat modeling.

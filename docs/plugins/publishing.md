@@ -2,6 +2,8 @@
 
 The plugin registry is a GitHub repository that exposes a JSON index consumed by `ananke install <plugin>`.
 
+> ⚠️ **Security caveat (public registry):** Registry publication increases exposure to untrusted plugin code paths. Production operators should treat all third-party plugins as untrusted by default and apply `docs/plugins/security-model.md` and `docs/plugins/deployment-checklist.md` before enabling plugins.
+
 ## Registry structure
 
 - `index.json` at repo root
