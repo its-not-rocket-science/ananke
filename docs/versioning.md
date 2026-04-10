@@ -202,7 +202,7 @@ to migrate.  The lifecycle follows a three-phase pattern:
 
 Add a structured JSDoc tag to the symbol:
 
-```typescript
+```typescript no-check-example
 /**
  * @deprecated since 0.1.50 — use `newFunction` instead. Removes at 0.3.0.
  */
