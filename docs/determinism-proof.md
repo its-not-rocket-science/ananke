@@ -1,106 +1,115 @@
-# Determinism assurance package
+# Determinism adopter assurance package
 
-This document states what the repository currently verifies about determinism, how it is verified, and what is explicitly out of scope.
+This document is a technical assurance package for integrators. It states:
 
-## Deterministic invariants
+- what determinism guarantees are currently made,
+- how each guarantee is checked,
+- what is intentionally excluded,
+- and which portability limits are known.
 
-The deterministic simulation path relies on the following invariants:
+It is not a formal proof and should be read as an implementation-and-tests contract for the current repository state.
 
-1. **Integer-only core state**
-   - Core runtime state fields (`tick`, `seed`, integer-scaled vectors, core injury counters) are finite integers; production assertions fail if non-integers are observed in this surface.【F:src/determinism.ts†L1-L34】
-2. **Fixed-point arithmetic contract**
-   - Dimensionless values use `SCALE.Q = 10_000`.
-   - Deterministic multiply/divide paths use truncating integer math (`qMul`, `qDiv`) and integer-safe `mulDiv` for large intermediates via `BigInt`.
-   - Host/API conversion helpers (`q`, `to.*`) are boundary conversions using `Math.round` and are distinct from per-tick deterministic kernel arithmetic.【F:src/units.ts†L1-L41】
-3. **Stable seed derivation for pseudo-random outcomes**
-   - Random-like outcomes in deterministic code are derived from `(worldSeed, tick, ids, salt)` using `eventSeed`, not `Math.random()` in kernel logic.【F:src/sim/seeds.ts†L1-L13】
-4. **Stable step phase order**
-   - The kernel uses a fixed phase pipeline contract (`prepare` … `finalize`) documented in `STEP_PHASE_ORDER` and wired by `stepWorld`.
-   - This constrains side-effect ordering between subsystems across hosts/backends.【F:src/sim/step/pipeline.ts†L1-L14】【F:src/sim/kernel.ts†L1-L220】
-5. **Deterministic event ordering where event lists are sorted**
-   - Impact/event lists that require deterministic ordering use explicit sort keys (`attackerId`, then `targetId`).【F:src/sim/events.ts†L1-L30】
+## 1) Guarantee scope
 
-## Exact deterministic scope (what is covered)
+### Guaranteed in scope
 
-Current automated determinism evidence covers:
+For the deterministic oracle model exercised by the determinism test harness:
 
-- **TS oracle vs WASM shadow parity for the deterministic oracle model**
-  - Property-based fuzzer compares per-tick snapshots and final state for generated world states/command sequences.
-  - Configurable by `DETERMINISM_WORLD_STATES`, `DETERMINISM_COMMANDS_PER_STATE`, and `DETERMINISM_SEED`.
-  - Test file: [`test/determinism/fuzz-against-wasm.spec.ts`](../test/determinism/fuzz-against-wasm.spec.ts).【F:test/determinism/fuzz-against-wasm.spec.ts†L1-L45】
-- **Golden regression lock for known seeds**
-  - Replays seeded cases from fixture and fails on first divergence with tick/entity diagnostics.
-  - Test file: [`test/determinism/regression.spec.ts`](../test/determinism/regression.spec.ts).
-  - Fixture: [`fixtures/determinism/golden-masters.json`](../fixtures/determinism/golden-masters.json).【F:test/determinism/regression.spec.ts†L1-L45】【F:fixtures/determinism/golden-masters.json†L1-L15】
-- **Replay hash-based equivalence tooling**
-  - `hashWorldState` canonicalizes state and computes a deterministic 64-bit checksum, enabling first-divergence diagnosis across replays.
-  - `diffReplays` performs lockstep replay comparison.
-  - Source: [`src/netcode.ts`](../src/netcode.ts).【F:src/netcode.ts†L1-L220】
-- **Replay reconstruction path**
-  - `ReplayRecorder` + `replayTo` provide deterministic reconstruction from initial snapshot + per-tick commands.
-  - Source: [`src/replay.ts`](../src/replay.ts).【F:src/replay.ts†L1-L129】
+1. **TypeScript oracle and WASM kernel produce equal traces** for tested seeds/configurations in CI, including per-tick snapshots and final state comparisons.【F:test/determinism/fuzz-against-wasm.spec.ts†L18-L45】【F:test/determinism/regression.spec.ts†L22-L43】
+2. **Golden fixture seeds remain stable** unless intentionally changed; fixture drift causes a failing regression test.【F:test/determinism/regression.spec.ts†L20-L43】【F:fixtures/determinism/golden-masters.json†L1-L22】
+3. **Replay reconstruction applies commands in deterministic tick order** when replay inputs are identical.【F:src/replay.ts†L14-L88】【F:test/netcode.test.ts†L127-L217】
+4. **Canonical replay/state hashing is stable** for equivalent states with canonical key ordering, enabling first-divergence diagnosis.【F:src/netcode.ts†L8-L220】【F:test/netcode.test.ts†L27-L125】
 
-## Known exclusions (what this does **not** prove)
+### Evidence surfaces (where assertions are enforced)
 
-This package does **not** claim all of the following are proven:
+- Determinism fuzz test (`test/determinism/fuzz-against-wasm.spec.ts`).【F:test/determinism/fuzz-against-wasm.spec.ts†L18-L45】
+- Golden regression test (`test/determinism/regression.spec.ts`) + fixture (`fixtures/determinism/golden-masters.json`).【F:test/determinism/regression.spec.ts†L20-L43】【F:fixtures/determinism/golden-masters.json†L1-L22】
+- Shared trace/harness implementation (`test/determinism/shared.ts`).【F:test/determinism/shared.ts†L1-L344】
+- Determinism CI workflows and generated status artifact (`.github/workflows/determinism.yml`, `.github/workflows/determinism-nightly.yml`).【F:.github/workflows/determinism.yml†L1-L31】【F:.github/workflows/determinism-nightly.yml†L1-L48】
 
-- **All repository modules are in deterministic CI parity against WASM**.
-  - Current oracle parity coverage is the determinism harness model and included kernel surfaces under test, not every exported subsystem API.
-- **Determinism for host-only/non-kernel features using host randomness**.
-  - The policy is deterministic kernels should avoid `Math.random()`, but non-kernel features may remain out of scope unless they are explicitly bound into deterministic replay/testing paths.
-- **Cross-version determinism without fixture/version agreement**.
-  - Golden fixtures detect behavioral drift; they do not assert semantic compatibility across arbitrary historical versions.
-- **Determinism when host code mutates world state outside the documented step/replay contracts**.
+## 2) Arithmetic guarantees
 
-See also: [What can still break determinism?](./what-can-still-break-determinism.md).
+### Guarantee
 
-## Arithmetic and ordering guarantees
+The deterministic path uses integer/fixed-point arithmetic primitives and deterministic seed derivation:
 
-### Arithmetic guarantees (in-scope)
+- `SCALE.Q` fixed-point representation and integer arithmetic helpers (`qMul`, `qDiv`, `mulDiv`, integer roots).【F:src/units.ts†L1-L101】
+- Determinism assertions for integer-only core state (`assertDeterministicWorldLike`) in strict mode paths.【F:src/determinism.ts†L1-L34】
+- Deterministic event seed generation via stable tuple inputs (`eventSeed(worldSeed, tick, a, b, salt)`).【F:src/sim/seeds.ts†L1-L13】
 
-- Deterministic arithmetic primitives are integer/fixed-point based (`qMul`, `qDiv`, `mulDiv`, integer roots).【F:src/units.ts†L1-L80】
-- Kernel deterministic assertions can fail fast in production when core integer invariants are violated before stepping progresses.【F:src/determinism.ts†L1-L34】
+### How it is tested
 
-### Ordering guarantees (in-scope)
+- Unit tests covering seed determinism and sensitivity (`test/seeds.test.ts`).【F:test/seeds.test.ts†L1-L19】
+- Oracle-vs-WASM determinism comparisons that would fail on arithmetic drift (`test/determinism/fuzz-against-wasm.spec.ts`, `test/determinism/regression.spec.ts`).【F:test/determinism/fuzz-against-wasm.spec.ts†L18-L45】【F:test/determinism/regression.spec.ts†L22-L43】
 
-- Step phases execute in a fixed declared order (`STEP_PHASE_ORDER`).【F:src/sim/step/pipeline.ts†L1-L14】
-- Determinism-sensitive event batches that are explicitly sorted use deterministic keys (`sortEventsDeterministic`).【F:src/sim/events.ts†L23-L30】
-- Replay state hashing uses canonical sort/canonical serialization of entities/maps/keys for stable hashes independent of object insertion order.【F:src/netcode.ts†L30-L81】
+## 3) Ordering guarantees
 
-## Replay guarantees
+### Guarantee
 
-For replay recorded via `ReplayRecorder` and re-simulated via `replayTo`:
+Ordering-sensitive paths are explicit and deterministic where declared:
 
-- Given the same `initialState`, same ordered frames/commands, and same kernel context semantics, `replayTo` applies commands in frame order up to `targetTick` deterministically.【F:src/replay.ts†L10-L88】
-- `diffReplays` can identify the first divergence tick/hash pair when two recordings diverge, including divergence at initial state (`-1`).【F:src/netcode.ts†L83-L220】
+- Fixed kernel phase order is declared in `STEP_PHASE_ORDER` and executed in that sequence by `stepWorld`.【F:src/sim/step/pipeline.ts†L1-L14】【F:src/sim/kernel.ts†L30-L220】
+- Impact event ordering uses deterministic sort keys (`attackerId`, then `targetId`).【F:src/sim/events.ts†L1-L30】
+- Canonical hash serialization sorts keys/collections before hashing to avoid host object insertion-order drift affecting hashes.【F:src/netcode.ts†L8-L81】
 
-These statements are operational guarantees of the implemented contract, not a proof that all possible host integrations are deterministic.
+### How it is tested
 
-## TS vs WASM conformance method
+- Event sorting behavior test (`test/events.test.ts`).【F:test/events.test.ts†L1-L15】
+- Spatial/query deterministic ordering tests where applicable (`test/spatial.test.ts`).【F:test/spatial.test.ts†L1-L15】
+- Replay/hash equivalence and divergence tests (`test/netcode.test.ts`).【F:test/netcode.test.ts†L27-L217】
 
-Conformance is established by two complementary tests:
+## 4) Replay guarantees
 
-1. **Fuzz oracle (`fuzz-against-wasm`)**
-   - Generate random deterministic world states and deterministic command streams.
-   - Execute TS reference and WASM backend.
-   - Assert exact equality of per-tick snapshots and final state.
-2. **Golden regression (`regression`)**
-   - Load committed deterministic seed fixtures.
-   - Re-run both paths and fail on first observed divergence.
+### Guarantee
 
-Shared harness code:
+Given identical replay inputs (`initialState`, ordered `frames`, and deterministic kernel semantics):
 
-- [`test/determinism/shared.ts`](../test/determinism/shared.ts) (state/command generators, TS runner, WASM runner, divergence detector).【F:test/determinism/shared.ts†L1-L240】
+- `replayTo` replays commands in frame order up to `targetTick` deterministically.【F:src/replay.ts†L14-L88】
+- `diffReplays` reports first divergence tick/hash, including initial-state divergence (`tick = -1`).【F:src/netcode.ts†L83-L220】
 
-Execution entrypoint:
+### How it is tested
 
-- [`tools/run-determinism-tests.mjs`](../tools/run-determinism-tests.mjs).【F:tools/run-determinism-tests.mjs†L1-L44】
+- Replay serialization/reconstruction and divergence checks (`test/netcode.test.ts`).【F:test/netcode.test.ts†L27-L217】
+- Additional replay-oriented coverage (`test/replay.test.ts`).【F:test/replay.test.ts†L1-L121】
 
-## CI machine-readable determinism summary
+## 5) TypeScript vs WASM conformance method
 
-CI now emits a machine-readable summary artifact in `determinism-report/summary.json` by parsing Vitest JSON output and recording run metadata.
+Conformance uses two complementary lanes:
 
-- Generator: [`tools/generate-determinism-summary.mjs`](../tools/generate-determinism-summary.mjs)
-- Workflows:
-  - [`.github/workflows/determinism.yml`](../.github/workflows/determinism.yml)
-  - [`.github/workflows/determinism-nightly.yml`](../.github/workflows/determinism-nightly.yml)
+1. **Fuzz lane**: randomized world states + command streams, then exact trace/final-state equality between TS and WASM backends.【F:test/determinism/fuzz-against-wasm.spec.ts†L18-L45】
+2. **Golden lane**: fixed seed fixtures to lock expected behavior and detect drift at known scenarios.【F:test/determinism/regression.spec.ts†L20-L43】【F:fixtures/determinism/golden-masters.json†L1-L22】
+
+Harness and execution details:
+
+- Shared deterministic generators/runners/comparators in `test/determinism/shared.ts`.【F:test/determinism/shared.ts†L1-L344】
+- Determinism runner entrypoint in `tools/run-determinism-tests.mjs`.【F:tools/run-determinism-tests.mjs†L1-L44】
+- CI regression/nightly workflows produce JSON output and generate a machine-readable status artifact (`determinism-report/status.json`).【F:.github/workflows/determinism.yml†L20-L31】【F:.github/workflows/determinism-nightly.yml†L24-L48】
+- Status artifact generator: `tools/generate-determinism-status.mjs`.【F:tools/generate-determinism-status.mjs†L1-L114】
+
+## 6) Exclusions (explicitly not guaranteed)
+
+The assurance package does **not** guarantee:
+
+1. Determinism for every module/export in the repository; coverage is limited to tested lanes/surfaces.
+2. Determinism for host-integrator code outside replay/kernel contracts.
+3. Determinism across arbitrary version upgrades without fixture/version coordination.
+4. Determinism when hosts mutate world state outside documented kernel/replay entry points.
+5. Determinism for non-kernel features that use host randomness or wall-clock state unless explicitly constrained and tested.
+
+These exclusions are intentional boundaries of current automated evidence.
+
+## 7) Known portability limits
+
+Known limits and caveats for adopters:
+
+- **WASM-dependent conformance tests are conditional**: determinism suites skip when wasm build artifacts are absent; CI builds wasm first to avoid false confidence from local skips.【F:test/determinism/fuzz-against-wasm.spec.ts†L18-L18】【F:test/determinism/regression.spec.ts†L22-L22】【F:.github/workflows/determinism.yml†L16-L22】
+- **Coverage is repository-controlled, not platform-matrix complete**: current determinism workflows run on `ubuntu-latest` only, so this package is not yet a full OS/browser matrix attestation.【F:.github/workflows/determinism.yml†L10-L10】【F:.github/workflows/determinism-nightly.yml†L14-L14】
+- **Cross-version equality is fixture-scoped**: golden fixtures detect drift relative to committed fixtures; they do not imply semantic equivalence across all historical commits/releases.【F:test/determinism/regression.spec.ts†L20-L43】
+
+## 8) Ways to accidentally break determinism in host code
+
+Common host-side mistakes are documented in a separate checklist:
+
+- [Determinism host pitfalls](./determinism-host-pitfalls.md)
+
+The checklist focuses on accidental sources of divergence (iteration order, wall-clock dependence, float conversions, side-channel mutation, inconsistent command ordering, and version skew) and links each pitfall to a code/test surface where possible.

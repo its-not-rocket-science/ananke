@@ -23,20 +23,20 @@ jobs:
       - run: npm run build
       - name: Run full determinism oracle
         run: npm run test:determinism:nightly -- --reporter=json --outputFile=determinism-report/results.json
-      - name: Build determinism summary artifact
-        run: node tools/generate-determinism-summary.mjs --input=determinism-report/results.json --output=determinism-report/summary.json
+      - name: Build determinism status artifact
+        run: node tools/generate-determinism-status.mjs --input=determinism-report/results.json --output=determinism-report/status.json
       - name: Build report site
         run: |
           mkdir -p determinism-report
           DATE_UTC="$(date -u +%Y-%m-%d)"
           cat > determinism-report/index.html <<HTML
-          <html><body><h1>Determinism Report</h1><p>Nightly run (UTC date: ${DATE_UTC})</p><h2>Machine-readable summary</h2><pre id='summary'></pre><h2>Raw Vitest JSON</h2><pre id='raw'></pre><script>Promise.all([fetch('./summary.json').then(r=>r.text()),fetch('./results.json').then(r=>r.text())]).then(([s,t])=>{document.getElementById('summary').textContent=s;document.getElementById('raw').textContent=t;})</script></body></html>
+          <html><body><h1>Determinism Report</h1><p>Nightly run (UTC date: ${DATE_UTC})</p><h2>Machine-readable status</h2><pre id='status'></pre><h2>Raw Vitest JSON</h2><pre id='raw'></pre><script>Promise.all([fetch('./status.json').then(r=>r.text()),fetch('./results.json').then(r=>r.text())]).then(([s,t])=>{document.getElementById('status').textContent=s;document.getElementById('raw').textContent=t;})</script></body></html>
           HTML
-      - name: Upload determinism summary artifact
+      - name: Upload determinism status artifact
         uses: actions/upload-artifact@v4
         with:
-          name: determinism-summary-nightly
-          path: determinism-report/summary.json
+          name: determinism-status-nightly
+          path: determinism-report/status.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: determinism-report

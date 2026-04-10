@@ -19,10 +19,10 @@ jobs:
       - run: npm run build
       - name: Run determinism regression test (json)
         run: npm run test:determinism -- --run test/determinism/regression.spec.ts --seed=1337 --reporter=json --outputFile=determinism-report/results.json
-      - name: Build determinism summary artifact
-        run: node tools/generate-determinism-summary.mjs --input=determinism-report/results.json --output=determinism-report/summary.json
-      - name: Upload determinism summary artifact
+      - name: Build determinism status artifact
+        run: node tools/generate-determinism-status.mjs --input=determinism-report/results.json --output=determinism-report/status.json
+      - name: Upload determinism status artifact
         uses: actions/upload-artifact@v4
         with:
-          name: determinism-summary
-          path: determinism-report/summary.json
+          name: determinism-status
+          path: determinism-report/status.json
