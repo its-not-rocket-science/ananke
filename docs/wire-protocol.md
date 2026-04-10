@@ -4,13 +4,28 @@ This document specifies how Ananke state is serialised for persistence, replay, 
 network transport.  All formats are deterministic: the same simulation state always
 produces the same bytes.
 
-> **Status legend used in this document**
+> **Status legend used in this document (taxonomy-bound)**
 >
-> - **Shipped**: implemented today and exported from a public package entrypoint.
-> - **Partial**: implemented, but scoped to advanced/internal surfaces or only partly wired.
-> - **Planned**: roadmap intent; not available in current runtime behavior.
+> - **Tier 1 stable**
+> - **Stable subpath**
+> - **Experimental**
+> - **Internal**
+> - **Shipped but undocumented**
+> - **Planned only**
 
 ---
+
+
+<!-- CONTRACT:STABILITY_LABELS:start -->
+```json
+[
+  { "kind": "subpath", "subject": "./schema", "status": "Shipped but undocumented", "notes": "Schema helpers are exported subpath APIs" },
+  { "kind": "subpath", "subject": "./schema-migration", "status": "Shipped but undocumented", "notes": "Alias subpath for migration helpers" },
+  { "kind": "subpath", "subject": "./tier3", "status": "Internal", "notes": "Binary diff helpers live on tier3" },
+  { "kind": "symbol-group", "subject": "wire:lockstep-message-protocol", "status": "Planned only", "notes": "Canonical message kinds are roadmap guidance" }
+]
+```
+<!-- CONTRACT:STABILITY_LABELS:end -->
 
 ## 1. Concepts
 
@@ -57,7 +72,7 @@ serialises `Map<K, V>` as an array of `[K, V]` pairs:
 > Note: `runtimeState.nutritionAccum` is represented as a scalar field in v0.1.  If a `Map`
 > field is added in a future version, its pairs will use the array format above.
 
-### 2.4 Version stamping (**Shipped**)
+### 2.4 Version stamping (**Shipped but undocumented**)
 
 Always call `stampSnapshot(world, "world")` before persisting.  This adds
 `_ananke_version` and `_schema` fields that enable forward migration:
@@ -83,7 +98,7 @@ check conformance programmatically before calling `stepWorld`.
 
 ---
 
-## 3. Binary Diff Format (**Partial**, `@experimental`)
+## 3. Binary Diff Format (**Internal**, `@experimental`)
 
 For tick-to-tick state synchronisation (multiplayer, streaming), use the binary
 diff format implemented in `src/snapshot.ts`.
@@ -133,7 +148,7 @@ include wall-clock timestamps or random nonces in diff payloads.
 
 ---
 
-## 4. Multiplayer Message Protocol (**Planned**)
+## 4. Multiplayer Message Protocol (**Planned only**)
 
 For lockstep multiplayer, hosts exchange command frames rather than full state.
 Ananke does **not** currently ship a canonical lockstep wire-message module with these
@@ -178,7 +193,7 @@ A full structural hash is more robust but expensive; use it only on resync.
 └──────────────────────────────────────────────────────────┘
 ```
 
-### 4.4 Transport encoding (**Planned**)
+### 4.4 Transport encoding (**Planned only**)
 
 Use JSON for development and debugging.  For production, encode wire messages
 as CBOR (RFC 8949) or MessagePack for ~30% size reduction.  The message
@@ -200,7 +215,7 @@ structure is identical; only the outer encoding changes.
 
 ---
 
-## 6. Migration (**Shipped**, with planned paths)
+## 6. Migration (**Shipped but undocumented**, with Planned only paths)
 
 Load a save and bring it to the current schema version before simulating:
 

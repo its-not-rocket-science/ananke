@@ -6,6 +6,18 @@ Canonical contract sources:
 - `docs/stable-api-manifest.json`
 - `docs/public-contract.md`
 
+
+## Stability labels (taxonomy-bound)
+
+<!-- CONTRACT:STABILITY_LABELS:start -->
+```json
+[
+  { "kind": "subpath", "subject": ".", "status": "Tier 1 stable", "notes": "Root package entrypoint" },
+  { "kind": "symbol-group", "subject": "root:tier1-symbols", "status": "Tier 1 stable", "notes": "Manifest-backed root symbols" }
+]
+```
+<!-- CONTRACT:STABILITY_LABELS:end -->
+
 ## Tier-1 (root-stable)
 
 Only root imports are Tier-1:
@@ -67,7 +79,7 @@ import { ... } from "@its-not-rocket-science/ananke";
 
 ## Shipped but not Tier-1 (subpath imports)
 
-Everything below is public and shipped through `package.json` exports, but **not Tier-1 root-stable**.
+Everything below is public and shipped through `package.json` exports, but must be treated by the taxonomy as **Shipped but undocumented**, **Experimental**, or **Internal** (never Tier 1 stable unless explicitly labeled).
 
 - Experimental subpaths: see `docs/module-index.md` for grouped listing.
 - Internal/advanced subpath: `@its-not-rocket-science/ananke/tier3`.
