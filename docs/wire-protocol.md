@@ -2,6 +2,8 @@
 
 This page documents only what is currently shipped in code. It avoids treating roadmap ideas as current protocol guarantees.
 
+For maintainer promises/non-promises and pinning recommendations, see `docs/support-boundaries.md`.
+
 Status badge legend:
 - 🟢 **Implemented + public**: implemented and exported on documented package entrypoints.
 - 🟡 **Partial**: implemented API exists, but completeness/coverage is intentionally limited.
@@ -17,6 +19,8 @@ Status badge legend:
 | Schema migration | 🟡 Partial | `migrateWorld` + `registerMigration` are shipped; only explicitly registered migration edges run (no built-in universal chain). |
 | Binary diff | 🟠 Implemented + internal | `diffWorldState` / `packDiff` / `unpackDiff` / `applyDiff` are shipped on `@its-not-rocket-science/ananke/tier3` (advanced/internal surface). |
 | Lockstep messages | 🔵 Planned | No canonical exported lockstep message envelope/type module. Hosts define their own message schema today. |
+
+Versioning note: production hosts should pin exact patch versions for schema migration and any non-root protocol helpers.
 
 ## 1) Save snapshots (JSON)
 

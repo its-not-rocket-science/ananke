@@ -2,6 +2,8 @@
 
 Canonical policy: `docs/public-contract.md`.
 
+Support scope and pinning guidance: `docs/support-boundaries.md`.
+
 - **Tier 1 stable** is root only (`@its-not-rocket-science/ananke`).
 - Subpaths default to **Shipped but undocumented** in the canonical inventory unless explicitly labeled otherwise.
 
@@ -97,3 +99,5 @@ Canonical policy: `docs/public-contract.md`.
 - **Stable subpath**: none declared at this time in the repo-level contract.
 
 For bridge and wire-specific behavior docs, see `docs/bridge-contract.md` and `docs/wire-protocol.md`.
+
+Adopter guidance: if you import any subpath in production, pin exact patch versions and run integration tests before upgrades.

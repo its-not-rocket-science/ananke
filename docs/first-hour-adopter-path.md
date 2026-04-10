@@ -2,6 +2,8 @@
 
 This is the only path a new adopter needs for the first 60 minutes.
 
+It is an onboarding confidence funnel, not a production-readiness certification.
+
 - Entry example: `examples/guided-first-hour.ts`
 - Command: `npm run example:first-hour`
 - Validation command: `npm run test:first-hour-smoke`
@@ -116,6 +118,12 @@ If first-hour verification fails, use this sequence:
    ```
 
    Fix reported errors and rerun until build succeeds.
+
+## Support boundary reminder
+
+- First-hour success confirms basic deterministic integration only.
+- Long-lived integrations should stay on Tier-1 root imports unless you intentionally accept subpath volatility.
+- For maintainer commitments and pinning guidance, see `docs/support-boundaries.md`.
 
 ## Next step after first hour
 

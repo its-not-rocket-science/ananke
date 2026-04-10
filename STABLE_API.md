@@ -6,6 +6,8 @@ Canonical contract sources:
 - `docs/stable-api-manifest.json`
 - `docs/public-contract.md`
 
+For explicit maintainer promises, exclusions, and version-pinning guidance, see `docs/support-boundaries.md`.
+
 
 ## Stability labels (taxonomy-bound)
 
@@ -88,4 +90,5 @@ Everything below is public and shipped through `package.json` exports, but must 
 
 - Do not import non-listed symbols from root and assume stability.
 - If a symbol is shipped only via subpath, treat it as shipped-but-not-Tier-1 unless a specific subpath-stability claim exists.
+- If you depend on subpaths in production, pin versions conservatively and regression-test every upgrade.
 
