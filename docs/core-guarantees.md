@@ -117,7 +117,7 @@ The full symbol table is in [`STABLE_API.md`](../STABLE_API.md).
 > guide.  The `1.0` release will lock the Tier 1 surface under full semver guarantees.
 
 Hosts that require byte-for-byte replay determinism across patch releases should also pin to
-a specific commit hash.  See [`docs/versioning.md`](versioning.md#commit-hash-pinning).
+a specific commit hash.  See [`docs/versioning.md`](versioning.md#commit-hash-pinning-supplementary).
 
 ### Deprecation lifecycle
 

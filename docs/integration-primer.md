@@ -208,7 +208,7 @@ Milestone 3 delivers a complete bridge module (`src/bridge/`) that handles tic
 - **Mapping system** – connect simulation segment IDs (`"leftArm"`, `"torso"`) to your skeleton’s bone names (`"arm_L"`, `"spine_02"`).
 - **Fixed‑point interpolation** – deterministic linear interpolation of positions, velocities, animation weights, pose modifiers, and condition.
 - **Extrapolation control** – optional velocity‑based prediction when render time runs ahead of simulation.
-- **Full API documentation** – see [`bridge‑api.md`](./bridge‑api.md) for detailed reference and examples.
+- **Full API documentation** – see [`bridge‑api.md`](./bridge-contract.md) for detailed reference and examples.
 
 ### Minimal setup example
 
@@ -243,11 +243,11 @@ if (state) {
 
 ### Working demo
 
-Run `npm run run:bridge‑demo` to see a complete bridge workflow with humanoid and quadruped body plans, simulation loop, render‑loop simulation, and determinism verification.
+Run `npm run run:bridge-demo` to see a complete bridge workflow with humanoid and quadruped body plans, simulation loop, render‑loop simulation, and determinism verification.
 
 ### Integration steps
 
-1. Read the [bridge API documentation](./bridge‑api.md) to understand mapping and interpolation details.
+1. Read the [bridge API documentation](./bridge-contract.md) to understand mapping and interpolation details.
 2. Author mappings for each body plan your game uses (humanoid, quadruped, avian, etc.).
 3. Integrate the bridge into your simulation and render threads as shown above.
 4. Use the `poseModifiers` array to drive vertex‑shader weights or morph targets for injury visualisation.
@@ -327,7 +327,7 @@ When mapping injury regions to a 3D skeleton, note that region IDs are **camelCa
 2. **Trace a single attack** (`npm run run:trace-attack`) to internalise the data flow.
 3. **Build an observer** that logs the state of your own entities each tick (copy `observer.ts`).
 4. **Implement save/load** using the serialisation pattern (`serialize.ts`).
-5. **Connect the 3D rig** using the bridge API (`npm run run:bridge‑demo`). See [Bridge API documentation](./bridge‑api.md).
+5. **Connect the 3D rig** using the bridge API (`npm run run:bridge-demo`). See [Bridge API documentation](./bridge-contract.md).
 6. **Profile performance** with many entities (100+) to ensure your bridge does not become a bottleneck.
 
 ---

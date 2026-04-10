@@ -13,7 +13,7 @@
 ```
 
 If you need byte-for-byte replay determinism across patch releases, also record the
-exact commit hash in your project's `UPSTREAM.md`.  See [commit-hash pinning](#commit-hash-pinning) below.
+exact commit hash in your project's `UPSTREAM.md`.  See [commit-hash pinning](#commit-hash-pinning-supplementary) below.
 
 ---
 
@@ -139,7 +139,7 @@ Each entry follows:
 
 ### Potentially breaking
 - `SURF_J` constant changed from 120 to 110.
-  Re-run `npm run validation` to check calibration impact.
+  Re-run `npm run run:validation` to check calibration impact.
 
 ### Added
 - `src/sim/widget.ts` — Widget System (Phase N).
@@ -154,7 +154,7 @@ When upgrading your pinned semver tag or commit hash:
 1. **Read the CHANGELOG** — check all entries since your previous version for Tier 1 / Tier 2 items
 2. **Diff the source** — `git diff <old-tag>..<new-tag> -- src/` to see what changed
 3. **Run your integration build** — `npm run build`
-4. **Run the validation suite** — `npm run validation` to confirm calibration scenarios pass
+4. **Run the validation suite** — `npm run run:validation` to confirm calibration scenarios pass
 5. **Run the full test suite** — `npm run test:coverage`
 6. **Update your pin** — commit the new tag/hash to your dependency manifest
 
