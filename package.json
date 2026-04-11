@@ -388,9 +388,10 @@
     "generate-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --write",
     "check-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --check",
     "test:first-hour-smoke": "npm run build && node tools/first-hour-smoke.mjs",
-    "check-trust-dashboard-artifacts": "node tools/check-trust-dashboard-artifacts.mjs",
+    "check-trust-dashboard-artifacts": "node dist/tools/generate-trust-dashboard.js --check",
     "check:docs": "node dist/tools/check-doc-links-and-references.js && node dist/tools/check-doc-semantic-consistency.js",
-    "check-doc-semantic-consistency": "node dist/tools/check-doc-semantic-consistency.js"
+    "check-doc-semantic-consistency": "node dist/tools/check-doc-semantic-consistency.js",
+    "generate-trust-dashboard": "node dist/tools/generate-trust-dashboard.js --write"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
