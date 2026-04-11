@@ -27,7 +27,7 @@ export interface OracleState {
 
 export interface TickSnapshot {
   tick: number;
-  entities: Omit<OracleEntity, "x" | "y" | "bleedingRate" | "structuralDamage" | "internalDamage" | "suffocation">[];
+  entities: Array<Omit<OracleEntity, "x" | "y" | "structuralDamage" | "internalDamage" | "suffocation"> & { projHeadBleedingRate: number }>;
 }
 
 export interface DeterminismTrace {
@@ -325,6 +325,7 @@ function tsStep(state: OracleState): TickSnapshot {
       projShock: e.projShock,
       projConsciousness: e.projConsciousness,
       projDead: e.projDead,
+      projHeadBleedingRate: e.bleedingRate,
     })),
   };
 }
@@ -355,6 +356,7 @@ function applyWasmReport(state: OracleState, report: TickSnapshot): void {
     e.projShock = row.projShock;
     e.projConsciousness = row.projConsciousness;
     e.projDead = row.projDead;
+    e.bleedingRate = row.projHeadBleedingRate;
     e.x += row.pushDvX;
     e.y += row.pushDvY;
   }
@@ -372,6 +374,7 @@ function normalizeWasmSnapshot(report: { tick: number; entities: Array<Record<st
       projShock: Number(e.projShock),
       projConsciousness: Number(e.projConsciousness),
       projDead: Boolean(e.projDead),
+      projHeadBleedingRate: Number(e.projHeadBleedingRate ?? 0),
     })),
   };
 }
