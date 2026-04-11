@@ -7,22 +7,120 @@ on:
 
 jobs:
   regression:
-    name: Determinism regression gate
-    runs-on: ubuntu-latest
+    name: Determinism (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [18.x, 20.x]
+    env:
+      DETERMINISM_SEED: "1337"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "22.x"
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
       - run: npm run build
       - name: Run determinism regression test (json)
-        run: npm run test:determinism -- --run test/determinism/regression.spec.ts --seed=1337 --reporter=json --outputFile=determinism-report/results.json
+        run: npm run test:determinism -- --run test/determinism/regression.spec.ts --seed=${{ env.DETERMINISM_SEED }} --reporter=json --outputFile=determinism-report/results.json
+      - name: Assert determinism suite was not skipped
+        shell: bash
+        run: |
+          node -e "const fs=require('node:fs');const p='determinism-report/results.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));const suites=Array.isArray(r.testResults)?r.testResults:[];const skipped=suites.filter((s)=>String(s?.status).toLowerCase()==='skipped');if(skipped.length){console.error('Skipped suites detected in determinism run:');for(const s of skipped){console.error(`- ${s.name ?? '<unknown suite>'}`);}process.exit(1);}console.log('No skipped determinism suites detected.');"
       - name: Build determinism status artifact
         run: node tools/generate-determinism-status.mjs --input=determinism-report/results.json --output=determinism-report/status.json
       - name: Upload determinism status artifact
         uses: actions/upload-artifact@v4
         with:
-          name: determinism-status
+          name: determinism-status-${{ matrix.os }}-node-${{ matrix.node }}
+          path: determinism-report/status.json
+
+  aggregate:
+    name: Aggregate determinism status
+    runs-on: ubuntu-latest
+    needs: regression
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: determinism-status-*
+          path: determinism-report/matrix
+      - name: Compare status across environments
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+
+          const root = path.resolve('determinism-report/matrix');
+          const entries = fs.readdirSync(root, { withFileTypes: true }).filter((x) => x.isDirectory());
+          if (entries.length === 0) {
+            console.error('No determinism status artifacts found.');
+            process.exit(1);
+          }
+
+          function readStatus(dir) {
+            const p = path.join(root, dir, 'status.json');
+            const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+            return {
+              environment: dir.replace(/^determinism-status-/, ''),
+              statusPath: p,
+              status: {
+                overall: raw?.status?.overall ?? null,
+                reason: raw?.status?.reason ?? null,
+              },
+              vitest: {
+                success: raw?.vitest?.success ?? null,
+                numTotalTests: raw?.vitest?.numTotalTests ?? null,
+                numPassedTests: raw?.vitest?.numPassedTests ?? null,
+                numFailedTests: raw?.vitest?.numFailedTests ?? null,
+                numTotalTestSuites: raw?.vitest?.numTotalTestSuites ?? null,
+                numPassedTestSuites: raw?.vitest?.numPassedTestSuites ?? null,
+                numFailedTestSuites: raw?.vitest?.numFailedTestSuites ?? null,
+                passRate: raw?.vitest?.passRate ?? null,
+              },
+              suites: Array.isArray(raw?.suites)
+                ? raw.suites.map((s) => ({
+                    name: s?.name ?? null,
+                    status: s?.status ?? null,
+                    assertionsTotal: s?.assertionsTotal ?? null,
+                    assertionsPassed: s?.assertionsPassed ?? null,
+                    assertionsFailed: s?.assertionsFailed ?? null,
+                  }))
+                : [],
+            };
+          }
+
+          const records = entries.map((e) => readStatus(e.name)).sort((a, b) => a.environment.localeCompare(b.environment));
+          const baseline = JSON.stringify({ status: records[0].status, vitest: records[0].vitest, suites: records[0].suites });
+          const divergences = records.filter((r) => JSON.stringify({ status: r.status, vitest: r.vitest, suites: r.suites }) !== baseline);
+
+          const aggregate = {
+            schemaVersion: 1,
+            generatedAtUtc: new Date().toISOString(),
+            baselineEnvironment: records[0].environment,
+            environmentsCompared: records.length,
+            consistentAcrossMatrix: divergences.length === 0,
+            records,
+          };
+
+          fs.mkdirSync('determinism-report', { recursive: true });
+          fs.writeFileSync('determinism-report/status.json', `${JSON.stringify(aggregate, null, 2)}\n`);
+
+          if (divergences.length > 0) {
+            console.error('Determinism status diverged across environments.');
+            for (const d of divergences) {
+              console.error(`- ${d.environment}`);
+            }
+            process.exit(1);
+          }
+
+          console.log(`Determinism status is consistent across ${records.length} environments.`);
+          NODE
+      - name: Upload aggregated determinism status
+        uses: actions/upload-artifact@v4
+        with:
+          name: determinism-status-aggregate
           path: determinism-report/status.json
