@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import * as fc from "fast-check";
 import {
+  assertDeterminismOrThrow,
   hasBuiltWasmKernel,
   loadWasmKernelFromDist,
   makeCommandSequence,
@@ -10,10 +11,10 @@ import {
 } from "./shared.js";
 
 const runSeed = Number(process.env.DETERMINISM_SEED ?? 1337);
-// CI defaults: 50 runs × 50 commands. Override via env vars for stress runs:
+// CI defaults: 200 runs × 250 commands. Override via env vars for stress runs:
 //   DETERMINISM_WORLD_STATES=10000 DETERMINISM_COMMANDS_PER_STATE=1000 npm test
-const worldRuns = Number(process.env.DETERMINISM_WORLD_STATES ?? 50);
-const commandsPerState = Number(process.env.DETERMINISM_COMMANDS_PER_STATE ?? 50);
+const worldRuns = Number(process.env.DETERMINISM_WORLD_STATES ?? 200);
+const commandsPerState = Number(process.env.DETERMINISM_COMMANDS_PER_STATE ?? 250);
 
 describe.skipIf(!hasBuiltWasmKernel())("determinism fuzzer against wasm", () => {
   it(
@@ -24,16 +25,24 @@ describe.skipIf(!hasBuiltWasmKernel())("determinism fuzzer against wasm", () => 
         fc.asyncProperty(
           fc.record({
             seed: fc.integer({ min: 1, max: 0x7fffffff }),
-            entityCount: fc.integer({ min: 1, max: 64 }),
+            entityCount: fc.integer({ min: 1, max: 256 }),
+            commandScale: fc.integer({ min: 1, max: 4 }),
           }),
-          async ({ seed, entityCount }) => {
+          async ({ seed, entityCount, commandScale }) => {
             const initial = makeInitialState(seed, entityCount);
-            const cmds = makeCommandSequence(seed ^ runSeed, entityCount, commandsPerState);
+            const commandCount = commandsPerState * commandScale;
+            const cmds = makeCommandSequence(seed ^ runSeed, entityCount, commandCount);
             const tsTrace = runTraceWithTs(initial, cmds);
             const wasmTrace = runTraceWithWasm(initial, cmds, kernel);
 
-            expect(wasmTrace.snapshots).toEqual(tsTrace.snapshots);
-            expect(wasmTrace.finalState).toEqual(tsTrace.finalState);
+            assertDeterminismOrThrow(tsTrace, wasmTrace, {
+              runSeed,
+              worldSeed: seed,
+              entityCount,
+              commandCount,
+              label: "fuzz-against-wasm",
+            });
+            expect(true).toBe(true);
           },
         ),
         {
