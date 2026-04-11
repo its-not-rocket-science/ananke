@@ -26,4 +26,6 @@ jobs:
           key: wasm-${{ runner.os }}-${{ hashFiles('as/**/*.ts', 'as/asconfig.json') }}
       - run: npm run build:wasm:core
       - run: npm run build
-      - run: ANANKE_STRICT_DETERMINISM=1 npm run test:determinism -- --runInBand
+      - run: npm run test:determinism -- --runInBand
+        env:
+          ANANKE_STRICT_DETERMINISM: "1"
