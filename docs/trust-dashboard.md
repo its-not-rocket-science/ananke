@@ -1,6 +1,6 @@
 # Trust Dashboard
 
-_Last updated: 2026-04-10 (UTC)_
+_Last updated: 2026-04-11 (UTC)_
 
 This dashboard is intentionally evidence-first: every status row must cite at least one measurable artifact that exists in-repo.
 
@@ -16,7 +16,7 @@ This dashboard is intentionally evidence-first: every status row must cite at le
 | Area | Status | Artifact-backed evidence |
 | --- | --- | --- |
 | API stability | verified | test: `test/version-sync.test.ts`<br>ci workflow: `.github/workflows/api-diff.yml`<br>ci workflow: `.github/workflows/semver-check.yml` |
-| docs coherence | partially verified | ci workflow: `.github/workflows/ci.yml`<br>doc-example compile check: `tools/check-doc-ts-examples.mjs`<br>doc-example compile check: `tools/check-doc-examples.ts` |
+| docs coherence | verified | ci workflow: `.github/workflows/ci.yml`<br>doc-example compile check: `tools/check-doc-ts-examples.mjs`<br>doc-example compile + stability check: `tools/check-doc-examples.ts`<br>doc semantic contract check: `tools/check-doc-semantic-consistency.ts`<br>machine report: `docs/doc-consistency-report.json` |
 | protocol status | verified | fixture: `conformance/bridge-snapshot.json`<br>test: `test/protocol-formats-roundtrip.test.ts`<br>example: `examples/reference/host-coherence/index.ts` |
 | determinism | partially verified | ci workflow: `.github/workflows/determinism.yml`<br>test: `test/determinism/regression.spec.ts`<br>fixture: `conformance/lockstep-sequence.json` |
 | examples health | verified | test: `test/reference-tactical-duel-smoke.test.ts`<br>example: `examples/reference/tactical-duel/index.ts`<br>example: `examples/reference/species-lab/index.ts` |

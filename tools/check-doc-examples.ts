@@ -24,7 +24,10 @@ interface BlockMeta {
   sourceFile: string;
   blockIndex: number;
   blockLine: number;
+  claimedStability: CanonicalStability;
 }
+
+type CanonicalStability = "tier1" | "experimental" | "internal" | "subpath-stable" | "shipped" | "unknown";
 
 function walkMarkdownFiles(inputPath: string, files: string[] = []): string[] {
   const abs = path.join(REPO_ROOT, inputPath);
@@ -182,6 +185,77 @@ function flattenDiagnosticMessage(messageText: string | ts.DiagnosticMessageChai
   return typeof messageText === "string" ? messageText : ts.flattenDiagnosticMessageText(messageText, "\n");
 }
 
+function canonicalizeStabilityLabel(raw: string): CanonicalStability {
+  const text = raw.toLowerCase();
+  if (/non[-\s]*tier[-\s]*1|not part of tier[-\s]*1|not tier[-\s]*1/.test(text)) {
+    return text.includes("shipped") ? "shipped" : "unknown";
+  }
+  if (/tier\s*-?\s*1|root-stable|stable root|tier 1 stable/.test(text)) return "tier1";
+  if (/subpath-stable/.test(text)) return "subpath-stable";
+  if (/internal|tier\s*-?\s*3/.test(text)) return "internal";
+  if (/experimental|tier\s*-?\s*2/.test(text)) return "experimental";
+  if (/shipped but undocumented|shipped/.test(text)) return "shipped";
+  return "unknown";
+}
+
+function parseJsonMarker<T>(docPath: string, marker: string): T {
+  const content = readFileSync(path.join(REPO_ROOT, docPath), "utf8");
+  const start = `<!-- ${marker}:start -->`;
+  const end = `<!-- ${marker}:end -->`;
+  const startIndex = content.indexOf(start);
+  const endIndex = content.indexOf(end);
+  if (startIndex < 0 || endIndex < 0 || endIndex <= startIndex) {
+    throw new Error(`${docPath} missing marker ${marker}`);
+  }
+  const block = content.slice(startIndex + start.length, endIndex);
+  const m = /```json\s*([\s\S]*?)```/.exec(block);
+  if (!m) throw new Error(`${docPath} marker ${marker} must include json fenced block`);
+  return JSON.parse(m[1] ?? "null") as T;
+}
+
+function expectedStabilityBySpecifier(): Map<string, CanonicalStability> {
+  const pkg = JSON.parse(readFileSync(path.join(REPO_ROOT, "package.json"), "utf8")) as { exports?: Record<string, unknown> };
+  const map = new Map<string, CanonicalStability>();
+  map.set(PACKAGE_ROOT, "tier1");
+  for (const key of Object.keys(pkg.exports ?? {})) {
+    if (key === "." || !key.startsWith("./")) continue;
+    map.set(`${PACKAGE_ROOT}${key.slice(1)}`, "shipped");
+  }
+
+  type Row = { kind: string; subject: string; status: string };
+  const labels = parseJsonMarker<Row[]>("docs/module-index.md", "CONTRACT:STABILITY_LABELS");
+  for (const row of labels) {
+    if (row.kind !== "subpath") continue;
+    const spec = row.subject === "." ? PACKAGE_ROOT : `${PACKAGE_ROOT}${row.subject.slice(1)}`;
+    map.set(spec, canonicalizeStabilityLabel(row.status));
+  }
+  return map;
+}
+
+function inferClaimedStability(content: string, blockStartLine: number): CanonicalStability {
+  const lines = content.split("\n");
+  const lineIndex = Math.max(0, blockStartLine - 1);
+  const start = Math.max(0, lineIndex - 8);
+  const end = Math.min(lines.length - 1, lineIndex + 2);
+  const isStabilityLine = (line: string): boolean =>
+    /\bstability\s*:|\bstatus\s*:|^\|[^|]*stability[^|]*\|/i.test(line) ||
+    /root-stable|subpath-stable|shipped but undocumented/i.test(line);
+
+  for (let i = lineIndex; i >= start; i -= 1) {
+    const candidate = lines[i] ?? "";
+    if (!isStabilityLine(candidate)) continue;
+    const label = canonicalizeStabilityLabel(candidate);
+    if (label !== "unknown") return label;
+  }
+  for (let i = lineIndex + 1; i <= end; i += 1) {
+    const candidate = lines[i] ?? "";
+    if (!isStabilityLine(candidate)) continue;
+    const label = canonicalizeStabilityLabel(candidate);
+    if (label !== "unknown") return label;
+  }
+  return "unknown";
+}
+
 function resolveMarkdownFiles(): string[] {
   const files = new Set<string>(["README.md"]);
   for (const file of walkMarkdownFiles("docs")) {
@@ -195,6 +269,7 @@ function main(): void {
   mkdirSync(GENERATED_ROOT, { recursive: true });
 
   const exportMap = loadPackageExportMap();
+  const stabilityBySpecifier = expectedStabilityBySpecifier();
   const markdownFiles = resolveMarkdownFiles();
   const roots: string[] = [];
   const metadataByGeneratedFile = new Map<string, BlockMeta>();
@@ -228,6 +303,7 @@ function main(): void {
         sourceFile: relFile,
         blockIndex: block.blockIndex,
         blockLine: block.line,
+        claimedStability: inferClaimedStability(content, block.line),
       });
     }
   }
@@ -254,8 +330,25 @@ function main(): void {
   });
 
   const diagnostics = ts.getPreEmitDiagnostics(program);
+  const stabilityFailures: string[] = [];
+  const importRe = /import\s+(?:type\s+)?(?:\{[^}]+\}|[\w*\s,]+)\s+from\s+["'](@its-not-rocket-science\/ananke(?:\/[a-zA-Z0-9._-]+)*)["']/g;
+  for (const generated of roots) {
+    const meta = metadataByGeneratedFile.get(path.resolve(generated));
+    if (!meta || meta.claimedStability === "unknown") continue;
+    const code = readFileSync(generated, "utf8");
+    let m: RegExpExecArray | null;
+    while ((m = importRe.exec(code)) !== null) {
+      const specifier = m[1] ?? PACKAGE_ROOT;
+      const expected = stabilityBySpecifier.get(specifier) ?? "unknown";
+      if (expected !== "unknown" && expected !== meta.claimedStability) {
+        stabilityFailures.push(
+          `${meta.sourceFile} [ts block ${meta.blockIndex}] claims ${meta.claimedStability} but import '${specifier}' is ${expected}`,
+        );
+      }
+    }
+  }
 
-  if (diagnostics.length === 0) {
+  if (diagnostics.length === 0 && stabilityFailures.length === 0) {
     console.log(`✅ Typechecked ${exampleBlocks} TypeScript doc example block(s); skipped ${pseudocodeBlocks} pseudocode block(s).`);
     return;
   }
@@ -294,7 +387,7 @@ function main(): void {
     nonBlockDiagnostics.push({ location: null, code, message });
   }
 
-  console.error(`❌ Found ${blockFailures.size + nonBlockDiagnostics.length} failing doc example location(s).`);
+  console.error(`❌ Found ${blockFailures.size + nonBlockDiagnostics.length + stabilityFailures.length} failing doc example location(s).`);
   for (const failure of blockFailures.values()) {
     console.error(
       `- ${failure.sourceFile} [ts block ${failure.blockIndex}] (starts at line ${failure.blockLine}) -> TS${failure.code} at ${failure.line}:${failure.col}`,
@@ -309,6 +402,9 @@ function main(): void {
     } else {
       console.error(`- TS${diagnostic.code}: ${diagnostic.message}`);
     }
+  }
+  for (const failure of stabilityFailures) {
+    console.error(`- ${failure}`);
   }
 
   process.exit(1);
