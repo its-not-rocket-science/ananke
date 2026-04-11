@@ -6,6 +6,7 @@ const defaultFiles = [];
 const runFiles = [];
 const pass = [];
 let seed;
+let runInBandRequested = false;
 
 for (let i = 0; i < raw.length; i++) {
   const a = raw[i];
@@ -29,12 +30,20 @@ for (let i = 0; i < raw.length; i++) {
     defaultFiles.push(a);
     continue;
   }
-  // Jest compat: --runInBand → Vitest single-fork serial execution
+  // Jest compat: --runInBand → Vitest single-worker serial execution
   if (a === "--runInBand") {
-    pass.push("--pool=forks", "--poolOptions.forks.singleFork=true");
+    runInBandRequested = true;
     continue;
   }
   pass.push(a);
+}
+
+if (
+  runInBandRequested
+  && !pass.some((arg) => arg === "--pool" || arg.startsWith("--pool="))
+) {
+  // Prefer threads for runInBand to avoid long-running fork RPC stalls on CI.
+  pass.push("--pool=threads", "--poolOptions.threads.singleThread=true");
 }
 
 const env = { ...process.env };
