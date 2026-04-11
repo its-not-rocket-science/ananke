@@ -91,7 +91,7 @@ import {
 import { getSkill } from "./skills.js";
 
 import { TICK_HZ } from "./tick.js";
-import { assertNoFloatUsageInProduction } from "../determinism.js";
+import { assertDeterministicWorldLike, assertNoFloatUsageInProduction } from "../determinism.js";
 import { resolveAttack as resolveAttackFromResolver } from "./resolvers/attack-resolver.js";
 import { resolveShoot as resolveShootFromResolver } from "./resolvers/shoot-resolver.js";
 import { resolveGrappleCommand as resolveGrappleCommandFromResolver, resolveBreakBind as resolveBreakBindFromResolver } from "./resolvers/grapple-resolver.js";
@@ -175,6 +175,8 @@ function shieldBlocksSegment(
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
   assertNoFloatUsageInProduction(world);
+  const strictDeterminism = ctx.strictDeterminism ?? process.env.ANANKE_STRICT_DETERMINISM === "1";
+  if (strictDeterminism) assertDeterministicWorldLike(world, "step:start");
   const tuning = ctx.tuning ?? TUNING.tactical;
 
   const trace = ctx.trace ?? nullTrace;
@@ -212,6 +214,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
     trace.onEvent({ kind: TraceKinds.Move, tick: world.tick, entityId: e.id, pos: e.position_m, vel: e.velocity_mps });
   }
   const spatialAfterMove = buildSpatialIndex(world, cellSize_m);
+  if (strictDeterminism) assertDeterministicWorldLike(world, "step:post-movement");
 
   // Phase 6: hazard damage — applied after movement so entities in hazard cells take damage each tick.
   if (ctx.hazardGrid) {
@@ -299,6 +302,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
   const aliveBeforeTick = new Set(world.entities.filter(e => !e.injury.dead).map(e => e.id));
 
   applyResolvedImpacts(world, index, finalImpacts, trace, { applyImpactToInjury });
+  if (strictDeterminism) assertDeterministicWorldLike(world, "step:post-impacts");
 
   // Phase 12B: apply chain payloads from active field effects, then expire timed ones
   stepChainEffects(world, trace, world.tick);
@@ -401,6 +405,7 @@ export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContex
 
   trace.onEvent({ kind: TraceKinds.TickEnd, tick: world.tick });
   world.tick += 1;
+  if (strictDeterminism) assertDeterministicWorldLike(world, "step:end");
 }
 
 function resolveCapabilityHitSegment(
@@ -989,4 +994,3 @@ function resolveActivation(
     applyCapabilityEffect(world, actor, cmd.targetId, effect, trace, tick);
   });
 }
-
