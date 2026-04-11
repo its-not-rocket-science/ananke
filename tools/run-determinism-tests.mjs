@@ -2,7 +2,8 @@
 import { spawnSync } from "node:child_process";
 
 const raw = process.argv.slice(2);
-const files = [];
+const defaultFiles = [];
+const runFiles = [];
 const pass = [];
 let seed;
 
@@ -19,13 +20,13 @@ for (let i = 0; i < raw.length; i++) {
   }
   if (a === "--run") {
     while (i + 1 < raw.length && !raw[i + 1].startsWith("--")) {
-      files.push(raw[i + 1]);
+      runFiles.push(raw[i + 1]);
       i += 1;
     }
     continue;
   }
   if (a.endsWith(".ts") || a.endsWith(".js")) {
-    files.push(a);
+    defaultFiles.push(a);
     continue;
   }
   // Jest compat: --runInBand → Vitest single-fork serial execution
@@ -42,7 +43,8 @@ if (seed !== undefined) env.DETERMINISM_SEED = seed;
 // spurious "Timeout calling onTaskUpdate" worker errors on slower CI machines.
 if (env.VITEST_RPC_TIMEOUT === undefined) env.VITEST_RPC_TIMEOUT = "300000";
 
-const vitestArgs = ["vitest", "run", ...files, ...pass];
+const files = runFiles.length > 0 ? runFiles : defaultFiles;
+const vitestArgs = ["vitest", "run", ...new Set(files), ...pass];
 const result = spawnSync("npx", vitestArgs, {
   stdio: "inherit",
   env,
