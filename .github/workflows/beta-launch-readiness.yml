@@ -82,7 +82,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run test:wasm
-      - run: npm run test:determinism -- --run test/determinism/fuzz-against-wasm.spec.ts --seed=1337
+      - run: ANANKE_STRICT_DETERMINISM=1 npm run test:determinism -- --run test/determinism/fuzz-against-wasm.spec.ts --seed=1337
 
   api-stability:
     name: API stability gate

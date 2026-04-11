@@ -16,6 +16,7 @@ jobs:
         node: [18.x, 20.x]
     env:
       DETERMINISM_SEED: "1337"
+      ANANKE_STRICT_DETERMINISM: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
