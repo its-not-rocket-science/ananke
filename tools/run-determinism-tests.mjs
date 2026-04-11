@@ -38,6 +38,9 @@ for (let i = 0; i < raw.length; i++) {
 
 const env = { ...process.env };
 if (seed !== undefined) env.DETERMINISM_SEED = seed;
+// Determinism fuzzing can run long CPU-bound tasks; increase RPC timeout to avoid
+// spurious "Timeout calling onTaskUpdate" worker errors on slower CI machines.
+if (env.VITEST_RPC_TIMEOUT === undefined) env.VITEST_RPC_TIMEOUT = "300000";
 
 const vitestArgs = ["vitest", "run", ...files, ...pass];
 const result = spawnSync("npx", vitestArgs, {
