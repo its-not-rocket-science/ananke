@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "degenerate-position-stack-collision",
+      "seed": 4242,
+      "entityCount": 32,
+      "commands": [
+        { "kind": "teleport", "entityId": 1, "x": 0, "y": 0 },
+        { "kind": "teleport", "entityId": 2, "x": 0, "y": 0 },
+        { "kind": "teleport", "entityId": 3, "x": 0, "y": 0 },
+        { "kind": "teleport", "entityId": 4, "x": 0, "y": 0 },
+        { "kind": "teleport", "entityId": 5, "x": 0, "y": 0 },
+        { "kind": "teleport", "entityId": 6, "x": 0, "y": 0 },
+        { "kind": "teleport", "entityId": 7, "x": 0, "y": 0 },
+        { "kind": "teleport", "entityId": 8, "x": 0, "y": 0 },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "move", "entityId": 1, "dx": 1, "dy": 0 },
+        { "kind": "move", "entityId": 2, "dx": -1, "dy": 0 },
+        { "kind": "move", "entityId": 3, "dx": 0, "dy": 1 },
+        { "kind": "move", "entityId": 4, "dx": 0, "dy": -1 },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" }
+      ]
+    },
+    {
+      "name": "grapple-like-chain-suffocation-and-shock",
+      "seed": 5252,
+      "entityCount": 12,
+      "commands": [
+        { "kind": "setBleed", "entityId": 1, "value": 10000 },
+        { "kind": "setInternal", "entityId": 2, "value": 10000 },
+        { "kind": "setSuffocation", "entityId": 3, "value": 10000 },
+        { "kind": "setFluidLoss", "entityId": 4, "value": 9000 },
+        { "kind": "setShock", "entityId": 5, "value": 12000 },
+        { "kind": "setConsciousness", "entityId": 6, "value": -10 },
+        { "kind": "kill", "entityId": 7, "dead": true },
+        { "kind": "kill", "entityId": 7, "dead": false },
+        { "kind": "teleport", "entityId": 1, "x": 1000, "y": 1000 },
+        { "kind": "teleport", "entityId": 2, "x": 1001, "y": 1000 },
+        { "kind": "teleport", "entityId": 3, "x": 1002, "y": 1000 },
+        { "kind": "teleport", "entityId": 4, "x": 1003, "y": 1000 },
+        { "kind": "teleport", "entityId": 5, "x": 1004, "y": 1000 },
+        { "kind": "teleport", "entityId": 6, "x": 1005, "y": 1000 },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" }
+      ]
+    },
+    {
+      "name": "extreme-entity-count-boundary-values",
+      "seed": 6262,
+      "entityCount": 256,
+      "commands": [
+        { "kind": "setStructuralDamage", "entityId": 1, "value": 10000 },
+        { "kind": "setStructuralDamage", "entityId": 2, "value": -100 },
+        { "kind": "setBleed", "entityId": 1, "value": 10000 },
+        { "kind": "setInternal", "entityId": 1, "value": 10000 },
+        { "kind": "setSuffocation", "entityId": 1, "value": 10000 },
+        { "kind": "setFluidLoss", "entityId": 1, "value": 10000 },
+        { "kind": "setShock", "entityId": 1, "value": 10000 },
+        { "kind": "setConsciousness", "entityId": 1, "value": 10000 },
+        { "kind": "teleport", "entityId": 1, "x": -60000, "y": -60000 },
+        { "kind": "teleport", "entityId": 256, "x": 60000, "y": 60000 },
+        { "kind": "move", "entityId": 128, "dx": 5000, "dy": -5000 },
+        { "kind": "kill", "entityId": 200, "dead": true },
+        { "kind": "kill", "entityId": 200, "dead": false },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" }
+      ]
+    },
+    {
+      "name": "multi-agent-collision-chain",
+      "seed": 7272,
+      "entityCount": 64,
+      "commands": [
+        { "kind": "teleport", "entityId": 10, "x": 0, "y": 0 },
+        { "kind": "teleport", "entityId": 11, "x": 1, "y": 0 },
+        { "kind": "teleport", "entityId": 12, "x": 2, "y": 0 },
+        { "kind": "teleport", "entityId": 13, "x": 3, "y": 0 },
+        { "kind": "teleport", "entityId": 14, "x": 4, "y": 0 },
+        { "kind": "teleport", "entityId": 15, "x": 5, "y": 0 },
+        { "kind": "teleport", "entityId": 16, "x": 6, "y": 0 },
+        { "kind": "move", "entityId": 10, "dx": 1000, "dy": 0 },
+        { "kind": "move", "entityId": 11, "dx": 900, "dy": 0 },
+        { "kind": "move", "entityId": 12, "dx": 800, "dy": 0 },
+        { "kind": "move", "entityId": 13, "dx": 700, "dy": 0 },
+        { "kind": "move", "entityId": 14, "dx": 600, "dy": 0 },
+        { "kind": "move", "entityId": 15, "dx": 500, "dy": 0 },
+        { "kind": "move", "entityId": 16, "dx": 400, "dy": 0 },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" },
+        { "kind": "noop" }
+      ]
+    }
+  ]
+}

@@ -90,46 +90,96 @@ export function makeInitialState(seed: number, entityCount: number): OracleState
 }
 
 export type OracleCommand =
+  | { kind: "noop" }
   | { kind: "move"; entityId: number; dx: number; dy: number }
+  | { kind: "teleport"; entityId: number; x: number; y: number }
   | { kind: "bleed"; entityId: number; delta: number }
   | { kind: "internal"; entityId: number; delta: number }
   | { kind: "suffocation"; entityId: number; delta: number }
-  | { kind: "kill"; entityId: number; dead: boolean };
+  | { kind: "kill"; entityId: number; dead: boolean }
+  | { kind: "setBleed"; entityId: number; value: number }
+  | { kind: "setInternal"; entityId: number; value: number }
+  | { kind: "setSuffocation"; entityId: number; value: number }
+  | { kind: "setFluidLoss"; entityId: number; value: number }
+  | { kind: "setShock"; entityId: number; value: number }
+  | { kind: "setConsciousness"; entityId: number; value: number }
+  | { kind: "setStructuralDamage"; entityId: number; value: number };
+
+function clampQ(value: number): number {
+  return Math.max(0, Math.min(SCALE.Q, value));
+}
 
 export function makeCommandSequence(seed: number, entityCount: number, length: number): OracleCommand[] {
   const out: OracleCommand[] = [];
   let s = seed ^ 0x9e3779b9;
   for (let i = 0; i < length; i++) {
     let kindRoll: number;
-    [s, kindRoll] = randInt(s, 0, 4);
+    [s, kindRoll] = randInt(s, 0, 13);
     let entityId: number;
     [s, entityId] = randInt(s, 1, entityCount);
     if (kindRoll === 0) {
+      out.push({ kind: "noop" });
+    } else if (kindRoll === 1) {
       let dx: number;
       let dy: number;
-      [s, dx] = randInt(s, -1_000, 1_000);
-      [s, dy] = randInt(s, -1_000, 1_000);
+      [s, dx] = randInt(s, -5_000, 5_000);
+      [s, dy] = randInt(s, -5_000, 5_000);
       out.push({ kind: "move", entityId, dx, dy });
-    } else if (kindRoll === 1) {
-      let delta: number;
-      [s, delta] = randInt(s, 0, 120);
-      out.push({ kind: "bleed", entityId, delta });
     } else if (kindRoll === 2) {
-      let delta: number;
-      [s, delta] = randInt(s, 0, 80);
-      out.push({ kind: "internal", entityId, delta });
+      let x: number;
+      let y: number;
+      [s, x] = randInt(s, -60_000, 60_000);
+      [s, y] = randInt(s, -60_000, 60_000);
+      out.push({ kind: "teleport", entityId, x, y });
     } else if (kindRoll === 3) {
       let delta: number;
-      [s, delta] = randInt(s, 0, 60);
+      [s, delta] = randInt(s, -240, 240);
+      out.push({ kind: "bleed", entityId, delta });
+    } else if (kindRoll === 4) {
+      let delta: number;
+      [s, delta] = randInt(s, -200, 200);
+      out.push({ kind: "internal", entityId, delta });
+    } else if (kindRoll === 5) {
+      let delta: number;
+      [s, delta] = randInt(s, -200, 200);
       out.push({ kind: "suffocation", entityId, delta });
-    } else {
+    } else if (kindRoll === 6) {
       out.push({ kind: "kill", entityId, dead: (s & 1) === 0 });
+    } else if (kindRoll === 7) {
+      let value: number;
+      [s, value] = randInt(s, -SCALE.Q, SCALE.Q * 2);
+      out.push({ kind: "setBleed", entityId, value });
+    } else if (kindRoll === 8) {
+      let value: number;
+      [s, value] = randInt(s, -SCALE.Q, SCALE.Q * 2);
+      out.push({ kind: "setInternal", entityId, value });
+    } else if (kindRoll === 9) {
+      let value: number;
+      [s, value] = randInt(s, -SCALE.Q, SCALE.Q * 2);
+      out.push({ kind: "setSuffocation", entityId, value });
+    } else if (kindRoll === 10) {
+      let value: number;
+      [s, value] = randInt(s, -SCALE.Q, SCALE.Q * 2);
+      out.push({ kind: "setFluidLoss", entityId, value });
+    } else if (kindRoll === 11) {
+      let value: number;
+      [s, value] = randInt(s, -SCALE.Q, SCALE.Q * 2);
+      out.push({ kind: "setShock", entityId, value });
+    } else if (kindRoll === 12) {
+      let value: number;
+      [s, value] = randInt(s, -SCALE.Q, SCALE.Q * 2);
+      out.push({ kind: "setConsciousness", entityId, value });
+    } else {
+      let value: number;
+      [s, value] = randInt(s, -SCALE.Q, SCALE.Q * 2);
+      out.push({ kind: "setStructuralDamage", entityId, value });
     }
   }
   return out;
 }
 
 function applyCommand(state: OracleState, cmd: OracleCommand): void {
+  if (cmd.kind === "noop") return;
   const e = state.entities[cmd.entityId - 1];
   if (!e) return;
   if (cmd.kind === "move") {
@@ -137,19 +187,52 @@ function applyCommand(state: OracleState, cmd: OracleCommand): void {
     e.y += cmd.dy;
     return;
   }
+  if (cmd.kind === "teleport") {
+    e.x = cmd.x;
+    e.y = cmd.y;
+    return;
+  }
   if (cmd.kind === "bleed") {
-    e.bleedingRate = Math.max(0, Math.min(SCALE.Q, e.bleedingRate + cmd.delta));
+    e.bleedingRate = clampQ(e.bleedingRate + cmd.delta);
     return;
   }
   if (cmd.kind === "internal") {
-    e.internalDamage = Math.max(0, Math.min(SCALE.Q, e.internalDamage + cmd.delta));
+    e.internalDamage = clampQ(e.internalDamage + cmd.delta);
     return;
   }
   if (cmd.kind === "suffocation") {
-    e.suffocation = Math.max(0, Math.min(SCALE.Q, e.suffocation + cmd.delta));
+    e.suffocation = clampQ(e.suffocation + cmd.delta);
     return;
   }
-  e.projDead = cmd.dead;
+  if (cmd.kind === "kill") {
+    e.projDead = cmd.dead;
+    return;
+  }
+  if (cmd.kind === "setBleed") {
+    e.bleedingRate = clampQ(cmd.value);
+    return;
+  }
+  if (cmd.kind === "setInternal") {
+    e.internalDamage = clampQ(cmd.value);
+    return;
+  }
+  if (cmd.kind === "setSuffocation") {
+    e.suffocation = clampQ(cmd.value);
+    return;
+  }
+  if (cmd.kind === "setFluidLoss") {
+    e.projFluidLoss = clampQ(cmd.value);
+    return;
+  }
+  if (cmd.kind === "setShock") {
+    e.projShock = clampQ(cmd.value);
+    return;
+  }
+  if (cmd.kind === "setConsciousness") {
+    e.projConsciousness = clampQ(cmd.value);
+    return;
+  }
+  e.structuralDamage = clampQ(cmd.value);
 }
 
 function qMul(a: number, b: number): number {
@@ -321,6 +404,42 @@ export function runTraceWithWasm(state: OracleState, commands: OracleCommand[], 
     applyWasmReport(mutable, report);
   }
   return { finalState: mutable, snapshots };
+}
+
+export function assertDeterminismOrThrow(
+  expected: DeterminismTrace,
+  actual: DeterminismTrace,
+  repro: { runSeed: number; worldSeed: number; entityCount: number; commandCount: number; label?: string },
+): void {
+  const divergence = firstDivergence(expected.snapshots, actual.snapshots);
+  if (divergence) {
+    throw new Error(
+      [
+        "Determinism mismatch",
+        repro.label ? `label=${repro.label}` : "",
+        `runSeed=${repro.runSeed}`,
+        `worldSeed=${repro.worldSeed}`,
+        `entityCount=${repro.entityCount}`,
+        `commandCount=${repro.commandCount}`,
+        `tick=${divergence.tick}`,
+        `entity=${divergence.entityId}`,
+        `expected=${JSON.stringify(divergence.expected)}`,
+        `actual=${JSON.stringify(divergence.actual)}`,
+      ].filter(Boolean).join(" "),
+    );
+  }
+  if (JSON.stringify(actual.finalState) !== JSON.stringify(expected.finalState)) {
+    throw new Error(
+      [
+        "Determinism final state mismatch",
+        repro.label ? `label=${repro.label}` : "",
+        `runSeed=${repro.runSeed}`,
+        `worldSeed=${repro.worldSeed}`,
+        `entityCount=${repro.entityCount}`,
+        `commandCount=${repro.commandCount}`,
+      ].filter(Boolean).join(" "),
+    );
+  }
 }
 
 export function firstDivergence(a: TickSnapshot[], b: TickSnapshot[]): { tick: number; entityId: number; expected: unknown; actual: unknown } | undefined {
