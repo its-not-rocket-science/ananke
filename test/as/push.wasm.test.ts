@@ -70,12 +70,12 @@ describe.skipIf(!wasmAvailable)("AS push.wasm vs TypeScript reference", () => {
 
   // ── Constants ──────────────────────────────────────────────────────────────
 
-  it("MAX_ENTITIES == 64", () => {
-    expect(ex.MAX_ENTITIES.value).toBe(64);
+  it("MAX_ENTITIES == 256", () => {
+    expect(ex.MAX_ENTITIES.value).toBe(256);
   });
 
-  it("memory layout offsets are non-overlapping multiples of 256", () => {
-    const stride = 64 * 4; // 256 bytes
+  it("memory layout offsets are non-overlapping multiples of 1024", () => {
+    const stride = 256 * 4; // 1024 bytes
     expect(ex.OFFSET_POS_X.value).toBe(0);
     expect(ex.OFFSET_POS_Y.value).toBe(stride);
     expect(ex.OFFSET_ALIVE.value).toBe(stride * 2);
