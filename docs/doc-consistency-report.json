@@ -1,0 +1,227 @@
+{
+  "generatedAt": "2026-04-11T00:06:41.694Z",
+  "filesScanned": 521,
+  "importClaims": [
+    {
+      "file": "README.md",
+      "line": 60,
+      "specifier": "@its-not-rocket-science/ananke",
+      "symbols": [
+        "createWorld",
+        "q",
+        "stepWorld",
+        "CommandMap"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { createWorld, q, stepWorld, type CommandMap } from \"@its-not-rocket-science/ananke\""
+    },
+    {
+      "file": "README.md",
+      "line": 80,
+      "specifier": "@its-not-rocket-science/ananke",
+      "symbols": [
+        "createWorld",
+        "stepWorld",
+        "q",
+        "CommandMap"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { createWorld, stepWorld, q, type CommandMap } from \"@its-not-rocket-science/ananke\""
+    },
+    {
+      "file": "docs/bridge-contract.md",
+      "line": 41,
+      "specifier": "@its-not-rocket-science/ananke",
+      "symbols": [
+        "createWorld",
+        "stepWorld",
+        "extractRigSnapshots",
+        "deriveAnimationHints",
+        "q",
+        "SCALE"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { createWorld, stepWorld, extractRigSnapshots, deriveAnimationHints, q, SCALE, } from \"@its-not-rocket-science/ananke\""
+    },
+    {
+      "file": "docs/bridge-contract.md",
+      "line": 71,
+      "specifier": "@its-not-rocket-science/ananke",
+      "symbols": [
+        "createWorld",
+        "stepWorld",
+        "extractRigSnapshots",
+        "q",
+        "SCALE"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { createWorld, stepWorld, extractRigSnapshots, q, SCALE } from \"@its-not-rocket-science/ananke\""
+    },
+    {
+      "file": "docs/bridge-contract.md",
+      "line": 72,
+      "specifier": "@its-not-rocket-science/ananke/tier2",
+      "symbols": [
+        "BridgeEngine",
+        "BridgeConfig",
+        "BodyPlanMapping",
+        "validateMappingCoverage"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { BridgeEngine, type BridgeConfig, type BodyPlanMapping, validateMappingCoverage, } from \"@its-not-rocket-science/ananke/tier2\""
+    },
+    {
+      "file": "docs/learning-paths/game-dev-path.md",
+      "line": 5,
+      "specifier": "@its-not-rocket-science/ananke",
+      "symbols": [
+        "createWorld",
+        "stepWorld",
+        "q",
+        "CommandMap"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { createWorld, stepWorld, q, type CommandMap } from \"@its-not-rocket-science/ananke\""
+    },
+    {
+      "file": "docs/learning-paths/storyteller-path.md",
+      "line": 5,
+      "specifier": "@its-not-rocket-science/ananke/narrative",
+      "symbols": [
+        "describeAction"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { describeAction } from \"@its-not-rocket-science/ananke/narrative\""
+    },
+    {
+      "file": "docs/learning-paths/storyteller-path.md",
+      "line": 25,
+      "specifier": "@its-not-rocket-science/ananke/narrative",
+      "symbols": [
+        "scorePlausibility"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { scorePlausibility } from '@its-not-rocket-science/ananke/narrative'"
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 15,
+      "specifier": "@its-not-rocket-science/ananke/species",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as Species from \"@its-not-rocket-science/ananke/species\""
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 24,
+      "specifier": "@its-not-rocket-science/ananke/combat",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as Combat from \"@its-not-rocket-science/ananke/combat\""
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 33,
+      "specifier": "@its-not-rocket-science/ananke/campaign",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as Campaign from \"@its-not-rocket-science/ananke/campaign\""
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 42,
+      "specifier": "@its-not-rocket-science/ananke/polity",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as Polity from \"@its-not-rocket-science/ananke/polity\""
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 51,
+      "specifier": "@its-not-rocket-science/ananke/character",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as Character from \"@its-not-rocket-science/ananke/character\""
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 60,
+      "specifier": "@its-not-rocket-science/ananke/catalog",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as Catalog from \"@its-not-rocket-science/ananke/catalog\""
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 69,
+      "specifier": "@its-not-rocket-science/ananke/social",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as Social from \"@its-not-rocket-science/ananke/social\""
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 78,
+      "specifier": "@its-not-rocket-science/ananke/netcode",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as Netcode from \"@its-not-rocket-science/ananke/netcode\""
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 87,
+      "specifier": "@its-not-rocket-science/ananke/schema",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as Schema from \"@its-not-rocket-science/ananke/schema\""
+    },
+    {
+      "file": "docs/subpath-reference.md",
+      "line": 96,
+      "specifier": "@its-not-rocket-science/ananke/content-pack",
+      "symbols": [],
+      "claimedStability": "shipped",
+      "snippet": "import * as ContentPack from \"@its-not-rocket-science/ananke/content-pack\""
+    },
+    {
+      "file": "docs/wire-protocol.md",
+      "line": 41,
+      "specifier": "@its-not-rocket-science/ananke/schema",
+      "symbols": [
+        "stampSnapshot",
+        "validateSnapshot"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { stampSnapshot, validateSnapshot } from \"@its-not-rocket-science/ananke/schema\""
+    },
+    {
+      "file": "docs/wire-protocol.md",
+      "line": 67,
+      "specifier": "@its-not-rocket-science/ananke",
+      "symbols": [
+        "ReplayRecorder",
+        "serializeReplay",
+        "deserializeReplay",
+        "replayTo"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { ReplayRecorder, serializeReplay, deserializeReplay, replayTo } from \"@its-not-rocket-science/ananke\""
+    },
+    {
+      "file": "examples/reference/tactical-duel/README.md",
+      "line": 17,
+      "specifier": "@its-not-rocket-science/ananke",
+      "symbols": [
+        "createWorld",
+        "stepWorld",
+        "q",
+        "ReplayRecorder",
+        "serializeReplay"
+      ],
+      "claimedStability": "unknown",
+      "snippet": "import { createWorld, stepWorld, q, ReplayRecorder, serializeReplay, } from \"@its-not-rocket-science/ananke\""
+    }
+  ],
+  "issueCount": 0,
+  "issues": []
+}
