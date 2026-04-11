@@ -39,6 +39,7 @@ interface InjuryExports {
   readConsciousness: (slot: number) => number;
   readDead:          (slot: number) => number;
   stepBleedAndShock: (n: number) => void;
+  readBleedingRate: (slot: number, region: number) => number;
 }
 
 // ── Shadow step result ────────────────────────────────────────────────────────
@@ -53,6 +54,7 @@ export interface WasmEntityReport {
   projShock:        number;
   projConsciousness:number;
   projDead:         boolean;
+  projHeadBleedingRate: number;
 }
 
 export interface WasmStepReport {
@@ -132,6 +134,7 @@ export class WasmKernel {
         projShock:         this.injury.readShock(i),
         projConsciousness: this.injury.readConsciousness(i),
         projDead:          this.injury.readDead(i) === 1,
+        projHeadBleedingRate: this.injury.readBleedingRate(i, 0),
       });
     }
 
