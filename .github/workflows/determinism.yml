@@ -64,6 +64,15 @@ jobs:
           function readStatus(dir) {
             const p = path.join(root, dir, 'status.json');
             const raw = JSON.parse(fs.readFileSync(p, 'utf8'));
+            const normalizeSuiteName = (name) => {
+              if (typeof name !== 'string') return null;
+              const slash = name.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '');
+              const testIdx = slash.toLowerCase().lastIndexOf('/test/');
+              if (testIdx >= 0) return slash.slice(testIdx + 1);
+              const distIdx = slash.toLowerCase().lastIndexOf('/dist-test/');
+              if (distIdx >= 0) return slash.slice(distIdx + 1);
+              return slash;
+            };
             return {
               environment: dir.replace(/^determinism-status-/, ''),
               statusPath: p,
@@ -83,7 +92,7 @@ jobs:
               },
               suites: Array.isArray(raw?.suites)
                 ? raw.suites.map((s) => ({
-                    name: s?.name ?? null,
+                    name: normalizeSuiteName(s?.name),
                     status: s?.status ?? null,
                     assertionsTotal: s?.assertionsTotal ?? null,
                     assertionsPassed: s?.assertionsPassed ?? null,
