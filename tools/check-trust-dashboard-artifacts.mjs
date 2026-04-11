@@ -4,7 +4,17 @@ import path from "node:path";
 const repoRoot = process.cwd();
 const dashboardPath = path.join(repoRoot, "docs", "trust-dashboard.md");
 const allowedStatuses = new Set(["verified", "partially verified", "unverified", "planned"]);
-const allowedTypes = new Set(["test", "ci workflow", "example", "doc-example compile check", "fixture", "benchmark"]);
+const allowedTypes = new Set([
+  "test",
+  "ci workflow",
+  "example",
+  "doc-example compile check",
+  "doc-example compile + stability check",
+  "doc semantic contract check",
+  "machine report",
+  "fixture",
+  "benchmark"
+]);
 
 function parseTableRows(lines) {
   const rows = [];
@@ -47,14 +57,14 @@ function parseEvidenceCell(evidenceCell) {
   const parsed = [];
 
   for (const entry of rawEntries) {
-    const match = entry.match(/^([a-z\- ]+):\s*`([^`]+)`$/i);
+    const match = entry.match(/^([^:]+):\s*`([^`]+)`$/);
     if (!match) {
       parsed.push({ error: `invalid evidence format: ${entry}` });
       continue;
     }
 
     parsed.push({
-      type: match[1].toLowerCase(),
+      type: match[1].trim().toLowerCase(),
       relPath: match[2]
     });
   }
