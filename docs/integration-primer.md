@@ -7,7 +7,7 @@
 ## Purpose
 
 > **New to Ananke?** Start with [`docs/host-contract.md`](host-contract.md) — it covers the
-> current stable integration surface with working code examples. Return here for
+> current Tier 1 stable integration surface with working code examples. Return here for
 > architecture diagrams, type glossary, and integration gotchas.
 
 This document captures the technical insights, data‑flow diagrams, type glossaries, and gotchas discovered during the 2–4 week evaluation spike described in the ROADMAP’s **Deep Integration & Technical Onboarding** milestone. It is intended as an internal reference for engineers who will be integrating Ananke into a production game or simulation.
@@ -16,7 +16,7 @@ The spike consisted of three concrete experiments:
 
 1. **Tracing the data flow of a simple melee attack** — from `Command` input through the kernel to injury output (`tools/trace‑attack.ts`).
 2. **Building a minimal observer** that reads `WorldState` after each `stepWorld` call and prints entity positions, condition, and injury summaries (`tools/observer.ts`).
-3. **Experimenting with saving and loading a complete `WorldState`** to understand the serialisation format and any Map/BigInt round‑trip concerns (`tools/serialize.ts`).
+3. **Experimenting with saving and loading a full `WorldState` snapshot** to understand the serialisation format and any Map/BigInt round‑trip concerns (`tools/serialize.ts`).
 
 Each experiment is documented below, followed by a glossary of critical types and a list of integration gotchas.
 
@@ -36,8 +36,8 @@ The full module index with all 41 exports is in [`docs/module-index.md`](module-
 | **Craft / economic simulation** | `"…/crafting"` + `"…/catalog"` | `"…/social"` for trade and faction effects |
 | **Grand strategy / 4X** | `"…/polity"` + `"…/campaign"` | Any combination of the 26 campaign extension modules |
 
-**Stability:** `"."` and `"./polity"` are **Tier 1 (Stable)** — no breaking changes without a major version bump.
-All other subpaths are **Tier 2 (Experimental)** — changelog documents any breaking changes.
+**Stability:** `"."` and `"./polity"` are **Tier 1 stable** — no breaking changes without a major version bump.
+All other subpaths are **Experimental** — changelog documents any breaking changes.
 See [`STABLE_API.md`](../STABLE_API.md) for the full tier table.
 
 ---
@@ -201,7 +201,7 @@ After deserialisation, the simulation can be continued from the saved state and 
 
 ## 5. Connecting to a Renderer (Bridge API)
 
-Milestone 3 delivers a complete bridge module (`src/bridge/`) that handles tick‑rate conversion, segment‑to‑bone mapping, and deterministic interpolation between simulation ticks. The bridge is a double‑buffered engine that ingests simulation snapshots at 20 Hz and provides smooth interpolated state at render frequency (60 Hz or higher).
+Milestone 3 delivers a Tier 1 stable bridge module (`src/bridge/`) that handles tick‑rate conversion, segment‑to‑bone mapping, and deterministic interpolation between simulation ticks. The bridge is a double‑buffered engine that ingests simulation snapshots at 20 Hz and provides smooth interpolated state at render frequency (60 Hz or higher).
 
 ### Key features
 
@@ -243,7 +243,7 @@ if (state) {
 
 ### Working demo
 
-Run `npm run run:bridge-demo` to see a complete bridge workflow with humanoid and quadruped body plans, simulation loop, render‑loop simulation, and determinism verification.
+Run `npm run run:bridge-demo` to see an end-to-end bridge workflow with humanoid and quadruped body plans, simulation loop, render‑loop simulation, and determinism verification.
 
 ### Integration steps
 
@@ -323,7 +323,7 @@ When mapping injury regions to a 3D skeleton, note that region IDs are **camelCa
 
 ## 8. Recommended Integration Steps
 
-1. **Start with the vertical slice** (`npm run run:vertical-slice`) to see a complete 1v1 duel.
+1. **Start with the vertical slice** (`npm run run:vertical-slice`) to see an end-to-end 1v1 duel.
 2. **Trace a single attack** (`npm run run:trace-attack`) to internalise the data flow.
 3. **Build an observer** that logs the state of your own entities each tick (copy `observer.ts`).
 4. **Implement save/load** using the serialisation pattern (`serialize.ts`).
