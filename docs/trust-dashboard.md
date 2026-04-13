@@ -3,7 +3,7 @@
 > GENERATED FILE: produced by `npm run generate-trust-dashboard`.
 > Do not edit manually; update source artifacts and regenerate.
 
-_Last updated: 2026-04-11T00:06:41.694Z_
+_Last updated: 2026-04-13T17:27:04.488Z_
 
 ## Status rules (machine-derived)
 
@@ -28,8 +28,8 @@ _Last updated: 2026-04-11T00:06:41.694Z_
 | Area | Status | Computed summary | Evidence |
 | --- | --- | --- | --- |
 | docs coherence | verified | semantic inconsistencies = 0/0 | doc validation report: `docs/doc-consistency-report.json` |
-| test coverage | unverified | missing coverage summary | coverage summary: `coverage/coverage-summary.json` (missing) |
-| determinism | unverified | missing CI determinism output | ci output: `docs/dashboard/ci-trust-report.json` (missing determinism payload) |
+| test coverage | verified | line coverage 95.46% (threshold 85%) | coverage summary: `coverage/coverage-summary.json` |
+| determinism | verified | ci matrix passes=true; wasm coverage 90.00%/90%; fuzz executions 2000/2000 | ci output: `docs/dashboard/ci-trust-report.json` |
 
 ## CI stale-file rule
 

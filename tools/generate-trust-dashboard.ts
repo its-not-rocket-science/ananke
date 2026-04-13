@@ -32,6 +32,7 @@ function parseArgs(argv: string[]) {
   return {
     write: args.has("--write"),
     check: args.has("--check"),
+    failOnUnverified: args.has("--fail-on-unverified"),
     ciOutputPath: readArg("ci-output", DEFAULT_CI_OUTPUT_PATH),
     coveragePath: readArg("coverage", DEFAULT_COVERAGE_PATH),
     docReportPath: readArg("doc-report", DEFAULT_DOC_REPORT_PATH)
@@ -174,6 +175,14 @@ function main() {
   if (args.write) {
     writeFileSync(DASHBOARD_PATH, rendered, "utf8");
     console.log(`Wrote ${DASHBOARD_PATH}`);
+  }
+
+  if (args.failOnUnverified) {
+    const unverified = rows.filter((row) => row.status === "unverified");
+    if (unverified.length > 0) {
+      console.error(`Trust dashboard contains unverified rows: ${unverified.map((row) => row.area).join(", ")}`);
+      process.exit(1);
+    }
   }
 
   if (args.check) {

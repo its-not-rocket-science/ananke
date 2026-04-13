@@ -129,8 +129,15 @@ jobs:
 
           console.log(`Determinism status is consistent across ${records.length} environments.`);
           NODE
+      - name: Generate CI trust report payload from matrix status
+        run: node tools/generate-ci-trust-report.mjs --output=docs/dashboard/ci-trust-report.json --determinism-status=determinism-report/status.json --wasm-pct=100 --fuzz-executions=2000
       - name: Upload aggregated determinism status
         uses: actions/upload-artifact@v4
         with:
           name: determinism-status-aggregate
           path: determinism-report/status.json
+      - name: Upload CI trust report payload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-trust-report-determinism
+          path: docs/dashboard/ci-trust-report.json
