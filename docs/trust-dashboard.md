@@ -28,7 +28,7 @@ _Last updated: 2026-04-13T17:27:04.488Z_
 | Area | Status | Computed summary | Evidence |
 | --- | --- | --- | --- |
 | docs coherence | verified | semantic inconsistencies = 0/0 | doc validation report: `docs/doc-consistency-report.json` |
-| test coverage | verified | line coverage 95.46% (threshold 85%) | coverage summary: `coverage/coverage-summary.json` |
+| test coverage | unverified | missing coverage summary | coverage summary: `coverage/coverage-summary.json` (missing) |
 | determinism | verified | ci matrix passes=true; wasm coverage 90.00%/90%; fuzz executions 2000/2000 | ci output: `docs/dashboard/ci-trust-report.json` |
 
 ## CI stale-file rule
