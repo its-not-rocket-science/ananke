@@ -25,12 +25,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      - name: Build WASM artifacts (required)
+        run: npm run build:wasm:all
+      - name: Assert required WASM artifacts exist
+        shell: bash
+        run: |
+          node -e "const fs=require('node:fs');const required=['dist/as/units.wasm','dist/as/push.wasm','dist/as/injury.wasm','wasm/ananke-core.wasm'];const missing=required.filter((p)=>!fs.existsSync(p));if(missing.length){console.error('Missing required WASM artifacts:');for(const m of missing)console.error(`- ${m}`);process.exit(1);}console.log('All required WASM artifacts exist.');"
       - name: Run determinism regression test (json)
-        run: npm run test:determinism -- --run test/determinism/regression.spec.ts --seed=${{ env.DETERMINISM_SEED }} --reporter=json --outputFile=determinism-report/results.json
+        run: node tools/run-determinism-tests.mjs test/determinism/fuzz-against-wasm.spec.ts test/determinism/regression.spec.ts --seed=${{ env.DETERMINISM_SEED }} --reporter=json --outputFile=determinism-report/results.json
       - name: Assert determinism suite was not skipped
         shell: bash
         run: |
-          node -e "const fs=require('node:fs');const p='determinism-report/results.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));const suites=Array.isArray(r.testResults)?r.testResults:[];const skipped=suites.filter((s)=>String(s?.status).toLowerCase()==='skipped');if(skipped.length){console.error('Skipped suites detected in determinism run:');for(const s of skipped){console.error(`- ${s.name ?? '<unknown suite>'}`);}process.exit(1);}console.log('No skipped determinism suites detected.');"
+          node -e "const fs=require('node:fs');const p='determinism-report/results.json';const r=JSON.parse(fs.readFileSync(p,'utf8'));const suites=Array.isArray(r.testResults)?r.testResults:[];const skipped=suites.filter((s)=>String(s?.status).toLowerCase()==='skipped');if(skipped.length){console.error('Skipped suites detected in determinism run:');for(const s of skipped){console.error(`- ${s.name ?? '<unknown suite>'}`);}process.exit(1);}const expected=['test/determinism/fuzz-against-wasm.spec.ts','test/determinism/regression.spec.ts'];const normalized=suites.map((s)=>String(s?.name??'').replace(/\\\\/g,'/'));const missing=expected.filter((name)=>!normalized.some((n)=>n.endsWith(name)));if(missing.length){console.error('Missing required determinism suites in report:');for(const m of missing){console.error(`- ${m}`);}process.exit(1);}console.log('No skipped determinism suites detected, and all required suites were executed.');"
       - name: Build determinism status artifact
         run: node tools/generate-determinism-status.mjs --input=determinism-report/results.json --output=determinism-report/status.json
       - name: Upload determinism status artifact

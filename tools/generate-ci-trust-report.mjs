@@ -36,11 +36,23 @@ function readDeterminismStatus(detStatusPath) {
   if (Array.isArray(raw?.records)) {
     const records = raw.records;
     const ciMatrixPasses = records.length > 0 && records.every((record) => record?.status?.overall === "pass");
-    return { ciMatrixPasses };
+    return {
+      ciMatrixPasses,
+      matrix: {
+        consistentAcrossMatrix: raw?.consistentAcrossMatrix === true,
+        environmentsCompared: typeof raw?.environmentsCompared === "number" ? raw.environmentsCompared : records.length,
+        baselineEnvironment: typeof raw?.baselineEnvironment === "string" ? raw.baselineEnvironment : null,
+        records: records.map((record) => ({
+          environment: record?.environment ?? null,
+          status: record?.status?.overall ?? null,
+          reason: record?.status?.reason ?? null
+        }))
+      }
+    };
   }
 
   if (raw?.status && typeof raw.status.overall === "string") {
-    return { ciMatrixPasses: raw.status.overall === "pass" };
+    return { ciMatrixPasses: raw.status.overall === "pass", matrix: null };
   }
 
   return null;
@@ -64,6 +76,7 @@ function main() {
     generatedAt: new Date().toISOString(),
     determinism: {
       ciMatrixPasses,
+      matrix: detFromStatus?.matrix ?? null,
       wasmCoverage: {
         pct: wasmPct,
         threshold: wasmThreshold
