@@ -3,7 +3,7 @@
 > GENERATED FILE: produced by `npm run generate-trust-dashboard`.
 > Do not edit manually; update source artifacts and regenerate.
 
-_Last updated: 2026-04-13T17:27:04.488Z_
+_Last updated: 2026-04-13T19:44:52.475Z_
 
 ## Status rules (machine-derived)
 
