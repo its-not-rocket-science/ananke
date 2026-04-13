@@ -392,7 +392,9 @@
     "check:docs": "node dist/tools/check-doc-links-and-references.js && node dist/tools/check-doc-semantic-consistency.js && node dist/tools/check-doc-language.js",
     "check-doc-semantic-consistency": "node dist/tools/check-doc-semantic-consistency.js",
     "generate-trust-dashboard": "node dist/tools/generate-trust-dashboard.js --write",
-    "check-doc-language": "node dist/tools/check-doc-language.js"
+    "check-doc-language": "node dist/tools/check-doc-language.js",
+    "generate-ci-trust-report": "node tools/generate-ci-trust-report.mjs --output=docs/dashboard/ci-trust-report.json",
+    "check-trust-dashboard-main": "node dist/tools/generate-trust-dashboard.js --fail-on-unverified"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

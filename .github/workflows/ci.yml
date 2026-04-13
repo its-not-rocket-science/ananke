@@ -54,11 +54,24 @@ jobs:
       - name: Check package boundaries (strict core gate + report)
         run: npm run check-boundaries:ci
 
+      - name: Generate CI trust report payload
+        run: npm run generate-ci-trust-report
+
+      - name: Verify coverage summary exists for trust dashboard
+        run: test -f coverage/coverage-summary.json
+
+      - name: Verify CI trust report exists for trust dashboard
+        run: test -f docs/dashboard/ci-trust-report.json
+
       - name: Check release dashboard freshness
         run: npm run check-release-dashboard
 
       - name: Check trust dashboard artifacts
         run: npm run check-trust-dashboard-artifacts
+
+      - name: Enforce fully-verified trust dashboard on main
+        if: github.ref_name == 'main' && matrix.node-version == '20.x'
+        run: npm run check-trust-dashboard-main
 
       - name: Upload package boundary report
         if: matrix.node-version == '20.x'
@@ -72,4 +85,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: coverage
+          path: coverage/coverage-summary.json
+
+      - name: Upload CI trust report
+        if: matrix.node-version == '20.x'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-trust-report
+          path: docs/dashboard/ci-trust-report.json
