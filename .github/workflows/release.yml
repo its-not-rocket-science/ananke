@@ -66,4 +66,5 @@ jobs:
           files: |
             release/artifacts/*.tgz
             release/artifacts/wasm/**
+            release/artifacts/determinism/**
           generate_release_notes: true

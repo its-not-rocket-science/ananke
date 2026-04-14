@@ -1,0 +1,11 @@
+{
+  "environmentsCompared": 1,
+  "consistentAcrossMatrix": true,
+  "records": [
+    {
+      "environment": "linux-node-22.21.1",
+      "overall": "pass",
+      "reason": "all_determinism_tests_passed"
+    }
+  ]
+}
