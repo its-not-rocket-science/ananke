@@ -145,6 +145,40 @@ const GATE_TYPECHECK: Gate = {
   },
 };
 
+// ── Gate 3b: Determinism artifact readiness ─────────────────────────────────
+
+const GATE_DETERMINISM_ARTIFACTS: Gate = {
+  id:   "determinism-artifacts",
+  name: "Determinism release artifacts",
+  run() {
+    const start = Date.now();
+    const summaryPath = path.join(ROOT, "docs", "dashboard", "determinism-release-status.json");
+    if (!fs.existsSync(summaryPath)) {
+      return {
+        id: "determinism-artifacts", name: this.name,
+        status: "fail",
+        durationMs: Date.now() - start,
+        summary: "Missing determinism artifact summary",
+        detail: "Expected docs/dashboard/determinism-release-status.json. Run release determinism artifact generation first.",
+      };
+    }
+
+    const r = runCmd("node", [
+      "tools/check-determinism-release-artifacts.mjs",
+      "--summary=docs/dashboard/determinism-release-status.json",
+    ], { timeoutMs: 30_000 });
+
+    const passed = r.exitCode === 0;
+    return {
+      id: "determinism-artifacts", name: this.name,
+      status: passed ? "pass" : "fail",
+      durationMs: Date.now() - start,
+      summary: passed ? "Determinism artifacts satisfy release thresholds" : "Determinism artifacts are missing or below threshold",
+      detail: (r.stdout + r.stderr).trim().slice(0, 700),
+    };
+  },
+};
+
 // ── Gate 4: Benchmark regression ─────────────────────────────────────────────
 
 const GATE_BENCHMARK: Gate = {
@@ -267,6 +301,7 @@ const GATES: Gate[] = [
   GATE_SCHEMA,
   GATE_FIXTURES,
   GATE_TYPECHECK,
+  GATE_DETERMINISM_ARTIFACTS,
   GATE_BENCHMARK,
   GATE_EMERGENT,
   GATE_MODULE_INDEX,
