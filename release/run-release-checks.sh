@@ -3,6 +3,8 @@ set -euo pipefail
 
 echo "Running full release quality gates..."
 npm run ci
+npm run check-coverage-summary
+npm run generate-coverage-status
 mkdir -p determinism-report
 ANANKE_STRICT_DETERMINISM=1 \
 DETERMINISM_SEED=1337 \

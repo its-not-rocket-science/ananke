@@ -58,7 +58,10 @@ jobs:
         run: npm run generate-ci-trust-report
 
       - name: Verify coverage summary exists for trust dashboard
-        run: test -f coverage/coverage-summary.json
+        run: npm run check-coverage-summary
+
+      - name: Generate compact coverage dashboard artifact
+        run: npm run generate-coverage-status
 
       - name: Verify CI trust report exists for trust dashboard
         run: test -f docs/dashboard/ci-trust-report.json
@@ -86,6 +89,13 @@ jobs:
         with:
           name: coverage-report
           path: coverage/coverage-summary.json
+
+      - name: Upload coverage status summary
+        if: matrix.node-version == '20.x'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-status
+          path: docs/dashboard/coverage-status.md
 
       - name: Upload CI trust report
         if: matrix.node-version == '20.x'

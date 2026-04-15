@@ -49,7 +49,7 @@ function readJsonIfPresent<T>(filePath: string): T | null {
 
 function buildRows(paths: { ciOutputPath: string; coveragePath: string; docReportPath: string }): Row[] {
   const docReport = readJsonIfPresent<{ issueCount?: number }>(paths.docReportPath);
-  const coverage = readJsonIfPresent<{ total?: { lines?: { pct?: number } } }>(paths.coveragePath);
+  const coverage = readJsonIfPresent<{ total?: { lines?: { pct?: number; covered?: number; total?: number } } }>(paths.coveragePath);
   const ci = readJsonIfPresent<{
     determinism?: {
       ciMatrixPasses?: boolean;
@@ -89,18 +89,24 @@ function buildRows(paths: { ciOutputPath: string; coveragePath: string; docRepor
     });
   } else {
     const linePct = coverage.total?.lines?.pct;
-    if (typeof linePct !== "number" || !Number.isFinite(linePct)) {
+    const covered = coverage.total?.lines?.covered;
+    const total = coverage.total?.lines?.total;
+    const hasSchema =
+      typeof linePct === "number" && Number.isFinite(linePct) &&
+      typeof covered === "number" && Number.isFinite(covered) &&
+      typeof total === "number" && Number.isFinite(total) && total > 0;
+    if (!hasSchema) {
       rows.push({
         area: "test coverage",
         status: "unverified",
-        notes: "coverage summary present but lines.pct is invalid",
+        notes: "coverage summary present but schema is invalid (expected total.lines.{pct,covered,total})",
         evidence: [`coverage summary: \`${paths.coveragePath}\``]
       });
     } else {
       rows.push({
         area: "test coverage",
         status: linePct < COVERAGE_THRESHOLD ? "partially verified" : "verified",
-        notes: `line coverage ${linePct.toFixed(2)}% (threshold ${COVERAGE_THRESHOLD}%)`,
+        notes: `line coverage ${linePct.toFixed(2)}% (${covered}/${total}, threshold ${COVERAGE_THRESHOLD}%)`,
         evidence: [`coverage summary: \`${paths.coveragePath}\``]
       });
     }
