@@ -396,7 +396,9 @@
     "generate-ci-trust-report": "node tools/generate-ci-trust-report.mjs --output=docs/dashboard/ci-trust-report.json",
     "check-trust-dashboard-main": "node dist/tools/generate-trust-dashboard.js --fail-on-unverified",
     "generate-determinism-release-artifacts": "node tools/generate-determinism-release-artifacts.mjs --input=determinism-report/results.json --summary=docs/dashboard/determinism-release-status.json --matrix=docs/dashboard/determinism-matrix-summary.json --doc=docs/determinism-status.md",
-    "check-determinism-release-artifacts": "node tools/check-determinism-release-artifacts.mjs --summary=docs/dashboard/determinism-release-status.json"
+    "check-determinism-release-artifacts": "node tools/check-determinism-release-artifacts.mjs --summary=docs/dashboard/determinism-release-status.json",
+    "check-coverage-summary": "node tools/check-coverage-summary.mjs --input=coverage/coverage-summary.json",
+    "generate-coverage-status": "node tools/check-coverage-summary.mjs --input=coverage/coverage-summary.json --markdown-out=docs/dashboard/coverage-status.md"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

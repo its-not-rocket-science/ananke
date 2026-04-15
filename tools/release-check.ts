@@ -65,6 +65,25 @@ function pkgVersion(): string {
   return pkg.version;
 }
 
+function readLineCoverageSummary(): { pct: number; covered: number; total: number } | null {
+  const coveragePath = path.join(ROOT, "coverage", "coverage-summary.json");
+  if (!fs.existsSync(coveragePath)) return null;
+  const raw = JSON.parse(fs.readFileSync(coveragePath, "utf8")) as {
+    total?: { lines?: { pct?: number; covered?: number; total?: number } };
+  };
+  const pct = raw.total?.lines?.pct;
+  const covered = raw.total?.lines?.covered;
+  const total = raw.total?.lines?.total;
+  if (
+    typeof pct !== "number" || !Number.isFinite(pct) ||
+    typeof covered !== "number" || !Number.isFinite(covered) ||
+    typeof total !== "number" || !Number.isFinite(total) || total <= 0
+  ) {
+    return null;
+  }
+  return { pct, covered, total };
+}
+
 // ── Gate 1: Schema migration tests ───────────────────────────────────────────
 
 const GATE_SCHEMA: Gate = {
@@ -141,6 +160,39 @@ const GATE_TYPECHECK: Gate = {
       durationMs: Date.now() - start,
       summary: passed ? "No TypeScript errors" : `${errors} TypeScript error(s) found`,
       detail: passed ? "Clean compile" : (r.stdout + r.stderr).slice(0, 600),
+    };
+  },
+};
+
+// ── Gate 3a: Coverage artifact contract ──────────────────────────────────────
+
+const RELEASE_COVERAGE_THRESHOLD = 85;
+
+const GATE_COVERAGE_ARTIFACT: Gate = {
+  id: "coverage-artifact",
+  name: "Coverage artifact contract (coverage/coverage-summary.json)",
+  run() {
+    const start = Date.now();
+    const summary = readLineCoverageSummary();
+    if (!summary) {
+      return {
+        id: "coverage-artifact",
+        name: this.name,
+        status: "fail",
+        durationMs: Date.now() - start,
+        summary: "Coverage artifact missing or schema-invalid",
+        detail: "Expected coverage/coverage-summary.json with numeric total.lines.{pct,covered,total}.",
+      };
+    }
+
+    const meetsThreshold = summary.pct >= RELEASE_COVERAGE_THRESHOLD;
+    return {
+      id: "coverage-artifact",
+      name: this.name,
+      status: meetsThreshold ? "pass" : "warn",
+      durationMs: Date.now() - start,
+      summary: `Line coverage ${summary.pct.toFixed(2)}% (${summary.covered}/${summary.total}), threshold ${RELEASE_COVERAGE_THRESHOLD}%`,
+      detail: "Source artifact: coverage/coverage-summary.json",
     };
   },
 };
@@ -301,6 +353,7 @@ const GATES: Gate[] = [
   GATE_SCHEMA,
   GATE_FIXTURES,
   GATE_TYPECHECK,
+  GATE_COVERAGE_ARTIFACT,
   GATE_DETERMINISM_ARTIFACTS,
   GATE_BENCHMARK,
   GATE_EMERGENT,
