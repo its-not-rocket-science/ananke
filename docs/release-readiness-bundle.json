@@ -1,0 +1,36 @@
+{
+  "generatedAt": "2026-04-16T18:08:53.774Z",
+  "entries": {
+    "trustDashboard": {
+      "status": "pass",
+      "stale": true,
+      "summary": "no unverified rows",
+      "source": "docs/trust-dashboard.md"
+    },
+    "determinismStatus": {
+      "status": "pass",
+      "stale": true,
+      "summary": "overall=pass",
+      "source": "docs/dashboard/determinism-release-status.json"
+    },
+    "docConsistencyReport": {
+      "status": "pass",
+      "stale": true,
+      "summary": "issues=0",
+      "source": "docs/doc-consistency-report.json"
+    },
+    "publicContractStatus": {
+      "status": "pass",
+      "stale": false,
+      "summary": "public contract check passed",
+      "source": "dist/tools/check-public-contract.js"
+    },
+    "coverageStatus": {
+      "status": "fail",
+      "stale": false,
+      "summary": "coverage summary missing",
+      "source": "coverage/coverage-summary.json"
+    }
+  },
+  "verdict": "RELEASE BLOCKED: trust-critical evidence is not fully green and fresh."
+}
