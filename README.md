@@ -89,7 +89,7 @@ Tier-1 root exports are the stability boundary documented in:
 
 Subpath modules are shipped and supported, but are **not** part of the Tier-1 semver contract unless explicitly called out as stable.
 
-For explicit maintainer commitments and non-goals, see [`docs/support-boundaries.md`](docs/support-boundaries.md).
+For explicit maintainer commitments, enforcement, and adopter responsibilities, see [`docs/support-boundaries.md`](docs/support-boundaries.md) and [`docs/engineering-guarantees.md`](docs/engineering-guarantees.md).
 
 ## What is actually stable today
 
@@ -104,7 +104,7 @@ Stable today means Tier-1 root exports from `@its-not-rocket-science/ananke`:
 
 If you need long-term compatibility, keep production integrations on this root Tier-1 surface.
 
-> Confidence note: first-hour checks are onboarding confidence signals, not a substitute for your own production regression suite.
+> Boundaries note: first-hour checks verify setup and basic deterministic behavior only; they do not validate your production integration.
 
 ## What is shipped but not semver-stable
 
@@ -131,4 +131,4 @@ Ananke is not:
 - a no-code simulation builder
 - a guarantee that every shipped subpath export is semver-stable
 
-If you need deterministic simulation as a kernel inside a host-owned stack, it is likely a fit.
+Use this package when you need deterministic simulation inside a host-owned stack and can run host-side regression tests on each upgrade.

@@ -1,6 +1,6 @@
 # What can still break determinism?
 
-This page lists realistic failure modes that can still break deterministic outcomes, even with the current determinism tests passing.
+This page lists bounded failure modes that can still break deterministic outcomes, even when current determinism tests pass.
 
 ## 1) Hidden floating-point values entering core state
 

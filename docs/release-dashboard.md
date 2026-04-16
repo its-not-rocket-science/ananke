@@ -171,3 +171,6 @@ Committed: 104 lines. Re-generated: 96 lines. Diff found.
 ---
 
 *To reach releasable state: fix all ❌ failures, then re-run `npm run release-check`.*
+
+
+See [`docs/engineering-guarantees.md`](docs/engineering-guarantees.md) for the contract summary and adopter-side validation boundaries.

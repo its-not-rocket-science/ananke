@@ -1,6 +1,6 @@
 # Determinism host pitfalls (integrator checklist)
 
-This checklist documents practical ways host/integration code can introduce divergence even when the kernel itself is deterministic.
+This checklist documents concrete host-side failure modes that can introduce divergence even when kernel code is deterministic.
 
 ## 1) Using host randomness (`Math.random`) in simulation decisions
 
@@ -92,4 +92,4 @@ Hash stability/divergence behavior is tested in `test/netcode.test.ts`.【F:test
 
 ---
 
-If you need an auditable machine-readable signal for CI runs, consume `determinism-report/status.json` from determinism workflows artifacts.
+For machine-readable CI evidence, consume `determinism-report/status.json` from determinism workflow artifacts.
