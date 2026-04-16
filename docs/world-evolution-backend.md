@@ -73,3 +73,8 @@ All sequencing is deterministic and order-stable (sorted IDs, no `Math.random`).
 ## Session orchestration layer
 
 For hosts that need a session-oriented API (`createEvolutionSession`, `stepEvolution`, serialization helpers), use `@its-not-rocket-science/ananke/world-evolution` and see `docs/world-evolution-orchestration.md`.
+
+
+## Host canonical schema
+
+For external platform integrators, see `docs/host-world-evolution-schema.md` and `schema/world-evolution-input.schema.json`.

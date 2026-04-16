@@ -24,3 +24,31 @@ export type {
   WorldEvolutionCheckpoint,
   WorldEvolutionMetrics,
 } from "./types.js";
+
+
+export {
+  HOST_WORLD_EVOLUTION_SCHEMA_VERSION,
+  normalizeHostWorldInput,
+  validateWorldEvolutionInput,
+  toAnankeEvolutionState,
+  fromAnankeEvolutionState,
+  toWorldEvolutionRunRequest,
+  fromWorldEvolutionRunResult,
+} from "./host-schema.js";
+
+export type {
+  WorldEvolutionInput,
+  NormalizedWorldEvolutionInput,
+  HostWorldEntity,
+  HostPolity,
+  HostSettlement,
+  HostRegion,
+  HostRelationship,
+  HostResourceNode,
+  HostRuleOverrides,
+  HostDiseaseProfile,
+  HostEpidemicState,
+  ValidationError,
+  HostAdapterContext,
+  AnankeEvolutionAdapterState,
+} from "./host-schema.js";
