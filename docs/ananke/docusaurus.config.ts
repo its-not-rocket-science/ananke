@@ -1,6 +1,10 @@
 import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
+const docsearchAppId = process.env.DOCSEARCH_APP_ID?.trim();
+const docsearchApiKey = process.env.DOCSEARCH_API_KEY?.trim();
+const docsearchIndexName = process.env.DOCSEARCH_INDEX_NAME?.trim();
+
 const config: Config = {
   title: 'Ananke Docs',
   tagline: 'Deterministic simulation for game developers, researchers, and creators.',
@@ -9,7 +13,11 @@ const config: Config = {
   organizationName: 'its-not-rocket-science',
   projectName: 'ananke',
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn'
+    }
+  },
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'zh-Hans', 'ja', 'ko']
@@ -65,12 +73,16 @@ const config: Config = {
         }
       ]
     },
-    algolia: {
-      appId: process.env.DOCSEARCH_APP_ID ?? 'REPLACE_WITH_APP_ID',
-      apiKey: process.env.DOCSEARCH_API_KEY ?? 'REPLACE_WITH_SEARCH_API_KEY',
-      indexName: process.env.DOCSEARCH_INDEX_NAME ?? 'ananke',
-      contextualSearch: true
-    }
+    ...(docsearchAppId && docsearchApiKey && docsearchIndexName
+      ? {
+          algolia: {
+            appId: docsearchAppId,
+            apiKey: docsearchApiKey,
+            indexName: docsearchIndexName,
+            contextualSearch: true
+          }
+        }
+      : {})
   } satisfies Preset.ThemeConfig
 };
 
