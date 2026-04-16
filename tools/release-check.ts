@@ -84,6 +84,31 @@ function readLineCoverageSummary(): { pct: number; covered: number; total: numbe
   return { pct, covered, total };
 }
 
+function parseTimestamp(value: unknown): number | null {
+  if (typeof value !== "string" || value.length === 0) return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function fileAgeMs(filePath: string): number | null {
+  if (!fs.existsSync(filePath)) return null;
+  return Date.now() - fs.statSync(filePath).mtimeMs;
+}
+
+function ageSummary(ageMs: number): string {
+  const hours = ageMs / (60 * 60 * 1000);
+  if (hours < 24) return `${hours.toFixed(1)}h old`;
+  return `${(hours / 24).toFixed(1)}d old`;
+}
+
+function readJsonFile<T>(relativePath: string): T | null {
+  const absolute = path.join(ROOT, relativePath);
+  if (!fs.existsSync(absolute)) return null;
+  return JSON.parse(fs.readFileSync(absolute, "utf8")) as T;
+}
+
+const RELEASE_FRESHNESS_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+
 // ── Gate 1: Schema migration tests ───────────────────────────────────────────
 
 const GATE_SCHEMA: Gate = {
@@ -294,6 +319,98 @@ const GATE_DETERMINISM_ARTIFACTS: Gate = {
       durationMs: Date.now() - start,
       summary: passed ? "Determinism artifacts satisfy release thresholds" : "Determinism artifacts are missing or below threshold",
       detail: (r.stdout + r.stderr).trim().slice(0, 700),
+    };
+  },
+};
+
+// ── Gate 3f: Trust-critical evidence freshness ──────────────────────────────
+
+const GATE_TRUST_EVIDENCE_FRESHNESS: Gate = {
+  id: "trust-evidence-freshness",
+  name: "Trust-critical evidence freshness & completeness",
+  run() {
+    const start = Date.now();
+    const failures: string[] = [];
+    const notes: string[] = [];
+
+    const trustDashboardPath = path.join(ROOT, "docs", "trust-dashboard.md");
+    if (!fs.existsSync(trustDashboardPath)) {
+      failures.push("trust dashboard is missing");
+    } else {
+      const trustDashboard = fs.readFileSync(trustDashboardPath, "utf8");
+      const unverifiedRows = [...trustDashboard.matchAll(/\|\s*[^|]+\|\s*unverified\s*\|/gi)].length;
+      if (unverifiedRows > 0) {
+        failures.push(`trust dashboard has ${unverifiedRows} unverified row(s)`);
+      }
+
+      const trustUpdatedMatch = /_Last updated:\s*([^_]+)_/.exec(trustDashboard);
+      const trustUpdatedMs = parseTimestamp(trustUpdatedMatch?.[1]?.trim());
+      const trustAgeMs = trustUpdatedMs === null ? fileAgeMs(trustDashboardPath) : Date.now() - trustUpdatedMs;
+      if (trustAgeMs === null) {
+        failures.push("trust dashboard freshness cannot be determined");
+      } else {
+        notes.push(`trust dashboard ${ageSummary(trustAgeMs)}`);
+        if (trustAgeMs > RELEASE_FRESHNESS_MAX_AGE_MS) {
+          failures.push(`trust dashboard is stale (${ageSummary(trustAgeMs)})`);
+        }
+      }
+    }
+
+    const determinismPath = "docs/dashboard/determinism-release-status.json";
+    const determinism = readJsonFile<{ generatedAtUtc?: string }>(determinismPath);
+    const determinismAgeMs =
+      parseTimestamp(determinism?.generatedAtUtc) !== null
+        ? Date.now() - (parseTimestamp(determinism?.generatedAtUtc) ?? 0)
+        : fileAgeMs(path.join(ROOT, determinismPath));
+    if (determinismAgeMs === null) {
+      failures.push("determinism artifact is missing");
+    } else {
+      notes.push(`determinism artifact ${ageSummary(determinismAgeMs)}`);
+      if (determinismAgeMs > RELEASE_FRESHNESS_MAX_AGE_MS) {
+        failures.push(`determinism artifact is stale (${ageSummary(determinismAgeMs)})`);
+      }
+    }
+
+    const docConsistencyPath = "docs/doc-consistency-report.json";
+    const docConsistency = readJsonFile<{ generatedAt?: string }>(docConsistencyPath);
+    const docAgeMs =
+      parseTimestamp(docConsistency?.generatedAt) !== null
+        ? Date.now() - (parseTimestamp(docConsistency?.generatedAt) ?? 0)
+        : fileAgeMs(path.join(ROOT, docConsistencyPath));
+    if (docAgeMs === null) {
+      failures.push("doc-consistency report is missing");
+    } else {
+      notes.push(`doc-consistency report ${ageSummary(docAgeMs)}`);
+      if (docAgeMs > RELEASE_FRESHNESS_MAX_AGE_MS) {
+        failures.push(`doc-consistency report is stale (${ageSummary(docAgeMs)})`);
+      }
+    }
+
+    const exportStatusPath = path.join(ROOT, "docs", "export-status-matrix.md");
+    const exportAgeMs = fileAgeMs(exportStatusPath);
+    if (exportAgeMs === null) {
+      failures.push("export-status matrix is missing");
+    } else {
+      notes.push(`export-status matrix ${ageSummary(exportAgeMs)}`);
+      if (exportAgeMs > RELEASE_FRESHNESS_MAX_AGE_MS) {
+        failures.push(`export-status matrix is stale (${ageSummary(exportAgeMs)})`);
+      }
+    }
+
+    const coveragePath = path.join(ROOT, "coverage", "coverage-summary.json");
+    if (!fs.existsSync(coveragePath)) {
+      failures.push("coverage summary is missing");
+    }
+
+    return {
+      id: this.id,
+      name: this.name,
+      status: failures.length === 0 ? "pass" : "fail",
+      durationMs: Date.now() - start,
+      summary: failures.length === 0
+        ? "All trust-critical evidence is fresh and complete"
+        : `${failures.length} trust-critical release blocker(s)`,
+      detail: failures.length === 0 ? notes.join("; ") : `${failures.join("; ")}${notes.length ? ` | ${notes.join("; ")}` : ""}`,
     };
   },
 };
@@ -519,6 +636,7 @@ const GATES: Gate[] = [
   GATE_COVERAGE_ARTIFACT,
   GATE_DETERMINISM,
   GATE_DETERMINISM_ARTIFACTS,
+  GATE_TRUST_EVIDENCE_FRESHNESS,
   GATE_EXAMPLES,
   GATE_PROTOCOL_ROUNDTRIP,
   GATE_BENCHMARK,
@@ -637,5 +755,127 @@ function renderDashboard(r: typeof report): string {
 const dashPath = path.join(ROOT, "docs", "release-dashboard.md");
 fs.writeFileSync(dashPath, renderDashboard(report), "utf8");
 console.log(`  Wrote docs/release-dashboard.md\n`);
+
+// ── Write docs/release-readiness-bundle.* ───────────────────────────────────
+
+type BundleEntry = {
+  status: "pass" | "fail";
+  stale: boolean;
+  summary: string;
+  source: string;
+};
+
+type BundleEntries = {
+  trustDashboard: BundleEntry;
+  determinismStatus: BundleEntry;
+  docConsistencyReport: BundleEntry;
+  publicContractStatus: BundleEntry;
+  coverageStatus: BundleEntry;
+};
+
+function collectReadinessBundle(): { entries: BundleEntries; verdict: string } {
+  const trustDashboardPath = path.join(ROOT, "docs", "trust-dashboard.md");
+  const trustDashboardText = fs.existsSync(trustDashboardPath) ? fs.readFileSync(trustDashboardPath, "utf8") : "";
+  const trustUpdated = parseTimestamp(/_Last updated:\s*([^_]+)_/.exec(trustDashboardText)?.[1]?.trim());
+  const trustAgeMs = trustUpdated === null ? fileAgeMs(trustDashboardPath) : Date.now() - trustUpdated;
+  const trustUnverified = [...trustDashboardText.matchAll(/\|\s*[^|]+\|\s*unverified\s*\|/gi)].length;
+  const trustEntry: BundleEntry = {
+    status: fs.existsSync(trustDashboardPath) && trustUnverified === 0 ? "pass" : "fail",
+    stale: trustAgeMs === null || trustAgeMs > RELEASE_FRESHNESS_MAX_AGE_MS,
+    summary: !fs.existsSync(trustDashboardPath)
+      ? "missing trust dashboard"
+      : trustUnverified > 0
+      ? `${trustUnverified} unverified row(s)`
+      : "no unverified rows",
+    source: "docs/trust-dashboard.md",
+  };
+
+  const determinism = readJsonFile<{ generatedAtUtc?: string; status?: { overall?: string } }>(
+    "docs/dashboard/determinism-release-status.json",
+  );
+  const determinismTs = parseTimestamp(determinism?.generatedAtUtc);
+  const determinismEntry: BundleEntry = {
+    status: determinism?.status?.overall === "pass" ? "pass" : "fail",
+    stale: determinismTs === null || (Date.now() - determinismTs) > RELEASE_FRESHNESS_MAX_AGE_MS,
+    summary: determinism?.status?.overall === "pass" ? "overall=pass" : "overall!=pass or missing",
+    source: "docs/dashboard/determinism-release-status.json",
+  };
+
+  const docConsistency = readJsonFile<{ generatedAt?: string; issueCount?: number }>("docs/doc-consistency-report.json");
+  const docTs = parseTimestamp(docConsistency?.generatedAt);
+  const docIssues = typeof docConsistency?.issueCount === "number" ? docConsistency.issueCount : Number.NaN;
+  const docEntry: BundleEntry = {
+    status: Number.isFinite(docIssues) && docIssues === 0 ? "pass" : "fail",
+    stale: docTs === null || (Date.now() - docTs) > RELEASE_FRESHNESS_MAX_AGE_MS,
+    summary: Number.isFinite(docIssues) ? `issues=${docIssues}` : "missing issueCount",
+    source: "docs/doc-consistency-report.json",
+  };
+
+  const publicContract = runCmd("node", ["dist/tools/check-public-contract.js"], { timeoutMs: 45_000 });
+  const publicContractEntry: BundleEntry = {
+    status: publicContract.exitCode === 0 ? "pass" : "fail",
+    stale: false,
+    summary: publicContract.exitCode === 0 ? "public contract check passed" : "public contract check failed",
+    source: "dist/tools/check-public-contract.js",
+  };
+
+  const coverage = readLineCoverageSummary();
+  const coverageEntry: BundleEntry = {
+    status: coverage ? "pass" : "fail",
+    stale: false,
+    summary: coverage
+      ? `line coverage ${coverage.pct.toFixed(2)}% (${coverage.covered}/${coverage.total})`
+      : "coverage summary missing",
+    source: "coverage/coverage-summary.json",
+  };
+
+  const entries: BundleEntries = {
+    trustDashboard: trustEntry,
+    determinismStatus: determinismEntry,
+    docConsistencyReport: docEntry,
+    publicContractStatus: publicContractEntry,
+    coverageStatus: coverageEntry,
+  };
+  const blockers = Object.values(entries).filter((entry) => entry.status !== "pass" || entry.stale).length;
+  const verdict = blockers === 0
+    ? "RELEASE READY: all trust-critical evidence is green and fresh."
+    : "RELEASE BLOCKED: trust-critical evidence is not fully green and fresh.";
+  return { entries, verdict };
+}
+
+function renderBundleMarkdown(
+  payload: { generatedAt: string; entries: BundleEntries; verdict: string },
+): string {
+  const row = (name: string, entry: BundleEntry): string =>
+    `| ${name} | ${entry.status === "pass" ? "✅ pass" : "❌ fail"} | ${entry.stale ? "⚠️ yes" : "no"} | ${entry.summary} | \`${entry.source}\` |`;
+  return `# Release Readiness Bundle
+
+> Generated ${payload.generatedAt}.
+> Source command: \`npm run release-check\`.
+
+| Artifact | Status | Stale | Summary | Source |
+|---|---|---|---|---|
+${row("trust dashboard", payload.entries.trustDashboard)}
+${row("determinism status", payload.entries.determinismStatus)}
+${row("doc consistency report", payload.entries.docConsistencyReport)}
+${row("public contract status", payload.entries.publicContractStatus)}
+${row("coverage status", payload.entries.coverageStatus)}
+
+Final verdict: **${payload.verdict}**
+`;
+}
+
+const readiness = collectReadinessBundle();
+const bundlePayload = {
+  generatedAt: new Date().toISOString(),
+  entries: readiness.entries,
+  verdict: readiness.verdict,
+};
+const bundleJsonPath = path.join(ROOT, "docs", "release-readiness-bundle.json");
+const bundleMdPath = path.join(ROOT, "docs", "release-readiness-bundle.md");
+fs.writeFileSync(bundleJsonPath, `${JSON.stringify(bundlePayload, null, 2)}\n`, "utf8");
+fs.writeFileSync(bundleMdPath, renderBundleMarkdown(bundlePayload), "utf8");
+console.log("  Wrote docs/release-readiness-bundle.json");
+console.log("  Wrote docs/release-readiness-bundle.md\n");
 
 process.exit(releasable ? 0 : 1);
