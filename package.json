@@ -237,6 +237,10 @@
     "./world-evolution-backend": {
       "import": "./dist/src/world-evolution-backend/index.js",
       "types": "./dist/src/world-evolution-backend/index.d.ts"
+    },
+    "./world-evolution": {
+      "import": "./dist/src/world-evolution.js",
+      "types": "./dist/src/world-evolution.d.ts"
     }
   },
   "workspaces": [
@@ -259,6 +263,7 @@
     "docs/release-dashboard.md",
     "docs/versioning.md",
     "docs/world-evolution-backend.md",
+    "docs/world-evolution-orchestration.md",
     "docs/emergent-validation-report.md",
     "docs/completion-evidence-dashboard.md",
     "docs/trust-dashboard.md",

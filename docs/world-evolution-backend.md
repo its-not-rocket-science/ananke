@@ -69,3 +69,7 @@ All sequencing is deterministic and order-stable (sorted IDs, no `Math.random`).
 - `runWorldEvolution(request)`
 - `listAvailableWorldEvolutionProfiles()`
 - plus profile helpers/types via the same subpath.
+
+## Session orchestration layer
+
+For hosts that need a session-oriented API (`createEvolutionSession`, `stepEvolution`, serialization helpers), use `@its-not-rocket-science/ananke/world-evolution` and see `docs/world-evolution-orchestration.md`.
