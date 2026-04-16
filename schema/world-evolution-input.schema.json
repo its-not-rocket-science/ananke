@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://its-not-rocket-science.github.io/ananke/schema/world-evolution-input.schema.json",
+  "title": "WorldEvolutionInput",
+  "description": "Host-facing canonical input schema for Ananke world evolution backend.",
+  "type": "object",
+  "required": ["worldSeed", "entities"],
+  "properties": {
+    "schemaVersion": { "type": "string" },
+    "worldSeed": { "type": "integer" },
+    "tick": { "type": "integer", "minimum": 0 },
+    "entities": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/HostPolity" },
+          { "$ref": "#/$defs/HostSettlement" },
+          { "$ref": "#/$defs/HostRegion" }
+        ]
+      }
+    },
+    "relationships": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/HostRelationship" }
+    },
+    "resources": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/HostResourceNode" }
+    },
+    "diseases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/HostDiseaseProfile" }
+    },
+    "epidemics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/HostEpidemicState" }
+    },
+    "ruleOverrides": { "$ref": "#/$defs/HostRuleOverrides" },
+    "hostMetadata": { "type": "object" },
+    "simulationState": {
+      "type": "object",
+      "properties": {
+        "climateByPolity": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["polityId", "active"],
+            "properties": {
+              "polityId": { "type": "string" },
+              "active": { "type": "array", "items": { "type": "object" } }
+            },
+            "additionalProperties": true
+          }
+        },
+        "governanceLawRegistry": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "HostPolity": {
+      "type": "object",
+      "required": ["kind", "id", "name"],
+      "properties": {
+        "kind": { "const": "polity" },
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "factionId": { "type": "string" },
+        "controlledRegionIds": { "type": "array", "items": { "type": "string" } },
+        "controlledSettlementIds": { "type": "array", "items": { "type": "string" } },
+        "population": { "type": "integer", "minimum": 0 },
+        "treasury_cu": { "type": "integer" },
+        "stabilityQ": { "type": "integer", "minimum": 0 },
+        "moraleQ": { "type": "integer", "minimum": 0 },
+        "techEra": { "type": "string" },
+        "governanceType": { "type": "string" },
+        "activeLawIds": { "type": "array", "items": { "type": "string" } },
+        "metadata": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "HostSettlement": {
+      "type": "object",
+      "required": ["kind", "id", "name"],
+      "properties": {
+        "kind": { "const": "settlement" },
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "regionId": { "type": "string" },
+        "polityId": { "type": "string" },
+        "population": { "type": "integer", "minimum": 0 },
+        "metadata": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "HostRegion": {
+      "type": "object",
+      "required": ["kind", "id", "name"],
+      "properties": {
+        "kind": { "const": "region" },
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "biome": { "type": "string" },
+        "polityId": { "type": "string" },
+        "population": { "type": "integer", "minimum": 0 },
+        "metadata": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "HostRelationship": {
+      "type": "object",
+      "required": ["id", "kind", "sourceId", "targetId"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["border", "trade_route", "treaty", "war"] },
+        "sourceId": { "type": "string" },
+        "targetId": { "type": "string" },
+        "sharedBorderCount": { "type": "integer", "minimum": 0 },
+        "routeQualityQ": { "type": "integer", "minimum": 0 },
+        "baseVolume_cu": { "type": "integer", "minimum": 0 },
+        "treatyType": { "type": "string" },
+        "treatyStrength_Q": { "type": "integer", "minimum": 0 },
+        "signedTick": { "type": "integer", "minimum": 0 },
+        "expiryTick": { "type": "integer" },
+        "metadata": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "HostResourceNode": {
+      "type": "object",
+      "required": ["id", "resourceType"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "polityId": { "type": "string" },
+        "regionId": { "type": "string" },
+        "settlementId": { "type": "string" },
+        "resourceType": { "type": "string", "minLength": 1 },
+        "stock": { "type": "integer", "minimum": 0 },
+        "metadata": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "HostDiseaseProfile": {
+      "type": "object",
+      "required": [
+        "id", "name", "transmissionRoute", "baseTransmissionRate_Q", "incubationPeriod_s",
+        "symptomaticDuration_s", "mortalityRate_Q", "symptomSeverity_Q", "airborneRange_Sm", "immunityDuration_s"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "transmissionRoute": { "enum": ["airborne", "contact", "vector", "waterborne"] },
+        "baseTransmissionRate_Q": { "type": "integer", "minimum": 0 },
+        "incubationPeriod_s": { "type": "integer", "minimum": 0 },
+        "symptomaticDuration_s": { "type": "integer", "minimum": 0 },
+        "mortalityRate_Q": { "type": "integer", "minimum": 0 },
+        "symptomSeverity_Q": { "type": "integer", "minimum": 0 },
+        "airborneRange_Sm": { "type": "integer", "minimum": 0 },
+        "immunityDuration_s": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "HostEpidemicState": {
+      "type": "object",
+      "required": ["polityId", "diseaseId", "prevalence_Q"],
+      "properties": {
+        "polityId": { "type": "string" },
+        "diseaseId": { "type": "string" },
+        "prevalence_Q": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "HostRuleOverrides": {
+      "type": "object",
+      "properties": {
+        "polityDayEnabled": { "type": "boolean" },
+        "governanceEnabled": { "type": "boolean" },
+        "diplomacyEnabled": { "type": "boolean" },
+        "tradeEnabled": { "type": "boolean" },
+        "migrationEnabled": { "type": "boolean" },
+        "epidemicEnabled": { "type": "boolean" },
+        "climateEnabled": { "type": "boolean" },
+        "governanceStabilityDaysPerStep": { "type": "integer", "minimum": 0 },
+        "treatyStrengthBoost_Q": { "type": "integer" },
+        "routeEfficiencyBoost_Q": { "type": "integer" },
+        "epidemicHealthBuffer_Q": { "type": "integer" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
