@@ -233,6 +233,10 @@
     "./data-governance": {
       "import": "./dist/src/data-governance.js",
       "types": "./dist/src/data-governance.d.ts"
+    },
+    "./world-evolution-backend": {
+      "import": "./dist/src/world-evolution-backend/index.js",
+      "types": "./dist/src/world-evolution-backend/index.d.ts"
     }
   },
   "workspaces": [
@@ -254,6 +258,7 @@
     "docs/performance.md",
     "docs/release-dashboard.md",
     "docs/versioning.md",
+    "docs/world-evolution-backend.md",
     "docs/emergent-validation-report.md",
     "docs/completion-evidence-dashboard.md",
     "docs/trust-dashboard.md",
