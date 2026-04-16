@@ -39,6 +39,7 @@ if (!Number.isFinite(summary?.fuzz?.executions) || summary.fuzz.executions < min
 }
 if (summary?.fuzz?.meetsThreshold !== true) errors.push("fuzz threshold check failed");
 if ((summary?.goldenFixtures?.status ?? "") !== "passed") errors.push("golden fixture suite did not pass");
+if ((summary?.scenarioCorpus?.status ?? "") !== "passed") errors.push("scenario corpus suite did not pass");
 
 if (args.requireMatrix) {
   const matrix = summary?.matrix;

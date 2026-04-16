@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "generatedBy": "manual-policy",
+  "required": [
+    {
+      "id": "determinism-wasm",
+      "checks": [
+        "test/determinism/fuzz-against-wasm.spec.ts",
+        "test/determinism/regression.spec.ts",
+        "test/determinism/scenario-corpus.spec.ts"
+      ],
+      "ci": true,
+      "releaseCheck": true
+    },
+    {
+      "id": "example-verification",
+      "checks": [
+        "test/examples-integration.test.ts"
+      ],
+      "ci": true,
+      "releaseCheck": true
+    },
+    {
+      "id": "protocol-roundtrip",
+      "checks": [
+        "test/protocol-formats-roundtrip.test.ts",
+        "test/serialization/roundtrip.spec.ts"
+      ],
+      "ci": true,
+      "releaseCheck": true
+    },
+    {
+      "id": "coverage-artifacts",
+      "checks": [
+        "coverage/coverage-summary.json",
+        "docs/dashboard/coverage-status.md"
+      ],
+      "ci": true,
+      "releaseCheck": true
+    }
+  ],
+  "optional": [
+    {
+      "id": "release-check-quick-benchmark",
+      "checks": [
+        "benchmark regression gate in --quick mode"
+      ],
+      "ci": false,
+      "releaseCheck": false
+    },
+    {
+      "id": "release-check-quick-emergent",
+      "checks": [
+        "emergent validation gate in --quick mode"
+      ],
+      "ci": false,
+      "releaseCheck": false
+    }
+  ]
+}

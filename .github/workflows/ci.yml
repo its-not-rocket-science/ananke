@@ -51,11 +51,59 @@ jobs:
       - name: Test with coverage
         run: npm run test:coverage
 
+      - name: Build WASM artifacts for determinism verification
+        run: npm run build:wasm:all
+
+      - name: Run required WASM determinism suites
+        run: |
+          mkdir -p determinism-report
+          ANANKE_STRICT_DETERMINISM=1 \
+          DETERMINISM_SEED=1337 \
+          DETERMINISM_WORLD_STATES=2000 \
+          DETERMINISM_COMMANDS_PER_STATE=500 \
+          node tools/run-determinism-tests.mjs \
+            test/determinism/fuzz-against-wasm.spec.ts \
+            test/determinism/regression.spec.ts \
+            test/determinism/scenario-corpus.spec.ts \
+            --seed=1337 \
+            --reporter=json \
+            --outputFile=determinism-report/results.json
+
+      - name: Assert required determinism suites were executed (no skips)
+        run: |
+          node tools/verify-required-vitest-suites.mjs \
+            --report=determinism-report/results.json \
+            --require=fuzz-against-wasm \
+            --require=regression \
+            --require=scenario-corpus
+
+      - name: Generate determinism release artifacts
+        run: |
+          node tools/generate-determinism-release-artifacts.mjs \
+            --input=determinism-report/results.json \
+            --summary=docs/dashboard/determinism-release-status.json \
+            --matrix=docs/dashboard/determinism-matrix-summary.json \
+            --doc=docs/determinism-status.md \
+            --fuzz-threshold=2000 \
+            --seed=1337 \
+            --world-states=2000 \
+            --commands-per-state=500
+
+      - name: Validate determinism release artifacts
+        run: |
+          node tools/check-determinism-release-artifacts.mjs \
+            --summary=docs/dashboard/determinism-release-status.json \
+            --min-fuzz=2000
+
       - name: Check package boundaries (strict core gate + report)
         run: npm run check-boundaries:ci
 
       - name: Generate CI trust report payload
-        run: npm run generate-ci-trust-report
+        run: |
+          node tools/generate-ci-trust-report.mjs \
+            --output=docs/dashboard/ci-trust-report.json \
+            --determinism-status=docs/dashboard/determinism-release-status.json \
+            --require-determinism-status=true
 
       - name: Verify coverage summary exists for trust dashboard
         run: npm run check-coverage-summary

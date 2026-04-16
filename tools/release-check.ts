@@ -26,7 +26,7 @@ const QUICK = process.argv.includes("--quick");
 interface GateResult {
   id:        string;
   name:      string;
-  status:    "pass" | "fail" | "skip" | "warn";
+  status:    "pass" | "fail" | "warn";
   durationMs: number;
   summary:   string;
   detail:    string;
@@ -123,15 +123,15 @@ const GATE_FIXTURES: Gate = {
     if (!fs.existsSync(fixturesDir) || fs.readdirSync(fixturesDir).length === 0) {
       return {
         id: "fixtures", name: this.name,
-        status: "skip",
+        status: "fail",
         durationMs: Date.now() - start,
-        summary: "No fixtures directory — run `npm run generate-fixtures` to create",
-        detail: "test/fixtures/ does not exist or is empty. Generate fixtures first.",
+        summary: "Fixture directory missing",
+        detail: "test/fixtures/ does not exist or is empty. Run `npm run generate-fixtures` before release checks.",
       };
     }
     // Run any fixture-related tests
     const r = runCmd("npx", ["vitest", "run", "--reporter=verbose",
-      "--testPathPattern=fixtures"], { timeoutMs: 60_000 });
+      "test/golden-fixtures.test.ts"], { timeoutMs: 60_000 });
     const passed = r.exitCode === 0;
     return {
       id: "fixtures", name: this.name,
@@ -173,6 +173,22 @@ const GATE_COVERAGE_ARTIFACT: Gate = {
   name: "Coverage artifact contract (coverage/coverage-summary.json)",
   run() {
     const start = Date.now();
+    const verify = runCmd("node", [
+      "tools/check-coverage-summary.mjs",
+      "--input=coverage/coverage-summary.json",
+      "--markdown-out=docs/dashboard/coverage-status.md",
+    ], { timeoutMs: 30_000 });
+    if (verify.exitCode !== 0) {
+      return {
+        id: "coverage-artifact",
+        name: this.name,
+        status: "fail",
+        durationMs: Date.now() - start,
+        summary: "Coverage artifact generation/verification failed",
+        detail: (verify.stdout + verify.stderr).trim().slice(0, 700),
+      };
+    }
+
     const summary = readLineCoverageSummary();
     if (!summary) {
       return {
@@ -189,7 +205,7 @@ const GATE_COVERAGE_ARTIFACT: Gate = {
     return {
       id: "coverage-artifact",
       name: this.name,
-      status: meetsThreshold ? "pass" : "warn",
+      status: meetsThreshold ? "pass" : "fail",
       durationMs: Date.now() - start,
       summary: `Line coverage ${summary.pct.toFixed(2)}% (${summary.covered}/${summary.total}), threshold ${RELEASE_COVERAGE_THRESHOLD}%`,
       detail: "Source artifact: coverage/coverage-summary.json",
@@ -197,7 +213,58 @@ const GATE_COVERAGE_ARTIFACT: Gate = {
   },
 };
 
-// ── Gate 3b: Determinism artifact readiness ─────────────────────────────────
+// ── Gate 3b: Determinism (WASM-dependent) evidence ──────────────────────────
+
+const GATE_DETERMINISM: Gate = {
+  id: "determinism-required",
+  name: "Required determinism suites (WASM parity + corpus + regression)",
+  run() {
+    const start = Date.now();
+    const reportPath = path.join(ROOT, "determinism-report", "results.release-check.json");
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+
+    const testRun = runCmd("node", [
+      "tools/run-determinism-tests.mjs",
+      "test/determinism/fuzz-against-wasm.spec.ts",
+      "test/determinism/regression.spec.ts",
+      "test/determinism/scenario-corpus.spec.ts",
+      "--seed=1337",
+      "--reporter=json",
+      `--outputFile=${reportPath}`,
+    ], { timeoutMs: 240_000 });
+    if (testRun.exitCode !== 0) {
+      return {
+        id: this.id,
+        name: this.name,
+        status: "fail",
+        durationMs: Date.now() - start,
+        summary: "Determinism suite failed",
+        detail: (testRun.stdout + testRun.stderr).trim().slice(0, 700),
+      };
+    }
+
+    const verify = runCmd("node", [
+      "tools/verify-required-vitest-suites.mjs",
+      `--report=${reportPath}`,
+      "--require=fuzz-against-wasm",
+      "--require=regression",
+      "--require=scenario-corpus",
+    ], { timeoutMs: 30_000 });
+
+    return {
+      id: this.id,
+      name: this.name,
+      status: verify.exitCode === 0 ? "pass" : "fail",
+      durationMs: Date.now() - start,
+      summary: verify.exitCode === 0
+        ? "Required determinism suites executed with no skips"
+        : "Determinism suite verification failed",
+      detail: (verify.stdout + verify.stderr).trim().slice(0, 700),
+    };
+  },
+};
+
+// ── Gate 3c: Determinism artifact readiness ─────────────────────────────────
 
 const GATE_DETERMINISM_ARTIFACTS: Gate = {
   id:   "determinism-artifacts",
@@ -231,6 +298,102 @@ const GATE_DETERMINISM_ARTIFACTS: Gate = {
   },
 };
 
+// ── Gate 3d: Example verification ────────────────────────────────────────────
+
+const GATE_EXAMPLES: Gate = {
+  id: "example-verification",
+  name: "Required example verification suite",
+  run() {
+    const start = Date.now();
+    const reportPath = path.join(ROOT, "determinism-report", "results.examples.json");
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+
+    const testRun = runCmd("npx", [
+      "vitest",
+      "run",
+      "test/examples-integration.test.ts",
+      "--reporter=json",
+      `--outputFile=${reportPath}`,
+    ], { timeoutMs: 120_000 });
+    if (testRun.exitCode !== 0) {
+      return {
+        id: this.id,
+        name: this.name,
+        status: "fail",
+        durationMs: Date.now() - start,
+        summary: "Example verification failed",
+        detail: (testRun.stdout + testRun.stderr).trim().slice(0, 700),
+      };
+    }
+
+    const verify = runCmd("node", [
+      "tools/verify-required-vitest-suites.mjs",
+      `--report=${reportPath}`,
+      "--require=examples-integration.test.ts",
+    ], { timeoutMs: 30_000 });
+
+    return {
+      id: this.id,
+      name: this.name,
+      status: verify.exitCode === 0 ? "pass" : "fail",
+      durationMs: Date.now() - start,
+      summary: verify.exitCode === 0
+        ? "Example verification suite executed with no skips"
+        : "Example verification suite was skipped/missing",
+      detail: (verify.stdout + verify.stderr).trim().slice(0, 700),
+    };
+  },
+};
+
+// ── Gate 3e: Protocol round-trip verification ───────────────────────────────
+
+const GATE_PROTOCOL_ROUNDTRIP: Gate = {
+  id: "protocol-roundtrip",
+  name: "Required protocol round-trip suites",
+  run() {
+    const start = Date.now();
+    const reportPath = path.join(ROOT, "determinism-report", "results.protocol-roundtrip.json");
+    fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+
+    const testRun = runCmd("npx", [
+      "vitest",
+      "run",
+      "test/protocol-formats-roundtrip.test.ts",
+      "test/serialization/roundtrip.spec.ts",
+      "--reporter=json",
+      `--outputFile=${reportPath}`,
+    ], { timeoutMs: 120_000 });
+    if (testRun.exitCode !== 0) {
+      return {
+        id: this.id,
+        name: this.name,
+        status: "fail",
+        durationMs: Date.now() - start,
+        summary: "Protocol round-trip verification failed",
+        detail: (testRun.stdout + testRun.stderr).trim().slice(0, 700),
+      };
+    }
+
+    const verify = runCmd("node", [
+      "tools/verify-required-vitest-suites.mjs",
+      `--report=${reportPath}`,
+      "--require=protocol-formats-roundtrip.test.ts",
+      "--require=serialization/roundtrip.spec.ts",
+    ], { timeoutMs: 30_000 });
+
+    return {
+      id: this.id,
+      name: this.name,
+      status: verify.exitCode === 0 ? "pass" : "fail",
+      durationMs: Date.now() - start,
+      summary: verify.exitCode === 0
+        ? "Protocol round-trip suites executed with no skips"
+        : "Protocol round-trip suites were skipped/missing",
+      detail: (verify.stdout + verify.stderr).trim().slice(0, 700),
+    };
+  },
+};
+
 // ── Gate 4: Benchmark regression ─────────────────────────────────────────────
 
 const GATE_BENCHMARK: Gate = {
@@ -240,9 +403,9 @@ const GATE_BENCHMARK: Gate = {
     if (QUICK) {
       return {
         id: "benchmark", name: this.name,
-        status: "skip",
+        status: "warn",
         durationMs: 0,
-        summary: "Skipped in --quick mode",
+        summary: "Not run in --quick mode",
         detail: "Run without --quick to include benchmark regression.",
       };
     }
@@ -272,9 +435,9 @@ const GATE_EMERGENT: Gate = {
     if (QUICK) {
       return {
         id: "emergent", name: this.name,
-        status: "skip",
+        status: "warn",
         durationMs: 0,
-        summary: "Skipped in --quick mode",
+        summary: "Not run in --quick mode",
         detail: "Run without --quick to include emergent validation (100 seeds).",
       };
     }
@@ -354,7 +517,10 @@ const GATES: Gate[] = [
   GATE_FIXTURES,
   GATE_TYPECHECK,
   GATE_COVERAGE_ARTIFACT,
+  GATE_DETERMINISM,
   GATE_DETERMINISM_ARTIFACTS,
+  GATE_EXAMPLES,
+  GATE_PROTOCOL_ROUNDTRIP,
   GATE_BENCHMARK,
   GATE_EMERGENT,
   GATE_MODULE_INDEX,
@@ -363,7 +529,6 @@ const GATES: Gate[] = [
 const statusIcon: Record<GateResult["status"], string> = {
   pass: "✅",
   fail: "❌",
-  skip: "⏭",
   warn: "⚠️",
 };
 
@@ -380,7 +545,7 @@ for (let i = 0; i < GATES.length; i++) {
   const result = gate.run();
   results.push(result);
   console.log(`${statusIcon[result.status]}  (${result.durationMs} ms)`);
-  if (result.status !== "pass" && result.status !== "skip") {
+  if (result.status !== "pass") {
     console.log(`          ${result.summary}`);
   }
 }
@@ -397,11 +562,10 @@ for (const r of results) {
 const passed   = results.filter(r => r.status === "pass").length;
 const failed   = results.filter(r => r.status === "fail").length;
 const warned   = results.filter(r => r.status === "warn").length;
-const skipped  = results.filter(r => r.status === "skip").length;
 const releasable = failed === 0 && warned === 0;
 
 console.log("\n" + "─".repeat(65));
-console.log(`  Passed: ${passed}  Failed: ${failed}  Warned: ${warned}  Skipped: ${skipped}`);
+console.log(`  Passed: ${passed}  Failed: ${failed}  Warned: ${warned}`);
 console.log(`  Verdict: ${releasable ? "✅ RELEASABLE" : failed > 0 ? "❌ NOT RELEASABLE" : "⚠️  REVIEW WARNINGS"}`);
 console.log("");
 
@@ -412,7 +576,7 @@ const report = {
   version:      pkgVersion(),
   quick:        QUICK,
   releasable,
-  summary:      { passed, failed, warned, skipped },
+  summary:      { passed, failed, warned },
   gates:        results.map(r => ({
     id:         r.id,
     name:       r.name,
@@ -447,7 +611,6 @@ function renderDashboard(r: typeof report): string {
   md += `| Gates passed | ${r.summary.passed} |\n`;
   md += `| Gates failed | ${r.summary.failed} |\n`;
   md += `| Gates warned | ${r.summary.warned} |\n`;
-  md += `| Gates skipped | ${r.summary.skipped} |\n\n`;
   md += `## Gate Results\n\n`;
   md += `| # | Gate | Status | Duration | Summary |\n`;
   md += `|---|------|--------|----------|---------|\n`;
