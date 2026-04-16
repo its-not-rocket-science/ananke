@@ -12,3 +12,8 @@
 | coverage status | ❌ fail | no | coverage summary missing | `coverage/coverage-summary.json` |
 
 Final verdict: **RELEASE BLOCKED: trust-critical evidence is not fully green and fresh.**
+
+
+## Related contract summary
+
+See [`docs/engineering-guarantees.md`](docs/engineering-guarantees.md) for the maintained list of guarantees, enforcement mechanisms, evidence sources, and adopter-side test responsibilities.

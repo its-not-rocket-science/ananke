@@ -2,7 +2,7 @@
 
 _Date: 2026-04-02_
 
-This dashboard converts maturity claims into explicit, machine-checkable evidence requirements.
+This dashboard maps each maturity claim to explicit, machine-checkable evidence requirements.
 
 ## Evidence mapping table (status → proof)
 

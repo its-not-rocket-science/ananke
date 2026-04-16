@@ -1,4 +1,4 @@
-# Package architecture: current reality, partial implementation, and target
+# Package architecture: shipped state, partial modularization, and target state
 
 This document reconciles three different things that are easy to blur together:
 
@@ -57,7 +57,7 @@ flowchart LR
 
 ## In progress (partially implemented)
 
-The modularization effort is real, but incomplete.
+Modularization work is in progress and incomplete.
 
 ### Already implemented
 
@@ -113,4 +113,4 @@ flowchart TD
 - You can safely use the monolith package now; it is the most direct reflection of shipped structure.
 - You can also use `@ananke/*` imports today, but treat them as import-path aliases/wrappers rather than fully independent packages.
 - Do not assume current modular imports provide maximum tree-shaking or strict package-boundary guarantees yet.
-- Migration to modular import paths now can still be worthwhile, because those paths are expected to remain stable as the architecture moves toward true modular ownership.
+- Migration to modular import paths can reduce future refactors, because those paths are intended to remain valid as ownership moves into `@ananke/*` packages.

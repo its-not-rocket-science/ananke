@@ -1,6 +1,6 @@
 # Support Boundaries
 
-This document defines the taxonomy-bound support contract for `@its-not-rocket-science/ananke`.
+This document defines the support contract for `@its-not-rocket-science/ananke` with scope, conditions, and required adopter actions.
 
 ## Claim ledger (scope, conditions, evidence)
 
@@ -34,7 +34,7 @@ This document defines the taxonomy-bound support contract for `@its-not-rocket-s
 - For **Tier 1 stable** usage, minor/patch upgrades are expected to preserve API compatibility under semver.
 - For **Experimental** usage, pin at least `~x.y.z`; prefer exact `x.y.z` for production.
 - For **Internal** usage, pin exact `x.y.z` and gate upgrades on full regression runs.
-- For **Planned** capabilities, treat roadmap language as intent and ship only against published artifacts.
+- For **Planned** capabilities, treat roadmap language as non-contractual until the capability is shipped and listed in release evidence.
 
 ## Release-gate checks
 
@@ -43,3 +43,8 @@ Run these checks before promoting a dependency update:
 1. `npm run build`
 2. `npm run test:first-hour-smoke`
 3. host integration regression suite for your deployment target
+
+
+## Related summary
+
+- For a single-page summary of guarantees, enforcement, evidence, and adopter-side test obligations, see [`docs/engineering-guarantees.md`](docs/engineering-guarantees.md).
