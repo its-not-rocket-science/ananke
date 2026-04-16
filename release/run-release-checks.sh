@@ -13,9 +13,15 @@ DETERMINISM_COMMANDS_PER_STATE="${DETERMINISM_COMMANDS_PER_STATE:-500}" \
 node tools/run-determinism-tests.mjs \
   test/determinism/fuzz-against-wasm.spec.ts \
   test/determinism/regression.spec.ts \
+  test/determinism/scenario-corpus.spec.ts \
   --seed=1337 \
   --reporter=json \
   --outputFile=determinism-report/results.json
+node tools/verify-required-vitest-suites.mjs \
+  --report=determinism-report/results.json \
+  --require=fuzz-against-wasm \
+  --require=regression \
+  --require=scenario-corpus
 node tools/generate-determinism-release-artifacts.mjs \
   --input=determinism-report/results.json \
   --summary=docs/dashboard/determinism-release-status.json \

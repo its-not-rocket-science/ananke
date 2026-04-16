@@ -60,8 +60,9 @@ function summarizeSuites(report) {
   const findSuite = (matcher) => mapped.find((s) => matcher(s.name.toLowerCase()));
   const fuzzSuite = findSuite((name) => name.includes("fuzz-against-wasm"));
   const goldenSuite = findSuite((name) => name.includes("regression") || name.includes("golden"));
+  const corpusSuite = findSuite((name) => name.includes("scenario-corpus"));
 
-  return { suites: mapped, fuzzSuite, goldenSuite };
+  return { suites: mapped, fuzzSuite, goldenSuite, corpusSuite };
 }
 
 function buildMatrixSummary(singleStatus, matrixDir) {
@@ -100,12 +101,14 @@ function buildMatrixSummary(singleStatus, matrixDir) {
 function renderDoc(summary) {
   const fuzz = summary.fuzz;
   const golden = summary.goldenFixtures;
+  const corpus = summary.scenarioCorpus;
   const matrix = summary.matrix;
   return `# Determinism Status\n\n` +
     `Generated: ${summary.generatedAtUtc}\n\n` +
     `- Overall: **${summary.status.overall.toUpperCase()}**\n` +
     `- Fuzz executions: **${fuzz.executions}** (threshold: ${fuzz.threshold})\n` +
     `- Golden fixtures: **${golden.status.toUpperCase()}** (${golden.passed}/${golden.total} passing)\n` +
+    `- Scenario corpus: **${corpus.status.toUpperCase()}** (${corpus.passed}/${corpus.total} passing)\n` +
     `- Matrix environments: **${matrix.environmentsCompared}** (consistent: ${matrix.consistentAcrossMatrix})\n\n` +
     `## Per-platform matrix\n\n` +
     `| Environment | Status | Reason |\n| --- | --- | --- |\n` +
@@ -117,7 +120,7 @@ const report = loadJson(args.input);
 const worldStates = num(args.worldStates);
 const commandsPerState = num(args.commandsPerState);
 const computedExecutions = worldStates !== null && commandsPerState !== null ? worldStates * commandsPerState : null;
-const { suites, fuzzSuite, goldenSuite } = summarizeSuites(report);
+const { suites, fuzzSuite, goldenSuite, corpusSuite } = summarizeSuites(report);
 
 const singleStatus = {
   environment: `${platform()}-node-${process.versions.node}`,
@@ -130,6 +133,8 @@ const fuzzThreshold = num(args.fuzzThreshold) ?? 2000;
 const fuzzExecutions = computedExecutions ?? (fuzzSuite?.assertions.total ?? 0);
 const goldenTotal = goldenSuite?.assertions.total ?? 0;
 const goldenPassed = goldenSuite?.assertions.passed ?? 0;
+const corpusTotal = corpusSuite?.assertions.total ?? 0;
+const corpusPassed = corpusSuite?.assertions.passed ?? 0;
 
 const summary = {
   schemaVersion: 1,
@@ -160,6 +165,13 @@ const summary = {
     passed: goldenPassed,
     failed: Math.max(goldenTotal - goldenPassed, 0),
     suite: goldenSuite?.name ?? null,
+  },
+  scenarioCorpus: {
+    status: corpusSuite?.status ?? "unknown",
+    total: corpusTotal,
+    passed: corpusPassed,
+    failed: Math.max(corpusTotal - corpusPassed, 0),
+    suite: corpusSuite?.name ?? null,
   },
   matrix,
   vitest: {

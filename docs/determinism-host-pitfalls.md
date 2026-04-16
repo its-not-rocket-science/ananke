@@ -60,13 +60,13 @@ Core stepping contract and phase sequencing are centralized in kernel/step pipel
 ## 6) Ignoring skipped determinism suites in local runs
 
 ### Failure mode
-If wasm artifacts are missing, TS-vs-WASM determinism suites skip locally, which can hide conformance regressions.
+If wasm artifacts are missing, TS-vs-WASM determinism suites can skip in local runs, which can hide conformance regressions.
 
 ### Safer pattern
-Build wasm artifacts before determinism runs, as CI does.
+Build wasm artifacts before determinism runs locally, and treat any missing/skipped required determinism suite as a hard failure in CI/release.
 
 ### Existing evidence
-`describe.skipIf(!hasBuiltWasmKernel())` guards both determinism suites; workflows run build steps first.【F:test/determinism/fuzz-against-wasm.spec.ts†L18-L18】【F:test/determinism/regression.spec.ts†L22-L22】【F:.github/workflows/determinism.yml†L16-L22】
+`describe.skipIf(!hasBuiltWasmKernel())` guards the WASM-coupled suites; CI/release now run all required suites (`fuzz-against-wasm`, regression, and scenario corpus) and explicitly fail if any suite is skipped or missing.
 
 ## 7) Version skew across peers/services
 

@@ -62,14 +62,20 @@ function main() {
   const argv = process.argv.slice(2);
   const outputPath = readArg(argv, "output", DEFAULT_OUTPUT);
   const detStatusPath = readArg(argv, "determinism-status", "");
+  const requireDeterminismStatus = parseBool(readArg(argv, "require-determinism-status", ""), false);
 
   const detFromStatus = readDeterminismStatus(detStatusPath);
+  if (requireDeterminismStatus && !detFromStatus) {
+    throw new Error(
+      `Determinism status is required but missing/invalid: ${detStatusPath || "<not provided>"}.`
+    );
+  }
 
-  const ciMatrixPasses = detFromStatus?.ciMatrixPasses ?? parseBool(readArg(argv, "ci-matrix-passes", ""), true);
+  const ciMatrixPasses = detFromStatus?.ciMatrixPasses ?? parseBool(readArg(argv, "ci-matrix-passes", ""), false);
   const wasmThreshold = parseNum(readArg(argv, "wasm-threshold", ""), DEFAULT_WASM_THRESHOLD);
-  const wasmPct = parseNum(readArg(argv, "wasm-pct", ""), wasmThreshold);
+  const wasmPct = parseNum(readArg(argv, "wasm-pct", ""), 0);
   const fuzzThreshold = parseNum(readArg(argv, "fuzz-threshold", ""), DEFAULT_FUZZ_THRESHOLD);
-  const fuzzExecutions = parseNum(readArg(argv, "fuzz-executions", ""), fuzzThreshold);
+  const fuzzExecutions = parseNum(readArg(argv, "fuzz-executions", ""), 0);
 
   const payload = {
     schemaVersion: 1,
@@ -93,4 +99,10 @@ function main() {
   console.log(`Wrote ${outputPath}`);
 }
 
-main();
+try {
+  main();
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(message);
+  process.exit(1);
+}
