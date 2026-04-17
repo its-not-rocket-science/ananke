@@ -79,6 +79,18 @@ Preset intent:
 
 Legacy IDs (`balanced`, `resilience`, `expansion`) are kept as deterministic aliases to `full_world_evolution` for compatibility.
 
+### Profile matrix (explicit ruleset behavior)
+
+| Profile | Polity | Governance | Diplomacy | Trade | Migration | Climate | Epidemic | Intended host use |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `minimal_world_history` | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Lowest-cost long-horizon history baselines |
+| `polity_dynamics` | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | Political/economic simulation without environmental load |
+| `conflict_heavy` | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | War/mobility-driven scenarios with reduced overhead |
+| `climate_and_migration` | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ✅ | Environmental stress, displacement, and disease pressure studies |
+| `full_world_evolution` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | Full-stack world simulation for maximal systemic richness |
+
+All presets preserve the same deterministic subsystem execution order and only enable/disable or tune existing mechanics.
+
 ## Host overrides layered on profile
 
 Hosts can provide:
@@ -87,6 +99,22 @@ Hosts can provide:
 - `ruleOverrides` to override specific fields deterministically
 
 Overrides are applied additively to the resolved profile; no random behavior is introduced.
+
+Example:
+
+```ts
+const result = runWorldEvolution({
+  snapshot,
+  steps: 90,
+  profileId: "polity_dynamics",
+  profile: {
+    governanceStabilityDaysPerStep: 2,
+    routeEfficiencyBoost_Q: q(0.001),
+  },
+});
+```
+
+The resolved profile remains deterministic for a fixed snapshot/seed + override object.
 
 ## Profile comparison example
 
