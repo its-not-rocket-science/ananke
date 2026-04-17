@@ -52,3 +52,27 @@ export type {
   HostAdapterContext,
   AnankeEvolutionAdapterState,
 } from "./host-schema.js";
+
+
+
+export {
+  OPEN_WORLD_HOST_ADAPTER_SCHEMA_VERSION,
+  canonicalizeOpenWorldInput,
+  mapOpenWorldHostToEvolutionInput,
+  toAnankeEvolutionStateFromOpenWorld,
+} from "./open-world-host-adapter.js";
+
+export type {
+  MetadataBuckets,
+  OpenWorldHostInput,
+  OpenWorldRegion,
+  OpenWorldSettlement,
+  OpenWorldFaction,
+  OpenWorldResource,
+  OpenWorldTradeLink,
+  OpenWorldEnvironment,
+  OpenWorldLoreMetadata,
+  OpenWorldHostAdapterOptions,
+  OpenWorldAdapterContext,
+  OpenWorldMappedState,
+} from "./open-world-host-adapter.js";

@@ -1,0 +1,56 @@
+[
+  {
+    "step": 1,
+    "tick": 1,
+    "tradeCount": 1,
+    "warCount": 0,
+    "migrationCount": 0,
+    "climateEventCount": 0,
+    "epidemicPopulationDelta": 0
+  },
+  {
+    "step": 2,
+    "tick": 2,
+    "tradeCount": 1,
+    "warCount": 0,
+    "migrationCount": 0,
+    "climateEventCount": 0,
+    "epidemicPopulationDelta": 0
+  },
+  {
+    "step": 3,
+    "tick": 3,
+    "tradeCount": 1,
+    "warCount": 0,
+    "migrationCount": 0,
+    "climateEventCount": 0,
+    "epidemicPopulationDelta": 0
+  },
+  {
+    "step": 4,
+    "tick": 4,
+    "tradeCount": 1,
+    "warCount": 0,
+    "migrationCount": 0,
+    "climateEventCount": 0,
+    "epidemicPopulationDelta": 0
+  },
+  {
+    "step": 5,
+    "tick": 5,
+    "tradeCount": 1,
+    "warCount": 0,
+    "migrationCount": 0,
+    "climateEventCount": 0,
+    "epidemicPopulationDelta": 0
+  },
+  {
+    "step": 6,
+    "tick": 6,
+    "tradeCount": 1,
+    "warCount": 0,
+    "migrationCount": 0,
+    "climateEventCount": 0,
+    "epidemicPopulationDelta": 0
+  }
+]
