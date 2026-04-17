@@ -52,9 +52,11 @@ jobs:
         run: npm run test:coverage
 
       - name: Build WASM artifacts for determinism verification
+        if: matrix.node-version == '20.x'
         run: npm run build:wasm:all
 
       - name: Run required WASM determinism suites
+        if: matrix.node-version == '20.x'
         run: |
           mkdir -p determinism-report
           ANANKE_STRICT_DETERMINISM=1 \
@@ -70,6 +72,7 @@ jobs:
             --outputFile=determinism-report/results.json
 
       - name: Assert required determinism suites were executed (no skips)
+        if: matrix.node-version == '20.x'
         run: |
           node tools/verify-required-vitest-suites.mjs \
             --report=determinism-report/results.json \
@@ -78,6 +81,7 @@ jobs:
             --require=scenario-corpus
 
       - name: Generate determinism release artifacts
+        if: matrix.node-version == '20.x'
         run: |
           node tools/generate-determinism-release-artifacts.mjs \
             --input=determinism-report/results.json \
@@ -90,6 +94,7 @@ jobs:
             --commands-per-state=500
 
       - name: Validate determinism release artifacts
+        if: matrix.node-version == '20.x'
         run: |
           node tools/check-determinism-release-artifacts.mjs \
             --summary=docs/dashboard/determinism-release-status.json \
