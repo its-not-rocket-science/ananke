@@ -41,7 +41,7 @@ leadGovernance.activeLawIds.push("rule_of_law");
 
 const session = createEvolutionSession({
   seed: 4242,
-  rulesetId: "balanced",
+  rulesetId: "full_world_evolution",
   canonicalSnapshot: {
     schemaVersion: WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
     worldSeed: 4242,

@@ -41,7 +41,7 @@ function createSession(seed = 7331) {
 
   return createEvolutionSession({
     seed,
-    rulesetId: "balanced",
+    rulesetId: "full_world_evolution",
     canonicalSnapshot: {
       schemaVersion: WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
       worldSeed: seed,

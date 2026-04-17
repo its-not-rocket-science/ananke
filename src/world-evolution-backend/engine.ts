@@ -45,7 +45,7 @@ import {
 } from "../trade-routes.js";
 import { hashString } from "../sim/seeds.js";
 import { SCALE, clampQ } from "../units.js";
-import { listWorldEvolutionProfiles, resolveWorldEvolutionProfile } from "./profiles.js";
+import { listWorldEvolutionProfiles, mergeWorldEvolutionProfileWithOverrides } from "./profiles.js";
 import {
   WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
   type WorldEvolutionCheckpoint,
@@ -120,7 +120,7 @@ export function listAvailableWorldEvolutionProfiles(): WorldEvolutionRulesetProf
 }
 
 function createRuntimeState(snapshot: WorldEvolutionSnapshot, request: WorldEvolutionRunRequest): RuntimeState {
-  const profile = request.profile ? { ...request.profile } : resolveWorldEvolutionProfile(request.profileId ?? "balanced");
+  const profile = mergeWorldEvolutionProfileWithOverrides(request.profileId, request.profile);
 
   const polityRegistry = createPolityRegistry(snapshot.polities.map(clonePolity));
   for (const [a, b] of snapshot.activeWars) {

@@ -8,6 +8,7 @@ import {
   WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
   createWorldEvolutionSnapshot,
   listAvailableWorldEvolutionProfiles,
+  resolveWorldEvolutionProfile,
   runWorldEvolution,
   type WorldEvolutionRunRequest,
 } from "../src/world-evolution-backend/index.js";
@@ -53,7 +54,7 @@ function createBaselineRequest(overrides: Partial<WorldEvolutionRunRequest> = {}
       climateByPolity: [],
     },
     steps: 12,
-    profileId: "balanced",
+    profileId: "full_world_evolution",
     includeDeltas: true,
     checkpointInterval: 4,
     ...overrides,
@@ -126,6 +127,54 @@ describe("world-evolution-backend", () => {
 
   it("exposes predefined host-friendly profiles", () => {
     const profiles = listAvailableWorldEvolutionProfiles();
-    expect(profiles.map((p) => p.id)).toEqual(["balanced", "resilience", "expansion"]);
+    expect(profiles.map((p) => p.id)).toEqual([
+      "minimal_world_history",
+      "polity_dynamics",
+      "conflict_heavy",
+      "climate_and_migration",
+      "full_world_evolution",
+    ]);
+    for (const profile of profiles) {
+      expect(profile.pipelineOrder).toEqual([
+        "polity",
+        "governance",
+        "diplomacy",
+        "trade",
+        "migration",
+        "climate",
+        "epidemic",
+      ]);
+    }
+  });
+
+  it("produces deterministic outputs for each predefined profile", () => {
+    const profileIds = listAvailableWorldEvolutionProfiles().map((p) => p.id);
+    for (const profileId of profileIds) {
+      const req = createBaselineRequest({ profileId });
+      const first = runWorldEvolution(req);
+      const second = runWorldEvolution(req);
+      expect(second).toEqual(first);
+    }
+  });
+
+  it("supports deterministic host overrides layered on top of a base profile", () => {
+    const baselineReq = createBaselineRequest({
+      profileId: "polity_dynamics",
+    });
+    const overriddenReq = createBaselineRequest({
+      profileId: "polity_dynamics",
+      profile: {
+        ...resolveWorldEvolutionProfile("polity_dynamics"),
+        governanceStabilityDaysPerStep: 2,
+        routeEfficiencyBoost_Q: q(0.001),
+      },
+    });
+
+    const baseline = runWorldEvolution(baselineReq);
+    const first = runWorldEvolution(overriddenReq);
+    const second = runWorldEvolution(overriddenReq);
+
+    expect(second).toEqual(first);
+    expect(first.finalSnapshot).not.toEqual(baseline.finalSnapshot);
   });
 });

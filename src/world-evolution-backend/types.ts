@@ -11,14 +11,33 @@ import type { Q } from "../units.js";
 export const WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION = "ananke.world-evolution-backend.v1" as const;
 
 export type WorldEvolutionRulesetId =
+  | "minimal_world_history"
+  | "polity_dynamics"
+  | "conflict_heavy"
+  | "climate_and_migration"
+  | "full_world_evolution"
+  // legacy aliases kept for backward compatibility
   | "balanced"
   | "resilience"
   | "expansion";
 
-export interface WorldEvolutionRulesetProfile {
+export interface EvolutionRulesetProfile {
   id: WorldEvolutionRulesetId;
   name: string;
   description: string;
+  /**
+   * Explicit deterministic execution order for active subsystems.
+   * Hosts can inspect this to verify reproducible orchestration order.
+   */
+  pipelineOrder: readonly [
+    "polity",
+    "governance",
+    "diplomacy",
+    "trade",
+    "migration",
+    "climate",
+    "epidemic",
+  ];
   polityDayEnabled: boolean;
   governanceEnabled: boolean;
   diplomacyEnabled: boolean;
@@ -31,6 +50,8 @@ export interface WorldEvolutionRulesetProfile {
   routeEfficiencyBoost_Q: Q;
   epidemicHealthBuffer_Q: Q;
 }
+
+export type WorldEvolutionRulesetProfile = EvolutionRulesetProfile;
 
 export interface WorldEvolutionSnapshot {
   schemaVersion: typeof WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION;

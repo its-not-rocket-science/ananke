@@ -31,6 +31,7 @@ import {
 - `relationships`: `border | trade_route | treaty | war`
 - `resources`: `HostResourceNode`
 - optional epidemiology payloads: `diseases`, `epidemics`
+- optional `profileId` (preset evolution ruleset selector)
 - optional `ruleOverrides`
 - optional `hostMetadata` (opaque pass-through)
 - optional `simulationState` (seed/restore simulation-owned derived data)
@@ -78,7 +79,8 @@ This preserves host metadata and resource nodes through `HostAdapterContext`.
 - `trade_route` maps to trade routes.
 - `treaty` maps to diplomacy treaties.
 - `war` maps to active wars.
-- `ruleOverrides` can compile into an inline backend profile for deterministic host control.
+- `profileId` selects a deterministic preset profile.
+- `ruleOverrides` layer on top of the selected profile (or default `full_world_evolution`) for deterministic host control.
 
 ## JSON Schema
 
