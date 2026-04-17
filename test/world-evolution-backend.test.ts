@@ -4,6 +4,7 @@ import { createPolity, createPolityRegistry, stepPolityDay, type PolityPair } fr
 import { signTreaty } from "../src/diplomacy.js";
 import { establishRoute } from "../src/trade-routes.js";
 import { createGovernanceState, PRESET_LAW_CODES } from "../src/governance.js";
+import type { DiseaseProfile } from "../src/sim/disease.js";
 import {
   WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
   createWorldEvolutionSnapshot,
@@ -62,6 +63,19 @@ function createBaselineRequest(overrides: Partial<WorldEvolutionRunRequest> = {}
 }
 
 describe("world-evolution-backend", () => {
+  const TEST_PLAGUE: DiseaseProfile = {
+    id: "test_plague",
+    name: "Test Plague",
+    transmissionRoute: "airborne",
+    baseTransmissionRate_Q: q(0.8),
+    incubationPeriod_s: 3 * 86_400,
+    symptomaticDuration_s: 14 * 86_400,
+    mortalityRate_Q: q(0.4),
+    symptomSeverity_Q: q(0.6),
+    airborneRange_Sm: 10_000,
+    immunityDuration_s: -1,
+  };
+
   it("is deterministic for the same snapshot + profile", () => {
     const req = createBaselineRequest();
     const first = runWorldEvolution(req);
@@ -176,5 +190,61 @@ describe("world-evolution-backend", () => {
 
     expect(second).toEqual(first);
     expect(first.finalSnapshot).not.toEqual(baseline.finalSnapshot);
+  });
+
+  it("applies profile subsystem toggles deterministically without replacing core mechanics", () => {
+    const expectations: Record<string, {
+      expectClimateEvents: boolean;
+      expectMigrationFlows: boolean;
+      expectEpidemicDelta: boolean;
+    }> = {
+      minimal_world_history: {
+        expectClimateEvents: false,
+        expectMigrationFlows: false,
+        expectEpidemicDelta: false,
+      },
+      polity_dynamics: {
+        expectClimateEvents: false,
+        expectMigrationFlows: false,
+        expectEpidemicDelta: false,
+      },
+      conflict_heavy: {
+        expectClimateEvents: false,
+        expectMigrationFlows: true,
+        expectEpidemicDelta: false,
+      },
+      climate_and_migration: {
+        expectClimateEvents: true,
+        expectMigrationFlows: true,
+        expectEpidemicDelta: true,
+      },
+      full_world_evolution: {
+        expectClimateEvents: true,
+        expectMigrationFlows: true,
+        expectEpidemicDelta: true,
+      },
+    };
+
+    for (const [profileId, expectation] of Object.entries(expectations)) {
+      const req = createBaselineRequest({ profileId: profileId as WorldEvolutionRunRequest["profileId"], steps: 180 });
+      req.snapshot.diseases = [TEST_PLAGUE];
+      req.snapshot.epidemics = [
+        {
+          polityId: "a",
+          diseaseId: TEST_PLAGUE.id,
+          prevalence_Q: q(0.08),
+        },
+      ];
+      const result = runWorldEvolution(req);
+      expect(result.timeline).toHaveLength(180);
+
+      const sawClimateEvents = result.timeline.some((event) => event.climateEventIds.length > 0);
+      const sawMigrationFlows = result.timeline.some((event) => event.migrations.length > 0);
+      const sawEpidemicDelta = result.timeline.some((event) => event.epidemicPopulationDelta !== 0);
+
+      expect(sawClimateEvents).toBe(expectation.expectClimateEvents);
+      expect(sawMigrationFlows).toBe(expectation.expectMigrationFlows);
+      expect(sawEpidemicDelta).toBe(expectation.expectEpidemicDelta);
+    }
   });
 });
