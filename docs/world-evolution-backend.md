@@ -103,13 +103,20 @@ Overrides are applied additively to the resolved profile; no random behavior is 
 Example:
 
 ```ts
+import {
+  resolveWorldEvolutionProfile,
+  runWorldEvolution,
+} from "@its-not-rocket-science/ananke/world-evolution-backend";
+
+const snapshot = {} as any;
+const baseProfile = resolveWorldEvolutionProfile("polity_dynamics");
+
 const result = runWorldEvolution({
   snapshot,
   steps: 90,
-  profileId: "polity_dynamics",
   profile: {
+    ...baseProfile,
     governanceStabilityDaysPerStep: 2,
-    routeEfficiencyBoost_Q: q(0.001),
   },
 });
 ```
