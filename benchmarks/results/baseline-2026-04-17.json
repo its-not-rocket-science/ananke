@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-17T10:35:55.609Z",
-  "commit": "a32c50a2aca80f8408591e57bf1f226572df8c1a",
+  "generatedAt": "2026-04-17T22:56:35.409Z",
+  "commit": "f834653a395b27510acddb0993b8712b09acc5a0",
   "branch": "main",
   "machine": "linux-x64",
   "measurements": [
@@ -9,17 +9,17 @@
       "scenarioLabel": "Empty world tick overhead (0 entities)",
       "adapterId": "ananke",
       "adapterLabel": "Ananke",
-      "tickMs": 0.004963150999999999,
-      "ticksPerSec": 201484.90344138234,
-      "heapDeltaMB": 1.03570556640625
+      "tickMs": 0.005657298799999998,
+      "ticksPerSec": 176762.80418492306,
+      "heapDeltaMB": -2.37548828125
     },
     {
       "scenarioId": "empty-world",
       "scenarioLabel": "Empty world tick overhead (0 entities)",
       "adapterId": "ananke-wasm",
       "adapterLabel": "Ananke (WASM core)",
-      "tickMs": 0.0004933530000000019,
-      "ticksPerSec": 2026946.2230897474,
+      "tickMs": 0.0004016838000000007,
+      "ticksPerSec": 2489520.364027621,
       "notes": "backend=ts"
     },
     {
@@ -45,8 +45,8 @@
       "scenarioLabel": "Empty world tick overhead (0 entities)",
       "adapterId": "hand-rolled-js",
       "adapterLabel": "Hand-rolled JS O(N²)",
-      "tickMs": 0.0002094227999999987,
-      "ticksPerSec": 4775029.27092946,
+      "tickMs": 0.00014986499999999979,
+      "ticksPerSec": 6672672.071531055,
       "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
     },
     {
@@ -54,17 +54,17 @@
       "scenarioLabel": "Small skirmish (10v10 melee)",
       "adapterId": "ananke",
       "adapterLabel": "Ananke",
-      "tickMs": 0.40026300549999994,
-      "ticksPerSec": 2498.357295725648,
-      "heapDeltaMB": -5.0556640625
+      "tickMs": 0.46006260499999996,
+      "ticksPerSec": 2173.6172189000235,
+      "heapDeltaMB": -2.91943359375
     },
     {
       "scenarioId": "small-skirmish",
       "scenarioLabel": "Small skirmish (10v10 melee)",
       "adapterId": "ananke-wasm",
       "adapterLabel": "Ananke (WASM core)",
-      "tickMs": 0.002164453500000036,
-      "ticksPerSec": 462010.3873795318,
+      "tickMs": 0.002063195999999948,
+      "ticksPerSec": 484684.92571720044,
       "notes": "backend=ts"
     },
     {
@@ -90,8 +90,8 @@
       "scenarioLabel": "Small skirmish (10v10 melee)",
       "adapterId": "hand-rolled-js",
       "adapterLabel": "Hand-rolled JS O(N²)",
-      "tickMs": 0.14903947949999996,
-      "ticksPerSec": 6709.631591272434,
+      "tickMs": 0.1517139505,
+      "ticksPerSec": 6591.351663471449,
       "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
     },
     {
@@ -99,17 +99,17 @@
       "scenarioLabel": "Large battle (100v100 mixed ranged/melee)",
       "adapterId": "ananke",
       "adapterLabel": "Ananke",
-      "tickMs": 7.0584234375,
-      "ticksPerSec": 141.6746967442048,
-      "heapDeltaMB": 4.109321594238281
+      "tickMs": 6.7790305725,
+      "ticksPerSec": 147.51371738263393,
+      "heapDeltaMB": 10.319633483886719
     },
     {
       "scenarioId": "large-battle",
       "scenarioLabel": "Large battle (100v100 mixed ranged/melee)",
       "adapterId": "ananke-wasm",
       "adapterLabel": "Ananke (WASM core)",
-      "tickMs": 0.0010352850000003855,
-      "ticksPerSec": 965917.5975693917,
+      "tickMs": 0.001243015000000014,
+      "ticksPerSec": 804495.520971178,
       "notes": "backend=ts"
     },
     {
@@ -135,8 +135,8 @@
       "scenarioLabel": "Large battle (100v100 mixed ranged/melee)",
       "adapterId": "hand-rolled-js",
       "adapterLabel": "Hand-rolled JS O(N²)",
-      "tickMs": 15.699445402499999,
-      "ticksPerSec": 63.6965175751214,
+      "tickMs": 15.919205374999999,
+      "ticksPerSec": 62.8172057865671,
       "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
     },
     {
@@ -144,17 +144,17 @@
       "scenarioLabel": "Spawn storm (+10 entities/tick for 100 ticks)",
       "adapterId": "ananke",
       "adapterLabel": "Ananke",
-      "tickMs": 82.56007983,
-      "ticksPerSec": 12.11239138890256,
-      "heapDeltaMB": 21.532730102539062
+      "tickMs": 88.04552885000001,
+      "ticksPerSec": 11.357760161832452,
+      "heapDeltaMB": 22.321937561035156
     },
     {
       "scenarioId": "spawn-storm",
       "scenarioLabel": "Spawn storm (+10 entities/tick for 100 ticks)",
       "adapterId": "ananke-wasm",
       "adapterLabel": "Ananke (WASM core)",
-      "tickMs": 0.0003635900000153924,
-      "ticksPerSec": 2750350.669593953,
+      "tickMs": 0.0003424300000187941,
+      "ticksPerSec": 2920304.8796691746,
       "notes": "backend=ts"
     },
     {
@@ -180,8 +180,8 @@
       "scenarioLabel": "Spawn storm (+10 entities/tick for 100 ticks)",
       "adapterId": "hand-rolled-js",
       "adapterLabel": "Hand-rolled JS O(N²)",
-      "tickMs": 914.7474564800001,
-      "ticksPerSec": 1.0931979016897806,
+      "tickMs": 935.9615102600001,
+      "ticksPerSec": 1.0684200034275029,
       "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
     },
     {
@@ -189,17 +189,17 @@
       "scenarioLabel": "Memory stress (10,000 ticks heap growth)",
       "adapterId": "ananke",
       "adapterLabel": "Ananke",
-      "tickMs": 2.393724227799999,
-      "ticksPerSec": 417.75906697450705,
-      "heapDeltaMB": 19.107559204101562
+      "tickMs": 2.3589258138999996,
+      "ticksPerSec": 423.92176731777136,
+      "heapDeltaMB": -0.1679229736328125
     },
     {
       "scenarioId": "memory-stress",
       "scenarioLabel": "Memory stress (10,000 ticks heap growth)",
       "adapterId": "ananke-wasm",
       "adapterLabel": "Ananke (WASM core)",
-      "tickMs": 0.0006445686000020942,
-      "ticksPerSec": 1551425.2478273856,
+      "tickMs": 0.0007240223999979207,
+      "ticksPerSec": 1381172.7372010478,
       "notes": "backend=ts"
     },
     {
@@ -225,8 +225,8 @@
       "scenarioLabel": "Memory stress (10,000 ticks heap growth)",
       "adapterId": "hand-rolled-js",
       "adapterLabel": "Hand-rolled JS O(N²)",
-      "tickMs": 3.8463135683000003,
-      "ticksPerSec": 259.98920323128556,
+      "tickMs": 3.9941586726000007,
+      "ticksPerSec": 250.36561688448126,
       "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
     },
     {
@@ -234,17 +234,17 @@
       "scenarioLabel": "Epic battle (5,000v5,000 optimized lane battle)",
       "adapterId": "ananke",
       "adapterLabel": "Ananke",
-      "tickMs": 463.95059212777784,
-      "ticksPerSec": 2.155401926342595,
-      "heapDeltaMB": 65.72618865966797
+      "tickMs": 447.56445732222215,
+      "ticksPerSec": 2.234315043654269,
+      "heapDeltaMB": -26.996131896972656
     },
     {
       "scenarioId": "epic-battle",
       "scenarioLabel": "Epic battle (5,000v5,000 optimized lane battle)",
       "adapterId": "ananke-wasm",
       "adapterLabel": "Ananke (WASM core)",
-      "tickMs": 0.046846422221925525,
-      "ticksPerSec": 21346.347331770623,
+      "tickMs": 0.05163632222199036,
+      "ticksPerSec": 19366.212715554902,
       "notes": "backend=ts"
     },
     {
@@ -270,8 +270,8 @@
       "scenarioLabel": "Epic battle (5,000v5,000 optimized lane battle)",
       "adapterId": "hand-rolled-js",
       "adapterLabel": "Hand-rolled JS O(N²)",
-      "tickMs": 3.8504842388889906,
-      "ticksPerSec": 259.7075946708816,
+      "tickMs": 3.9866773999997855,
+      "ticksPerSec": 250.83544507515302,
       "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
     }
   ]
