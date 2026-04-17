@@ -7,6 +7,7 @@ export {
 export {
   resolveWorldEvolutionProfile,
   listWorldEvolutionProfiles,
+  mergeWorldEvolutionProfileWithOverrides,
 } from "./profiles.js";
 
 export {
@@ -14,6 +15,7 @@ export {
 } from "./types.js";
 
 export type {
+  EvolutionRulesetProfile,
   WorldEvolutionRulesetId,
   WorldEvolutionRulesetProfile,
   WorldEvolutionSnapshot,

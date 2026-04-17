@@ -6,11 +6,13 @@ import { TechEra as TechEraCode, type TechEra } from "../sim/tech.js";
 import { SCALE } from "../units.js";
 import {
   WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
+  type WorldEvolutionRulesetId,
   type WorldEvolutionRunRequest,
   type WorldEvolutionRunResult,
   type WorldEvolutionRulesetProfile,
   type WorldEvolutionSnapshot,
 } from "./types.js";
+import { mergeWorldEvolutionProfileWithOverrides } from "./profiles.js";
 
 export const HOST_WORLD_EVOLUTION_SCHEMA_VERSION = "ananke.host-world-evolution-input.v1" as const;
 
@@ -120,6 +122,7 @@ export interface WorldEvolutionInput {
   resources?: HostResourceNode[];
   diseases?: HostDiseaseProfile[];
   epidemics?: HostEpidemicState[];
+  profileId?: WorldEvolutionRulesetId;
   ruleOverrides?: HostRuleOverrides;
   hostMetadata?: Record<string, unknown>;
   simulationState?: {
@@ -519,8 +522,13 @@ export function toWorldEvolutionRunRequest(
     ...options,
   };
 
-  if (input.ruleOverrides != null) {
-    request.profile = toInlineRuleset(input.ruleOverrides);
+  if (input.profileId != null) {
+    request.profileId = input.profileId;
+  }
+
+  if (input.ruleOverrides != null || input.profileId != null) {
+    request.profile = toInlineRuleset(input.profileId, input.ruleOverrides);
+    delete request.profileId;
   }
 
   return request;
@@ -533,23 +541,29 @@ export function fromWorldEvolutionRunResult(
   return fromAnankeEvolutionState(result.finalSnapshot, context);
 }
 
-function toInlineRuleset(overrides: HostRuleOverrides): WorldEvolutionRulesetProfile {
-  return {
-    id: "balanced",
-    name: "host-overrides",
-    description: "Inline host-provided overrides",
-    polityDayEnabled: overrides.polityDayEnabled ?? true,
-    governanceEnabled: overrides.governanceEnabled ?? true,
-    diplomacyEnabled: overrides.diplomacyEnabled ?? true,
-    tradeEnabled: overrides.tradeEnabled ?? true,
-    migrationEnabled: overrides.migrationEnabled ?? true,
-    epidemicEnabled: overrides.epidemicEnabled ?? true,
-    climateEnabled: overrides.climateEnabled ?? true,
-    governanceStabilityDaysPerStep: overrides.governanceStabilityDaysPerStep ?? 1,
-    treatyStrengthBoost_Q: clampQField(overrides.treatyStrengthBoost_Q ?? 0),
-    routeEfficiencyBoost_Q: clampQField(overrides.routeEfficiencyBoost_Q ?? 0),
-    epidemicHealthBuffer_Q: clampQField(overrides.epidemicHealthBuffer_Q ?? 0),
-  };
+function toInlineRuleset(
+  profileId: WorldEvolutionRulesetId | undefined,
+  overrides: HostRuleOverrides | undefined,
+): WorldEvolutionRulesetProfile {
+  const compiledOverrides: Partial<WorldEvolutionRulesetProfile> = {};
+  if (overrides?.polityDayEnabled != null) compiledOverrides.polityDayEnabled = overrides.polityDayEnabled;
+  if (overrides?.governanceEnabled != null) compiledOverrides.governanceEnabled = overrides.governanceEnabled;
+  if (overrides?.diplomacyEnabled != null) compiledOverrides.diplomacyEnabled = overrides.diplomacyEnabled;
+  if (overrides?.tradeEnabled != null) compiledOverrides.tradeEnabled = overrides.tradeEnabled;
+  if (overrides?.migrationEnabled != null) compiledOverrides.migrationEnabled = overrides.migrationEnabled;
+  if (overrides?.epidemicEnabled != null) compiledOverrides.epidemicEnabled = overrides.epidemicEnabled;
+  if (overrides?.climateEnabled != null) compiledOverrides.climateEnabled = overrides.climateEnabled;
+  if (overrides?.governanceStabilityDaysPerStep != null) {
+    compiledOverrides.governanceStabilityDaysPerStep = overrides.governanceStabilityDaysPerStep;
+  }
+  if (overrides?.treatyStrengthBoost_Q != null) compiledOverrides.treatyStrengthBoost_Q = clampQField(overrides.treatyStrengthBoost_Q);
+  if (overrides?.routeEfficiencyBoost_Q != null) compiledOverrides.routeEfficiencyBoost_Q = clampQField(overrides.routeEfficiencyBoost_Q);
+  if (overrides?.epidemicHealthBuffer_Q != null) compiledOverrides.epidemicHealthBuffer_Q = clampQField(overrides.epidemicHealthBuffer_Q);
+
+  return mergeWorldEvolutionProfileWithOverrides(
+    profileId,
+    Object.keys(compiledOverrides).length > 0 ? compiledOverrides : undefined,
+  );
 }
 
 function clampQField(value: number): number {

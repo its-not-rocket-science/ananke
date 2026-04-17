@@ -107,7 +107,7 @@ export function createEvolutionSession(config: EvolutionSessionConfig): Evolutio
     ...config.canonicalSnapshot,
     worldSeed: config.seed,
   });
-  const ruleset = config.ruleset ? cloneRuleset(config.ruleset) : resolveWorldEvolutionProfile(config.rulesetId ?? "balanced");
+  const ruleset = config.ruleset ? cloneRuleset(config.ruleset) : resolveWorldEvolutionProfile(config.rulesetId ?? "full_world_evolution");
   const seed = canonicalSnapshot.worldSeed;
 
   const state: EvolutionSession["state"] = {

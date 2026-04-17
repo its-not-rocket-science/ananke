@@ -27,7 +27,7 @@ No Tier-1 root exports were changed.
 ## Host flow
 
 1. Build an initial `WorldEvolutionSnapshot` (canon state).
-2. Pick a profile (`balanced`, `resilience`, `expansion`) or provide a custom profile.
+2. Pick a profile (`minimal_world_history`, `polity_dynamics`, `conflict_heavy`, `climate_and_migration`, `full_world_evolution`) and optionally layer deterministic host overrides on top.
 3. Run `runWorldEvolution({ snapshot, steps, ... })`.
 4. Read:
    - `finalSnapshot`
@@ -56,6 +56,41 @@ The backend composes existing systems in deterministic order per step:
 7. **Epidemic**: `stepEpidemic` + death pressure application
 
 All sequencing is deterministic and order-stable (sorted IDs, no `Math.random`).
+
+## Deterministic profile presets
+
+Profiles are explicit additive controls over existing modules and all share the same explicit pipeline order:
+
+1. `polity`
+2. `governance`
+3. `diplomacy`
+4. `trade`
+5. `migration`
+6. `climate`
+7. `epidemic`
+
+Preset intent:
+
+- `minimal_world_history`: only core polity day stepping.
+- `polity_dynamics`: polity + governance + diplomacy + trade.
+- `conflict_heavy`: polity/governance/diplomacy/trade/migration with no climate/epidemic load.
+- `climate_and_migration`: polity + migration + climate + epidemic pressure.
+- `full_world_evolution`: all currently integrated world-scale subsystems enabled.
+
+Legacy IDs (`balanced`, `resilience`, `expansion`) are kept as deterministic aliases to `full_world_evolution` for compatibility.
+
+## Host overrides layered on profile
+
+Hosts can provide:
+
+- `profileId` to select a preset
+- `ruleOverrides` to override specific fields deterministically
+
+Overrides are applied additively to the resolved profile; no random behavior is introduced.
+
+## Profile comparison example
+
+See `examples/world-evolution-profiles-comparison.ts` for a side-by-side run comparing multiple profiles over the same input state and seed.
 
 ## Determinism notes
 
