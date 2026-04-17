@@ -58,6 +58,14 @@ Normalization guarantees stable ordering across:
 3. Run backend evolution.
 
 ```ts
+import {
+  runWorldEvolution,
+  toWorldEvolutionRunRequest,
+  type WorldEvolutionInput,
+} from "@its-not-rocket-science/ananke/world-evolution-backend";
+
+declare const hostInput: WorldEvolutionInput;
+
 const req = toWorldEvolutionRunRequest(hostInput, 30, {
   includeDeltas: true,
   checkpointInterval: 5,
