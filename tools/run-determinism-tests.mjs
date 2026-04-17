@@ -38,11 +38,19 @@ for (let i = 0; i < raw.length; i++) {
   pass.push(a);
 }
 
-if (
-  runInBandRequested
-  && !pass.some((arg) => arg === "--pool" || arg.startsWith("--pool="))
-) {
+let hasPoolSetting = pass.some((arg) => arg === "--pool" || arg.startsWith("--pool="));
+const hasExplicitMaxWorkers = pass.some(
+  (arg) => arg === "--maxWorkers" || arg.startsWith("--maxWorkers="),
+);
+if (runInBandRequested && !hasPoolSetting) {
   // Prefer threads for runInBand to avoid long-running fork RPC stalls on CI.
+  pass.push("--pool=threads", "--poolOptions.threads.singleThread=true");
+  hasPoolSetting = true;
+}
+if (!hasPoolSetting && !hasExplicitMaxWorkers) {
+  // Determinism suites are CPU-heavy and occasionally trip Vitest's "tests are
+  // still running while writing JSON report" issue in multi-worker mode on CI.
+  // Force a single thread unless the caller has asked for a worker strategy.
   pass.push("--pool=threads", "--poolOptions.threads.singleThread=true");
 }
 
