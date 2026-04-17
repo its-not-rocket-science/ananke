@@ -5,16 +5,16 @@
 </head>
 <body>
 <h1>Ananke Performance Dashboard</h1>
-<p class="alert">✅ Stable (0.0% vs fe8782c)</p>
+<p class="alert">✅ Stable (0.0% vs a32c50a)</p>
 <canvas id="chart" width="1000" height="280"></canvas>
 <h2>Current vs baseline (large battle)</h2>
-<table><thead><tr><th>Adapter</th><th>Ticks/sec</th><th>Ananke Ratio</th><th>Delta vs Adapter</th></tr></thead><tbody><tr><td>Ananke</td><td>145.2</td><td>1.00x</td><td>0.0%</td></tr>
-<tr><td>Ananke (WASM core)</td><td>578041.4</td><td>0.00x</td><td>-100.0%</td></tr>
-<tr><td>GridSage (public snapshot)</td><td>0.0</td><td>0.00x</td><td>14522.6%</td></tr>
-<tr><td>Unity DOTS (C#/WASM minimal)</td><td>0.0</td><td>0.00x</td><td>14522.6%</td></tr>
-<tr><td>Hand-rolled JS O(N²)</td><td>62.8</td><td>2.31x</td><td>131.2%</td></tr></tbody></table>
+<table><thead><tr><th>Adapter</th><th>Ticks/sec</th><th>Ananke Ratio</th><th>Delta vs Adapter</th></tr></thead><tbody><tr><td>Ananke</td><td>141.7</td><td>1.00x</td><td>0.0%</td></tr>
+<tr><td>Ananke (WASM core)</td><td>965917.6</td><td>0.00x</td><td>-100.0%</td></tr>
+<tr><td>GridSage (public snapshot)</td><td>0.0</td><td>0.00x</td><td>14167.5%</td></tr>
+<tr><td>Unity DOTS (C#/WASM minimal)</td><td>0.0</td><td>0.00x</td><td>14167.5%</td></tr>
+<tr><td>Hand-rolled JS O(N²)</td><td>63.7</td><td>2.22x</td><td>122.4%</td></tr></tbody></table>
 <script>
-const points = [{"commit":"19bbed7","ticks":101.05012594427919},{"commit":"5c07c75","ticks":148.72526104519017},{"commit":"4b46e82","ticks":142.00220317554246},{"commit":"f0c2e24","ticks":142.59984283073123},{"commit":"c5eae02","ticks":149.68721199268256},{"commit":"8978e9a","ticks":147.88608622564365},{"commit":"b443f99","ticks":148.06573141685277},{"commit":"ca2bbb0","ticks":144.85109363884786},{"commit":"fe8782c","ticks":145.22574456478617},{"commit":"fe8782c","ticks":145.22574456478617}];
+const points = [{"commit":"19bbed7","ticks":101.05012594427919},{"commit":"5c07c75","ticks":148.72526104519017},{"commit":"4b46e82","ticks":142.00220317554246},{"commit":"f0c2e24","ticks":142.59984283073123},{"commit":"c5eae02","ticks":149.68721199268256},{"commit":"8978e9a","ticks":147.88608622564365},{"commit":"b443f99","ticks":148.06573141685277},{"commit":"ca2bbb0","ticks":144.85109363884786},{"commit":"fe8782c","ticks":145.22574456478617},{"commit":"a32c50a","ticks":141.6746967442048},{"commit":"a32c50a","ticks":141.6746967442048}];
 const canvas = document.getElementById('chart');
 const ctx = canvas.getContext('2d');
 ctx.clearRect(0,0,canvas.width,canvas.height);
