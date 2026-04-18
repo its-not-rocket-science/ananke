@@ -124,6 +124,43 @@ export interface WorldEvolutionCheckpoint {
   snapshot: WorldEvolutionSnapshot;
 }
 
+
+
+export type EvolutionTimelineCategory =
+  | "polity"
+  | "migration"
+  | "conflict"
+  | "diplomacy"
+  | "economy"
+  | "disease"
+  | "climate"
+  | "infrastructure"
+  | "governance"
+  | "mythology_culture";
+
+export interface EvolutionTimelineFactRef {
+  subsystem: "trade" | "wars" | "migrations" | "climateEventIds" | "epidemicPopulationDelta" | "metrics";
+  step: number;
+  tick: number;
+  index?: number;
+}
+
+export interface EvolutionTimelineEvent {
+  id: string;
+  hash: string;
+  step: number;
+  tick: number;
+  category: EvolutionTimelineCategory;
+  /** 0..100 host-friendly intensity score. */
+  severity: number;
+  /** 0..100 host-friendly relevance score for surfacing highlights. */
+  significance: number;
+  /** Stable timeline order in the normalized stream. */
+  sequence: number;
+  entityIds: string[];
+  factRefs: EvolutionTimelineFactRef[];
+  summary?: string;
+}
 export interface WorldEvolutionRunResult {
   initialSnapshot: WorldEvolutionSnapshot;
   finalSnapshot: WorldEvolutionSnapshot;
