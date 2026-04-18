@@ -7,11 +7,16 @@ import { createGovernanceState, PRESET_LAW_CODES } from "../src/governance.js";
 import { WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION } from "../src/world-evolution-backend/index.js";
 import {
   WORLD_EVOLUTION_ORCHESTRATION_SCHEMA_VERSION,
+  WORLD_EVOLUTION_ENGINE_VERSION,
   createEvolutionSession,
+  deserializeEvolutionCheckpoint,
   deserializeEvolutionResult,
   getEvolutionSummary,
+  resumeEvolutionSessionFromCheckpoint,
   runEvolution,
+  serializeEvolutionCheckpoint,
   serializeEvolutionResult,
+  serializeEvolutionIntermediateState,
   stepEvolution,
 } from "../src/world-evolution.js";
 
@@ -106,5 +111,51 @@ describe("world-evolution orchestration", () => {
 
     expect(decoded).toEqual(result);
     expect(decoded.schemaVersion).toBe(WORLD_EVOLUTION_ORCHESTRATION_SCHEMA_VERSION);
+  });
+
+  it("resumes from checkpoint and matches uninterrupted run exactly", () => {
+    const uninterrupted = runEvolution(createSession(1024), { steps: 60, checkpointInterval: 20 });
+
+    const firstLegSession = createSession(1024);
+    const firstLeg = runEvolution(firstLegSession, { steps: 20, checkpointInterval: 20 });
+    const checkpoint = firstLeg.checkpoints?.[0];
+    if (!checkpoint) throw new Error("expected checkpoint");
+
+    const resumedSession = resumeEvolutionSessionFromCheckpoint(checkpoint);
+    const secondLeg = runEvolution(resumedSession, { steps: 40, checkpointInterval: 20, includeCheckpointDiffs: true });
+
+    expect(secondLeg.finalSnapshot).toEqual(uninterrupted.finalSnapshot);
+    const uninterruptedTail = uninterrupted.timeline.slice(20).map(({ step: _step, ...rest }) => rest);
+    const resumedTimeline = secondLeg.timeline.map(({ step: _step, ...rest }) => rest);
+    expect(resumedTimeline).toEqual(uninterruptedTail);
+  });
+
+  it("serializes and deserializes checkpoints with deterministic metadata", () => {
+    const session = createSession(2048);
+    runEvolution(session, { steps: 10, checkpointInterval: 5 });
+    const serialized = serializeEvolutionIntermediateState(session);
+    const checkpoint = deserializeEvolutionCheckpoint(serialized);
+
+    expect(checkpoint.metadata.engineVersion).toBe(WORLD_EVOLUTION_ENGINE_VERSION);
+    expect(checkpoint.metadata.seed).toBe(2048);
+    expect(checkpoint.metadata.step).toBe(10);
+  });
+
+  it("rejects checkpoint when engine metadata is incompatible", () => {
+    const session = createSession(55);
+    const result = runEvolution(session, { steps: 5, checkpointInterval: 5 });
+    const checkpoint = result.checkpoints?.[0];
+    if (!checkpoint) throw new Error("expected checkpoint");
+
+    const tampered = {
+      ...checkpoint,
+      metadata: {
+        ...checkpoint.metadata,
+        engineVersion: "0.0.0-dev-incompatible",
+      },
+    };
+
+    const serialized = serializeEvolutionCheckpoint(tampered);
+    expect(() => deserializeEvolutionCheckpoint(serialized)).toThrow(/engine mismatch/);
   });
 });

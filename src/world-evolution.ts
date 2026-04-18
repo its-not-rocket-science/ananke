@@ -12,9 +12,12 @@ import {
   type WorldEvolutionSnapshot,
   type WorldEvolutionStepEvent,
 } from "./world-evolution-backend/index.js";
+import { ANANKE_ENGINE_VERSION } from "./version.js";
+import { hashString } from "./sim/seeds.js";
 
 export const WORLD_EVOLUTION_ORCHESTRATION_SCHEMA_VERSION = "ananke.world-evolution-orchestration.v1" as const;
-export const WORLD_EVOLUTION_ENGINE_VERSION = WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION;
+export const WORLD_EVOLUTION_ENGINE_VERSION = ANANKE_ENGINE_VERSION;
+export const WORLD_EVOLUTION_CHECKPOINT_SCHEMA_VERSION = "ananke.world-evolution-checkpoint.v1" as const;
 
 export type EvolutionRuleset = WorldEvolutionRulesetProfile;
 
@@ -32,6 +35,7 @@ export interface EvolutionRequest {
   steps: number;
   checkpointInterval?: number;
   includeDeltas?: boolean;
+  includeCheckpointDiffs?: boolean;
 }
 
 export interface EvolutionTimelineEvent {
@@ -52,6 +56,37 @@ export interface EvolutionCheckpoint {
   tick: number;
   summary: string;
   snapshot: WorldEvolutionSnapshot;
+  metadata: EvolutionCheckpointMetadata;
+}
+
+export interface EvolutionCheckpointMetadata {
+  engineVersion: string;
+  seed: number;
+  rulesetProfile: EvolutionRuleset;
+  step: number;
+  schemaVersion: typeof WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION;
+}
+
+export interface EvolutionCheckpointDiff {
+  fromStep: number;
+  toStep: number;
+  fromTick: number;
+  toTick: number;
+  fromSnapshotHash: string;
+  toSnapshotHash: string;
+  worldChanges: Record<string, unknown>;
+  polityDeltas: Array<{
+    polityId: string;
+    populationDelta: number;
+    treasuryDelta_cu: number;
+    stabilityDelta_Q: number;
+    moraleDelta_Q: number;
+  }>;
+}
+
+export interface SerializedEvolutionCheckpoint {
+  schemaVersion: typeof WORLD_EVOLUTION_CHECKPOINT_SCHEMA_VERSION;
+  checkpoint: EvolutionCheckpoint;
 }
 
 export interface EvolutionRunResult {
@@ -65,6 +100,7 @@ export interface EvolutionRunResult {
   timeline: EvolutionTimelineEvent[];
   metrics: WorldEvolutionMetrics;
   checkpoints?: EvolutionCheckpoint[];
+  checkpointDiffs?: EvolutionCheckpointDiff[];
   deltas?: WorldEvolutionDelta[];
 }
 
@@ -100,6 +136,12 @@ export interface EvolutionSession {
     defaultCheckpointInterval?: number;
     defaultIncludeDeltas: boolean;
   };
+}
+
+export interface ResumeEvolutionOptions {
+  label?: string;
+  checkpointInterval?: number;
+  includeDeltas?: boolean;
 }
 
 export function createEvolutionSession(config: EvolutionSessionConfig): EvolutionSession {
@@ -141,6 +183,7 @@ export function runEvolution(session: EvolutionSession, request: EvolutionReques
   const steps = Math.max(0, Math.floor(request.steps));
   const initialSnapshot = cloneSnapshot(session.state.currentSnapshot);
   const includeDeltas = request.includeDeltas ?? session.state.defaultIncludeDeltas;
+  const includeCheckpointDiffs = request.includeCheckpointDiffs ?? false;
   const checkpointInterval = request.checkpointInterval ?? session.state.defaultCheckpointInterval;
 
   const backendRequest = {
@@ -153,7 +196,7 @@ export function runEvolution(session: EvolutionSession, request: EvolutionReques
   const backendResult = runWorldEvolution(backendRequest);
 
   const timeline = backendResult.timeline.map(toTimelineEvent);
-  const checkpoints = mapCheckpoints(backendResult.checkpoints);
+  const checkpoints = mapCheckpoints(session, backendResult.checkpoints);
 
   session.state.totalSteps += steps;
   session.state.currentSnapshot = cloneSnapshot(backendResult.finalSnapshot);
@@ -168,6 +211,7 @@ export function runEvolution(session: EvolutionSession, request: EvolutionReques
     request: {
       steps,
       includeDeltas,
+      ...(includeCheckpointDiffs ? { includeCheckpointDiffs: true } : {}),
       ...(checkpointInterval != null ? { checkpointInterval } : {}),
     },
     ruleset: cloneRuleset(session.ruleset),
@@ -178,6 +222,9 @@ export function runEvolution(session: EvolutionSession, request: EvolutionReques
   };
   if (checkpoints.length > 0) {
     result.checkpoints = checkpoints;
+    if (includeCheckpointDiffs) {
+      result.checkpointDiffs = buildEvolutionCheckpointDiffs(checkpoints);
+    }
   }
   if (backendResult.deltas) {
     result.deltas = backendResult.deltas.map(cloneDelta);
@@ -216,6 +263,28 @@ export function getEvolutionSummary(session: EvolutionSession): EvolutionSession
   return summary;
 }
 
+export function resumeEvolutionSessionFromCheckpoint(
+  checkpoint: EvolutionCheckpoint,
+  options: ResumeEvolutionOptions = {},
+): EvolutionSession {
+  validateCheckpointCompatibility(checkpoint);
+  const session = createEvolutionSession({
+    seed: checkpoint.metadata.seed,
+    ruleset: checkpoint.metadata.rulesetProfile,
+    canonicalSnapshot: checkpoint.snapshot,
+    ...(options.checkpointInterval != null ? { checkpointInterval: options.checkpointInterval } : {}),
+    ...(options.includeDeltas != null ? { includeDeltas: options.includeDeltas } : {}),
+    ...(options.label != null ? { label: options.label } : {}),
+  });
+
+  session.state.totalSteps = checkpoint.step;
+  session.state.currentSnapshot = cloneSnapshot(checkpoint.snapshot);
+  session.state.checkpoints = [cloneCheckpoint(checkpoint)];
+  session.state.timeline = [];
+  session.state.lastMetrics = computeStaticMetrics(checkpoint.snapshot);
+  return session;
+}
+
 export function serializeEvolutionResult(result: EvolutionRunResult): string {
   return JSON.stringify({
     schemaVersion: WORLD_EVOLUTION_ORCHESTRATION_SCHEMA_VERSION,
@@ -228,7 +297,12 @@ export function serializeEvolutionResult(result: EvolutionRunResult): string {
       checkpoints: result.checkpoints?.map((checkpoint) => ({
         ...checkpoint,
         snapshot: cloneSnapshot(checkpoint.snapshot),
+        metadata: {
+          ...checkpoint.metadata,
+          rulesetProfile: cloneRuleset(checkpoint.metadata.rulesetProfile),
+        },
       })),
+      checkpointDiffs: result.checkpointDiffs?.map(cloneCheckpointDiff),
       deltas: result.deltas?.map(cloneDelta),
       metrics: { ...result.metrics },
     },
@@ -252,6 +326,7 @@ export function deserializeEvolutionResult(json: string): EvolutionRunResult {
     request: {
       steps: Math.max(0, Math.floor(payload.request.steps)),
       ...(payload.request.includeDeltas != null ? { includeDeltas: payload.request.includeDeltas } : {}),
+      ...(payload.request.includeCheckpointDiffs != null ? { includeCheckpointDiffs: payload.request.includeCheckpointDiffs } : {}),
       ...(payload.request.checkpointInterval != null ? { checkpointInterval: payload.request.checkpointInterval } : {}),
     },
     ruleset: cloneRuleset(payload.ruleset),
@@ -267,12 +342,70 @@ export function deserializeEvolutionResult(json: string): EvolutionRunResult {
     result.checkpoints = payload.checkpoints.map((checkpoint) => ({
       ...checkpoint,
       snapshot: cloneSnapshot(checkpoint.snapshot),
+      metadata: {
+        ...checkpoint.metadata,
+        rulesetProfile: cloneRuleset(checkpoint.metadata.rulesetProfile),
+      },
     }));
+  }
+  if (payload.checkpointDiffs) {
+    result.checkpointDiffs = payload.checkpointDiffs.map(cloneCheckpointDiff);
   }
   if (payload.deltas) {
     result.deltas = payload.deltas.map(cloneDelta);
   }
   return result;
+}
+
+export function serializeEvolutionCheckpoint(checkpoint: EvolutionCheckpoint): string {
+  const payload: SerializedEvolutionCheckpoint = {
+    schemaVersion: WORLD_EVOLUTION_CHECKPOINT_SCHEMA_VERSION,
+    checkpoint: cloneCheckpoint(checkpoint),
+  };
+  return JSON.stringify(payload);
+}
+
+export function deserializeEvolutionCheckpoint(json: string): EvolutionCheckpoint {
+  const parsed = JSON.parse(json) as { schemaVersion?: string; checkpoint?: EvolutionCheckpoint };
+  if (parsed.schemaVersion !== WORLD_EVOLUTION_CHECKPOINT_SCHEMA_VERSION || parsed.checkpoint == null) {
+    throw new Error("Invalid evolution checkpoint payload: unsupported schema version or missing checkpoint");
+  }
+  const checkpoint = cloneCheckpoint(parsed.checkpoint);
+  validateCheckpointCompatibility(checkpoint);
+  return checkpoint;
+}
+
+export function serializeEvolutionIntermediateState(session: EvolutionSession): string {
+  return serializeEvolutionCheckpoint(buildSessionCheckpoint(session));
+}
+
+export function serializeEvolutionFinalState(result: Pick<EvolutionRunResult, "finalSnapshot" | "sessionId" | "engineVersion" | "ruleset">): string {
+  const checkpoint: EvolutionCheckpoint = {
+    step: Number.MAX_SAFE_INTEGER,
+    tick: result.finalSnapshot.tick,
+    summary: `final-state tick=${result.finalSnapshot.tick}`,
+    snapshot: cloneSnapshot(result.finalSnapshot),
+    metadata: {
+      engineVersion: result.engineVersion,
+      seed: result.finalSnapshot.worldSeed,
+      rulesetProfile: cloneRuleset(result.ruleset),
+      step: Number.MAX_SAFE_INTEGER,
+      schemaVersion: WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
+    },
+  };
+  return serializeEvolutionCheckpoint(checkpoint);
+}
+
+export function buildEvolutionCheckpointDiffs(checkpoints: readonly EvolutionCheckpoint[]): EvolutionCheckpointDiff[] {
+  if (checkpoints.length < 2) return [];
+  const diffs: EvolutionCheckpointDiff[] = [];
+  for (let i = 1; i < checkpoints.length; i += 1) {
+    const prev = checkpoints[i - 1];
+    const next = checkpoints[i];
+    if (!prev || !next) continue;
+    diffs.push(diffEvolutionSnapshots(prev, next));
+  }
+  return diffs;
 }
 
 function toTimelineEvent(event: WorldEvolutionStepEvent): EvolutionTimelineEvent {
@@ -290,13 +423,20 @@ function toTimelineEvent(event: WorldEvolutionStepEvent): EvolutionTimelineEvent
   };
 }
 
-function mapCheckpoints(checkpoints?: WorldEvolutionCheckpoint[]): EvolutionCheckpoint[] {
+function mapCheckpoints(session: EvolutionSession, checkpoints?: WorldEvolutionCheckpoint[]): EvolutionCheckpoint[] {
   if (!checkpoints || checkpoints.length === 0) return [];
   return checkpoints.map((checkpoint) => ({
     step: checkpoint.step,
     tick: checkpoint.tick,
     summary: `checkpoint step=${checkpoint.step} tick=${checkpoint.tick}`,
     snapshot: cloneSnapshot(checkpoint.snapshot),
+    metadata: {
+      engineVersion: session.engineVersion,
+      seed: session.seed,
+      rulesetProfile: cloneRuleset(session.ruleset),
+      step: checkpoint.step,
+      schemaVersion: WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
+    },
   }));
 }
 
@@ -316,8 +456,101 @@ function cloneDelta(delta: WorldEvolutionDelta): WorldEvolutionDelta {
   };
 }
 
+function cloneCheckpoint(checkpoint: EvolutionCheckpoint): EvolutionCheckpoint {
+  return {
+    ...checkpoint,
+    snapshot: cloneSnapshot(checkpoint.snapshot),
+    metadata: {
+      ...checkpoint.metadata,
+      rulesetProfile: cloneRuleset(checkpoint.metadata.rulesetProfile),
+    },
+  };
+}
+
+function cloneCheckpointDiff(diff: EvolutionCheckpointDiff): EvolutionCheckpointDiff {
+  return {
+    ...diff,
+    worldChanges: { ...diff.worldChanges },
+    polityDeltas: diff.polityDeltas.map((entry) => ({ ...entry })),
+  };
+}
+
 function buildSessionId(seed: number, tick: number, rulesetId: string): string {
   return `evo-${seed}-${tick}-${rulesetId}`;
+}
+
+function buildSessionCheckpoint(session: EvolutionSession): EvolutionCheckpoint {
+  return {
+    step: session.state.totalSteps,
+    tick: session.state.currentSnapshot.tick,
+    summary: `checkpoint step=${session.state.totalSteps} tick=${session.state.currentSnapshot.tick}`,
+    snapshot: cloneSnapshot(session.state.currentSnapshot),
+    metadata: {
+      engineVersion: session.engineVersion,
+      seed: session.seed,
+      rulesetProfile: cloneRuleset(session.ruleset),
+      step: session.state.totalSteps,
+      schemaVersion: WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
+    },
+  };
+}
+
+function validateCheckpointCompatibility(checkpoint: EvolutionCheckpoint): void {
+  if (checkpoint.metadata.schemaVersion !== WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION) {
+    throw new Error(
+      `Evolution checkpoint schema mismatch: checkpoint=${checkpoint.metadata.schemaVersion} runtime=${WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION}`,
+    );
+  }
+  if (checkpoint.metadata.engineVersion !== WORLD_EVOLUTION_ENGINE_VERSION) {
+    throw new Error(
+      `Evolution checkpoint engine mismatch: checkpoint=${checkpoint.metadata.engineVersion} runtime=${WORLD_EVOLUTION_ENGINE_VERSION}`,
+    );
+  }
+  if (checkpoint.snapshot.worldSeed !== checkpoint.metadata.seed) {
+    throw new Error(
+      `Evolution checkpoint seed mismatch: snapshot=${checkpoint.snapshot.worldSeed} metadata=${checkpoint.metadata.seed}`,
+    );
+  }
+}
+
+function diffEvolutionSnapshots(from: EvolutionCheckpoint, to: EvolutionCheckpoint): EvolutionCheckpointDiff {
+  const fromSnapshot = cloneSnapshot(from.snapshot);
+  const toSnapshot = cloneSnapshot(to.snapshot);
+  const worldChanges: Record<string, unknown> = {};
+
+  if (fromSnapshot.tick !== toSnapshot.tick) worldChanges.tick = toSnapshot.tick;
+  if (fromSnapshot.worldSeed !== toSnapshot.worldSeed) worldChanges.worldSeed = toSnapshot.worldSeed;
+  if (JSON.stringify(fromSnapshot.activeWars) !== JSON.stringify(toSnapshot.activeWars)) worldChanges.activeWars = toSnapshot.activeWars;
+  if (JSON.stringify(fromSnapshot.treaties) !== JSON.stringify(toSnapshot.treaties)) worldChanges.treaties = toSnapshot.treaties;
+  if (JSON.stringify(fromSnapshot.tradeRoutes) !== JSON.stringify(toSnapshot.tradeRoutes)) worldChanges.tradeRoutes = toSnapshot.tradeRoutes;
+  if (JSON.stringify(fromSnapshot.governanceStates) !== JSON.stringify(toSnapshot.governanceStates)) worldChanges.governanceStates = toSnapshot.governanceStates;
+  if (JSON.stringify(fromSnapshot.governanceLawRegistry) !== JSON.stringify(toSnapshot.governanceLawRegistry)) worldChanges.governanceLawRegistry = toSnapshot.governanceLawRegistry;
+  if (JSON.stringify(fromSnapshot.epidemics) !== JSON.stringify(toSnapshot.epidemics)) worldChanges.epidemics = toSnapshot.epidemics;
+  if (JSON.stringify(fromSnapshot.diseases) !== JSON.stringify(toSnapshot.diseases)) worldChanges.diseases = toSnapshot.diseases;
+  if (JSON.stringify(fromSnapshot.climateByPolity) !== JSON.stringify(toSnapshot.climateByPolity)) worldChanges.climateByPolity = toSnapshot.climateByPolity;
+
+  const beforeById = new Map(fromSnapshot.polities.map((polity) => [polity.id, polity]));
+  const polityDeltas = toSnapshot.polities.map((polity) => {
+    const prev = beforeById.get(polity.id);
+    return {
+      polityId: polity.id,
+      populationDelta: polity.population - (prev?.population ?? 0),
+      treasuryDelta_cu: polity.treasury_cu - (prev?.treasury_cu ?? 0),
+      stabilityDelta_Q: polity.stabilityQ - (prev?.stabilityQ ?? 0),
+      moraleDelta_Q: polity.moraleQ - (prev?.moraleQ ?? 0),
+    };
+  });
+
+  return {
+    fromStep: from.step,
+    toStep: to.step,
+    fromTick: from.tick,
+    toTick: to.tick,
+    fromSnapshotHash: hashString(JSON.stringify(fromSnapshot)).toString(16),
+    toSnapshotHash: hashString(JSON.stringify(toSnapshot)).toString(16),
+    worldChanges,
+    polityDeltas,
+  };
 }
 
 
