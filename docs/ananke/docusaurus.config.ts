@@ -13,11 +13,7 @@ const config: Config = {
   organizationName: 'its-not-rocket-science',
   projectName: 'ananke',
   onBrokenLinks: 'warn',
-  markdown: {
-    hooks: {
-      onBrokenMarkdownLinks: 'warn'
-    }
-  },
+  onBrokenMarkdownLinks: 'warn',
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'zh-Hans', 'ja', 'ko']
