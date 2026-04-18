@@ -97,3 +97,12 @@ import * as Schema from "@its-not-rocket-science/ananke/schema";
 import * as ContentPack from "@its-not-rocket-science/ananke/content-pack";
 ```
 - **Doc destination:** [Plugin/content docs](./plugins/README.md).
+
+## `./world-evolution-engine`
+- **Purpose:** Deterministic world-evolution backend for host/platform integration (engine run API + host schema adapters + timeline projection).
+- **Stability:** **Shipped but undocumented** (public, non-Tier-1).
+- **Example import:**
+```ts
+import * as WorldEvolutionEngine from "@its-not-rocket-science/ananke/world-evolution-engine";
+```
+- **Doc destination:** [World evolution engine integrator guide](./world-evolution-engine.md).

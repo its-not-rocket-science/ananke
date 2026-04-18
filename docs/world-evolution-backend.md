@@ -13,13 +13,19 @@ It does **not** replace existing systems. It orchestrates existing modules and e
 
 ## Stable import path
 
-Use the dedicated subpath export:
+Preferred additive subpath export:
 
 ```ts
 import {
   runWorldEvolution,
   listAvailableWorldEvolutionProfiles,
-} from "@its-not-rocket-science/ananke/world-evolution-backend";
+} from "@its-not-rocket-science/ananke/world-evolution-engine";
+```
+
+Compatibility alias (still supported):
+
+```ts
+import { runWorldEvolution } from "@its-not-rocket-science/ananke/world-evolution-backend";
 ```
 
 No Tier-1 root exports were changed.
