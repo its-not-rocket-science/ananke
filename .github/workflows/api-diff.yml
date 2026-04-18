@@ -3,6 +3,16 @@ name: Tier 1 API Diff
 on:
   pull_request:
     branches: [main, master]
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - ".github/workflows/api-diff.yml"
+
+concurrency:
+  group: api-diff-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

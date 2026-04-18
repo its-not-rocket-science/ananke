@@ -3,7 +3,31 @@ name: wasm-build
 on:
   push:
     branches: [main]
+    paths:
+      - "as/**"
+      - "wasm/**"
+      - "src/**"
+      - "test/**"
+      - "tools/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - ".github/workflows/wasm-build.yml"
   pull_request:
+    paths:
+      - "as/**"
+      - "wasm/**"
+      - "src/**"
+      - "test/**"
+      - "tools/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - ".github/workflows/wasm-build.yml"
+
+concurrency:
+  group: wasm-build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-wasm:
