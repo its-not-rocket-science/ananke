@@ -111,3 +111,13 @@ It shows:
 - timeline projection,
 - checkpoint emission,
 - and a lightweight deterministic re-run sanity check.
+
+## Optional host-backend facade
+
+For hosts that want a single higher-level wrapper combining adapter + deterministic run + orchestration helpers, use:
+
+```ts
+import { runHostDeterministicEvolution } from "@its-not-rocket-science/ananke/world-evolution-host-backend";
+```
+
+See `docs/world-evolution-host-backend.md` for lifecycle wrappers (session/checkpoint resume/branch what-if).
