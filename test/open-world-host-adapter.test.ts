@@ -86,4 +86,23 @@ describe("open-world host adapter", () => {
 
     expect(result.metrics).toEqual(metricsSample);
   });
+
+  it("keeps mapping deterministic for equivalent faction-polity aliases", () => {
+    const input = readJson<OpenWorldHostInput>("openworld-host-input.sample.json");
+    const canonical = mapOpenWorldHostToEvolutionInput(input);
+    const aliased: OpenWorldHostInput = {
+      ...input,
+      factions: input.factions.map((faction) => ({
+        ...faction,
+        polityId: faction.polityId ?? `p.${faction.id}`,
+      })),
+      tradeLinks: input.tradeLinks?.map((link) => ({ ...link })),
+      resources: input.resources?.map((resource) => ({ ...resource })),
+    };
+    const mappedAliased = mapOpenWorldHostToEvolutionInput(aliased);
+
+    expect(mappedAliased.input.entities).toEqual(canonical.input.entities);
+    expect(mappedAliased.input.relationships).toEqual(canonical.input.relationships);
+    expect(mappedAliased.input.resources).toEqual(canonical.input.resources);
+  });
 });

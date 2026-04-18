@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { q } from "../src/units.js";
 import {
+  fromWorldEvolutionRunResult,
   fromAnankeEvolutionState,
   normalizeHostWorldInput,
+  toWorldEvolutionRunRequest,
   toAnankeEvolutionState,
   validateWorldEvolutionInput,
   type WorldEvolutionInput,
 } from "../src/world-evolution-backend/host-schema.js";
+import { runWorldEvolution } from "../src/world-evolution-backend/engine.js";
 
 function makeHostInput(): WorldEvolutionInput {
   return {
@@ -147,5 +150,24 @@ describe("world-evolution host schema", () => {
     expect(alphaEntity).toMatchObject({
       metadata: { lore: "old-marsh-kingdom" },
     });
+  });
+
+  it("round-trips host request/result adapters deterministically", () => {
+    const input = makeHostInput();
+    const requestA = toWorldEvolutionRunRequest(input, 12, { includeDeltas: true, checkpointInterval: 4 });
+    const requestB = toWorldEvolutionRunRequest(normalizeHostWorldInput(input), 12, { includeDeltas: true, checkpointInterval: 4 });
+
+    expect(requestA).toEqual(requestB);
+
+    const run = runWorldEvolution(requestA);
+    const hostResult = fromWorldEvolutionRunResult(run);
+    const replayRequest = toWorldEvolutionRunRequest(hostResult, 0);
+    const replayA = runWorldEvolution(replayRequest);
+    const replayB = runWorldEvolution(replayRequest);
+
+    expect(replayA).toEqual(replayB);
+    expect(hostResult.worldSeed).toBe(run.finalSnapshot.worldSeed);
+    expect(hostResult.tick).toBe(run.finalSnapshot.tick);
+    expect(hostResult.entities.filter((entity) => entity.kind === "polity")).toHaveLength(run.finalSnapshot.polities.length);
   });
 });

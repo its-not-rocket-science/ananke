@@ -171,6 +171,26 @@ describe("world-evolution-backend", () => {
     }
   });
 
+  it("keeps final state and timeline parity when checkpoint emission is toggled", () => {
+    const baselineReq = createBaselineRequest({
+      steps: 48,
+      checkpointInterval: undefined,
+      includeDeltas: false,
+    });
+    const checkpointedReq = createBaselineRequest({
+      steps: 48,
+      checkpointInterval: 6,
+      includeDeltas: false,
+    });
+
+    const baseline = runWorldEvolution(baselineReq);
+    const checkpointed = runWorldEvolution(checkpointedReq);
+
+    expect(checkpointed.finalSnapshot).toEqual(baseline.finalSnapshot);
+    expect(checkpointed.timeline).toEqual(baseline.timeline);
+    expect(checkpointed.checkpoints).toHaveLength(8);
+  });
+
   it("supports deterministic host overrides layered on top of a base profile", () => {
     const baselineReq = createBaselineRequest({
       profileId: "polity_dynamics",

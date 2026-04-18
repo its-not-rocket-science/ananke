@@ -220,4 +220,57 @@ describe("world-evolution orchestration", () => {
     expect(siblingB.branchMetadata.parentBranchId).toBe(branch.branchId);
     expect(siblingA.derivedState.currentSnapshot).not.toEqual(siblingB.derivedState.currentSnapshot);
   });
+
+  it("keeps resumed execution parity after checkpoint serialization boundaries", () => {
+    const uninterrupted = runEvolution(createSession(6060), { steps: 45, checkpointInterval: 15, includeDeltas: true });
+    const firstLeg = runEvolution(createSession(6060), { steps: 30, checkpointInterval: 15, includeDeltas: true });
+    const checkpoint = firstLeg.checkpoints?.[1];
+    if (!checkpoint) throw new Error("expected second checkpoint");
+
+    const restored = deserializeEvolutionCheckpoint(serializeEvolutionCheckpoint(checkpoint));
+    const resumed = runEvolution(
+      resumeEvolutionSessionFromCheckpoint(restored, { checkpointInterval: 15 }),
+      { steps: 15, checkpointInterval: 15, includeDeltas: true },
+    );
+
+    expect(resumed.finalSnapshot).toEqual(uninterrupted.finalSnapshot);
+    expect(resumed.timeline.map(({ step: _step, ...rest }) => rest))
+      .toEqual(uninterrupted.timeline.slice(30).map(({ step: _step, ...rest }) => rest));
+    expect(resumed.deltas?.map(({ step: _step, ...rest }) => rest))
+      .toEqual(uninterrupted.deltas?.slice(30).map(({ step: _step, ...rest }) => rest));
+  });
+
+  it("keeps parent/sibling branch state isolated after descendant runs", () => {
+    const base = createSession(4545).canonicalInitialSnapshot;
+    const root = createEvolutionBranch({
+      baseSnapshot: base,
+      metadata: {
+        name: "root",
+        seed: 4545,
+        rulesetId: "full_world_evolution",
+      },
+    });
+    runEvolutionOnBranch(root, { steps: 5 });
+    const parentStateBefore = JSON.parse(JSON.stringify(root.derivedState));
+
+    const child = forkEvolutionBranch(root, {
+      metadata: {
+        name: "child",
+        seed: 4546,
+      },
+    });
+    const sibling = forkEvolutionBranch(root, {
+      metadata: {
+        name: "sibling",
+        seed: 4547,
+      },
+    });
+
+    const siblingBefore = JSON.parse(JSON.stringify(sibling.derivedState));
+    runEvolutionOnBranch(child, { steps: 8 });
+
+    expect(root.derivedState).toEqual(parentStateBefore);
+    expect(sibling.derivedState).not.toEqual(child.derivedState);
+    expect(sibling.derivedState).toEqual(siblingBefore);
+  });
 });
