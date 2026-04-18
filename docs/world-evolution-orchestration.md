@@ -17,6 +17,12 @@ import {
   runEvolution,
   stepEvolution,
   getEvolutionSummary,
+  resumeEvolutionSessionFromCheckpoint,
+  serializeEvolutionCheckpoint,
+  deserializeEvolutionCheckpoint,
+  serializeEvolutionIntermediateState,
+  serializeEvolutionFinalState,
+  buildEvolutionCheckpointDiffs,
   serializeEvolutionResult,
   deserializeEvolutionResult,
 } from "@its-not-rocket-science/ananke/world-evolution";
@@ -63,6 +69,54 @@ The ordering is fixed, iteration is sorted where needed, and no random host cloc
 3. call `getEvolutionSummary(session)` at any point
 4. archive run artifacts via `serializeEvolutionResult(result)` / `deserializeEvolutionResult(json)`
 
+## Checkpointing and resume for long-running jobs
+
+- Set `checkpointInterval` in `createEvolutionSession` and/or `runEvolution`.
+- Each checkpoint now includes deterministic metadata:
+  - `engineVersion`
+  - `seed`
+  - `rulesetProfile`
+  - `step`
+  - backend `schemaVersion`
+- Resume from a checkpoint with `resumeEvolutionSessionFromCheckpoint(checkpoint)`.
+- Compatibility validation is enforced on deserialize/resume:
+  - engine mismatch -> reject
+  - backend schema mismatch -> reject
+  - seed mismatch between metadata and snapshot -> reject
+
+### 1000-step host pattern (background worker)
+
+```ts
+const result = runEvolution(session, {
+  steps: 1000,
+  checkpointInterval: 100,
+  includeCheckpointDiffs: true, // optional
+});
+
+const cp = result.checkpoints?.at(-1);
+if (cp) {
+  await hostStorage.put(`jobs/${jobId}/checkpoint.json`, serializeEvolutionCheckpoint(cp));
+}
+```
+
+On restart:
+
+```ts
+const raw = await hostStorage.get(`jobs/${jobId}/checkpoint.json`);
+const checkpoint = deserializeEvolutionCheckpoint(raw);
+const resumed = resumeEvolutionSessionFromCheckpoint(checkpoint);
+runEvolution(resumed, { steps: remainingSteps, checkpointInterval: 100 });
+```
+
+### User-saveable sandbox branches
+
+For “save branch” UX in a sandbox/editor host:
+
+1. Persist `serializeEvolutionIntermediateState(session)` as the branch point.
+2. Resume branch sessions with `resumeEvolutionSessionFromCheckpoint(...)`.
+3. Optionally compare branch progression via `buildEvolutionCheckpointDiffs(...)`.
+4. Persist final branch states with `serializeEvolutionFinalState(...)`.
+
 ## Types
 
 - `EvolutionSessionConfig`
@@ -70,5 +124,7 @@ The ordering is fixed, iteration is sorted where needed, and no random host cloc
 - `EvolutionRuleset`
 - `EvolutionRunResult`
 - `EvolutionCheckpoint`
+- `EvolutionCheckpointMetadata`
+- `EvolutionCheckpointDiff`
 - `EvolutionTimelineEvent`
 - `EvolutionMetrics` (re-export of world metrics)
