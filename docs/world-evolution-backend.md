@@ -140,6 +140,47 @@ See `examples/world-evolution-profiles-comparison.ts` for a side-by-side run com
 - `listAvailableWorldEvolutionProfiles()`
 - plus profile helpers/types via the same subpath.
 
+
+
+## Host timeline/event layer for readable world history
+
+For UI-facing history rendering, use the presentation-oriented event stream builder:
+
+```ts
+import {
+  runWorldEvolution,
+  buildEvolutionTimeline,
+  sortTimelineEventsBySignificance,
+} from "@its-not-rocket-science/ananke/world-evolution-backend";
+
+const result = runWorldEvolution({ snapshot, steps: 180, profileId: "full_world_evolution" });
+const timeline = buildEvolutionTimeline(result, { includeSummaryText: true });
+const highlights = sortTimelineEventsBySignificance(timeline).slice(0, 10);
+```
+
+`buildEvolutionTimeline` converts subsystem output into a **stable chronological stream** with:
+
+- deterministic `id` and `hash`
+- event categories (`polity`, `migration`, `conflict`, `diplomacy`, `economy`, `disease`, `climate`, `infrastructure`, `governance`, `mythology_culture`)
+- `severity` / `significance` scoring for host ranking
+- optional summary text for direct UI rendering
+- fact references (`factRefs`) pointing back to originating step/subsystem facts
+
+### Raw engine state vs presentation-oriented timeline events
+
+- **Raw engine state** (`finalSnapshot`, step metrics, per-step subsystem arrays):
+  - canonical simulation outputs
+  - optimized for correctness/replay/integrity
+  - rich but not directly UI-friendly
+
+- **Presentation timeline events** (`buildEvolutionTimeline` output):
+  - additive read-only projection layer
+  - normalized shape for host feeds, journals, and map overlays
+  - stable ordering + identity for caching/diffing in external platforms
+  - preserves links back to raw subsystem facts through `factRefs`
+
+This separation lets hosts keep simulation truth in snapshots while rendering an approachable “world history” layer for players.
+
 ## Session orchestration layer
 
 For hosts that need a session-oriented API (`createEvolutionSession`, `stepEvolution`, serialization helpers), use `@its-not-rocket-science/ananke/world-evolution` and see `docs/world-evolution-orchestration.md`.

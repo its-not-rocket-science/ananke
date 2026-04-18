@@ -25,9 +25,18 @@ export type {
   WorldEvolutionDelta,
   WorldEvolutionCheckpoint,
   WorldEvolutionMetrics,
+  EvolutionTimelineCategory,
+  EvolutionTimelineFactRef,
+  EvolutionTimelineEvent,
 } from "./types.js";
 
 
+
+
+export {
+  buildEvolutionTimeline,
+  sortTimelineEventsBySignificance,
+} from "./timeline.js";
 export {
   HOST_WORLD_EVOLUTION_SCHEMA_VERSION,
   normalizeHostWorldInput,
