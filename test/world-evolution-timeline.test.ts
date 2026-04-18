@@ -98,4 +98,13 @@ describe("world-evolution timeline builder", () => {
     expect(sorted[0]?.significance).toBeGreaterThanOrEqual(sorted[1]?.significance ?? 0);
     expect(timeline.every((event) => typeof event.summary === "string" && event.summary.length > 0)).toBe(true);
   });
+
+  it("keeps timeline sequence slots deterministic and gap-free", () => {
+    const request = createTimelineRequest();
+    const timeline = buildEvolutionTimeline(runWorldEvolution(request));
+    const sequences = timeline.map((event) => event.sequence).sort((a, b) => a - b);
+
+    const expected = Array.from({ length: sequences.length }, (_v, i) => i);
+    expect(sequences).toEqual(expected);
+  });
 });
