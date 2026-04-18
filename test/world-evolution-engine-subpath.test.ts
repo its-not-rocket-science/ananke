@@ -55,4 +55,20 @@ describe("world-evolution-engine subpath barrel", () => {
     expect(manifest.symbols).not.toContain("buildEvolutionTimeline");
     expect(manifest.symbols).not.toContain("canonicalizeOpenWorldInput");
   });
+
+  it("preserves Tier-1 runtime canary exports while backend surface evolves", () => {
+    const canaryTier1RuntimeSymbols = [
+      "SCALE",
+      "q",
+      "createWorld",
+      "loadScenario",
+      "stepWorld",
+      "ReplayRecorder",
+      "extractRigSnapshots",
+      "loadPlugin",
+    ] as const;
+    for (const symbol of canaryTier1RuntimeSymbols) {
+      expect(symbol in tier1Root).toBe(true);
+    }
+  });
 });

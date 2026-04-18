@@ -191,6 +191,39 @@ describe("world-evolution-backend", () => {
     expect(checkpointed.checkpoints).toHaveLength(8);
   });
 
+  it("keeps final-state parity when resuming from a checkpoint", () => {
+    const fullRunReq = createBaselineRequest({
+      steps: 36,
+      checkpointInterval: 6,
+      includeDeltas: false,
+    });
+    const fullRun = runWorldEvolution(fullRunReq);
+    const resumePoint = fullRun.checkpoints?.[3];
+    expect(resumePoint).toBeDefined();
+
+    const resumed = runWorldEvolution({
+      snapshot: resumePoint!.snapshot,
+      steps: fullRunReq.steps - resumePoint!.step,
+      profileId: fullRunReq.profileId,
+      includeDeltas: false,
+    });
+
+    expect(resumed.finalSnapshot).toEqual(fullRun.finalSnapshot);
+  });
+
+  it("isolates profile branches from each other while preserving deterministic replay", () => {
+    const branchSeed = createBaselineRequest({ steps: 20, includeDeltas: false });
+    const branchAReq = { ...branchSeed, profileId: "minimal_world_history" as const };
+    const branchBReq = { ...branchSeed, profileId: "full_world_evolution" as const };
+
+    const branchAFirst = runWorldEvolution(branchAReq);
+    const branchB = runWorldEvolution(branchBReq);
+    const branchASecond = runWorldEvolution(branchAReq);
+
+    expect(branchASecond).toEqual(branchAFirst);
+    expect(branchB.finalSnapshot).not.toEqual(branchAFirst.finalSnapshot);
+  });
+
   it("supports deterministic host overrides layered on top of a base profile", () => {
     const baselineReq = createBaselineRequest({
       profileId: "polity_dynamics",
