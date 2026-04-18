@@ -158,6 +158,9 @@ import {
   buildEvolutionTimeline,
   sortTimelineEventsBySignificance,
 } from "@its-not-rocket-science/ananke/world-evolution-backend";
+import type { WorldEvolutionSnapshot } from "@its-not-rocket-science/ananke/world-evolution-backend";
+
+declare const snapshot: WorldEvolutionSnapshot;
 
 const result = runWorldEvolution({ snapshot, steps: 180, profileId: "full_world_evolution" });
 const timeline = buildEvolutionTimeline(result, { includeSummaryText: true });

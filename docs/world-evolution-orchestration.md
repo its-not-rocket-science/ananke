@@ -73,6 +73,11 @@ The branching surface is built for host platforms (worldbuilding tools, procedur
 1. Start from canonical snapshot:
 
 ```ts
+import { createEvolutionBranch } from "@its-not-rocket-science/ananke/world-evolution";
+import type { WorldEvolutionSnapshot } from "@its-not-rocket-science/ananke/world-evolution-backend";
+
+declare const canonicalSnapshot: WorldEvolutionSnapshot;
+
 const branch = createEvolutionBranch({
   baseSnapshot: canonicalSnapshot,
   metadata: {
@@ -87,12 +92,32 @@ const branch = createEvolutionBranch({
 2. Run deterministic branch evolution:
 
 ```ts
+import { createEvolutionBranch, runEvolutionOnBranch } from "@its-not-rocket-science/ananke/world-evolution";
+import type { WorldEvolutionSnapshot } from "@its-not-rocket-science/ananke/world-evolution-backend";
+
+declare const canonicalSnapshot: WorldEvolutionSnapshot;
+
+const branch = createEvolutionBranch({
+  baseSnapshot: canonicalSnapshot,
+  metadata: { name: "alt-history: no treaty", seed: 1337, rulesetId: "full_world_evolution" },
+});
+
 runEvolutionOnBranch(branch, { steps: 120, includeDeltas: true });
 ```
 
 3. Fork additional sandboxes from any branch point:
 
 ```ts
+import { createEvolutionBranch, forkEvolutionBranch } from "@its-not-rocket-science/ananke/world-evolution";
+import type { WorldEvolutionSnapshot } from "@its-not-rocket-science/ananke/world-evolution-backend";
+
+declare const canonicalSnapshot: WorldEvolutionSnapshot;
+
+const branch = createEvolutionBranch({
+  baseSnapshot: canonicalSnapshot,
+  metadata: { name: "alt-history: no treaty", seed: 1337, rulesetId: "full_world_evolution" },
+});
+
 const fork = forkEvolutionBranch(branch, {
   metadata: { name: "alt-history: hard winter", seed: 7331 },
 });
@@ -101,6 +126,16 @@ const fork = forkEvolutionBranch(branch, {
 4. Compute host-friendly canonical-vs-sandbox diffs:
 
 ```ts
+import { createEvolutionBranch, diffBranchAgainstBase } from "@its-not-rocket-science/ananke/world-evolution";
+import type { WorldEvolutionSnapshot } from "@its-not-rocket-science/ananke/world-evolution-backend";
+
+declare const canonicalSnapshot: WorldEvolutionSnapshot;
+
+const branch = createEvolutionBranch({
+  baseSnapshot: canonicalSnapshot,
+  metadata: { name: "alt-history: no treaty", seed: 1337, rulesetId: "full_world_evolution" },
+});
+
 const diff = diffBranchAgainstBase(branch);
 // worldChanges + polityDeltas for dashboards/tools/review UIs
 ```
@@ -153,6 +188,13 @@ The ordering is fixed, iteration is sorted where needed, and no random host cloc
 ### 1000-step host pattern (background worker)
 
 ```ts
+import { runEvolution, serializeEvolutionCheckpoint } from "@its-not-rocket-science/ananke/world-evolution";
+import type { EvolutionSession } from "@its-not-rocket-science/ananke/world-evolution";
+
+declare const session: EvolutionSession;
+declare const hostStorage: { put(path: string, content: string): Promise<void> };
+declare const jobId: string;
+
 const result = runEvolution(session, {
   steps: 1000,
   checkpointInterval: 100,
@@ -168,6 +210,16 @@ if (cp) {
 On restart:
 
 ```ts
+import {
+  deserializeEvolutionCheckpoint,
+  resumeEvolutionSessionFromCheckpoint,
+  runEvolution,
+} from "@its-not-rocket-science/ananke/world-evolution";
+
+declare const hostStorage: { get(path: string): Promise<string> };
+declare const jobId: string;
+declare const remainingSteps: number;
+
 const raw = await hostStorage.get(`jobs/${jobId}/checkpoint.json`);
 const checkpoint = deserializeEvolutionCheckpoint(raw);
 const resumed = resumeEvolutionSessionFromCheckpoint(checkpoint);
