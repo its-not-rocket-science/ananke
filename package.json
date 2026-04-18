@@ -241,6 +241,10 @@
     "./world-evolution": {
       "import": "./dist/src/world-evolution.js",
       "types": "./dist/src/world-evolution.d.ts"
+    },
+    "./world-evolution-engine": {
+      "import": "./dist/src/world-evolution-backend/public.js",
+      "types": "./dist/src/world-evolution-backend/public.d.ts"
     }
   },
   "workspaces": [
@@ -279,7 +283,8 @@
     "STABLE_API.md",
     "docs/stable-api-manifest.json",
     "docs/host-world-evolution-schema.md",
-    "schema/world-evolution-input.schema.json"
+    "schema/world-evolution-input.schema.json",
+    "docs/world-evolution-engine.md"
   ],
   "engines": {
     "node": ">=18"
