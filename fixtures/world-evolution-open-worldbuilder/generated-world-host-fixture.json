@@ -1,0 +1,202 @@
+{
+  "schemaVersion": "openworldbuilder.generated-world.v2",
+  "worldSeed": 90210,
+  "tick": 128,
+  "regions": [
+    {
+      "id": "r.delta",
+      "name": "Saffron Delta",
+      "tileCount": 244,
+      "climateTag": "river-temperate",
+      "polityId": "p.guild",
+      "population": 196000,
+      "metadata": {
+        "descriptive": {
+          "landmark": "Seven Locks Canal"
+        }
+      }
+    },
+    {
+      "id": "r.steppe",
+      "name": "Khamsin Steppe",
+      "tileCount": 318,
+      "climateTag": "dry-steppe",
+      "polityId": "p.khaganate",
+      "population": 154000,
+      "metadata": {
+        "descriptive": {
+          "landmark": "Stormglass Pass"
+        }
+      }
+    },
+    {
+      "id": "r.coast",
+      "name": "Amber Coast",
+      "tileCount": 207,
+      "climateTag": "maritime",
+      "polityId": "p.maritime",
+      "population": 175000,
+      "metadata": {
+        "descriptive": {
+          "landmark": "Beacon of Vath"
+        }
+      }
+    },
+    {
+      "id": "r.highland",
+      "name": "Ashen Highlands",
+      "tileCount": 184,
+      "climateTag": "cool-highland",
+      "polityId": "p.citadel",
+      "population": 118000,
+      "metadata": {
+        "descriptive": {
+          "landmark": "Black Basalt Ring"
+        }
+      }
+    }
+  ],
+  "settlements": [
+    { "id": "s.lattice", "name": "Lattice Quays", "regionId": "r.delta", "polityId": "p.guild", "population": 78000 },
+    { "id": "s.reedwatch", "name": "Reedwatch", "regionId": "r.delta", "polityId": "p.guild", "population": 55000 },
+    { "id": "s.ortho", "name": "Ortho Camp", "regionId": "r.steppe", "polityId": "p.khaganate", "population": 46000 },
+    { "id": "s.auric", "name": "Auric Anchorage", "regionId": "r.coast", "polityId": "p.maritime", "population": 69000 },
+    { "id": "s.deepwake", "name": "Deepwake", "regionId": "r.coast", "polityId": "p.maritime", "population": 48000 },
+    { "id": "s.obsidian", "name": "Obsidian Gate", "regionId": "r.highland", "polityId": "p.citadel", "population": 51000 }
+  ],
+  "factions": [
+    {
+      "id": "f.guild",
+      "polityId": "p.guild",
+      "name": "River Guild Confederacy",
+      "population": 212000,
+      "treasury_cu": 101500,
+      "stabilityQ": 670,
+      "moraleQ": 640,
+      "metadata": {
+        "simulation": {
+          "taxCapacityQ": 710
+        },
+        "descriptive": {
+          "banner": "azure-knot"
+        }
+      }
+    },
+    {
+      "id": "f.khaganate",
+      "polityId": "p.khaganate",
+      "name": "Khamsin Khaganate",
+      "population": 168000,
+      "treasury_cu": 88400,
+      "stabilityQ": 610,
+      "moraleQ": 600,
+      "metadata": {
+        "simulation": {
+          "taxCapacityQ": 645
+        },
+        "descriptive": {
+          "banner": "sand-hawk"
+        }
+      }
+    },
+    {
+      "id": "f.maritime",
+      "polityId": "p.maritime",
+      "name": "Maritime Compact of Vath",
+      "population": 187000,
+      "treasury_cu": 111200,
+      "stabilityQ": 690,
+      "moraleQ": 660,
+      "metadata": {
+        "simulation": {
+          "taxCapacityQ": 730
+        },
+        "descriptive": {
+          "banner": "amber-wave"
+        }
+      }
+    },
+    {
+      "id": "f.citadel",
+      "polityId": "p.citadel",
+      "name": "Basalt Citadel League",
+      "population": 126000,
+      "treasury_cu": 79200,
+      "stabilityQ": 650,
+      "moraleQ": 620,
+      "metadata": {
+        "simulation": {
+          "taxCapacityQ": 660
+        },
+        "descriptive": {
+          "banner": "obsidian-wheel"
+        }
+      }
+    }
+  ],
+  "resources": [
+    { "id": "res.delta-grain", "resourceType": "grain", "regionId": "r.delta", "factionId": "f.guild", "stock": 42000 },
+    { "id": "res.steppe-horses", "resourceType": "horses", "regionId": "r.steppe", "factionId": "f.khaganate", "stock": 18500 },
+    { "id": "res.coast-salt", "resourceType": "salt", "settlementId": "s.auric", "factionId": "f.maritime", "stock": 29000 },
+    { "id": "res.highland-iron", "resourceType": "iron", "regionId": "r.highland", "factionId": "f.citadel", "stock": 21000 }
+  ],
+  "tradeLinks": [
+    {
+      "id": "link.guild-maritime",
+      "sourceFactionId": "f.guild",
+      "targetFactionId": "f.maritime",
+      "baseVolume_cu": 9300,
+      "routeQualityQ": 770,
+      "sharedBorderCount": 1,
+      "treatyType": "trade_pact",
+      "treatyStrength_Q": 840
+    },
+    {
+      "id": "link.guild-khaganate",
+      "sourceFactionId": "f.guild",
+      "targetFactionId": "f.khaganate",
+      "baseVolume_cu": 6200,
+      "routeQualityQ": 640,
+      "sharedBorderCount": 2,
+      "treatyType": "non_aggression",
+      "treatyStrength_Q": 710
+    },
+    {
+      "id": "link.khaganate-citadel",
+      "sourceFactionId": "f.khaganate",
+      "targetFactionId": "f.citadel",
+      "baseVolume_cu": 5100,
+      "routeQualityQ": 590,
+      "sharedBorderCount": 2,
+      "war": true
+    },
+    {
+      "id": "link.maritime-citadel",
+      "sourceFactionId": "f.maritime",
+      "targetFactionId": "f.citadel",
+      "baseVolume_cu": 4700,
+      "routeQualityQ": 560,
+      "sharedBorderCount": 1,
+      "treatyType": "research_compact",
+      "treatyStrength_Q": 690
+    }
+  ],
+  "environment": {
+    "climateByRegionId": {
+      "r.delta": "floodplain",
+      "r.steppe": "arid-wind",
+      "r.coast": "storm-current",
+      "r.highland": "cold-front"
+    }
+  },
+  "lore": {
+    "summary": "A generated world where canal guilds, horse clans, coastal merchants, and highland fortresses balance trade, rivalry, and frontier shocks.",
+    "tags": ["generated", "openworldbuilder", "trade-network", "frontier"]
+  },
+  "metadata": {
+    "opaque": {
+      "generationRunId": "owb-run-0284",
+      "loreArchivePointer": "lore://worlds/owb-run-0284"
+    }
+  }
+}

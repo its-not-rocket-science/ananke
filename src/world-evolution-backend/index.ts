@@ -87,3 +87,14 @@ export type {
   OpenWorldAdapterContext,
   OpenWorldMappedState,
 } from "./open-world-host-adapter.js";
+
+
+export {
+  runOpenWorldBuilderReferenceDemo,
+} from "./open-worldbuilder-reference-demo.js";
+
+export type {
+  OpenWorldBuilderDemoRunConfig,
+  OpenWorldBuilderRunArtifacts,
+  OpenWorldBuilderDemoOutput,
+} from "./open-worldbuilder-reference-demo.js";
