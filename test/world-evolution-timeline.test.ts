@@ -107,4 +107,17 @@ describe("world-evolution timeline builder", () => {
     const expected = Array.from({ length: sequences.length }, (_v, i) => i);
     expect(sequences).toEqual(expected);
   });
+
+  it("emits step timeline entries in strict chronological order", () => {
+    const request = createTimelineRequest();
+    const run = runWorldEvolution(request);
+    expect(run.timeline).toHaveLength(request.steps);
+
+    for (let index = 0; index < run.timeline.length; index++) {
+      const event = run.timeline[index];
+      expect(event).toBeDefined();
+      expect(event?.step).toBe(index + 1);
+      expect(event?.tick).toBe(request.snapshot.tick + index + 1);
+    }
+  });
 });

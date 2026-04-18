@@ -170,4 +170,19 @@ describe("world-evolution host schema", () => {
     expect(hostResult.tick).toBe(run.finalSnapshot.tick);
     expect(hostResult.entities.filter((entity) => entity.kind === "polity")).toHaveLength(run.finalSnapshot.polities.length);
   });
+
+  it("keeps schema round-trip canonical across normalize -> snapshot -> host transitions", () => {
+    const normalized = normalizeHostWorldInput(makeHostInput());
+    const { snapshot, context } = toAnankeEvolutionState(normalized);
+    const hostRoundTrip = fromAnankeEvolutionState(snapshot, context);
+    const normalizedRoundTrip = normalizeHostWorldInput(hostRoundTrip);
+    const normalizedTwice = normalizeHostWorldInput(normalizedRoundTrip);
+
+    expect(normalizedTwice).toEqual(normalizedRoundTrip);
+    expect(normalizedRoundTrip.worldSeed).toBe(normalized.worldSeed);
+    expect(normalizedRoundTrip.tick).toBe(normalized.tick);
+    expect(normalizedRoundTrip.entities.filter((entity) => entity.kind === "polity")).toHaveLength(
+      normalized.entities.filter((entity) => entity.kind === "polity").length,
+    );
+  });
 });

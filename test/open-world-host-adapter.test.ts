@@ -105,4 +105,25 @@ describe("open-world host adapter", () => {
     expect(mappedAliased.input.relationships).toEqual(canonical.input.relationships);
     expect(mappedAliased.input.resources).toEqual(canonical.input.resources);
   });
+
+  it("canonicalizes nested metadata buckets for stable adapter fingerprints", () => {
+    const input = readJson<OpenWorldHostInput>("openworld-host-input.sample.json");
+    const noisy: OpenWorldHostInput = {
+      ...input,
+      metadata: {
+        opaque: {
+          zeta: 1,
+          alpha: {
+            y: 2,
+            x: 1,
+          },
+        },
+      },
+    };
+
+    const canonical = canonicalizeOpenWorldInput(noisy);
+    expect(Object.keys(canonical.metadata?.opaque ?? {})).toEqual(["alpha", "zeta"]);
+    const nested = canonical.metadata?.opaque as { alpha?: { x?: number; y?: number } } | undefined;
+    expect(nested?.alpha).toEqual({ x: 1, y: 2 });
+  });
 });
