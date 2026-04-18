@@ -144,6 +144,77 @@ export interface ResumeEvolutionOptions {
   includeDeltas?: boolean;
 }
 
+export interface EvolutionBranchMetadata {
+  name: string;
+  description?: string;
+  seed: number;
+  rulesetProfile: EvolutionRuleset;
+  createdAtStep: number;
+  parentBranchId?: string;
+}
+
+export interface EvolutionBranchSnapshotRef {
+  snapshot: WorldEvolutionSnapshot;
+  step: number;
+  tick: number;
+  snapshotHash: string;
+}
+
+export interface EvolutionBranchDerivedState {
+  totalSteps: number;
+  currentSnapshot: WorldEvolutionSnapshot;
+  timeline: EvolutionTimelineEvent[];
+  lastMetrics: WorldEvolutionMetrics;
+}
+
+export interface EvolutionBranch {
+  branchId: string;
+  schemaVersion: typeof WORLD_EVOLUTION_ORCHESTRATION_SCHEMA_VERSION;
+  baseSnapshotRef: EvolutionBranchSnapshotRef;
+  derivedState: EvolutionBranchDerivedState;
+  branchMetadata: EvolutionBranchMetadata;
+}
+
+export interface CreateEvolutionBranchInput {
+  baseSnapshot: WorldEvolutionSnapshot;
+  metadata: {
+    name: string;
+    description?: string;
+    seed: number;
+    rulesetProfile?: EvolutionRuleset;
+    rulesetId?: WorldEvolutionRulesetId;
+    createdAtStep?: number;
+    parentBranchId?: string;
+  };
+  baseStep?: number;
+}
+
+export interface ForkEvolutionBranchInput {
+  metadata: {
+    name: string;
+    description?: string;
+    seed?: number;
+    rulesetProfile?: EvolutionRuleset;
+    rulesetId?: WorldEvolutionRulesetId;
+  };
+}
+
+export interface EvolutionBranchDiff {
+  branchId: string;
+  baseSnapshotRef: Pick<EvolutionBranchSnapshotRef, "step" | "tick" | "snapshotHash">;
+  branchStep: number;
+  branchTick: number;
+  branchSnapshotHash: string;
+  worldChanges: Record<string, unknown>;
+  polityDeltas: Array<{
+    polityId: string;
+    populationDelta: number;
+    treasuryDelta_cu: number;
+    stabilityDelta_Q: number;
+    moraleDelta_Q: number;
+  }>;
+}
+
 export function createEvolutionSession(config: EvolutionSessionConfig): EvolutionSession {
   const canonicalSnapshot = createWorldEvolutionSnapshot({
     ...config.canonicalSnapshot,
@@ -283,6 +354,96 @@ export function resumeEvolutionSessionFromCheckpoint(
   session.state.timeline = [];
   session.state.lastMetrics = computeStaticMetrics(checkpoint.snapshot);
   return session;
+}
+
+export function createEvolutionBranch(input: CreateEvolutionBranchInput): EvolutionBranch {
+  const baseStep = Math.max(0, Math.floor(input.baseStep ?? input.metadata.createdAtStep ?? 0));
+  const rulesetProfile = input.metadata.rulesetProfile
+    ? cloneRuleset(input.metadata.rulesetProfile)
+    : resolveWorldEvolutionProfile(input.metadata.rulesetId ?? "full_world_evolution");
+  const canonicalBaseSnapshot = createWorldEvolutionSnapshot({
+    ...input.baseSnapshot,
+    worldSeed: input.metadata.seed,
+  });
+
+  return {
+    branchId: buildBranchId(input.metadata.seed, canonicalBaseSnapshot.tick, rulesetProfile.id, baseStep),
+    schemaVersion: WORLD_EVOLUTION_ORCHESTRATION_SCHEMA_VERSION,
+    baseSnapshotRef: {
+      snapshot: cloneSnapshot(canonicalBaseSnapshot),
+      step: baseStep,
+      tick: canonicalBaseSnapshot.tick,
+      snapshotHash: computeSnapshotHash(canonicalBaseSnapshot),
+    },
+    derivedState: {
+      totalSteps: 0,
+      currentSnapshot: cloneSnapshot(canonicalBaseSnapshot),
+      timeline: [],
+      lastMetrics: computeStaticMetrics(canonicalBaseSnapshot),
+    },
+    branchMetadata: {
+      name: input.metadata.name,
+      ...(input.metadata.description != null ? { description: input.metadata.description } : {}),
+      seed: input.metadata.seed,
+      rulesetProfile,
+      createdAtStep: baseStep,
+      ...(input.metadata.parentBranchId != null ? { parentBranchId: input.metadata.parentBranchId } : {}),
+    },
+  };
+}
+
+export function forkEvolutionBranch(branch: EvolutionBranch, input: ForkEvolutionBranchInput): EvolutionBranch {
+  return createEvolutionBranch({
+    baseSnapshot: branch.derivedState.currentSnapshot,
+    baseStep: branch.baseSnapshotRef.step + branch.derivedState.totalSteps,
+    metadata: {
+      name: input.metadata.name,
+      ...(input.metadata.description != null ? { description: input.metadata.description } : {}),
+      seed: input.metadata.seed ?? branch.branchMetadata.seed,
+      ...(input.metadata.rulesetProfile != null ? { rulesetProfile: input.metadata.rulesetProfile } : {}),
+      ...(input.metadata.rulesetId != null ? { rulesetId: input.metadata.rulesetId } : {}),
+      createdAtStep: branch.baseSnapshotRef.step + branch.derivedState.totalSteps,
+      parentBranchId: branch.branchId,
+    },
+  });
+}
+
+export function runEvolutionOnBranch(branch: EvolutionBranch, request: EvolutionRequest): EvolutionRunResult {
+  const runResult = runEvolutionFromSnapshot({
+    snapshot: branch.derivedState.currentSnapshot,
+    ruleset: branch.branchMetadata.rulesetProfile,
+    request,
+  });
+  branch.derivedState.totalSteps += runResult.request.steps;
+  branch.derivedState.currentSnapshot = cloneSnapshot(runResult.finalSnapshot);
+  branch.derivedState.timeline.push(...runResult.timeline);
+  branch.derivedState.lastMetrics = { ...runResult.metrics };
+  return runResult;
+}
+
+export function diffBranchAgainstBase(branch: EvolutionBranch): EvolutionBranchDiff {
+  const diff = diffSnapshots(
+    branch.baseSnapshotRef.snapshot,
+    branch.derivedState.currentSnapshot,
+    branch.baseSnapshotRef.step,
+    branch.baseSnapshotRef.tick,
+    branch.baseSnapshotRef.snapshotHash,
+    branch.baseSnapshotRef.step + branch.derivedState.totalSteps,
+  );
+
+  return {
+    branchId: branch.branchId,
+    baseSnapshotRef: {
+      step: branch.baseSnapshotRef.step,
+      tick: branch.baseSnapshotRef.tick,
+      snapshotHash: branch.baseSnapshotRef.snapshotHash,
+    },
+    branchStep: diff.toStep,
+    branchTick: diff.toTick,
+    branchSnapshotHash: diff.toSnapshotHash,
+    worldChanges: diff.worldChanges,
+    polityDeltas: diff.polityDeltas,
+  };
 }
 
 export function serializeEvolutionResult(result: EvolutionRunResult): string {
@@ -475,8 +636,76 @@ function cloneCheckpointDiff(diff: EvolutionCheckpointDiff): EvolutionCheckpoint
   };
 }
 
+function runEvolutionFromSnapshot(input: {
+  snapshot: WorldEvolutionSnapshot;
+  ruleset: EvolutionRuleset;
+  request: EvolutionRequest;
+}): EvolutionRunResult {
+  const steps = Math.max(0, Math.floor(input.request.steps));
+  const includeDeltas = input.request.includeDeltas ?? false;
+  const includeCheckpointDiffs = input.request.includeCheckpointDiffs ?? false;
+  const checkpointInterval = input.request.checkpointInterval;
+  const initialSnapshot = createWorldEvolutionSnapshot({
+    ...input.snapshot,
+    worldSeed: input.snapshot.worldSeed,
+  });
+  const backendResult = runWorldEvolution({
+    snapshot: cloneSnapshot(initialSnapshot),
+    steps,
+    profile: cloneRuleset(input.ruleset),
+    includeDeltas,
+    ...(checkpointInterval != null ? { checkpointInterval } : {}),
+  });
+
+  const checkpoints = backendResult.checkpoints?.map((checkpoint) => ({
+    step: checkpoint.step,
+    tick: checkpoint.tick,
+    summary: `checkpoint step=${checkpoint.step} tick=${checkpoint.tick}`,
+    snapshot: cloneSnapshot(checkpoint.snapshot),
+    metadata: {
+      engineVersion: WORLD_EVOLUTION_ENGINE_VERSION,
+      seed: initialSnapshot.worldSeed,
+      rulesetProfile: cloneRuleset(input.ruleset),
+      step: checkpoint.step,
+      schemaVersion: WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION,
+    },
+  }));
+
+  return {
+    schemaVersion: WORLD_EVOLUTION_ORCHESTRATION_SCHEMA_VERSION,
+    engineVersion: WORLD_EVOLUTION_ENGINE_VERSION,
+    sessionId: buildSessionId(initialSnapshot.worldSeed, initialSnapshot.tick, input.ruleset.id),
+    request: {
+      steps,
+      includeDeltas,
+      ...(includeCheckpointDiffs ? { includeCheckpointDiffs: true } : {}),
+      ...(checkpointInterval != null ? { checkpointInterval } : {}),
+    },
+    ruleset: cloneRuleset(input.ruleset),
+    initialSnapshot,
+    finalSnapshot: cloneSnapshot(backendResult.finalSnapshot),
+    timeline: backendResult.timeline.map(toTimelineEvent),
+    metrics: { ...backendResult.metrics },
+    ...(checkpoints && checkpoints.length > 0
+      ? {
+        checkpoints,
+        ...(includeCheckpointDiffs ? { checkpointDiffs: buildEvolutionCheckpointDiffs(checkpoints) } : {}),
+      }
+      : {}),
+    ...(backendResult.deltas ? { deltas: backendResult.deltas.map(cloneDelta) } : {}),
+  };
+}
+
 function buildSessionId(seed: number, tick: number, rulesetId: string): string {
   return `evo-${seed}-${tick}-${rulesetId}`;
+}
+
+function buildBranchId(seed: number, tick: number, rulesetId: string, createdAtStep: number): string {
+  return `branch-${seed}-${tick}-${rulesetId}-${createdAtStep}`;
+}
+
+function computeSnapshotHash(snapshot: WorldEvolutionSnapshot): string {
+  return hashString(JSON.stringify(snapshot)).toString(16);
 }
 
 function buildSessionCheckpoint(session: EvolutionSession): EvolutionCheckpoint {
@@ -514,8 +743,26 @@ function validateCheckpointCompatibility(checkpoint: EvolutionCheckpoint): void 
 }
 
 function diffEvolutionSnapshots(from: EvolutionCheckpoint, to: EvolutionCheckpoint): EvolutionCheckpointDiff {
-  const fromSnapshot = cloneSnapshot(from.snapshot);
-  const toSnapshot = cloneSnapshot(to.snapshot);
+  return diffSnapshots(
+    from.snapshot,
+    to.snapshot,
+    from.step,
+    from.tick,
+    hashString(JSON.stringify(from.snapshot)).toString(16),
+    to.step,
+  );
+}
+
+function diffSnapshots(
+  fromSnapshotInput: WorldEvolutionSnapshot,
+  toSnapshotInput: WorldEvolutionSnapshot,
+  fromStep: number,
+  fromTick: number,
+  fromSnapshotHash: string,
+  toStep: number,
+): EvolutionCheckpointDiff {
+  const fromSnapshot = cloneSnapshot(fromSnapshotInput);
+  const toSnapshot = cloneSnapshot(toSnapshotInput);
   const worldChanges: Record<string, unknown> = {};
 
   if (fromSnapshot.tick !== toSnapshot.tick) worldChanges.tick = toSnapshot.tick;
@@ -542,11 +789,11 @@ function diffEvolutionSnapshots(from: EvolutionCheckpoint, to: EvolutionCheckpoi
   });
 
   return {
-    fromStep: from.step,
-    toStep: to.step,
-    fromTick: from.tick,
-    toTick: to.tick,
-    fromSnapshotHash: hashString(JSON.stringify(fromSnapshot)).toString(16),
+    fromStep,
+    toStep,
+    fromTick,
+    toTick: toSnapshot.tick,
+    fromSnapshotHash,
     toSnapshotHash: hashString(JSON.stringify(toSnapshot)).toString(16),
     worldChanges,
     polityDeltas,

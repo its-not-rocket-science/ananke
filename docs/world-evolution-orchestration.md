@@ -14,6 +14,10 @@ It is additive and uses the existing world-evolution backend as the deterministi
 ```ts
 import {
   createEvolutionSession,
+  createEvolutionBranch,
+  forkEvolutionBranch,
+  runEvolutionOnBranch,
+  diffBranchAgainstBase,
   runEvolution,
   stepEvolution,
   getEvolutionSummary,
@@ -45,6 +49,68 @@ the API returns deterministic outputs.
 - `canonicalSnapshot` passed to `createEvolutionSession` is preserved as canonical input.
 - mutable simulation progression happens on an internal clone.
 - all returned snapshots/results are cloned host-safe copies.
+- `createEvolutionBranch(...)` keeps a `baseSnapshotRef` immutable and writes all branch progression to `derivedState`.
+
+## Canonical-vs-sandbox timelines for external platforms
+
+The branching surface is built for host platforms (worldbuilding tools, procedural generators, editor sandboxes) that need “what-if” simulation while preserving canonical truth.
+
+- Canonical world data stays untouched as the source of truth.
+- Each sandbox branch stores:
+  - `baseSnapshotRef` (immutable branch base checkpoint/snapshot/hash)
+  - `derivedState` (mutable branch-local simulation state)
+  - `branchMetadata`:
+    - `name`
+    - `description`
+    - `seed`
+    - `rulesetProfile`
+    - `createdAtStep`
+    - optional `parentBranchId`
+- Multiple timelines can be created from the same canonical snapshot, each with independent seed/ruleset/step progression.
+
+### Branch lifecycle
+
+1. Start from canonical snapshot:
+
+```ts
+const branch = createEvolutionBranch({
+  baseSnapshot: canonicalSnapshot,
+  metadata: {
+    name: "alt-history: no treaty",
+    description: "stress-test a no-alliance variant",
+    seed: 1337,
+    rulesetId: "full_world_evolution",
+  },
+});
+```
+
+2. Run deterministic branch evolution:
+
+```ts
+runEvolutionOnBranch(branch, { steps: 120, includeDeltas: true });
+```
+
+3. Fork additional sandboxes from any branch point:
+
+```ts
+const fork = forkEvolutionBranch(branch, {
+  metadata: { name: "alt-history: hard winter", seed: 7331 },
+});
+```
+
+4. Compute host-friendly canonical-vs-sandbox diffs:
+
+```ts
+const diff = diffBranchAgainstBase(branch);
+// worldChanges + polityDeltas for dashboards/tools/review UIs
+```
+
+### Determinism and isolation guarantees
+
+- Same base snapshot + same seed + same ruleset + same step inputs => same branch result.
+- Branch state cannot mutate its `baseSnapshotRef`.
+- Branch execution does not mutate canonical host state.
+- Sibling branches remain isolated from each other.
 
 ## Explicit pipeline ordering
 

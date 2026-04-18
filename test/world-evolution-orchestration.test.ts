@@ -6,13 +6,17 @@ import { establishRoute } from "../src/trade-routes.js";
 import { createGovernanceState, PRESET_LAW_CODES } from "../src/governance.js";
 import { WORLD_EVOLUTION_BACKEND_SCHEMA_VERSION } from "../src/world-evolution-backend/index.js";
 import {
+  createEvolutionBranch,
   WORLD_EVOLUTION_ORCHESTRATION_SCHEMA_VERSION,
   WORLD_EVOLUTION_ENGINE_VERSION,
   createEvolutionSession,
   deserializeEvolutionCheckpoint,
   deserializeEvolutionResult,
+  diffBranchAgainstBase,
+  forkEvolutionBranch,
   getEvolutionSummary,
   resumeEvolutionSessionFromCheckpoint,
+  runEvolutionOnBranch,
   runEvolution,
   serializeEvolutionCheckpoint,
   serializeEvolutionResult,
@@ -157,5 +161,63 @@ describe("world-evolution orchestration", () => {
 
     const serialized = serializeEvolutionCheckpoint(tampered);
     expect(() => deserializeEvolutionCheckpoint(serialized)).toThrow(/engine mismatch/);
+  });
+
+  it("keeps branch evolution deterministic for the same base, ruleset, and seed", () => {
+    const base = createSession(8080).canonicalInitialSnapshot;
+    const metadata = {
+      name: "sandbox-main",
+      description: "determinism check",
+      seed: 8080,
+      rulesetId: "full_world_evolution" as const,
+    };
+
+    const branchA = createEvolutionBranch({ baseSnapshot: base, metadata });
+    const branchB = createEvolutionBranch({ baseSnapshot: base, metadata });
+
+    const runA = runEvolutionOnBranch(branchA, { steps: 36, includeDeltas: true });
+    const runB = runEvolutionOnBranch(branchB, { steps: 36, includeDeltas: true });
+
+    expect(runA).toEqual(runB);
+    expect(diffBranchAgainstBase(branchA)).toEqual(diffBranchAgainstBase(branchB));
+  });
+
+  it("isolates sandbox branches from canonical state and from sibling branches", () => {
+    const session = createSession(9090);
+    const canonicalBefore = JSON.parse(JSON.stringify(session.canonicalInitialSnapshot));
+    const branch = createEvolutionBranch({
+      baseSnapshot: session.canonicalInitialSnapshot,
+      metadata: {
+        name: "sandbox-root",
+        description: "root branch",
+        seed: 9090,
+        rulesetProfile: session.ruleset,
+      },
+    });
+
+    runEvolutionOnBranch(branch, { steps: 12 });
+    expect(session.canonicalInitialSnapshot).toEqual(canonicalBefore);
+    expect(branch.baseSnapshotRef.snapshot).toEqual(canonicalBefore);
+    expect(branch.derivedState.currentSnapshot).not.toEqual(canonicalBefore);
+
+    const siblingA = forkEvolutionBranch(branch, {
+      metadata: {
+        name: "sandbox-a",
+        seed: 9091,
+      },
+    });
+    const siblingB = forkEvolutionBranch(branch, {
+      metadata: {
+        name: "sandbox-b",
+        seed: 9092,
+      },
+    });
+
+    runEvolutionOnBranch(siblingA, { steps: 10 });
+    runEvolutionOnBranch(siblingB, { steps: 10 });
+
+    expect(siblingA.branchMetadata.parentBranchId).toBe(branch.branchId);
+    expect(siblingB.branchMetadata.parentBranchId).toBe(branch.branchId);
+    expect(siblingA.derivedState.currentSnapshot).not.toEqual(siblingB.derivedState.currentSnapshot);
   });
 });
