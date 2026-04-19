@@ -121,3 +121,26 @@ import { runHostDeterministicEvolution } from "@its-not-rocket-science/ananke/wo
 ```
 
 See `docs/world-evolution-host-backend.md` for lifecycle wrappers (session/checkpoint resume/branch what-if).
+
+
+## Reproducibility fingerprints (additive)
+
+Use deterministic fingerprints to verify replay identity across hosts, caches, and audit logs.
+
+```ts
+import {
+  buildEvolutionRunReproducibilityRecord,
+  runWorldEvolution,
+  toWorldEvolutionRunRequest,
+} from "@its-not-rocket-science/ananke/world-evolution-engine";
+
+const request = toWorldEvolutionRunRequest(normalizedHostInput, 30, {
+  includeDeltas: true,
+  checkpointInterval: 10,
+});
+const result = runWorldEvolution(request);
+const proof = buildEvolutionRunReproducibilityRecord(request, result);
+
+// proof.requestFingerprint and proof.outputDigest are stable 8-hex hashes
+```
+

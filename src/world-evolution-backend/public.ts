@@ -83,3 +83,14 @@ export type {
   OpenWorldAdapterContext,
   OpenWorldMappedState,
 } from "./open-world-host-adapter.js";
+
+
+export {
+  computeWorldEvolutionRunRequestFingerprint,
+  computeWorldEvolutionRunResultDigest,
+  buildEvolutionRunReproducibilityRecord,
+} from "./reproducibility.js";
+
+export type {
+  EvolutionRunReproducibilityRecord,
+} from "./reproducibility.js";
