@@ -134,7 +134,12 @@ import {
   toWorldEvolutionRunRequest,
 } from "@its-not-rocket-science/ananke/world-evolution-engine";
 
-const request = toWorldEvolutionRunRequest(normalizedHostInput, 30, {
+const hostInput = {
+  worldSeed: 1337,
+  entities: [],
+};
+
+const request = toWorldEvolutionRunRequest(hostInput, 30, {
   includeDeltas: true,
   checkpointInterval: 10,
 });
@@ -143,4 +148,3 @@ const proof = buildEvolutionRunReproducibilityRecord(request, result);
 
 // proof.requestFingerprint and proof.outputDigest are stable 8-hex hashes
 ```
-
