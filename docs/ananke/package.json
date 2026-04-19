@@ -6,7 +6,8 @@
     "start": "docusaurus start",
     "build": "docusaurus build",
     "serve": "docusaurus serve",
-    "clear": "docusaurus clear"
+    "clear": "docusaurus clear",
+    "prebuild": "node ./scripts/patch-webpackbar.mjs"
   },
   "dependencies": {
     "@docusaurus/core": "3.5.2",
