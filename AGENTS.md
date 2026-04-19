@@ -16,3 +16,8 @@ To avoid release-dashboard CI failures:
 
 7. For Docusaurus config changes, only use keys supported by the installed docs-site version (`docs/ananke/node_modules/@docusaurus/types`), and prefer documented top-level fields such as `onBrokenMarkdownLinks` over unsupported nested keys.
 8. After editing `docs/ananke/docusaurus.config.ts`, always run `npm run build` from `docs/ananke` first to validate the docs configuration schema before finishing.
+
+## Codex rules for Markdown TypeScript example safety
+
+9. If you edit any `docs/**/*.md` file that contains `ts` code fences, run `npm run check:doc-examples` before declaring completion.
+10. If `npm run check:doc-examples` fails, fix all reported examples and re-run until it passes.
