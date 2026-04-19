@@ -53,3 +53,18 @@ For identical normalized host input + ruleset/profile + seed + steps + engine ve
 - deltas/checkpoints (when enabled)
 
 Resume and branch flows preserve deterministic behavior because they route through existing checkpoint and branch orchestration primitives.
+
+
+### Replay proof helper
+
+If hosts need a single call that includes deterministic replay proof metadata, use:
+
+- `runHostDeterministicEvolutionWithReplayProof(...)`
+
+It returns the same data as `runHostDeterministicEvolution(...)` plus:
+
+- `reproducibility.requestFingerprint`
+- `reproducibility.outputDigest`
+
+Both values are deterministic for the same normalized run request/output and are intended for traceability/caching checks.
+

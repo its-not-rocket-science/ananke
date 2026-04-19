@@ -12,6 +12,8 @@ import {
   type WorldEvolutionRulesetId,
   type WorldEvolutionRulesetProfile,
   type WorldEvolutionRunResult,
+  buildEvolutionRunReproducibilityRecord,
+  type EvolutionRunReproducibilityRecord,
 } from "./world-evolution-backend/public.js";
 import {
   createEvolutionBranch,
@@ -50,6 +52,10 @@ export interface HostDeterministicRunResult {
   adapterContext: HostAdapterContext;
   run: WorldEvolutionRunResult;
   history: EvolutionTimelineEvent[];
+}
+
+export interface HostDeterministicRunWithReplayProofResult extends HostDeterministicRunResult {
+  reproducibility: EvolutionRunReproducibilityRecord;
 }
 
 export interface HostOrchestrationSessionConfig {
@@ -173,4 +179,23 @@ function normalizeHostBackendInput(input: WorldEvolutionInput | OpenWorldHostInp
 function isOpenWorldHostInput(input: WorldEvolutionInput | OpenWorldHostInput): input is OpenWorldHostInput {
   const candidate = input as Partial<OpenWorldHostInput>;
   return Array.isArray(candidate.regions) && Array.isArray(candidate.settlements) && Array.isArray(candidate.factions);
+}
+
+
+export function runHostDeterministicEvolutionWithReplayProof(
+  request: HostDeterministicRunRequest,
+): HostDeterministicRunWithReplayProofResult {
+  const result = runHostDeterministicEvolution(request);
+  return {
+    ...result,
+    reproducibility: buildEvolutionRunReproducibilityRecord(
+      toWorldEvolutionRunRequest(result.normalizedInput, request.steps, {
+        ...(request.profileId != null ? { profileId: request.profileId } : {}),
+        ...(request.profile != null ? { profile: request.profile } : {}),
+        ...(request.includeDeltas != null ? { includeDeltas: request.includeDeltas } : {}),
+        ...(request.checkpointInterval != null ? { checkpointInterval: request.checkpointInterval } : {}),
+      }),
+      result.run,
+    ),
+  };
 }
