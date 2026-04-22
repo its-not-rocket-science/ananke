@@ -28,3 +28,5 @@ To avoid release-dashboard CI failures:
 11. If your changes touch trust evidence inputs (`docs/trust-dashboard.md`, `docs/release-readiness-bundle.md`, `docs/release-readiness-bundle.json`, `docs/dashboard/repo-discipline-audit.{md,json}`, `tools/generate-trust-dashboard.ts`, or `tools/check-trust-dashboard-artifacts.mjs`), run `npm run generate-trust-dashboard`.
 12. Always run `npm run check-trust-dashboard-artifacts` before declaring completion when trust evidence/docs/scripts are changed.
 13. If the check reports `docs/trust-dashboard.md` is stale or manually edited, regenerate it and commit the updated file.
+14. Run trust checks in this order when trust inputs change: `npm run build` → `npm run generate-trust-dashboard` → `npm run check-trust-dashboard-artifacts`.
+15. If `npm run check-trust-dashboard-artifacts` fails because `dist/tools/generate-trust-dashboard.js` is missing, run `npm run build` and rerun the check.
