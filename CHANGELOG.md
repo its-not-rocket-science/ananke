@@ -15,6 +15,24 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.4.0] — 2026-04-22
+
+### Added
+
+- Added a new Tier-2 / experimental session facade subpath: `@its-not-rocket-science/ananke/session` (`./session` in package exports) so hosts can opt into a unified session workflow without changing Tier-1 root imports.
+- Added `src/session.ts` with JSON-first session types and helpers: `SessionMode`, `SessionConfig`, `SessionHandle`, `RunSessionRequest`, `RunSessionResult`, `SessionSummary`, `ForkSessionRequest`, and `LoadSessionPackResult`.
+- Added session facade functions: `createSession`, `runSession`, `stepSession`, `getSessionSummary`, `forkSession`, `loadSessionPack`, `serializeSession`, and `deserializeSession`.
+- Added tactical-mode initialization adapters for explicit `WorldState` and scenario JSON (plus optional seed/entity convenience bootstrap).
+- Added world-evolution-mode initialization adapters for canonical snapshots with `ruleset` / `rulesetId`, delegating to existing world-evolution orchestration.
+- Added deterministic serialization envelopes with explicit `schemaVersion`, `engineVersion`, `mode`, and `payload`.
+- Added content-pack integration via `loadSessionPack` that delegates to existing content-pack validation/loading/scenario instantiation APIs.
+
+### Changed
+
+- Bumped package version to `0.4.0` to reflect the additive new public subpath/API while preserving backward compatibility for existing Tier-1 imports.
+
+---
+
 ## [0.3.0] — 2026-04-04
 
 ### Added

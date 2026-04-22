@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -249,6 +249,10 @@
     "./world-evolution-host-backend": {
       "import": "./dist/src/world-evolution-host-backend.js",
       "types": "./dist/src/world-evolution-host-backend.d.ts"
+    },
+    "./session": {
+      "import": "./dist/src/session.js",
+      "types": "./dist/src/session.d.ts"
     }
   },
   "workspaces": [
