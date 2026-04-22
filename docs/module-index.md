@@ -15,6 +15,7 @@ Support scope and pinning guidance: `docs/support-boundaries.md`.
 ```json
 [
   { "kind": "subpath", "subject": ".", "status": "Tier 1 stable", "notes": "Root entrypoint" },
+  { "kind": "subpath", "subject": "./session", "status": "Tier 2 experimental", "notes": "Host session facade (`tactical` / `world_evolution`) — see docs/session-api.md" },
   { "kind": "subpath", "subject": "./tier2", "status": "Experimental", "notes": "Tier-2 barrel" },
   { "kind": "subpath", "subject": "./tier3", "status": "Internal", "notes": "Tier-3 barrel" }
 ]
@@ -73,6 +74,7 @@ Support scope and pinning guidance: `docs/support-boundaries.md`.
   "./renown",
   "./research",
   "./resources",
+  "./session",
   "./schema",
   "./schema-migration",
   "./siege",
@@ -93,7 +95,7 @@ Support scope and pinning guidance: `docs/support-boundaries.md`.
 
 ### Subpath classification
 
-- **Experimental**: `./tier2`.
+- **Experimental**: `./session`, `./tier2`.
 - **Internal**: `./tier3`.
 - **Shipped but undocumented**: all remaining exported subpaths (`./tier2` and `./tier3` excluded).
 - **Stable subpath**: none declared at this time in the repo-level contract.

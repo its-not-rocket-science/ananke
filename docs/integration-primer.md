@@ -23,7 +23,7 @@ Each experiment is documented below, followed by a glossary of critical types an
 ## Choose your entry point
 
 Use the table below to find the right subpath export for your use case.
-The full module index with all 41 exports is in [`docs/module-index.md`](module-index.md).
+The full module index is in [`docs/module-index.md`](module-index.md).
 
 | I want to… | Start with | Then add |
 |---|---|---|
@@ -32,6 +32,7 @@ The full module index with all 41 exports is in [`docs/module-index.md`](module-
 | **Design a species or xenobiology** | `"…"` + `"…/species"` + `"…/anatomy"` | `"…/character"` for aging, sleep, disease |
 | **Drive a 3D renderer** | `"…/host-loop"` for stable wire frames | Add `"…/tier2"` only if you need experimental bridge internals (`BridgeEngine`, mapping helpers) — see [`docs/bridge-contract.md`](bridge-contract.md) |
 | **Build a multiplayer host** | `"…"` (deterministic by design) | See [`docs/host-contract.md`](host-contract.md) for lockstep pattern |
+| **Run host session workflows** | `"…/session"` | See [`docs/session-api.md`](session-api.md) for the Tier 2 / experimental session facade |
 | **Add narrative / storytelling** | `"…/narrative"` + `"…/narrative-prose"` | `"…/renown"` for legend-building |
 | **Craft / economic simulation** | `"…/crafting"` + `"…/catalog"` | `"…/social"` for trade and faction effects |
 | **Grand strategy / 4X** | `"…/polity"` + `"…/campaign"` | Any combination of the 26 campaign extension modules |
