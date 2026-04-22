@@ -276,6 +276,7 @@
     "docs/versioning.md",
     "docs/world-evolution-backend.md",
     "docs/world-evolution-orchestration.md",
+    "docs/session-api.md",
     "docs/emergent-validation-report.md",
     "docs/completion-evidence-dashboard.md",
     "docs/trust-dashboard.md",
