@@ -21,3 +21,10 @@ To avoid release-dashboard CI failures:
 
 9. If you edit any `docs/**/*.md` file that contains `ts` code fences, run `npm run check:doc-examples` before declaring completion.
 10. If `npm run check:doc-examples` fails, fix all reported examples and re-run until it passes.
+
+
+## Codex rules for trust dashboard artifact safety
+
+11. If your changes touch trust evidence inputs (`docs/trust-dashboard.md`, `docs/release-readiness-bundle.md`, `docs/release-readiness-bundle.json`, `docs/dashboard/repo-discipline-audit.{md,json}`, `tools/generate-trust-dashboard.ts`, or `tools/check-trust-dashboard-artifacts.mjs`), run `npm run generate-trust-dashboard`.
+12. Always run `npm run check-trust-dashboard-artifacts` before declaring completion when trust evidence/docs/scripts are changed.
+13. If the check reports `docs/trust-dashboard.md` is stale or manually edited, regenerate it and commit the updated file.
