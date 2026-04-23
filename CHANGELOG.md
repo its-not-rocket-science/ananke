@@ -14,6 +14,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Performed adopter-confidence docs hardening across README/first-hour/stable API/module/bridge/wire docs and added `docs/support-boundaries.md` to make maintainer promises, exclusions, and version-pinning guidance explicit.
 - Wired the shipped `./session` subpath into host-facing docs (`docs/session-api.md`, module index, and integration primer), explicitly labeling it Tier 2 / experimental and documenting the host lifecycle (`create`, `run`, `fork`, pack load, serialize/deserialize).
 - Added `examples/session-embedding-minimal/` as the canonical NPM-package-style embedding template for the new session facade, covering tactical + world-evolution create/run/fork/serialize workflows using public imports.
+- Strengthened session-facade quality gates by running TypeScript doc-example checks as part of `npm run check:docs` and adding a smoke test that imports `@its-not-rocket-science/ananke/session` the same way external consumers do while executing the session embedding example.
 
 ---
 

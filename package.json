@@ -416,7 +416,7 @@
     "check-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --check",
     "test:first-hour-smoke": "npm run build && node tools/first-hour-smoke.mjs",
     "check-trust-dashboard-artifacts": "node dist/tools/generate-trust-dashboard.js --check",
-    "check:docs": "node dist/tools/check-doc-links-and-references.js && node dist/tools/check-doc-semantic-consistency.js && node dist/tools/check-doc-language.js",
+    "check:docs": "node dist/tools/check-doc-links-and-references.js && node dist/tools/check-doc-semantic-consistency.js && node dist/tools/check-doc-language.js && node dist/tools/check-doc-examples.js",
     "check-doc-semantic-consistency": "node dist/tools/check-doc-semantic-consistency.js",
     "generate-trust-dashboard": "node dist/tools/generate-trust-dashboard.js --write",
     "check-doc-language": "node dist/tools/check-doc-language.js",
