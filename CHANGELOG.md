@@ -13,6 +13,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Normalized documentation version references to use `package.json` as canonical source, replaced stale hard-coded Ananke versions in companion docs, and added `npm run check-doc-version-sync` to catch future markdown drift.
 - Performed adopter-confidence docs hardening across README/first-hour/stable API/module/bridge/wire docs and added `docs/support-boundaries.md` to make maintainer promises, exclusions, and version-pinning guidance explicit.
 - Wired the shipped `./session` subpath into host-facing docs (`docs/session-api.md`, module index, and integration primer), explicitly labeling it Tier 2 / experimental and documenting the host lifecycle (`create`, `run`, `fork`, pack load, serialize/deserialize).
+- Added `examples/session-embedding-minimal/` as the canonical NPM-package-style embedding template for the new session facade, covering tactical + world-evolution create/run/fork/serialize workflows using public imports.
 
 ---
 
