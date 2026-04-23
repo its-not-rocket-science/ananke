@@ -8,6 +8,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-04-23
+
+### Added
+
+- Expanded the Tier-2 experimental session facade documentation and plan artifacts for embedders (`docs/session-api.md`, `docs/session-api-plan.md`) with an explicit contract-level API inventory for the `@its-not-rocket-science/ananke/session` subpath.
+- Added additional world-evolution alias coverage in `test/session-facade.test.ts` to assert `runSession(..., { worldEvolution })` behavior for host-side JSON-first integrations.
+
+### Changed
+
+- Bumped package version to `0.5.0` and synchronized runtime version source-of-truth files for tag-driven CI/npm release flow alignment.
+- Refreshed release preparation evidence (`docs/release-prep-session-api.md`) to track the current tag-driven release path (`scripts/tag-release.sh` + `.github/workflows/release.yml`).
+
+---
+
 ## [0.4.1] — 2026-04-23
 
 ### Changed

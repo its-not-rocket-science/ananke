@@ -158,6 +158,21 @@ describe("session facade world_evolution mode", () => {
     expect(result.summary.summary.totalSteps).toBe(4);
   });
 
+  it("supports worldEvolution request alias for world_evolution sessions", () => {
+    const session = createSession({ mode: "world_evolution", canonicalSnapshot: createCanonicalSnapshot(312) });
+
+    const result = runSession(session, {
+      steps: 2,
+      worldEvolution: { includeDeltas: true },
+    });
+
+    expect(result.mode).toBe("world_evolution");
+    expect(result.executedSteps).toBe(2);
+    expect(result.summary.mode).toBe("world_evolution");
+    expect(result.summary.summary.totalSteps).toBe(2);
+  });
+
+
   it("forks world_evolution sessions as independent branches", () => {
     const base = createSession({ mode: "world_evolution", canonicalSnapshot: createCanonicalSnapshot(303) });
     runSession(base, { steps: 2 });

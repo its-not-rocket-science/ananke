@@ -41,6 +41,30 @@ Use low-level functions from `@its-not-rocket-science/ananke` (and other subpath
   - Session pack loading still mutates in-memory global registries (weapons/armour/archetypes/scenario maps) in-process. This is host-runtime portable, but not yet isolated by namespace/sandbox.
   - `./session` does not provide fetch/file I/O adapters; hosts must supply already-loaded JSON payloads for scenarios/packs.
 
+## Public API surface
+
+### Types
+
+- `SessionMode = "tactical" | "world_evolution"`
+- `SessionConfig`
+- `SessionHandle`
+- `RunSessionRequest`
+- `RunSessionResult`
+- `SessionSummary`
+- `ForkSessionRequest`
+- `LoadSessionPackResult`
+
+### Functions
+
+- `createSession(config)`
+- `runSession(session, request)`
+- `stepSession(session, request?)`
+- `getSessionSummary(session)`
+- `forkSession(session, request?)`
+- `loadSessionPack(manifestOrRequest)`
+- `serializeSession(session)`
+- `deserializeSession(json)`
+
 ## Lifecycle
 
 1. **create** — `createSession(config)`
