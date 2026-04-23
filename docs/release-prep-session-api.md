@@ -20,3 +20,12 @@
 
 - Do **not** run `npm publish` locally.
 - Use the repo flow: commit -> push -> create/push `v0.4.1` tag.
+
+## Release verification note (2026-04-23)
+
+- Verified version consistency for `0.4.1` across `package.json`, `package-lock.json`, `src/version.ts`, and the latest changelog heading (`## [0.4.1] — 2026-04-23`) using `npm run check-version-sync` plus direct file checks.
+- Verified docs version references stay aligned with `package.json` via `npm run check-doc-version-sync`.
+- Verified release dashboard artifacts are current via `npm run check-release-dashboard`.
+- Verified release commit conventions are represented in history by release-prep/release-discipline commits (`ff89a8c` and `dcea3c7`) and that workflow tag convention remains `v*` (`v<package.json version>`).
+- Local repository snapshot does not currently include the `v0.4.1` tag object, so tag-object presence cannot be revalidated in this checkout without a configured remote.
+
