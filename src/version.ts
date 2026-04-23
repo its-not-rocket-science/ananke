@@ -6,4 +6,4 @@
  *
  * Source of truth: package.json "version".
  */
-export const ANANKE_ENGINE_VERSION = "0.4.1";
+export const ANANKE_ENGINE_VERSION = "0.5.0";
