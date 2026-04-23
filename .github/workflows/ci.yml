@@ -62,6 +62,9 @@ jobs:
       - name: Reference app smoke test
         run: npx vitest run test/reference-tactical-duel-smoke.test.ts
 
+      - name: Session facade subpath smoke test
+        run: npx vitest run test/session-subpath-smoke.test.ts
+
       - name: Test with coverage
         run: npm run test:coverage
 
