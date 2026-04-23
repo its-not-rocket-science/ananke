@@ -100,6 +100,16 @@ describe("session facade tactical mode", () => {
     expect(session.state.replay?.frames).toHaveLength(3);
   });
 
+  it("supports request aliases and defaults runSession steps to one", () => {
+    const session = createSession({ mode: "tactical", scenarioJson: createScenarioJson(220), enableReplay: true });
+    const result = runSession(session, { commandFrames: [[]] });
+
+    expect(result.executedSteps).toBe(1);
+    expect(result.summary.mode).toBe("tactical");
+    expect(session.state.world.tick).toBe(1);
+    expect(session.state.replay?.frames).toHaveLength(1);
+  });
+
   it("stepSession is one-step sugar for tactical sessions", () => {
     const a = createSession({ mode: "tactical", scenarioJson: createScenarioJson(23) });
     const b = createSession({ mode: "tactical", scenarioJson: createScenarioJson(23) });
@@ -204,6 +214,14 @@ describe("session facade pack loading and summary metadata", () => {
     expect(result.pack.packId).toBe(`${manifest.name}@${manifest.version}`);
     expect(result.scenarioJson).toEqual(manifest.scenarios?.[0]);
     expect(result.worldState?.entities).toHaveLength(2);
+  });
+
+  it("accepts raw pack manifest as loadSessionPack input", () => {
+    const manifest = createPackManifest("manifest-input");
+    const result = loadSessionPack(manifest);
+    expect(result.validationErrors).toEqual([]);
+    expect(result.pack.errors).toEqual([]);
+    expect(result.pack.packId).toBe(`${manifest.name}@${manifest.version}`);
   });
 
   it("returns validation errors for invalid pack manifests", () => {

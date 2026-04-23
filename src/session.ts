@@ -96,10 +96,20 @@ export type SessionHandle =
   };
 
 export interface RunSessionRequest {
-  steps: number;
+  /**
+   * Number of simulation steps to run. Defaults to 1 when omitted.
+   */
+  steps?: number;
+  /** Tactical command frames, one frame per requested step. */
   tacticalCommandFrames?: ReadonlyArray<ReadonlyArray<readonly [entityId: number, cmds: ReadonlyArray<Command>]>>;
+  /** Alias for tacticalCommandFrames. Prefer this for new host integrations. */
+  commandFrames?: ReadonlyArray<ReadonlyArray<readonly [entityId: number, cmds: ReadonlyArray<Command>]>>;
   tacticalContext?: KernelContext;
+  /** Alias for tacticalContext. Prefer this for new host integrations. */
+  context?: KernelContext;
   evolution?: Omit<EvolutionRequest, "steps">;
+  /** Alias for evolution. Prefer this for new host integrations. */
+  worldEvolution?: Omit<EvolutionRequest, "steps">;
 }
 
 export interface RunSessionResult {
@@ -135,6 +145,12 @@ export interface LoadSessionPackResult {
   validationErrors: PackValidationError[];
   scenarioJson?: unknown;
   worldState?: WorldState;
+}
+
+export interface LoadSessionPackRequest {
+  manifest: AnankePackManifest;
+  scenarioId?: string;
+  instantiateScenario?: boolean;
 }
 
 interface SessionSerializationEnvelope {
@@ -191,18 +207,21 @@ export function createSession(config: SessionConfig): SessionHandle {
 }
 
 export function runSession(session: SessionHandle, request: RunSessionRequest): RunSessionResult {
-  const requestedSteps = Math.max(0, Math.floor(request.steps));
+  const requestedSteps = Math.max(0, Math.floor(request.steps ?? 1));
+  const commandFrames = request.commandFrames ?? request.tacticalCommandFrames;
+  const tacticalContext = request.context ?? request.tacticalContext;
+  const evolutionRequest = request.worldEvolution ?? request.evolution;
 
   if (session.mode === "tactical") {
     for (let i = 0; i < requestedSteps; i += 1) {
-      const frame = request.tacticalCommandFrames?.[i] ?? [];
+      const frame = commandFrames?.[i] ?? [];
       if (session.state.replay) {
         session.state.replay.frames.push({
           tick: session.state.world.tick,
           commands: frame.map(([entityId, cmds]) => [entityId, [...cmds]] as const),
         });
       }
-      stepWorld(session.state.world, toCommandMap(frame), request.tacticalContext ?? { tractionCoeff: q(0.85) });
+      stepWorld(session.state.world, toCommandMap(frame), tacticalContext ?? { tractionCoeff: q(0.85) });
     }
 
     return { mode: "tactical", executedSteps: requestedSteps, summary: getSessionSummary(session) };
@@ -210,17 +229,18 @@ export function runSession(session: SessionHandle, request: RunSessionRequest): 
 
   runEvolution(session.state.evolution, {
     steps: requestedSteps,
-    ...(request.evolution?.checkpointInterval != null ? { checkpointInterval: request.evolution.checkpointInterval } : {}),
-    ...(request.evolution?.includeDeltas != null ? { includeDeltas: request.evolution.includeDeltas } : {}),
-    ...(request.evolution?.includeCheckpointDiffs != null ? { includeCheckpointDiffs: request.evolution.includeCheckpointDiffs } : {}),
+    ...(evolutionRequest?.checkpointInterval != null ? { checkpointInterval: evolutionRequest.checkpointInterval } : {}),
+    ...(evolutionRequest?.includeDeltas != null ? { includeDeltas: evolutionRequest.includeDeltas } : {}),
+    ...(evolutionRequest?.includeCheckpointDiffs != null ? { includeCheckpointDiffs: evolutionRequest.includeCheckpointDiffs } : {}),
   });
 
   return { mode: "world_evolution", executedSteps: requestedSteps, summary: getSessionSummary(session) };
 }
 
 export function stepSession(session: SessionHandle, request: Omit<RunSessionRequest, "steps"> = {}): RunSessionResult {
+  const evolutionRequest = request.worldEvolution ?? request.evolution;
   if (session.mode === "world_evolution") {
-    stepEvolution(session.state.evolution, request.evolution ?? {});
+    stepEvolution(session.state.evolution, evolutionRequest ?? {});
     return { mode: "world_evolution", executedSteps: 1, summary: getSessionSummary(session) };
   }
 
@@ -293,19 +313,16 @@ export function forkSession(session: SessionHandle, request: ForkSessionRequest 
   };
 }
 
-export function loadSessionPack(input: {
-  manifest: AnankePackManifest;
-  scenarioId?: string;
-  instantiateScenario?: boolean;
-}): LoadSessionPackResult {
-  const validationErrors = validatePack(input.manifest);
-  const pack = loadPack(input.manifest);
+export function loadSessionPack(input: LoadSessionPackRequest | AnankePackManifest): LoadSessionPackResult {
+  const request = isPackManifest(input) ? { manifest: input } : input;
+  const validationErrors = validatePack(request.manifest);
+  const pack = loadPack(request.manifest);
 
   const out: LoadSessionPackResult = { pack, validationErrors };
-  if (input.scenarioId) {
-    out.scenarioJson = getPackScenario(pack.packId, input.scenarioId);
-    if (input.instantiateScenario && out.scenarioJson != null) {
-      out.worldState = instantiatePackScenario(pack.packId, input.scenarioId);
+  if (request.scenarioId) {
+    out.scenarioJson = getPackScenario(pack.packId, request.scenarioId);
+    if (request.instantiateScenario && out.scenarioJson != null) {
+      out.worldState = instantiatePackScenario(pack.packId, request.scenarioId);
     }
   }
   return out;
@@ -399,4 +416,8 @@ function createTacticalWorld(config: TacticalSessionConfig): WorldState {
 
 function toCommandMap(frame: ReadonlyArray<readonly [entityId: number, cmds: ReadonlyArray<Command>]>): CommandMap {
   return new Map(frame.map(([entityId, cmds]) => [entityId, [...cmds]]));
+}
+
+function isPackManifest(input: LoadSessionPackRequest | AnankePackManifest): input is AnankePackManifest {
+  return !("manifest" in input);
 }
