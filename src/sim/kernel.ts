@@ -175,7 +175,9 @@ function shieldBlocksSegment(
 
 export function stepWorld(world: WorldState, cmds: CommandMap, ctx: KernelContext): void {
   assertNoFloatUsageInProduction(world);
-  const strictDeterminism = ctx.strictDeterminism ?? process.env.ANANKE_STRICT_DETERMINISM === "1";
+  const strictDeterminism =
+    ctx.strictDeterminism ??
+    (typeof process !== "undefined" && process.env.ANANKE_STRICT_DETERMINISM === "1");
   if (strictDeterminism) assertDeterministicWorldLike(world, "step:start");
   const tuning = ctx.tuning ?? TUNING.tactical;
 

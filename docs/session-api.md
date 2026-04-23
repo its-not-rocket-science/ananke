@@ -28,6 +28,19 @@ Use low-level functions from `@its-not-rocket-science/ananke` (and other subpath
 - `"tactical"`
 - `"world_evolution"`
 
+## Runtime portability notes (Node vs browser/worker)
+
+`./session` is designed to be importable in browser/worker embedders, but some behavior still varies by runtime:
+
+- **Portable by default**
+  - Core tactical/session lifecycle (`createSession`, `runSession`, `stepSession`, `forkSession`, `serializeSession`, `deserializeSession`) is runtime-neutral and does not require Node globals.
+- **Optional/conditional behavior**
+  - `runSession` strict determinism env override (`ANANKE_STRICT_DETERMINISM`) now only applies when a Node-style `process.env` exists; browser/worker hosts should set `context.strictDeterminism` explicitly instead.
+  - Pack checksum validation (`registry.checksum`) is available from the session path without Node-only imports.
+- **Current limits**
+  - Session pack loading still mutates in-memory global registries (weapons/armour/archetypes/scenario maps) in-process. This is host-runtime portable, but not yet isolated by namespace/sandbox.
+  - `./session` does not provide fetch/file I/O adapters; hosts must supply already-loaded JSON payloads for scenarios/packs.
+
 ## Lifecycle
 
 1. **create** — `createSession(config)`

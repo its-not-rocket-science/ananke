@@ -16,6 +16,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - Added `examples/session-embedding-minimal/` as the canonical NPM-package-style embedding template for the new session facade, covering tactical + world-evolution create/run/fork/serialize workflows using public imports.
 - Refined Tier-2 session facade ergonomics after embedding validation: `runSession` now defaults to one step, request aliases were added (`commandFrames`, `context`, `worldEvolution`), and `loadSessionPack` accepts either `{ manifest, ... }` or a raw manifest for lower-ceremony JSON-first host usage.
 - Added a session subpath consumer smoke test (`test/session-subpath-smoke.test.ts`) and wired it into CI so `@its-not-rocket-science/ananke/session` imports plus `examples/session-embedding-minimal` execution are continuously verified under build/test/coverage gates.
+- Improved `./session` runtime portability for browser/worker embedders by removing a transitive Node-only `node:crypto` dependency from pack checksum logic and guarding `process.env` determinism reads in the tactical kernel.
 
 ---
 
