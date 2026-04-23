@@ -262,3 +262,13 @@ Reason:
 - **Added**: unified `createSession/runSession/stepSession/getSessionSummary/forkSession` across tactical and world-evolution flows.
 - **Added**: session serialization/deserialization and content-pack session bootstrap helpers.
 - **Compatibility**: Tier-1 root API unchanged.
+
+## Post-embedding API refinement note (2026-04-23)
+
+After validating the minimal embedding example, we made small ergonomic refinements without expanding scope:
+
+- `runSession` now defaults `steps` to `1` when omitted, reducing ceremony for hosts doing single-tick advancement.
+- Added alias request fields for discoverability and consistency (`commandFrames`/`context`/`worldEvolution`) while keeping existing `tactical*` and `evolution` names fully supported.
+- `loadSessionPack` now accepts either `{ manifest, ... }` or a raw pack manifest directly, improving JSON-first embedding ergonomics.
+
+These are additive Tier-2 refinements only; no renderer/network/bridge functionality was added, and Tier-1 API status is unchanged.
