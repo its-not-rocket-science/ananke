@@ -30,3 +30,5 @@ To avoid release-dashboard CI failures:
 13. If the check reports `docs/trust-dashboard.md` is stale or manually edited, regenerate it and commit the updated file.
 14. Run trust checks in this order when trust inputs change: `npm run build` → `npm run generate-trust-dashboard` → `npm run check-trust-dashboard-artifacts`.
 15. If `npm run check-trust-dashboard-artifacts` fails because `dist/tools/generate-trust-dashboard.js` is missing, run `npm run build` and rerun the check.
+16. As a final pre-completion guardrail for **all coding tasks**, run `npm run check-trust-dashboard-artifacts` after the required `npm run build` step.
+17. If that final trust-artifact check reports `docs/trust-dashboard.md` is stale or manually edited, run `npm run generate-trust-dashboard`, then rerun `npm run check-trust-dashboard-artifacts`, and commit the regenerated dashboard before declaring completion.
