@@ -426,7 +426,8 @@
     "check-determinism-release-artifacts": "node tools/check-determinism-release-artifacts.mjs --summary=docs/dashboard/determinism-release-status.json",
     "check-coverage-summary": "node tools/check-coverage-summary.mjs --input=coverage/coverage-summary.json",
     "generate-coverage-status": "node tools/check-coverage-summary.mjs --input=coverage/coverage-summary.json --markdown-out=docs/dashboard/coverage-status.md",
-    "audit:repo-discipline": "node tools/audit-repo-discipline.mjs"
+    "audit:repo-discipline": "node tools/audit-repo-discipline.mjs",
+    "example:session-embedding-minimal": "node dist/examples/session-embedding-minimal/index.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
