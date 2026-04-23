@@ -8,6 +8,8 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-04-23
+
 ### Changed
 
 - Normalized documentation version references to use `package.json` as canonical source, replaced stale hard-coded Ananke versions in companion docs, and added `npm run check-doc-version-sync` to catch future markdown drift.

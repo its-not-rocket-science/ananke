@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-16T18:08:53.774Z",
+  "generatedAt": "2026-04-23T14:51:50.075Z",
   "entries": {
     "trustDashboard": {
       "status": "pass",
@@ -9,7 +9,7 @@
     },
     "determinismStatus": {
       "status": "pass",
-      "stale": true,
+      "stale": false,
       "summary": "overall=pass",
       "source": "docs/dashboard/determinism-release-status.json"
     },
@@ -20,15 +20,15 @@
       "source": "docs/doc-consistency-report.json"
     },
     "publicContractStatus": {
-      "status": "pass",
+      "status": "fail",
       "stale": false,
-      "summary": "public contract check passed",
+      "summary": "public contract check failed",
       "source": "dist/tools/check-public-contract.js"
     },
     "coverageStatus": {
-      "status": "fail",
+      "status": "pass",
       "stale": false,
-      "summary": "coverage summary missing",
+      "summary": "line coverage 95.22% (32347/33969)",
       "source": "coverage/coverage-summary.json"
     }
   },
