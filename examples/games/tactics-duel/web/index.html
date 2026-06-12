@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tactics Duel</title>
+  <style>
+    body { font-family: sans-serif; margin: 1rem; }
+    #grid { display:grid; grid-template-columns: repeat(5, 64px); gap: 4px; }
+    .cell { width:64px; height:64px; border:1px solid #aaa; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .t1 { background:#dde8ff; } .t2 { background:#ffe0e0; }
+  </style>
+</head>
+<body>
+  <h1>Tactics Duel</h1>
+  <p id="status"></p>
+  <div id="grid"></div>
+  <button id="attack">Attack with selected</button>
+  <button id="save">Save</button>
+  <button id="load">Load</button>
+  <button id="replay">Export Replay</button>
+  <button id="check">Check Determinism</button>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

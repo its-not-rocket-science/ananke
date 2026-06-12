@@ -108,7 +108,7 @@
       "evidence": [
         "tools/release-check.ts",
         "tools/benchmark.ts",
-        "docs/release-report.json",
+        "docs/release-dashboard.md",
         "test/performance.test.ts"
       ],
       "notes": "Performance baselines and release artifacts tracked in-repo."

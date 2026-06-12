@@ -1,0 +1,7 @@
+{
+  "id": "ananke-plugin-visualizer",
+  "version": "1.0.0",
+  "hooks": ["afterStep"],
+  "dependencies": {},
+  "permissions": ["read:worldState", "write:telemetry"]
+}

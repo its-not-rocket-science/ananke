@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  firstDivergence,
+  assertDeterminismOrThrow,
   hasBuiltWasmKernel,
   loadWasmKernelFromDist,
   makeCommandSequence,
@@ -12,6 +12,7 @@ import {
 } from "./shared.js";
 
 interface GoldenEntry {
+  label?: string;
   seed: number;
   entityCount: number;
   commands: number;
@@ -29,16 +30,14 @@ describe.skipIf(!hasBuiltWasmKernel())("cross-version determinism regression", (
       const commands = makeCommandSequence(entry.seed, entry.entityCount, entry.commands);
       const expected = runTraceWithTs(initial, commands);
       const actual = runTraceWithWasm(initial, commands, kernel);
-
-      const divergence = firstDivergence(expected.snapshots, actual.snapshots);
-      if (divergence) {
-        throw new Error(
-          `Determinism mismatch seed=${entry.seed} tick=${divergence.tick} entity=${divergence.entityId}\n` +
-          `expected=${JSON.stringify(divergence.expected)}\nactual=${JSON.stringify(divergence.actual)}`,
-        );
-      }
-
-      expect(actual.finalState).toEqual(expected.finalState);
+      assertDeterminismOrThrow(expected, actual, {
+        runSeed: entry.seed,
+        worldSeed: entry.seed,
+        entityCount: entry.entityCount,
+        commandCount: entry.commands,
+        label: entry.label ?? "golden-masters",
+      });
+      expect(true).toBe(true);
     }
   }, 180_000);
 });

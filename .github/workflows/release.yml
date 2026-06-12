@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release/publish (for manual reruns, e.g. v1.2.3)"
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref_name || github.event.inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || github.ref_name || github.event.inputs.tag }}
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: npm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches package version
+        run: |
+          TAG_REF="${{ github.event.release.tag_name || github.ref_name || github.event.inputs.tag }}"
+          if [ -z "$TAG_REF" ]; then
+            echo "No release tag detected from event context."
+            exit 1
+          fi
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${TAG_REF#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag $TAG_REF does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Beta launch readiness gate (v1.0.0-beta.* only)
+        if: startsWith(github.event.release.tag_name || github.ref_name || github.event.inputs.tag, 'v1.0.0-beta.')
+        run: |
+          npm run build
+          node tools/check-beta-readiness.mjs --file=.github/beta-launch-readiness.json
+
+      - name: Run full release checks (CI + determinism + benchmarks)
+        run: bash release/run-release-checks.sh
+
+      - name: Build release artifacts (npm + WASM)
+        run: bash release/build-release-artifacts.sh
+
+      - name: Publish package to npm with provenance
+        run: npm publish --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Extract release notes from CHANGELOG.md
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name || github.ref_name || github.event.inputs.tag }}
+        run: bash release/extract-changelog-notes.sh
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name || github.ref_name || github.event.inputs.tag }}
+          name: ${{ github.event.release.tag_name || github.ref_name || github.event.inputs.tag }}
+          body_path: release-notes.md
+          files: |
+            release/artifacts/*.tgz
+            release/artifacts/wasm/**
+            release/artifacts/determinism/**
+          generate_release_notes: true

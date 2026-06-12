@@ -13,7 +13,7 @@ import { SCALE_Q, clampQ } from "./units";
 // ── Memory layout ────────────────────────────────────────────────────────────
 
 /** Maximum entities per batch. */
-export const MAX_ENTITIES: i32 = 64;
+export const MAX_ENTITIES: i32 = 256;
 
 const STRIDE: i32 = MAX_ENTITIES * 4; // bytes per i32 array
 
@@ -27,7 +27,7 @@ export const OFFSET_ALIVE: i32 = STRIDE * 2;
 export const OFFSET_DV_X: i32 = STRIDE * 3;
 /** Byte offset of dv_y output array (i32 × MAX_ENTITIES). Cleared by stepRepulsionPairs. */
 export const OFFSET_DV_Y: i32 = STRIDE * 4;
-// Total footprint: 5 × 64 × 4 = 1280 bytes (< 1 WASM page = 65536 bytes)
+// Total footprint: 5 × 256 × 4 = 5120 bytes (< 1 WASM page = 65536 bytes)
 
 // ── Data marshaling ──────────────────────────────────────────────────────────
 

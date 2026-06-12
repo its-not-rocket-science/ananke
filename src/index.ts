@@ -45,3 +45,16 @@ export type { Replay, ReplayFrame } from "./replay.js";
 // Bridge extraction
 export { extractRigSnapshots, deriveAnimationHints } from "./model3d.js";
 export type { RigSnapshot, AnimationHints } from "./model3d.js";
+
+// Plugin SDK
+export { loadPlugin } from "./plugins/loader.js";
+export { installPluginFromRegistry } from "./plugins/registry.js";
+export type {
+  PluginManifest,
+  PluginPermission,
+  PluginHookContext,
+  PluginHooks,
+  PluginRuntimeApi,
+  PluginModule,
+  LoadedPlugin,
+} from "./plugins/types.js";

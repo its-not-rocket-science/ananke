@@ -79,7 +79,7 @@ array (immediately before the closing `];`).
 
 ### Minimal template
 
-```typescript
+```typescript pseudocode
 {
   name: "My New Scenario",
   description:
@@ -119,7 +119,7 @@ array (immediately before the closing `];`).
 
 **0-tick attribute read** — measure a physical constant directly from entity attributes
 (no simulation loop needed):
-```typescript
+```typescript pseudocode
 setup: (seed) => {
   const entity = mkHumanoidEntity((seed % 200) + 1, 1, 0, 0);
   return { world: mkWorld(seed, [entity]), ctx: { tractionCoeff: q(1.0) }, steps: 0 };
@@ -127,7 +127,7 @@ setup: (seed) => {
 ```
 
 **Short combat tick** — run N ticks and read an accumulated value:
-```typescript
+```typescript pseudocode
 setup: (seed) => {
   const attacker = mkHumanoidEntity(1, 1,    0,                    0);
   const defender = mkHumanoidEntity(2, 2, Math.round(2 * SCALE.m), 0);
@@ -138,7 +138,7 @@ setup: (seed) => {
 ```
 
 **Downtime scenario** — run a disease/recovery loop using `stepDiseaseForEntity`:
-```typescript
+```typescript pseudocode
 setup: (seed) => {
   const entity = mkHumanoidEntity(1, 1, 0, 0);
   exposeToDisease(entity, "wound_fever");

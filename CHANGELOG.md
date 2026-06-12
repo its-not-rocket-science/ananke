@@ -6,6 +6,66 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [Unreleased]
+
+## [0.5.0] — 2026-04-23
+
+### Added
+
+- Expanded the Tier-2 experimental session facade documentation and plan artifacts for embedders (`docs/session-api.md`, `docs/session-api-plan.md`) with an explicit contract-level API inventory for the `@its-not-rocket-science/ananke/session` subpath.
+- Added additional world-evolution alias coverage in `test/session-facade.test.ts` to assert `runSession(..., { worldEvolution })` behavior for host-side JSON-first integrations.
+
+### Changed
+
+- Bumped package version to `0.5.0` and synchronized runtime version source-of-truth files for tag-driven CI/npm release flow alignment.
+- Refreshed release preparation evidence (`docs/release-prep-session-api.md`) to track the current tag-driven release path (`scripts/tag-release.sh` + `.github/workflows/release.yml`).
+
+---
+
+## [0.4.1] — 2026-04-23
+
+### Changed
+
+- Normalized documentation version references to use `package.json` as canonical source, replaced stale hard-coded Ananke versions in companion docs, and added `npm run check-doc-version-sync` to catch future markdown drift.
+- Performed adopter-confidence docs hardening across README/first-hour/stable API/module/bridge/wire docs and added `docs/support-boundaries.md` to make maintainer promises, exclusions, and version-pinning guidance explicit.
+- Wired the shipped `./session` subpath into host-facing docs (`docs/session-api.md`, module index, and integration primer), explicitly labeling it Tier 2 / experimental and documenting the host lifecycle (`create`, `run`, `fork`, pack load, serialize/deserialize).
+- Added `examples/session-embedding-minimal/` as the canonical NPM-package-style embedding template for the new session facade, covering tactical + world-evolution create/run/fork/serialize workflows using public imports.
+- Refined Tier-2 session facade ergonomics after embedding validation: `runSession` now defaults to one step, request aliases were added (`commandFrames`, `context`, `worldEvolution`), and `loadSessionPack` accepts either `{ manifest, ... }` or a raw manifest for lower-ceremony JSON-first host usage.
+- Added a session subpath consumer smoke test (`test/session-subpath-smoke.test.ts`) and wired it into CI so `@its-not-rocket-science/ananke/session` imports plus `examples/session-embedding-minimal` execution are continuously verified under build/test/coverage gates.
+- Improved `./session` runtime portability for browser/worker embedders by removing a transitive Node-only `node:crypto` dependency from pack checksum logic and guarding `process.env` determinism reads in the tactical kernel.
+
+---
+
+## [0.4.0] — 2026-04-22
+
+### Added
+
+- Added a new Tier-2 / experimental session facade subpath: `@its-not-rocket-science/ananke/session` (`./session` in package exports) so hosts can opt into a unified session workflow without changing Tier-1 root imports.
+- Added `src/session.ts` with JSON-first session types and helpers: `SessionMode`, `SessionConfig`, `SessionHandle`, `RunSessionRequest`, `RunSessionResult`, `SessionSummary`, `ForkSessionRequest`, and `LoadSessionPackResult`.
+- Added session facade functions: `createSession`, `runSession`, `stepSession`, `getSessionSummary`, `forkSession`, `loadSessionPack`, `serializeSession`, and `deserializeSession`.
+- Added tactical-mode initialization adapters for explicit `WorldState` and scenario JSON (plus optional seed/entity convenience bootstrap).
+- Added world-evolution-mode initialization adapters for canonical snapshots with `ruleset` / `rulesetId`, delegating to existing world-evolution orchestration.
+- Added deterministic serialization envelopes with explicit `schemaVersion`, `engineVersion`, `mode`, and `payload`.
+- Added content-pack integration via `loadSessionPack` that delegates to existing content-pack validation/loading/scenario instantiation APIs.
+
+### Changed
+
+- Bumped package version to `0.4.0` to reflect the additive new public subpath/API while preserving backward compatibility for existing Tier-1 imports.
+
+---
+
+## [0.3.0] — 2026-04-04
+
+### Added
+
+- Added a new AssemblyScript WASM core in `as/world.ts`, `as/combat.ts`, `as/movement.ts`, and `as/ananke-core.ts`, compiled to `wasm/ananke-core.wasm` via `npm run build:wasm:core`.
+- Added TypeScript↔WASM bridge (`src/wasm/bridge.ts`) with automatic TS fallback and new bridge tests (`test/wasm/bridge.test.ts`).
+- Added WASM benchmark runner (`tools/wasm-benchmark.ts`), WASM adapter (`benchmarks/adapters/wasm.ts`), and generated comparison output support under `benchmarks/results/wasm-vs-ts-*.json`.
+- Added cross-platform CI workflow `.github/workflows/wasm-build.yml` for Linux/macOS/Windows WASM builds and determinism fuzzing.
+- Added advanced WASM integration docs and runnable examples (`docs/wasm-integration.md`, `examples/wasm-node.ts`, `examples/wasm-browser.html`).
+
+---
+
 ## [0.2.11] — 2026-04-04
 
 ### Fixed

@@ -12,6 +12,8 @@ import type { BiomeContext } from "./biome.js";
 export interface KernelContext {
   tractionCoeff: Q;
   tuning?: SimulationTuning;
+  /** When true, enforce strict deterministic world invariants at pipeline checkpoints. */
+  strictDeterminism?: boolean;
   cellSize_m?: I32; // fixed-point metres; default 4m
   density?: DensityField;
 

@@ -1,124 +1,134 @@
-# Ananke — Programmer's Guide
+# Ananke
 
 ![CI](../../actions/workflows/ci.yml/badge.svg)
 ![Determinism](https://img.shields.io/badge/Determinism-%E2%9C%85%2010%2C000%2F10%2C000%20seeds%20passed%20(last%20run%3A%202026--04--03)-brightgreen)
-[![Mod of the Week](https://img.shields.io/badge/Mod%20of%20the%20Week-Submit%20Yours-blueviolet)](docs/mod-of-the-week.md)
 
 > **Package:** `@its-not-rocket-science/ananke`  
 > **Stable API contract:** [`STABLE_API.md`](STABLE_API.md)
 
-Ananke is a deterministic, fixed-point simulation engine for combat and world-state replay.  
-Given the same seed and command stream, results are bit-for-bit reproducible.
+## What it is
 
----
+Ananke is a deterministic simulation kernel for host applications.
 
-## Golden path (new adopters, first 60 minutes)
+Core contract:
 
-This is the **only recommended onboarding path** for first-time users. It uses **Tier 1 stable root exports only**.
+- same initial world state
+- same command stream
+- same tick count
+- same engine version
 
-1. Install dependencies and build:
+=> same outcome.
+
+The package is designed so you can keep rendering, networking, persistence, and tooling in your own stack while delegating deterministic simulation to Ananke.
+
+## Why you would use it
+
+Use Ananke when you need deterministic simulation you can reproduce and verify:
+
+- lockstep or replayable simulation loops
+- authoritative host control over commands and timing
+- repeatable test fixtures for simulation behavior
+- strict root-import API for long-lived integrations
+
+Do **not** adopt it if you want a full game engine, visual editor, or turnkey networking/runtime platform.
+
+## 10-minute success path
+
+1. Install and build.
 
    ```bash
    npm install
    npm run build
    ```
 
-2. Run the guided first-hour example:
+2. Run the guided first-hour example (prints deterministic markers).
 
    ```bash
    npm run example:first-hour
    ```
 
-3. Re-run once to confirm determinism:
+3. Run the measurable smoke verification.
 
    ```bash
-   npm run example:first-hour
+   npm run test:first-hour-smoke
    ```
 
-4. Follow the full walkthrough:
+4. Follow the first-hour funnel: [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md).
 
-   - [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md)
+Minimal deterministic loop:
 
-### Minimal host loop (Tier 1 only)
+```ts example
+import { createWorld, q, stepWorld, type CommandMap } from "@its-not-rocket-science/ananke";
+
+const world = createWorld(1337, [
+  { id: 1, teamId: 1, seed: 10, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword", armourId: "arm_mail", x_m: -1.2 },
+  { id: 2, teamId: 2, seed: 11, archetype: "HUMAN_BASE", weaponId: "wpn_club", x_m: 1.2 },
+]);
+
+const commands: CommandMap = new Map([
+  [1, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
+  [2, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
+]);
+
+stepWorld(world, commands, { tractionCoeff: q(0.9) });
+```
+
+## Stable API promise
+
+For semver stability, import from the package root only:
 
 ```ts
 import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
-
-const world = createWorld(7, [
-  { id: 1, teamId: 1, seed: 7001, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword", armourId: "arm_mail", x_m: -1.2 },
-  { id: 2, teamId: 2, seed: 7002, archetype: "HUMAN_BASE", weaponId: "wpn_club", x_m: 1.2 },
-]);
-
-for (let tick = 0; tick < 180; tick++) {
-  const commands: CommandMap = new Map([
-    [1, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
-    [2, [{ kind: "attackNearest", mode: "strike", intensity: q(1.0) }]],
-  ]);
-  stepWorld(world, commands, { tractionCoeff: q(0.9) });
-}
 ```
 
----
+Tier-1 root exports are the stability boundary documented in:
 
-## Stable API quick reference (Tier 1)
+- [`STABLE_API.md`](STABLE_API.md)
+- [`docs/public-contract.md`](docs/public-contract.md)
+- [`docs/stable-api-manifest.json`](docs/stable-api-manifest.json)
 
-Import only from the package root:
+Subpath modules are shipped and supported, but are **not** part of the Tier-1 semver contract unless explicitly called out as stable.
 
-```ts
-import { ... } from "@its-not-rocket-science/ananke";
-```
+For explicit maintainer commitments, enforcement, and adopter responsibilities, see [`docs/support-boundaries.md`](docs/support-boundaries.md) and [`docs/engineering-guarantees.md`](docs/engineering-guarantees.md).
 
-Tier 1 includes:
+## What is actually stable today
 
-- Fixed-point utilities (`q`, `SCALE`, conversion helpers)
-- Host types (`Entity`, `WorldState`, `Command`, `CommandMap`, `KernelContext`)
-- World/scenario creation (`createWorld`, `loadScenario`, `validateScenario`)
-- Stepping (`stepWorld`)
-- Replay/serialization (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`)
-- Bridge extraction (`extractRigSnapshots`, `deriveAnimationHints`)
+Stable today means Tier-1 root exports from `@its-not-rocket-science/ananke`:
 
-See [`STABLE_API.md`](STABLE_API.md) and [`docs/stable-api-manifest.json`](docs/stable-api-manifest.json) for the source of truth.
+- fixed-point primitives and helpers (`q`, `SCALE`, related conversion/math utilities)
+- host-facing types (`Entity`, `WorldState`, `Command`, `CommandMap`, `KernelContext`)
+- deterministic world/scenario entry points (`createWorld`, `loadScenario`, `validateScenario`)
+- deterministic stepping (`stepWorld`)
+- replay helpers (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`)
+- bridge snapshot extraction (`extractRigSnapshots`, `deriveAnimationHints`)
 
----
+If you need long-term compatibility, keep production integrations on this root Tier-1 surface.
 
-## Advanced and internal paths (not first-hour)
+> Boundaries note: first-hour checks verify setup and basic deterministic behavior only; they do not validate your production integration.
 
-These are intentionally separated from onboarding because they may use Tier 2/Tier 3 or internal file-level imports.
+## What is shipped but not semver-stable
 
-### Advanced examples
+These are available exports but outside the Tier-1 semver promise (unless separately documented):
 
-- `examples/quickstart-combat.ts`
-- `examples/quickstart-campaign.ts`
-- `examples/quickstart-species.ts`
-- `examples/lockstep-server.ts`
-- `examples/rollback-client.ts`
-- `examples/reference/**`
+- most subpath modules in `package.json#exports` (for example `./combat`, `./character`, `./tier2`, `./tier3`, `./netcode`, `./host-loop`)
+- emerging or advanced modules that may change shape between minor releases
+- exploratory integration helpers and higher-order systems
 
-### Advanced docs
+Treat these surfaces as adopt-with-version-pinning.
 
-- [`docs/integration-primer.md`](docs/integration-primer.md)
-- [`docs/cookbook.md`](docs/cookbook.md)
-- [`docs/recipes-matrix.md`](docs/recipes-matrix.md)
-- [`docs/host-contract.md`](docs/host-contract.md)
-- [`docs/bridge-contract.md`](docs/bridge-contract.md)
+## Next steps after the first hour
 
----
+- Game/server integrator: [`docs/host-contract.md`](docs/host-contract.md)
+- Renderer integrator: [`docs/bridge-contract.md`](docs/bridge-contract.md)
 
-## API stability tiers
+## What this project is not
 
-| Tier | Guarantee | Import style |
-|---|---|---|
-| **Tier 1 — Stable** | Semver-protected (breaking changes require major bump) | `@its-not-rocket-science/ananke` |
-| **Tier 2 — Experimental** | May change in minor releases | `@its-not-rocket-science/ananke/tier2` or domain subpaths |
-| **Tier 3 — Internal** | No stability guarantee | `@its-not-rocket-science/ananke/tier3` and internal subpaths |
+Ananke is not:
 
----
+- a rendering engine or scene graph
+- a complete networking stack
+- a content-authoring GUI
+- a no-code simulation builder
+- a guarantee that every shipped subpath export is semver-stable
 
-## Further reading
-
-- [`docs/project-overview.md`](docs/project-overview.md)
-- [`docs/versioning.md`](docs/versioning.md)
-- [`docs/performance.md`](docs/performance.md)
-- [`docs/emergent-validation-report.md`](docs/emergent-validation-report.md)
-- [`docs/golden-path-improvement-plan.md`](docs/golden-path-improvement-plan.md)
-- [`docs/mod-of-the-week.md`](docs/mod-of-the-week.md)
+Use this package when you need deterministic simulation inside a host-owned stack and can run host-side regression tests on each upgrade.

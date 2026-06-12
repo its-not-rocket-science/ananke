@@ -9,6 +9,13 @@
 import type { WorldState } from "./sim/world.js";
 import type { Entity } from "./sim/entity.js";
 import type { GrapplePosition } from "./sim/entity.js";
+import type {
+  BodySegment,
+  BodySegmentLateralSide,
+  BodySegmentRenderSpatial,
+  BodySegmentRigRole,
+  BodySegmentVerticalPosition,
+} from "./sim/bodyplan.js";
 import type { Q } from "./units.js";
 import { q, SCALE } from "./units.js";
 import { DefenceModes } from "./sim/kinds.js";
@@ -55,6 +62,75 @@ function getCanonicalOffset(segId: string): CanonicalOffset {
   return { xFrac: 0, yFrac: 0.50 }; // unknown: geometric midpoint
 }
 
+const VERTICAL_POSITION_TO_Y_FRAC: Record<BodySegmentVerticalPosition, number> = {
+  crown: 0.94,
+  high: 0.80,
+  upper: 0.68,
+  mid: 0.50,
+  lower: 0.28,
+  ground: 0.03,
+};
+
+const RIG_ROLE_TO_Y_FRAC: Record<BodySegmentRigRole, number> = {
+  head: 0.94,
+  neck: 0.80,
+  torso: 0.63,
+  abdomen: 0.52,
+  pelvis: 0.43,
+  shoulder: 0.72,
+  arm_upper: 0.68,
+  arm_lower: 0.56,
+  hand: 0.44,
+  leg_upper: 0.33,
+  leg_lower: 0.17,
+  foot: 0.03,
+  tail: 0.35,
+  wing: 0.65,
+  appendage: 0.50,
+  core: 0.50,
+};
+
+const RIG_ROLE_TO_X_FRAC_MAGNITUDE: Partial<Record<BodySegmentRigRole, number>> = {
+  shoulder: 0.20,
+  arm_upper: 0.20,
+  arm_lower: 0.22,
+  hand: 0.25,
+  leg_upper: 0.07,
+  leg_lower: 0.07,
+  foot: 0.07,
+  wing: 0.50,
+};
+
+function sideToSign(side?: BodySegmentLateralSide): number {
+  if (side === "left") return -1;
+  if (side === "right") return 1;
+  return 0;
+}
+
+function getCanonicalOffsetFromMetadata(
+  segId: string,
+  spatial?: BodySegmentRenderSpatial,
+): CanonicalOffset | null {
+  if (!spatial) return null;
+  const legacy = getCanonicalOffset(segId);
+  const side = sideToSign(spatial.lateralSide);
+
+  const fromHintX = spatial.centerOfMassHint?.xFrac;
+  const fromHintY = spatial.centerOfMassHint?.yFrac;
+  const fromVertical = spatial.verticalPosition ? VERTICAL_POSITION_TO_Y_FRAC[spatial.verticalPosition] : undefined;
+  const fromRigY = spatial.rigRole ? RIG_ROLE_TO_Y_FRAC[spatial.rigRole] : undefined;
+  const xMag = spatial.rigRole ? (RIG_ROLE_TO_X_FRAC_MAGNITUDE[spatial.rigRole] ?? 0) : 0;
+
+  return {
+    xFrac: Math.max(-1, Math.min(1, fromHintX ?? (side * xMag))),
+    yFrac: Math.max(0, Math.min(1, fromHintY ?? fromVertical ?? fromRigY ?? legacy.yFrac)),
+  };
+}
+
+function resolveCanonicalOffset(seg: BodySegment): CanonicalOffset {
+  return getCanonicalOffsetFromMetadata(seg.id, seg.renderSpatial) ?? getCanonicalOffset(seg.id);
+}
+
 // ─── Mass distribution ────────────────────────────────────────────────────────
 
 /** Per-segment mass and its fraction of total body mass. */
@@ -97,7 +173,7 @@ export function deriveMassDistribution(entity: Entity): MassDistribution {
     let cogY = 0;
 
     const segments: SegmentMass[] = segs.map(seg => {
-      const off    = getCanonicalOffset(seg.id);
+      const off    = resolveCanonicalOffset(seg);
       const mass_r = seg.mass_kg / SCALE.kg;
       cogX += mass_r * off.xFrac * stature_m;
       cogY += mass_r * off.yFrac * stature_m;
@@ -151,7 +227,7 @@ export function deriveInertiaTensor(entity: Entity): InertiaTensor {
   if (entity.bodyPlan) {
     let I_yaw = 0, I_pitch = 0, I_roll = 0;
     for (const seg of entity.bodyPlan.segments) {
-      const off = getCanonicalOffset(seg.id);
+      const off = resolveCanonicalOffset(seg);
       const m   = seg.mass_kg / SCALE.kg;
       const x   = off.xFrac * stature_m;
       const y   = off.yFrac * stature_m;

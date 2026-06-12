@@ -16,11 +16,10 @@ import { hashMod }                                            from "./modding.js
 import { registerWorldArchetype, registerWorldItem }          from "./world-factory.js";
 import type { WorldState }                                    from "./sim/world.js";
 
-// ── Version constant ──────────────────────────────────────────────────────────
-// Must be kept in sync with package.json "version" field.
+// ── Runtime version constant ─────────────────────────────────────────────────────
 
-/** Current Ananke engine version — used to evaluate pack compatRange at runtime. */
-export const ANANKE_ENGINE_VERSION = "0.1.69";
+export { ANANKE_ENGINE_VERSION } from "./version.js";
+import { ANANKE_ENGINE_VERSION } from "./version.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -157,8 +156,9 @@ export interface LoadPackResult {
 // Compound ranges (space-separated) require all constraints to match.
 
 function parseSemverTuple(v: string): [number, number, number] | null {
-  const parts = v.replace(/^v/, "").split(".").map(Number);
-  if (parts.some(isNaN)) return null;
+  const raw = v.trim().replace(/^v/, "");
+  if (!/^\d+(\.\d+){0,2}$/.test(raw)) return null;
+  const parts = raw.split(".").map(Number);
   const [major = 0, minor = 0, patch = 0] = parts;
   return [major, minor, patch];
 }
@@ -177,9 +177,38 @@ export function semverSatisfies(version: string, range: string): boolean {
   const ver = parseSemverTuple(version);
   if (!ver) return false;
 
-  const constraints = range.trim().split(/\s+/);
+  const trimmed = range.trim();
+  if (trimmed.length === 0) return false;
+  const constraints = trimmed.split(/\s+/);
   for (const constraint of constraints) {
+    if (constraint.length === 0) return false;
     if (!evalConstraint(ver, constraint.trim())) return false;
+  }
+  return true;
+}
+
+function isSemverRange(range: string): boolean {
+  const trimmed = range.trim();
+  if (trimmed.length === 0) return false;
+  const constraints = trimmed.split(/\s+/);
+  for (const constraint of constraints) {
+    if (constraint.length === 0) return false;
+    if (constraint.startsWith("^") || constraint.startsWith("~")) {
+      if (parseSemverTuple(constraint.slice(1)) === null) return false;
+      continue;
+    }
+    if (
+      constraint.startsWith(">=") ||
+      constraint.startsWith("<=") ||
+      constraint.startsWith(">") ||
+      constraint.startsWith("<") ||
+      constraint.startsWith("=")
+    ) {
+      const offset = constraint.startsWith(">=") || constraint.startsWith("<=") ? 2 : 1;
+      if (parseSemverTuple(constraint.slice(offset)) === null) return false;
+      continue;
+    }
+    if (parseSemverTuple(constraint) === null) return false;
   }
   return true;
 }
@@ -272,9 +301,22 @@ export function validatePack(manifest: unknown): PackValidationError[] {
   // Required: version (semver-ish)
   if (
     typeof m["version"] !== "string" ||
-    !/^\d+\.\d+(\.\d+)?$/.test(m["version"] as string)
+    parseSemverTuple(m["version"] as string) === null
   ) {
     errors.push({ path: "$.version", message: 'must be a semver string like "1.0.0" or "1.0"' });
+  }
+
+  if (m["anankeVersion"] !== undefined) {
+    if (typeof m["anankeVersion"] !== "string") {
+      errors.push({ path: "$.anankeVersion", message: "must be a semver range string" });
+    } else if (!isSemverRange(m["anankeVersion"] as string)) {
+      errors.push({ path: "$.anankeVersion", message: "must be a valid semver range expression" });
+    } else if (!semverSatisfies(ANANKE_ENGINE_VERSION, m["anankeVersion"] as string)) {
+      errors.push({
+        path: "$.anankeVersion",
+        message: `engine version ${ANANKE_ENGINE_VERSION} does not satisfy range "${m["anankeVersion"] as string}"`,
+      });
+    }
   }
 
   // Optional: registry block
@@ -288,6 +330,8 @@ export function validatePack(manifest: unknown): PackValidationError[] {
       if (reg["compatRange"] !== undefined) {
         if (typeof reg["compatRange"] !== "string") {
           errors.push({ path: "$.registry.compatRange", message: "must be a string" });
+        } else if (!isSemverRange(reg["compatRange"] as string)) {
+          errors.push({ path: "$.registry.compatRange", message: "must be a valid semver range expression" });
         } else if (!semverSatisfies(ANANKE_ENGINE_VERSION, reg["compatRange"] as string)) {
           errors.push({
             path:    "$.registry.compatRange",
@@ -357,22 +401,39 @@ export function validatePack(manifest: unknown): PackValidationError[] {
 
   // Validate weapon entries
   if (Array.isArray(m["weapons"])) {
+    const ids = new Set<string>();
     for (let i = 0; i < (m["weapons"] as unknown[]).length; i++) {
       const w = (m["weapons"] as unknown[])[i];
       errors.push(...validateWeaponEntry(w, i));
+      if (typeof w === "object" && w !== null) {
+        const id = (w as Record<string, unknown>)["id"];
+        if (typeof id === "string") {
+          if (ids.has(id)) errors.push({ path: `$.weapons[${i}].id`, message: `duplicate weapon id "${id}"` });
+          ids.add(id);
+        }
+      }
     }
   }
 
   // Validate armour entries
   if (Array.isArray(m["armour"])) {
+    const ids = new Set<string>();
     for (let i = 0; i < (m["armour"] as unknown[]).length; i++) {
       const a = (m["armour"] as unknown[])[i];
       errors.push(...validateArmourEntry(a, i));
+      if (typeof a === "object" && a !== null) {
+        const id = (a as Record<string, unknown>)["id"];
+        if (typeof id === "string") {
+          if (ids.has(id)) errors.push({ path: `$.armour[${i}].id`, message: `duplicate armour id "${id}"` });
+          ids.add(id);
+        }
+      }
     }
   }
 
   // Validate archetype entries (minimal — full validation is in registerArchetype)
   if (Array.isArray(m["archetypes"])) {
+    const ids = new Set<string>();
     for (let i = 0; i < (m["archetypes"] as unknown[]).length; i++) {
       const arch = (m["archetypes"] as unknown[])[i];
       if (typeof arch !== "object" || arch === null) {
@@ -382,21 +443,138 @@ export function validatePack(manifest: unknown): PackValidationError[] {
       const o = arch as Record<string, unknown>;
       if (typeof o["id"] !== "string" || (o["id"] as string).trim() === "") {
         errors.push({ path: `$.archetypes[${i}].id`, message: "must be a non-empty string" });
+      } else {
+        if (ids.has(o["id"] as string)) errors.push({ path: `$.archetypes[${i}].id`, message: `duplicate archetype id "${o["id"] as string}"` });
+        ids.add(o["id"] as string);
       }
     }
   }
 
   // Validate scenario entries via existing validateScenario
   if (Array.isArray(m["scenarios"])) {
+    const ids = new Set<string>();
     for (let i = 0; i < (m["scenarios"] as unknown[]).length; i++) {
-      const scenErrors = validateScenario((m["scenarios"] as unknown[])[i]);
+      const scenario = (m["scenarios"] as unknown[])[i];
+      if (typeof scenario === "object" && scenario !== null) {
+        const id = (scenario as Record<string, unknown>)["id"];
+        if (typeof id === "string") {
+          if (ids.has(id)) errors.push({ path: `$.scenarios[${i}].id`, message: `duplicate scenario id "${id}"` });
+          ids.add(id);
+        }
+      }
+      const scenErrors = validateScenario(scenario);
       for (const msg of scenErrors) {
         errors.push({ path: `$.scenarios[${i}]`, message: msg });
       }
     }
   }
 
+  const checksum = (m["registry"] as Record<string, unknown> | undefined)?.["checksum"];
+  if (typeof checksum === "string" && /^[0-9a-f]{64}$/.test(checksum)) {
+    const computed = computePackChecksum(m as unknown as AnankePackManifest);
+    if (computed !== checksum) {
+      errors.push({
+        path: "$.registry.checksum",
+        message: `checksum mismatch: expected "${checksum}" but computed "${computed}"`,
+      });
+    }
+  }
+
   return errors;
+}
+
+/** Compute SHA-256 for a manifest's canonical JSON with `registry.checksum` blanked. */
+export function computePackChecksum(manifest: AnankePackManifest): string {
+  const clone = JSON.parse(JSON.stringify(manifest)) as Record<string, unknown>;
+  const registry = clone["registry"];
+  if (typeof registry === "object" && registry !== null && !Array.isArray(registry)) {
+    (registry as Record<string, unknown>)["checksum"] = "";
+  }
+  return sha256Hex(JSON.stringify(clone));
+}
+
+/** Portable SHA-256 (sync) used by pack checksum validation in both Node and browser/worker runtimes. */
+function sha256Hex(input: string): string {
+  const bytes = new TextEncoder().encode(input);
+  const K = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+  ] as const;
+  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const paddedLength = (((bytes.length + 9 + 63) >> 6) << 6);
+  const data = new Uint8Array(paddedLength);
+  data.set(bytes);
+  data[bytes.length] = 0x80;
+  const bitLenHi = Math.floor((bytes.length * 8) / 0x100000000);
+  const bitLenLo = (bytes.length * 8) >>> 0;
+  data[paddedLength - 8] = (bitLenHi >>> 24) & 0xff;
+  data[paddedLength - 7] = (bitLenHi >>> 16) & 0xff;
+  data[paddedLength - 6] = (bitLenHi >>> 8) & 0xff;
+  data[paddedLength - 5] = bitLenHi & 0xff;
+  data[paddedLength - 4] = (bitLenLo >>> 24) & 0xff;
+  data[paddedLength - 3] = (bitLenLo >>> 16) & 0xff;
+  data[paddedLength - 2] = (bitLenLo >>> 8) & 0xff;
+  data[paddedLength - 1] = bitLenLo & 0xff;
+
+  const w = new Uint32Array(64);
+  for (let i = 0; i < data.length; i += 64) {
+    for (let t = 0; t < 16; t += 1) {
+      const j = i + (t << 2);
+      w[t] = ((data[j]! << 24) | (data[j + 1]! << 16) | (data[j + 2]! << 8) | data[j + 3]!) >>> 0;
+    }
+    for (let t = 16; t < 64; t += 1) {
+      const s0 = (rotR(w[t - 15]!, 7) ^ rotR(w[t - 15]!, 18) ^ (w[t - 15]! >>> 3)) >>> 0;
+      const s1 = (rotR(w[t - 2]!, 17) ^ rotR(w[t - 2]!, 19) ^ (w[t - 2]! >>> 10)) >>> 0;
+      w[t] = (w[t - 16]! + s0 + w[t - 7]! + s1) >>> 0;
+    }
+
+    let a = H[0]!;
+    let b = H[1]!;
+    let c = H[2]!;
+    let d = H[3]!;
+    let e = H[4]!;
+    let f = H[5]!;
+    let g = H[6]!;
+    let h = H[7]!;
+    for (let t = 0; t < 64; t += 1) {
+      const S1 = (rotR(e, 6) ^ rotR(e, 11) ^ rotR(e, 25)) >>> 0;
+      const ch = ((e & f) ^ (~e & g)) >>> 0;
+      const temp1 = (h + S1 + ch + K[t]! + w[t]!) >>> 0;
+      const S0 = (rotR(a, 2) ^ rotR(a, 13) ^ rotR(a, 22)) >>> 0;
+      const maj = ((a & b) ^ (a & c) ^ (b & c)) >>> 0;
+      const temp2 = (S0 + maj) >>> 0;
+
+      h = g;
+      g = f;
+      f = e;
+      e = (d + temp1) >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = (temp1 + temp2) >>> 0;
+    }
+
+    H[0] = (H[0]! + a) >>> 0;
+    H[1] = (H[1]! + b) >>> 0;
+    H[2] = (H[2]! + c) >>> 0;
+    H[3] = (H[3]! + d) >>> 0;
+    H[4] = (H[4]! + e) >>> 0;
+    H[5] = (H[5]! + f) >>> 0;
+    H[6] = (H[6]! + g) >>> 0;
+    H[7] = (H[7]! + h) >>> 0;
+  }
+
+  return H.map((n) => n.toString(16).padStart(8, "0")).join("");
+}
+
+function rotR(x: number, n: number): number {
+  return (x >>> n) | (x << (32 - n));
 }
 
 function validateWeaponEntry(w: unknown, i: number): PackValidationError[] {
@@ -457,10 +635,23 @@ function validateArmourEntry(a: unknown, i: number): PackValidationError[] {
  */
 export function loadPack(manifest: AnankePackManifest): LoadPackResult {
   const packId = `${manifest.name}@${manifest.version}`;
+  const fingerprint = hashMod(manifest as unknown as Record<string, unknown>);
 
   // Already loaded — return stored summary
   const existing = _packs.get(packId);
   if (existing !== undefined) {
+    if (existing.fingerprint !== fingerprint) {
+      return {
+        packId,
+        registeredIds: [],
+        scenarioIds: [],
+        fingerprint: existing.fingerprint,
+        errors: [{
+          path: "$",
+          message: `pack "${packId}" already loaded with different content fingerprint (${existing.fingerprint} != ${fingerprint})`,
+        }],
+      };
+    }
     return {
       packId,
       registeredIds: existing.registeredIds,
@@ -524,7 +715,9 @@ export function loadPack(manifest: AnankePackManifest): LoadPackResult {
     scenarioIds.push(id);
   }
 
-  const fingerprint = hashMod(manifest as unknown as Record<string, unknown>);
+  if (loadErrors.length > 0) {
+    return { packId, registeredIds, scenarioIds: [], fingerprint, errors: loadErrors };
+  }
 
   _packs.set(packId, {
     manifest,

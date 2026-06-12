@@ -1,0 +1,254 @@
+{
+  "schemaVersion": "openworldbuilder.generated-world.v1",
+  "generator": {
+    "tool": "OpenWorldBuilder",
+    "version": "demo-local-0.1.0",
+    "runId": "owb-local-run-2026-04-18-01"
+  },
+  "world": {
+    "seed": 44021,
+    "tick": 0,
+    "name": "Shattercoast Reach",
+    "regions": [
+      {
+        "id": "region.tideglass-delta",
+        "name": "Tideglass Delta",
+        "ownerFactionId": "f.mariner-league",
+        "climateTag": "humid-monsoon",
+        "population": 158000,
+        "tileCount": 416,
+        "metadata": {
+          "simulation": { "floodRiskQ": 420 },
+          "descriptive": { "landmark": "Mirror Canals" },
+          "opaque": { "generatorNodeId": "rg-11" }
+        }
+      },
+      {
+        "id": "region.emberplate-barrens",
+        "name": "Emberplate Barrens",
+        "ownerFactionId": "f.ashforged",
+        "climateTag": "arid-ashwind",
+        "population": 103000,
+        "tileCount": 502,
+        "metadata": {
+          "simulation": { "heatPressureQ": 610 },
+          "descriptive": { "landmark": "Basalt Teeth" },
+          "opaque": { "generatorNodeId": "rg-22" }
+        }
+      },
+      {
+        "id": "region.frostmere-steps",
+        "name": "Frostmere Steps",
+        "ownerFactionId": "f.aurora-crown",
+        "climateTag": "subpolar-wet",
+        "population": 91000,
+        "tileCount": 351,
+        "metadata": {
+          "simulation": { "cropFragilityQ": 570 },
+          "descriptive": { "landmark": "Blue Fen" },
+          "opaque": { "generatorNodeId": "rg-37" }
+        }
+      }
+    ],
+    "settlements": [
+      {
+        "id": "settlement.harbor-of-reeds",
+        "name": "Harbor of Reeds",
+        "regionId": "region.tideglass-delta",
+        "factionId": "f.mariner-league",
+        "population": 92000,
+        "metadata": {
+          "simulation": { "marketAccessQ": 860 },
+          "descriptive": { "specialty": "shipwrights" },
+          "opaque": { "districtCount": 19 }
+        }
+      },
+      {
+        "id": "settlement.charforge",
+        "name": "Charforge",
+        "regionId": "region.emberplate-barrens",
+        "factionId": "f.ashforged",
+        "population": 59000,
+        "metadata": {
+          "simulation": { "fortificationQ": 700 },
+          "descriptive": { "specialty": "glasssteel" },
+          "opaque": { "districtCount": 12 }
+        }
+      },
+      {
+        "id": "settlement.whitewake",
+        "name": "Whitewake",
+        "regionId": "region.frostmere-steps",
+        "factionId": "f.aurora-crown",
+        "population": 47000,
+        "metadata": {
+          "simulation": { "marketAccessQ": 600 },
+          "descriptive": { "specialty": "icebound grain" },
+          "opaque": { "districtCount": 9 }
+        }
+      }
+    ],
+    "factions": [
+      {
+        "id": "f.mariner-league",
+        "polityId": "p.mariner-league",
+        "name": "Mariner League",
+        "population": 214000,
+        "treasury_cu": 125000,
+        "stabilityQ": 710,
+        "moraleQ": 690,
+        "metadata": {
+          "simulation": { "taxCapacityQ": 730 },
+          "descriptive": { "banner": "blue-kraken" },
+          "opaque": { "loreBlobId": "lb-1001" }
+        }
+      },
+      {
+        "id": "f.ashforged",
+        "polityId": "p.ashforged",
+        "name": "Ashforged Compact",
+        "population": 149000,
+        "treasury_cu": 91000,
+        "stabilityQ": 620,
+        "moraleQ": 650,
+        "metadata": {
+          "simulation": { "raidPressureQ": 460 },
+          "descriptive": { "banner": "sundered-anvil" },
+          "opaque": { "loreBlobId": "lb-1002" }
+        }
+      },
+      {
+        "id": "f.aurora-crown",
+        "polityId": "p.aurora-crown",
+        "name": "Aurora Crown",
+        "population": 126000,
+        "treasury_cu": 87000,
+        "stabilityQ": 660,
+        "moraleQ": 670,
+        "metadata": {
+          "simulation": { "logisticsQ": 520 },
+          "descriptive": { "banner": "silver-aurora" },
+          "opaque": { "loreBlobId": "lb-1003" }
+        }
+      }
+    ],
+    "resources": [
+      {
+        "id": "res.tideglass-fishery",
+        "resourceType": "food",
+        "regionId": "region.tideglass-delta",
+        "factionId": "f.mariner-league",
+        "stock": 210000,
+        "metadata": {
+          "simulation": { "renewalQ": 780 },
+          "descriptive": { "note": "estuary shoals" },
+          "opaque": { "clusterId": "rc-7" }
+        }
+      },
+      {
+        "id": "res.emberplate-ore",
+        "resourceType": "iron",
+        "regionId": "region.emberplate-barrens",
+        "factionId": "f.ashforged",
+        "stock": 154000,
+        "metadata": {
+          "simulation": { "renewalQ": 410 },
+          "descriptive": { "note": "deep lodes" },
+          "opaque": { "clusterId": "rc-13" }
+        }
+      },
+      {
+        "id": "res.frostmere-grain",
+        "resourceType": "grain",
+        "regionId": "region.frostmere-steps",
+        "factionId": "f.aurora-crown",
+        "stock": 131000,
+        "metadata": {
+          "simulation": { "renewalQ": 540 },
+          "descriptive": { "note": "cold terraces" },
+          "opaque": { "clusterId": "rc-21" }
+        }
+      }
+    ],
+    "tradeLinks": [
+      {
+        "id": "link.delta-to-ember",
+        "sourceFactionId": "f.mariner-league",
+        "targetFactionId": "f.ashforged",
+        "baseVolume_cu": 28000,
+        "routeQualityQ": 760,
+        "sharedBorderCount": 2,
+        "treatyType": "trade_pact",
+        "treatyStrength_Q": 710,
+        "war": false,
+        "metadata": {
+          "simulation": { "convoyRiskQ": 340 },
+          "descriptive": { "routeName": "Ashwake Spine" },
+          "opaque": { "linkNode": "lnk-88" }
+        }
+      },
+      {
+        "id": "link.ember-to-frost",
+        "sourceFactionId": "f.ashforged",
+        "targetFactionId": "f.aurora-crown",
+        "baseVolume_cu": 17000,
+        "routeQualityQ": 630,
+        "sharedBorderCount": 1,
+        "treatyType": "non_aggression",
+        "treatyStrength_Q": 540,
+        "war": false,
+        "metadata": {
+          "simulation": { "convoyRiskQ": 410 },
+          "descriptive": { "routeName": "Glasswind March" },
+          "opaque": { "linkNode": "lnk-89" }
+        }
+      },
+      {
+        "id": "link.delta-to-frost",
+        "sourceFactionId": "f.mariner-league",
+        "targetFactionId": "f.aurora-crown",
+        "baseVolume_cu": 12000,
+        "routeQualityQ": 690,
+        "sharedBorderCount": 1,
+        "treatyType": "trade_pact",
+        "treatyStrength_Q": 620,
+        "war": false,
+        "metadata": {
+          "simulation": { "convoyRiskQ": 300 },
+          "descriptive": { "routeName": "North Channel" },
+          "opaque": { "linkNode": "lnk-90" }
+        }
+      }
+    ],
+    "environment": {
+      "climateByRegionId": {
+        "region.tideglass-delta": "storm-flood-cycle",
+        "region.emberplate-barrens": "ash-squall-cycle",
+        "region.frostmere-steps": "cold-rain-cycle"
+      },
+      "metadata": {
+        "simulation": { "stormCycleDays": 37 },
+        "descriptive": { "epoch": "fractured-thaw" },
+        "opaque": { "climateKernel": "ck-004" }
+      }
+    },
+    "lore": {
+      "summary": "Three powers survived the Rift Years and now balance commerce, migration, and border tension.",
+      "tags": ["maritime", "ashland", "frontier"],
+      "metadata": {
+        "descriptive": { "codex": "Chronicle of the Seventh Beacon" },
+        "opaque": { "loreStorePointer": "lore://shattercoast/entry/7" }
+      }
+    },
+    "metadata": {
+      "descriptive": {
+        "hostWorldId": "world-shattercoast-reach",
+        "hostBuild": "owb-host-local-demo"
+      },
+      "opaque": {
+        "generatorHash": "genhash-44a8",
+        "loreDatabaseKey": "ldb-90021"
+      }
+    }
+  }
+}

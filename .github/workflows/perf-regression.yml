@@ -3,8 +3,30 @@ name: Performance Regression
 on:
   push:
     branches: ["main"]
+    paths:
+      - "src/**"
+      - "as/**"
+      - "wasm/**"
+      - "benchmarks/**"
+      - "tools/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/perf-regression.yml"
   pull_request:
     branches: ["main", "master"]
+    paths:
+      - "src/**"
+      - "as/**"
+      - "wasm/**"
+      - "benchmarks/**"
+      - "tools/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/perf-regression.yml"
+
+concurrency:
+  group: perf-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   benchmark-main:

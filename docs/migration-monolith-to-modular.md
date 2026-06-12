@@ -1,46 +1,59 @@
-# Migration Guide: Monolith to Modular Packages
+# Migration guide: monolith to modular imports (state-aware)
 
-This guide covers how to migrate from `@its-not-rocket-science/ananke` to the
-focused `@ananke/*` packages.  Migration is optional — the monolith package is
-maintained indefinitely for backwards compatibility.
+This guide separates what is available **today** from what is **planned** so adopters can migrate with accurate expectations.
 
 ---
 
-## Should you migrate?
+## Current state (available now)
 
-| Situation | Recommendation |
-|-----------|----------------|
-| Existing project, everything working | Stay on the monolith. No action required. |
-| New project, only needs combat | Start with `@ananke/combat` + `@ananke/core` |
-| New project, full simulation stack | Use the monolith; migrate to modular when convenient |
-| Bundle size is a concern (Phase 2+) | Migrate after Phase 2 (source migration) for real tree-shaking |
+- `@its-not-rocket-science/ananke` is the primary shipped package.
+- `@ananke/core`, `@ananke/combat`, `@ananke/campaign`, and `@ananke/content` are currently Phase 1 wrappers that re-export from the monolith.
+- Result: changing imports can improve API clarity, but does not yet create full package isolation or guaranteed bundle-size reductions.
+
+## In progress (partial implementation)
+
+- Package-boundary definitions and checks exist and are actively used.
+- Boundary cleanup and source ownership migration are still ongoing.
+- Until that migration is complete, modular packages should be treated as compatibility entrypoints, not fully separated codebases.
+
+## Target state (planned)
+
+- Each `@ananke/*` package will own implementation and build artifacts.
+- Dependency relationships between packages will match the declared modular DAG.
+- The monolith remains as a compatibility/meta package for teams that prefer one dependency.
 
 ---
 
-## Phase 1 Migration (stubs — available now)
+## Should you migrate now?
 
-Phase 1 packages are thin wrappers that re-export from the monolith.  Bundle
-size is unchanged, but import paths are cleaner and signal which API tier you
-depend on.
+| Situation | Recommendation today |
+|---|---|
+| Existing project that already works on monolith imports | Staying on monolith is valid; no urgent change required. |
+| New project that wants explicit domain-oriented imports | Use `@ananke/*` imports, understanding they are wrappers in Phase 1. |
+| Team expecting immediate tree-shaking/size wins from modular packages | Wait for source-ownership migration milestones before expecting those gains. |
 
-### Step 1 — Install the sub-package(s) you need
+---
+
+## Migration steps you can do today
+
+### 1) Install wrapper packages
 
 ```bash
-# Combat-only host
+# Example: combat-oriented app
 npm install @ananke/core @ananke/combat
 
-# Full world simulation
+# Example: broader simulation app
 npm install @ananke/core @ananke/combat @ananke/campaign @ananke/content
 ```
 
-The monolith is installed automatically as a peer dependency.
+These packages currently peer on `@its-not-rocket-science/ananke`.
 
-### Step 2 — Update imports
+### 2) Update imports
 
-Replace monolith paths with the appropriate package name:
+Use modular package names instead of monolith subpaths where practical.
 
-| Old import | New import |
-|-----------|-----------|
+| Old import | Current modular import |
+|---|---|
 | `@its-not-rocket-science/ananke` | `@ananke/core` |
 | `@its-not-rocket-science/ananke/combat` | `@ananke/combat` |
 | `@its-not-rocket-science/ananke/anatomy` | `@ananke/combat` |
@@ -54,67 +67,36 @@ Replace monolith paths with the appropriate package name:
 | `@its-not-rocket-science/ananke/polity` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/social` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/narrative` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/narrative-prose` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/renown` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/kinship` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/succession` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/calendar` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/feudal` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/diplomacy` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/migration` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/espionage` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/trade-routes` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/siege` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/faith` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/demography` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/granary` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/epidemic` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/infrastructure` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/unrest` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/research` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/taxation` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/military-campaign` | `@ananke/campaign` |
 | `@its-not-rocket-science/ananke/governance` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/resources` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/climate` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/famine` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/containment` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/mercenaries` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/wonders` | `@ananke/campaign` |
-| `@its-not-rocket-science/ananke/monetary` | `@ananke/campaign` |
 
-### Step 3 — Verify
+> Note: for APIs not listed above, keep using monolith subpaths until corresponding modular wrapper/package coverage is explicitly documented.
+
+### 3) Verify build and tests
 
 ```bash
-npm run build   # or tsc --noEmit
+npm run build
 npm test
 ```
 
-No other changes are needed.
+---
+
+## What this means for adopters today
+
+- Treat current migration as an import-surface alignment step.
+- Do not treat it as proof that implementation has already moved out of the monolith.
+- Adopting modular imports now can reduce future churn once target modular ownership lands.
 
 ---
 
-## Phase 2 Migration (source migration — planned)
+## Related docs
 
-When Phase 2 lands, `@ananke/combat` will no longer depend on the monolith.
-The import paths remain identical — only the transitive dependency graph changes.
-
-**No code changes required in your project for Phase 2.**
-
-Run `npm update` when the new versions are published; your bundler will
-automatically produce a smaller output.
-
----
-
-## Staying on the monolith
-
-If you prefer to keep using `@its-not-rocket-science/ananke` directly, nothing
-changes.  The 41 subpath exports are stable and will not be removed.
-
----
-
-## See also
-
-- [`docs/package-architecture.md`](package-architecture.md) — full design document and source file mapping
-- [`docs/module-index.md`](module-index.md) — all exports with stability tiers and use cases
-- [`STABLE_API.md`](../STABLE_API.md) — stable API surface (Tier 1)
+- [`docs/package-architecture.md`](package-architecture.md)
+- [`docs/module-index.md`](module-index.md)
+- [`STABLE_API.md`](../STABLE_API.md)

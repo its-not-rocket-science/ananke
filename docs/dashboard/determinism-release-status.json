@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-04-13T22:24:01.506Z",
+  "status": {
+    "overall": "pass",
+    "reason": "determinism_evidence_available"
+  },
+  "source": {
+    "input": "determinism-report/results.json",
+    "matrixDir": null
+  },
+  "thresholds": {
+    "fuzzExecutionsMin": 1
+  },
+  "fuzz": {
+    "seed": "1337",
+    "worldStates": 1,
+    "commandsPerState": 1,
+    "executions": 1,
+    "threshold": 1,
+    "meetsThreshold": true,
+    "suiteStatus": "passed"
+  },
+  "goldenFixtures": {
+    "status": "passed",
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "suite": "test/determinism/regression.spec.ts"
+  },
+  "matrix": {
+    "environmentsCompared": 1,
+    "consistentAcrossMatrix": true,
+    "records": [
+      {
+        "environment": "linux-node-22.21.1",
+        "overall": "pass",
+        "reason": "all_determinism_tests_passed"
+      }
+    ]
+  },
+  "vitest": {
+    "success": true,
+    "numTotalTests": 2,
+    "numPassedTests": 2,
+    "numFailedTests": 0,
+    "suites": [
+      {
+        "name": "test/determinism/fuzz-against-wasm.spec.ts",
+        "status": "passed",
+        "assertions": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0
+        }
+      },
+      {
+        "name": "test/determinism/regression.spec.ts",
+        "status": "passed",
+        "assertions": {
+          "total": 1,
+          "passed": 1,
+          "failed": 0
+        }
+      }
+    ]
+  }
+}

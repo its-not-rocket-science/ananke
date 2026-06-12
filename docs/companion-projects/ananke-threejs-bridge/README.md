@@ -1,6 +1,6 @@
 # ananke-threejs-bridge
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![Three.js](https://img.shields.io/badge/Three.js-r165%2B-000000?logo=threedotjs&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5.x-646cff?logo=vite&logoColor=white)
@@ -42,7 +42,7 @@ The result is the lowest-friction way to demonstrate Ananke: share a URL, open a
 |-----------|----------------|-------|
 | Node.js | 18 | Build tooling only; not in the browser bundle |
 | npm | 9 | Bundled with Node.js 18 |
-| Ananke | 0.1.0 | Cloned alongside this repo |
+| Ananke | package.json version (workspace) | Cloned alongside this repo |
 
 Clone Ananke into a sibling directory before cloning this project:
 
@@ -89,7 +89,7 @@ There is no worker thread in the initial implementation. The simulation runs syn
 
 Three.js uses `THREE.Skeleton` + `THREE.SkinnedMesh`. Each bone in the skeleton corresponds to one Ananke segment. `SegmentBoneMapper.ts` maps segment IDs to bone indices:
 
-```typescript
+```typescript pseudocode
 // SegmentBoneMapper.ts
 const SEGMENT_BONE_INDEX: Record<string, number> = {
   torso:    0,
@@ -118,7 +118,7 @@ export function applySnapshot(snapshot: RigSnapshot, skeleton: THREE.Skeleton): 
 
 `AnimationClipBlender.ts` uses a `THREE.AnimationMixer` to blend between named clips:
 
-```typescript
+```typescript pseudocode
 export function applyHints(hints: AnimationHints, mixer: THREE.AnimationMixer): void {
   // Fade to the primary state clip over 0.1 s
   const clip = mixer.clipAction(hints.primaryState);
@@ -198,7 +198,7 @@ ananke-threejs-bridge/
 
 Ananke stores all lengths as integers with `SCALE.m = 10000` (10000 units = 1 metre). Three.js uses floating-point metres. Divide by `SCALE.m` everywhere a length reaches Three.js:
 
-```typescript
+```typescript pseudocode
 import { SCALE } from "../ananke/dist/src/units.js";
 
 // Position
@@ -242,7 +242,7 @@ documented in
 
 The simulation runs at 20 Hz (`setInterval(tick, 50)`). `requestAnimationFrame` runs at display rate. `InterpolationBuffer` retains the previous and current simulation timestamps:
 
-```typescript
+```typescript pseudocode
 // InterpolationBuffer.ts
 getState(entityId: number, nowMs: number): InterpolatedState {
   const { prev, curr } = this._snapshots.get(entityId)!;
@@ -263,7 +263,7 @@ Ananke source is approximately 150 KB of TypeScript with zero runtime dependenci
 
 Do not import all of Three.js with `import * as THREE from "three"`. Import only the classes you use:
 
-```typescript
+```typescript pseudocode
 import { Scene, PerspectiveCamera, WebGLRenderer, Skeleton, SkinnedMesh } from "three";
 ```
 

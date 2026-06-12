@@ -1,6 +1,6 @@
 # ananke-historical-battles
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Vitest-2.x-6e9f18?logo=vitest&logoColor=white)
 ![Scale](https://img.shields.io/badge/scale-10–200%20entities-blue)
@@ -21,7 +21,8 @@ Historically-sourced tactical battle scenarios for Ananke, with validated outcom
 7. [Validation requirements](#validation-requirements)
 8. [Historical sources](#historical-sources)
 9. [Equipment accuracy](#equipment-accuracy)
-10. [Contributing](#contributing)
+10. [Credibility audit](#credibility-audit)
+11. [Contributing](#contributing)
 
 ---
 
@@ -39,7 +40,7 @@ The scenarios are also useful as reference implementations for anyone building t
 
 | Dependency | Version | Notes |
 |-----------|---------|-------|
-| Ananke | 0.1.0+ | Kernel + arena DSL + validation framework |
+| Ananke | package.json version range (workspace) | Kernel + arena DSL + validation framework |
 | Node.js | 18+ | |
 
 ```
@@ -159,7 +160,7 @@ ananke-historical-battles/
 
 Each scenario file exports two objects:
 
-```typescript
+```typescript pseudocode
 // src/scenarios/agincourt.ts
 import type { ArenaScenario } from "../../ananke/dist/src/arena.js";
 import type { DirectValidationScenario } from "../../ananke/dist/src/tools/validation.js";
@@ -268,6 +269,12 @@ Where possible, scenarios use Ananke's built-in `STARTER_WEAPONS` and `STARTER_A
 | Spartan large shield (aspis) | Archetype `bulkIntegrity: q(0.90)` | Shield as integral to body plan, not equipment slot | `archetypes/spartan-hoplite.ts` |
 
 If you add a historical weapon that should be in Ananke's core, open an issue in the Ananke repository with the weapon's historical specifications (mass, edge geometry, typical strike energy).
+
+---
+
+## Credibility audit
+
+For a concrete prioritised validation plan (top 5 scenarios, schema proposal, labels, and roadmap), see [credibility-validation-audit.md](./credibility-validation-audit.md).
 
 ---
 

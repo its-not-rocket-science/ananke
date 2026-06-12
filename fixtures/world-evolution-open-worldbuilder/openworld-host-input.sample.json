@@ -1,0 +1,154 @@
+{
+  "schemaVersion": "ananke.open-world-host-adapter.v1",
+  "worldSeed": 90210,
+  "tick": 0,
+  "regions": [
+    {
+      "id": "region.delta-basin",
+      "name": "Delta Basin",
+      "climateTag": "temperate-wet",
+      "polityId": "p.guild",
+      "population": 84000,
+      "metadata": {
+        "simulation": { "fertilityQ": 700 },
+        "descriptive": { "terrain": "floodplain" },
+        "opaque": { "hostRegionScore": 17 }
+      }
+    },
+    {
+      "id": "region.obsidian-steppe",
+      "name": "Obsidian Steppe",
+      "climateTag": "arid-windy",
+      "polityId": "p.khaganate",
+      "population": 61000,
+      "metadata": {
+        "simulation": { "hazardQ": 350 },
+        "descriptive": { "terrain": "steppe" },
+        "opaque": { "hostRegionScore": 22 }
+      }
+    }
+  ],
+  "settlements": [
+    {
+      "id": "settlement.rivergate",
+      "name": "Rivergate",
+      "regionId": "region.delta-basin",
+      "polityId": "p.guild",
+      "population": 42000,
+      "metadata": {
+        "simulation": { "marketAccessQ": 830 },
+        "descriptive": { "nickname": "City of Bridges" },
+        "opaque": { "districtIds": ["d1", "d2"] }
+      }
+    },
+    {
+      "id": "settlement.skycamp",
+      "name": "Skycamp",
+      "regionId": "region.obsidian-steppe",
+      "polityId": "p.khaganate",
+      "population": 21000,
+      "metadata": {
+        "simulation": { "fortificationQ": 520 },
+        "descriptive": { "nickname": "Windhold" },
+        "opaque": { "districtIds": ["d9"] }
+      }
+    }
+  ],
+  "factions": [
+    {
+      "id": "f.guild",
+      "polityId": "p.guild",
+      "name": "River Guild Confederacy",
+      "population": 126000,
+      "treasury_cu": 54000,
+      "stabilityQ": 710,
+      "moraleQ": 660,
+      "metadata": {
+        "simulation": { "taxCapacityQ": 740 },
+        "descriptive": { "banner": "azure-knot" },
+        "opaque": { "internalHash": "g-194" }
+      }
+    },
+    {
+      "id": "f.khaganate",
+      "polityId": "p.khaganate",
+      "name": "Khaganate of Cinder Winds",
+      "population": 82000,
+      "treasury_cu": 28000,
+      "stabilityQ": 620,
+      "moraleQ": 640,
+      "metadata": {
+        "simulation": { "raidPressureQ": 490 },
+        "descriptive": { "banner": "black-sun" },
+        "opaque": { "internalHash": "k-702" }
+      }
+    }
+  ],
+  "resources": [
+    {
+      "id": "res.iron.delta",
+      "resourceType": "iron",
+      "regionId": "region.delta-basin",
+      "factionId": "f.guild",
+      "stock": 19000,
+      "metadata": {
+        "simulation": { "extractionQ": 710 },
+        "descriptive": { "grade": "high" },
+        "opaque": { "veinId": "v-884" }
+      }
+    },
+    {
+      "id": "res.salt.steppe",
+      "resourceType": "salt",
+      "regionId": "region.obsidian-steppe",
+      "factionId": "f.khaganate",
+      "stock": 11000,
+      "metadata": {
+        "simulation": { "extractionQ": 510 },
+        "descriptive": { "grade": "medium" },
+        "opaque": { "veinId": "v-101" }
+      }
+    }
+  ],
+  "tradeLinks": [
+    {
+      "id": "link.guild-khaganate",
+      "sourceFactionId": "f.guild",
+      "targetFactionId": "f.khaganate",
+      "baseVolume_cu": 14500,
+      "routeQualityQ": 760,
+      "sharedBorderCount": 2,
+      "treatyType": "trade_pact",
+      "treatyStrength_Q": 680,
+      "war": false,
+      "metadata": {
+        "simulation": { "convoyRiskQ": 330 },
+        "descriptive": { "routeName": "Ashwater Corridor" },
+        "opaque": { "linkUid": "l-1122" }
+      }
+    }
+  ],
+  "environment": {
+    "climateByRegionId": {
+      "region.delta-basin": "seasonal-flood",
+      "region.obsidian-steppe": "dust-storm"
+    },
+    "metadata": {
+      "simulation": { "stormCycleDays": 41 },
+      "descriptive": { "era": "late-copper" },
+      "opaque": { "hostClimateModel": "owb-c1" }
+    }
+  },
+  "lore": {
+    "summary": "The river cities and steppe riders balance trade with rivalry.",
+    "tags": ["frontier", "river", "steppe"],
+    "metadata": {
+      "descriptive": { "chronicle": "Annals of the Ninth Flood" },
+      "opaque": { "generatorRun": "owb-run-55" }
+    }
+  },
+  "metadata": {
+    "descriptive": { "worldName": "Caldera Meridian" },
+    "opaque": { "hostBuild": "0.17.4" }
+  }
+}

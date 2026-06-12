@@ -1,0 +1,55 @@
+name: wasm-build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "as/**"
+      - "wasm/**"
+      - "src/**"
+      - "test/**"
+      - "tools/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - ".github/workflows/wasm-build.yml"
+  pull_request:
+    paths:
+      - "as/**"
+      - "wasm/**"
+      - "src/**"
+      - "test/**"
+      - "tools/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - ".github/workflows/wasm-build.yml"
+
+concurrency:
+  group: wasm-build-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-wasm:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm install
+      - name: Cache wasm artifacts
+        uses: actions/cache@v4
+        with:
+          path: wasm
+          key: wasm-${{ runner.os }}-${{ hashFiles('as/**/*.ts', 'as/asconfig.json') }}
+      - run: npm run build:wasm:core
+      - run: npm run build
+      - run: npm run test:determinism -- --runInBand
+        env:
+          ANANKE_STRICT_DETERMINISM: "1"

@@ -88,7 +88,7 @@ The `npx ananke pack bundle <directory>` command does this automatically.
 
 **To verify a checksum manually:**
 
-```typescript
+```typescript pseudocode
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 

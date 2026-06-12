@@ -1,0 +1,278 @@
+{
+  "generatedAt": "2026-04-10T10:57:00.929Z",
+  "commit": "b443f998b72cd1e0806708554df96b65e0223640",
+  "branch": "main",
+  "machine": "linux-x64",
+  "measurements": [
+    {
+      "scenarioId": "empty-world",
+      "scenarioLabel": "Empty world tick overhead (0 entities)",
+      "adapterId": "ananke",
+      "adapterLabel": "Ananke",
+      "tickMs": 0.0038217480000000024,
+      "ticksPerSec": 261660.3711181374,
+      "heapDeltaMB": 0.7782440185546875
+    },
+    {
+      "scenarioId": "empty-world",
+      "scenarioLabel": "Empty world tick overhead (0 entities)",
+      "adapterId": "ananke-wasm",
+      "adapterLabel": "Ananke (WASM core)",
+      "tickMs": 0.00039591279999999924,
+      "ticksPerSec": 2525808.713433872,
+      "notes": "backend=ts"
+    },
+    {
+      "scenarioId": "empty-world",
+      "scenarioLabel": "Empty world tick overhead (0 entities)",
+      "adapterId": "gridsage",
+      "adapterLabel": "GridSage (public snapshot)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "No public GridSage snapshot configured; add benchmarks/adapters/vendor/gridsage-baseline.json."
+    },
+    {
+      "scenarioId": "empty-world",
+      "scenarioLabel": "Empty world tick overhead (0 entities)",
+      "adapterId": "unity-dots",
+      "adapterLabel": "Unity DOTS (C#/WASM minimal)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "Unity DOTS WASM runner not present (expected benchmarks/adapters/vendor/unity-dots-runner.wasm)."
+    },
+    {
+      "scenarioId": "empty-world",
+      "scenarioLabel": "Empty world tick overhead (0 entities)",
+      "adapterId": "hand-rolled-js",
+      "adapterLabel": "Hand-rolled JS O(N²)",
+      "tickMs": 0.00020001300000000127,
+      "ticksPerSec": 4999675.021123596,
+      "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
+    },
+    {
+      "scenarioId": "small-skirmish",
+      "scenarioLabel": "Small skirmish (10v10 melee)",
+      "adapterId": "ananke",
+      "adapterLabel": "Ananke",
+      "tickMs": 0.42853400750000004,
+      "ticksPerSec": 2333.537088068792,
+      "heapDeltaMB": -2.2985763549804688
+    },
+    {
+      "scenarioId": "small-skirmish",
+      "scenarioLabel": "Small skirmish (10v10 melee)",
+      "adapterId": "ananke-wasm",
+      "adapterLabel": "Ananke (WASM core)",
+      "tickMs": 0.0018830995000000711,
+      "ticksPerSec": 531039.3848014735,
+      "notes": "backend=ts"
+    },
+    {
+      "scenarioId": "small-skirmish",
+      "scenarioLabel": "Small skirmish (10v10 melee)",
+      "adapterId": "gridsage",
+      "adapterLabel": "GridSage (public snapshot)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "No public GridSage snapshot configured; add benchmarks/adapters/vendor/gridsage-baseline.json."
+    },
+    {
+      "scenarioId": "small-skirmish",
+      "scenarioLabel": "Small skirmish (10v10 melee)",
+      "adapterId": "unity-dots",
+      "adapterLabel": "Unity DOTS (C#/WASM minimal)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "Unity DOTS WASM runner not present (expected benchmarks/adapters/vendor/unity-dots-runner.wasm)."
+    },
+    {
+      "scenarioId": "small-skirmish",
+      "scenarioLabel": "Small skirmish (10v10 melee)",
+      "adapterId": "hand-rolled-js",
+      "adapterLabel": "Hand-rolled JS O(N²)",
+      "tickMs": 0.16683867449999992,
+      "ticksPerSec": 5993.814102137334,
+      "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
+    },
+    {
+      "scenarioId": "large-battle",
+      "scenarioLabel": "Large battle (100v100 mixed ranged/melee)",
+      "adapterId": "ananke",
+      "adapterLabel": "Ananke",
+      "tickMs": 6.753757202500001,
+      "ticksPerSec": 148.06573141685277,
+      "heapDeltaMB": -4.204490661621094
+    },
+    {
+      "scenarioId": "large-battle",
+      "scenarioLabel": "Large battle (100v100 mixed ranged/melee)",
+      "adapterId": "ananke-wasm",
+      "adapterLabel": "Ananke (WASM core)",
+      "tickMs": 0.002276052499998968,
+      "ticksPerSec": 439357.17651524,
+      "notes": "backend=ts"
+    },
+    {
+      "scenarioId": "large-battle",
+      "scenarioLabel": "Large battle (100v100 mixed ranged/melee)",
+      "adapterId": "gridsage",
+      "adapterLabel": "GridSage (public snapshot)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "No public GridSage snapshot configured; add benchmarks/adapters/vendor/gridsage-baseline.json."
+    },
+    {
+      "scenarioId": "large-battle",
+      "scenarioLabel": "Large battle (100v100 mixed ranged/melee)",
+      "adapterId": "unity-dots",
+      "adapterLabel": "Unity DOTS (C#/WASM minimal)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "Unity DOTS WASM runner not present (expected benchmarks/adapters/vendor/unity-dots-runner.wasm)."
+    },
+    {
+      "scenarioId": "large-battle",
+      "scenarioLabel": "Large battle (100v100 mixed ranged/melee)",
+      "adapterId": "hand-rolled-js",
+      "adapterLabel": "Hand-rolled JS O(N²)",
+      "tickMs": 17.534898545000004,
+      "ticksPerSec": 57.02912950614963,
+      "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
+    },
+    {
+      "scenarioId": "spawn-storm",
+      "scenarioLabel": "Spawn storm (+10 entities/tick for 100 ticks)",
+      "adapterId": "ananke",
+      "adapterLabel": "Ananke",
+      "tickMs": 87.81374315,
+      "ticksPerSec": 11.38773914114832,
+      "heapDeltaMB": 14.802772521972656
+    },
+    {
+      "scenarioId": "spawn-storm",
+      "scenarioLabel": "Spawn storm (+10 entities/tick for 100 ticks)",
+      "adapterId": "ananke-wasm",
+      "adapterLabel": "Ananke (WASM core)",
+      "tickMs": 0.0003414300000076764,
+      "ticksPerSec": 2928858.0381850363,
+      "notes": "backend=ts"
+    },
+    {
+      "scenarioId": "spawn-storm",
+      "scenarioLabel": "Spawn storm (+10 entities/tick for 100 ticks)",
+      "adapterId": "gridsage",
+      "adapterLabel": "GridSage (public snapshot)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "No public GridSage snapshot configured; add benchmarks/adapters/vendor/gridsage-baseline.json."
+    },
+    {
+      "scenarioId": "spawn-storm",
+      "scenarioLabel": "Spawn storm (+10 entities/tick for 100 ticks)",
+      "adapterId": "unity-dots",
+      "adapterLabel": "Unity DOTS (C#/WASM minimal)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "Unity DOTS WASM runner not present (expected benchmarks/adapters/vendor/unity-dots-runner.wasm)."
+    },
+    {
+      "scenarioId": "spawn-storm",
+      "scenarioLabel": "Spawn storm (+10 entities/tick for 100 ticks)",
+      "adapterId": "hand-rolled-js",
+      "adapterLabel": "Hand-rolled JS O(N²)",
+      "tickMs": 1031.72974859,
+      "ticksPerSec": 0.9692460660038512,
+      "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
+    },
+    {
+      "scenarioId": "memory-stress",
+      "scenarioLabel": "Memory stress (10,000 ticks heap growth)",
+      "adapterId": "ananke",
+      "adapterLabel": "Ananke",
+      "tickMs": 2.3063985919,
+      "ticksPerSec": 433.5764006759148,
+      "heapDeltaMB": 10.766525268554688
+    },
+    {
+      "scenarioId": "memory-stress",
+      "scenarioLabel": "Memory stress (10,000 ticks heap growth)",
+      "adapterId": "ananke-wasm",
+      "adapterLabel": "Ananke (WASM core)",
+      "tickMs": 0.0007117866999993566,
+      "ticksPerSec": 1404915.2646444559,
+      "notes": "backend=ts"
+    },
+    {
+      "scenarioId": "memory-stress",
+      "scenarioLabel": "Memory stress (10,000 ticks heap growth)",
+      "adapterId": "gridsage",
+      "adapterLabel": "GridSage (public snapshot)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "No public GridSage snapshot configured; add benchmarks/adapters/vendor/gridsage-baseline.json."
+    },
+    {
+      "scenarioId": "memory-stress",
+      "scenarioLabel": "Memory stress (10,000 ticks heap growth)",
+      "adapterId": "unity-dots",
+      "adapterLabel": "Unity DOTS (C#/WASM minimal)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "Unity DOTS WASM runner not present (expected benchmarks/adapters/vendor/unity-dots-runner.wasm)."
+    },
+    {
+      "scenarioId": "memory-stress",
+      "scenarioLabel": "Memory stress (10,000 ticks heap growth)",
+      "adapterId": "hand-rolled-js",
+      "adapterLabel": "Hand-rolled JS O(N²)",
+      "tickMs": 4.178947923500001,
+      "ticksPerSec": 239.2946785425525,
+      "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
+    },
+    {
+      "scenarioId": "epic-battle",
+      "scenarioLabel": "Epic battle (5,000v5,000 optimized lane battle)",
+      "adapterId": "ananke",
+      "adapterLabel": "Ananke",
+      "tickMs": 447.9827315333333,
+      "ticksPerSec": 2.232228899933819,
+      "heapDeltaMB": -81.40497589111328
+    },
+    {
+      "scenarioId": "epic-battle",
+      "scenarioLabel": "Epic battle (5,000v5,000 optimized lane battle)",
+      "adapterId": "ananke-wasm",
+      "adapterLabel": "Ananke (WASM core)",
+      "tickMs": 0.05204739999996188,
+      "ticksPerSec": 19213.25560932405,
+      "notes": "backend=ts"
+    },
+    {
+      "scenarioId": "epic-battle",
+      "scenarioLabel": "Epic battle (5,000v5,000 optimized lane battle)",
+      "adapterId": "gridsage",
+      "adapterLabel": "GridSage (public snapshot)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "No public GridSage snapshot configured; add benchmarks/adapters/vendor/gridsage-baseline.json."
+    },
+    {
+      "scenarioId": "epic-battle",
+      "scenarioLabel": "Epic battle (5,000v5,000 optimized lane battle)",
+      "adapterId": "unity-dots",
+      "adapterLabel": "Unity DOTS (C#/WASM minimal)",
+      "tickMs": 0,
+      "ticksPerSec": 0,
+      "notes": "Unity DOTS WASM runner not present (expected benchmarks/adapters/vendor/unity-dots-runner.wasm)."
+    },
+    {
+      "scenarioId": "epic-battle",
+      "scenarioLabel": "Epic battle (5,000v5,000 optimized lane battle)",
+      "adapterId": "hand-rolled-js",
+      "adapterLabel": "Hand-rolled JS O(N²)",
+      "tickMs": 4.30633996111121,
+      "ticksPerSec": 232.21575840054197,
+      "notes": "Reference implementation intentionally uses naive O(N²) broadphase."
+    }
+  ]
+}

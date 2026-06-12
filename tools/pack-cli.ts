@@ -18,6 +18,7 @@ import { validatePack, loadPack, type AnankePackManifest } from "../src/content-
 import { loadContentPack } from "../src/content/loader.js";
 import { runContentSemanticChecks } from "../src/content/validator.js";
 import { diffReplayJson } from "../src/netcode.js";
+import { installPluginFromRegistry } from "../src/plugins/registry.js";
 import { q } from "../src/units.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -226,6 +227,23 @@ async function cmdContentValidate(args: string[]): Promise<void> {
   }
 }
 
+async function cmdInstall(args: string[]): Promise<void> {
+  const pluginName = args[0];
+  if (!pluginName) {
+    console.error("Usage: ananke install <plugin-name>");
+    process.exit(1);
+  }
+
+  try {
+    const installPath = await installPluginFromRegistry(pluginName);
+    console.log(`✓  Installed ${pluginName} to ${installPath}`);
+    process.exit(0);
+  } catch (error) {
+    console.error(`✗  Install failed: ${String(error)}`);
+    process.exit(1);
+  }
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
@@ -265,6 +283,9 @@ async function main(): Promise<void> {
     case "validate":
       await cmdContentValidate(argv.slice(1));
       break;
+    case "install":
+      await cmdInstall(argv.slice(1));
+      break;
 
     default:
       console.error(`Unknown command: ${cmd}`);
@@ -277,6 +298,7 @@ function printHelp(): void {
   console.log("Ananke CLI");
   console.log("");
   console.log("Commands:");
+  console.log("  install <plugin-name>                      — install a plugin from ananke-plugins registry");
   console.log("  validate <file.json>                       — validate a content pack (schema + semantic checks)");
   console.log("  pack validate <file.json>                  — validate a pack manifest");
   console.log("  pack bundle <directory> [out.json]         — merge JSON files into one pack");

@@ -1,6 +1,6 @@
 # ananke-fantasy-species
 
-![Ananke version](https://img.shields.io/badge/ananke-0.1.0-6366f1)
+![Ananke version](https://img.shields.io/badge/ananke-sync%20with%20package.json-6366f1)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript&logoColor=white)
 ![Data only](https://img.shields.io/badge/simulation%20code-none-brightgreen)
 ![Status](https://img.shields.io/badge/status-wanted-lightgrey)
@@ -39,7 +39,7 @@ This is a **pure data package**. It contains no simulation code, no kernel modif
 
 | Dependency | Version | Notes |
 |-----------|---------|-------|
-| Ananke | 0.1.0+ | Kernel + type definitions |
+| Ananke | package.json version range (workspace) | Kernel + type definitions |
 | Node.js | 18+ | Only needed if you run the tests |
 
 Install alongside Ananke:
@@ -57,7 +57,7 @@ git clone https://github.com/its-not-rocket-science/ananke-fantasy-species.git
 
 ## How to use
 
-```typescript
+```typescript pseudocode
 import { generateIndividual } from "../ananke/dist/src/generate.js";
 import { ELF_BODY_PLAN, ELF_WARRIOR_ARCHETYPE } from "../ananke-fantasy-species/dist/src/elf/index.js";
 
@@ -213,7 +213,7 @@ For truly non-humanoid species, refer to the quadruped and octopoid examples in 
 
 Every species must pass these two checks. The test runner is Vitest (same as Ananke).
 
-```typescript
+```typescript pseudocode
 // tests/elf.test.ts
 import { describe, it, expect } from "vitest";
 import { generateIndividual } from "../../ananke/dist/src/generate.js";

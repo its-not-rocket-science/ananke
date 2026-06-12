@@ -128,6 +128,8 @@ Copy this checklist into every PR description:
 - [ ] CHANGELOG.md updated if Stable or Experimental tier exports changed
 - [ ] README updated if the feature is user-facing (new phase, new tool, new quickstart)
 - [ ] ROADMAP updated if a planned item is completed
+- [ ] TypeScript snippets in `README.md` and `docs/**/*.md` are fenced as `ts example` or `ts pseudocode`
+- [ ] `npm run check:doc-examples` passes locally after docs edits
 
 ### Performance (check if touching kernel or AI path)
 - [ ] `npm run benchmark-check:strict` run locally; delta reported in PR description
@@ -228,3 +230,45 @@ Intentionally accepting a performance regression requires:
 - Open a GitHub Issue for bugs, dataset proposals, phase proposals, or plugin listings
 - Read `docs/integration-primer.md` for the architecture overview and data-flow diagrams
 - Read `STABLE_API.md` for the API stability contract
+
+---
+
+## 11. External contribution incentives
+
+### Good First Issue labels
+
+We use the following labels for external onboarding:
+
+- `good first issue` — scoped for first-time contributors, typically < 1 day effort.
+- `help wanted` — maintainers are explicitly seeking community implementation help.
+- `mentored` — a maintainer is available to pair async in issue comments.
+- `determinism` — touches reproducibility or fixed-point guarantees.
+- `performance` — benchmark-sensitive work.
+
+Starter workflow for new contributors:
+
+1. Filter by `good first issue` first.
+2. Comment “I’d like to take this” before opening a PR.
+3. Maintainer confirms assignment and links any relevant tests/docs.
+
+### Bug bounty (determinism break)
+
+Community bounty program (funded through GitHub Sponsors):
+
+- **Sponsors tier:** `Determinism Defender`
+- **Reward:** USD **$100**
+- **Scope:** Any reproducible determinism break where same seed + same inputs produce divergent outputs.
+- **Submission channel:** Private report via `SECURITY.md` process (preferred) or issue if non-sensitive.
+- **Payout channel:** GitHub Sponsors transfer (maintainer coordinated).
+
+Eligibility rules:
+
+- Must include minimal reproduction and environment metadata.
+- Must reproduce on a maintainer machine or CI.
+- First valid report for a unique root cause gets the bounty.
+
+### Contributor recognition system
+
+- All merged external contributors are listed in `CONTRIBUTORS.md`.
+- Monthly “Top Contributor” is highlighted in `README.md` badge text.
+- Recognition criteria include: merged PR count, review quality, and regression-prevention impact.

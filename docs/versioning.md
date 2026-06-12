@@ -9,11 +9,11 @@
 **Short answer: put the semver tag in your `package.json`.**
 
 ```json
-{ "dependencies": { "ananke": "^0.1.0" } }
+{ "dependencies": { "ananke": "^<current-ananke-version>" } }
 ```
 
 If you need byte-for-byte replay determinism across patch releases, also record the
-exact commit hash in your project's `UPSTREAM.md`.  See [commit-hash pinning](#commit-hash-pinning) below.
+exact commit hash in your project's `UPSTREAM.md`.  See [commit-hash pinning](#commit-hash-pinning-supplementary) below.
 
 ---
 
@@ -27,12 +27,23 @@ Ananke uses **semantic versioning (semver)** as the public contract:
 | Minor (`0.x.0`) | Additive changes: new exports, new optional fields, new simulation phases.  **Tier 1 (Stable) exports are not broken.**  Tier 2 (Experimental) exports may change with a `CHANGELOG.md` entry |
 | Major (`x.0.0`) | Breaking changes to Tier 1 exports.  A migration guide accompanies every major bump |
 
-> **Pre-1.0 note:** The project is currently at `0.1.0`.  Tier 1 exports will not break
-> within the `0.x` line without a minor-version bump and a migration guide in `CHANGELOG.md`.
+> **Pre-1.0 note:** While the project major is `0`, Tier 1 exports do not break
+> within the current minor line without a documented minor-version bump and a migration guide in `CHANGELOG.md`.
 > The `1.0` release will lock the Tier 1 surface under full semver guarantees.
 
 ---
 
+
+## Canonical runtime version source
+
+Runtime compatibility checks use `ANANKE_ENGINE_VERSION` from `src/version.ts`, which is
+a generated file.  The **only authoritative source** is `package.json` `"version"`; run
+`npm run sync-version` to regenerate `src/version.ts` after any version bump.
+
+CI enforces this with `npm run check-version-sync` to prevent drift between publish
+versioning, runtime compat checks, and generated docs/tooling outputs.
+
+---
 ## API stability tiers
 
 Every export in `src/index.ts` is tagged with a stability tier.
@@ -128,7 +139,7 @@ Each entry follows:
 
 ### Potentially breaking
 - `SURF_J` constant changed from 120 to 110.
-  Re-run `npm run validation` to check calibration impact.
+  Re-run `npm run run:validation` to check calibration impact.
 
 ### Added
 - `src/sim/widget.ts` — Widget System (Phase N).
@@ -143,7 +154,7 @@ When upgrading your pinned semver tag or commit hash:
 1. **Read the CHANGELOG** — check all entries since your previous version for Tier 1 / Tier 2 items
 2. **Diff the source** — `git diff <old-tag>..<new-tag> -- src/` to see what changed
 3. **Run your integration build** — `npm run build`
-4. **Run the validation suite** — `npm run validation` to confirm calibration scenarios pass
+4. **Run the validation suite** — `npm run run:validation` to confirm calibration scenarios pass
 5. **Run the full test suite** — `npm run test:coverage`
 6. **Update your pin** — commit the new tag/hash to your dependency manifest
 
@@ -191,7 +202,7 @@ to migrate.  The lifecycle follows a three-phase pattern:
 
 Add a structured JSDoc tag to the symbol:
 
-```typescript
+```typescript no-check-example
 /**
  * @deprecated since 0.1.50 — use `newFunction` instead. Removes at 0.3.0.
  */

@@ -40,7 +40,7 @@ species — only a `BodyPlan` and a matching `Archetype` baseline.
 
 ### Minimal humanoid-variant template
 
-```typescript
+```typescript pseudocode
 // my-species/bodyplan.ts
 import type { BodyPlan } from "ananke/src/sim/bodyplan.js";
 
@@ -64,7 +64,7 @@ export const MY_SPECIES_BODY_PLAN: BodyPlan = {
 
 ### Matching archetype baseline
 
-```typescript
+```typescript pseudocode
 // my-species/archetype.ts
 import type { Archetype } from "ananke/src/archetypes.js";
 import { q } from "ananke/src/units.js";
@@ -160,7 +160,7 @@ renderer-consumable data.  See `docs/bridge-api.md` for the full API reference.
 
 ### Minimal Unity adapter sketch
 
-```typescript
+```typescript pseudocode
 // Not a Unity file — this is a TypeScript data-extraction layer that outputs
 // a JSON blob your Unity C# code can consume via a WebSocket or named pipe.
 
@@ -232,12 +232,12 @@ If you build one, open a PR to add it to the "Community links" section below.
 
 | Bridge | Engine | Status | GitHub |
 |--------|--------|--------|--------|
-| `ananke-godot-reference` | Godot 4.2+ | ✅ M1–M4 complete (WebSocket sidecar, bone mapping, AnimationTree, grapple IK) | [its-not-rocket-science/ananke-godot-reference](https://github.com/its-not-rocket-science/ananke-godot-reference) |
-| `ananke-unity-reference` | Unity 6 (6000.0 LTS) | ✅ M1–M4 complete (WebSocket sidecar, HumanBodyBones, AnimatorController, grapple constraint) | [its-not-rocket-science/ananke-unity-reference](https://github.com/its-not-rocket-science/ananke-unity-reference) |
+| `ananke-godot-reference` | Godot 4.2+ | Reported by companion repo: M1–M4 implemented (WebSocket sidecar, bone mapping, AnimationTree, grapple IK) | [its-not-rocket-science/ananke-godot-reference](https://github.com/its-not-rocket-science/ananke-godot-reference) |
+| `ananke-unity-reference` | Unity 6 (6000.0 LTS) | Reported by companion repo: M1–M4 implemented (WebSocket sidecar, HumanBodyBones, AnimatorController, grapple constraint) | [its-not-rocket-science/ananke-unity-reference](https://github.com/its-not-rocket-science/ananke-unity-reference) |
 | `ananke-unreal-bridge` | Unreal Engine 5 | Wanted | — |
 | `ananke-threejs-bridge` | Three.js / WebGL | Wanted | — |
 
-Both reference repos cover the full M1–M4 bridge contract:
+Both reference repos report coverage for the full M1–M4 bridge contract:
 - **M1** entity positions + animation state flags over WebSocket at 20 Hz
 - **M2** `RigSnapshot.pose[].segmentId` → engine bone names (Godot `SkeletonMapper.gd` / Unity `AnankeSkeletonConfig`)
 - **M3** `AnimationHints` drives locomotion blend, combat override, and shock additive layers

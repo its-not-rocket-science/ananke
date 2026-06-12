@@ -321,6 +321,55 @@
       }
     }
 
+
+    class MemoryDashboardPanel extends HTMLElement {
+      connectedCallback() {
+        this.innerHTML = `
+          <div class="card">
+            <h3>Memory Usage Dashboard</h3>
+            <p class="small">Tracks heap size, entity count, and snapshot size with leak alerts.</p>
+            <div class="metric-row">
+              <div class="metric"><div class="label">heap (MB)</div><div class="value" id="heapMb">120</div></div>
+              <div class="metric"><div class="label">entities</div><div class="value" id="entityCount">2,000</div></div>
+              <div class="metric"><div class="label">snapshot (MB)</div><div class="value" id="snapshotMb">14.2</div></div>
+            </div>
+            <p class="small" id="leakAlert" style="margin-top:.5rem;color:var(--ok)">Leak detector: stable.</p>
+          </div>
+        `;
+        const heapEl = this.querySelector('#heapMb');
+        const entityEl = this.querySelector('#entityCount');
+        const snapEl = this.querySelector('#snapshotMb');
+        const alertEl = this.querySelector('#leakAlert');
+        let heap = 120;
+        let baseline = 120;
+
+        const timer = setInterval(() => {
+          const drift = (Math.random() - 0.48) * 2.2;
+          heap = Math.max(90, heap + drift);
+          const entities = 1800 + Math.round(Math.random() * 700);
+          const snapshot = Math.max(8, entities * 0.0068);
+
+          heapEl.textContent = heap.toFixed(1);
+          entityEl.textContent = entities.toLocaleString();
+          snapEl.textContent = snapshot.toFixed(1);
+
+          const growth = heap - baseline;
+          if (growth > 12) {
+            alertEl.textContent = `Leak detector: warning (heap +${growth.toFixed(1)} MB)`;
+            alertEl.style.color = 'var(--danger)';
+          } else {
+            alertEl.textContent = 'Leak detector: stable.';
+            alertEl.style.color = 'var(--ok)';
+          }
+
+          baseline = baseline * 0.98 + heap * 0.02;
+        }, 1400);
+
+        this._cleanup = () => clearInterval(timer);
+      }
+      disconnectedCallback() { this._cleanup?.(); }
+    }
+
     class TelemetryPanel extends HTMLElement {
       connectedCallback() {
         this.innerHTML = `
@@ -349,6 +398,7 @@
     customElements.define('simulation-viewer-panel', SimulationViewerPanel);
     customElements.define('seed-editor-panel', SeedEditorPanel);
     customElements.define('telemetry-panel', TelemetryPanel);
+    customElements.define('memory-dashboard-panel', MemoryDashboardPanel);
 
     // Lazy role panel registry (load on demand)
     const panelLoaders = {
@@ -472,7 +522,8 @@
       sharedPanels.append(
         document.createElement('simulation-viewer-panel'),
         document.createElement('seed-editor-panel'),
-        document.createElement('telemetry-panel')
+        document.createElement('telemetry-panel'),
+        document.createElement('memory-dashboard-panel')
       );
     }
 

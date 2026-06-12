@@ -71,7 +71,7 @@ The bridge does **not** perform any rendering; it only transforms simulation dat
 
 ### Core types
 
-```typescript
+```typescript pseudocode
 // One segment‑to‑bone correspondence
 interface SegmentMapping {
   segmentId: string;      // matches BodySegment.id (e.g., "leftArm")
@@ -148,7 +148,7 @@ Extrapolation is **disabled by default** because it can cause visible artefacts 
 
 ### Construction
 
-```typescript
+```typescript pseudocode
 import { BridgeEngine } from "ananke";
 
 const config: BridgeConfig = {
@@ -161,7 +161,7 @@ const engine = new BridgeEngine(config);
 
 ### Ingestion (simulation thread)
 
-```typescript
+```typescript pseudocode
 // After each stepWorld()
 const snapshots = extractRigSnapshots(world);
 const motion = extractMotionVectors(world);
@@ -175,7 +175,7 @@ engine.update(snapshots, motion, condition);
 
 If you know an entity’s body plan before its first snapshot arrives, register it:
 
-```typescript
+```typescript pseudocode
 engine.setEntityBodyPlan(entityId, "humanoid");
 ```
 
@@ -183,7 +183,7 @@ If not registered, the bridge assumes `"humanoid"` when the first snapshot arriv
 
 ### Retrieval (render thread)
 
-```typescript
+```typescript pseudocode
 // In your render loop, for each visible entity
 const state = engine.getInterpolatedState(entityId, renderTime_s);
 if (state) {
@@ -224,7 +224,7 @@ if (state) {
 
 ### Example: minimal humanoid mapping
 
-```typescript
+```typescript pseudocode
 import { HUMANOID_PLAN, segmentIds } from "ananke";
 
 const humanoidMapping: BodyPlanMapping = {

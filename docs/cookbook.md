@@ -37,7 +37,7 @@ If you can read and run one recipe in this document you can produce a working si
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 
 // 1. Create a world — world seed + entity list.
@@ -84,7 +84,7 @@ Entity 2 (team 2): dead
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 
 // 1. Create 500 entities across two teams.
@@ -134,13 +134,12 @@ console.log(`200 ticks × 500 agents — ${ms} ms — ${alive} survivors`);
 
 **Steps:**
 
-```typescript
-import { generateIndividual } from "@its-not-rocket-science/ananke";
-import type { Archetype } from "@its-not-rocket-science/ananke";
+```typescript pseudocode
+import { generateSpeciesIndividual, type SpeciesDefinition } from "@its-not-rocket-science/ananke/species";
 import { q, SCALE } from "@its-not-rocket-science/ananke";
 
-// 1. Define an archetype — a prototype individual for your species.
-const GIANT_APE: Archetype = {
+// 1. Define a species with an archetype prototype.
+const GIANT_APE: SpeciesDefinition = {
   id:   "giant_ape",
   name: "Giant Ape",
   morphology: {
@@ -158,13 +157,13 @@ const GIANT_APE: Archetype = {
   },
 };
 
-// 2. Generate a deterministic individual from the archetype.
-//    Seed produces unique attribute scatter while staying within archetype bounds.
-const individual = generateIndividual(7, GIANT_APE);
+// 2. Generate a deterministic individual from the species definition.
+//    Seed produces unique attribute scatter while staying within species bounds.
+const individual = generateSpeciesIndividual(GIANT_APE, 7);
 
-console.log("Stature:", individual.morphology.stature_m / SCALE.m, "m");
-console.log("Mass:   ", individual.morphology.mass_kg   / 1000,    "kg");
-console.log("Strength:", individual.performance.muscularStrength_N / SCALE.N, "N");
+console.log("Stature:", individual.attributes.morphology.stature_m / SCALE.m, "m");
+console.log("Mass:   ", individual.attributes.morphology.mass_kg   / 1000,    "kg");
+console.log("Strength:", individual.attributes.performance.muscularStrength_N / SCALE.N, "N");
 ```
 
 **Expected output:**
@@ -184,13 +183,12 @@ Strength: 2840 N
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q, SCALE } from "@its-not-rocket-science/ananke";
-import type { Item } from "@its-not-rocket-science/ananke";
 
 // 1. Define a weapon item.
 //    Items use SI units: mass in SCALE.kg, reach in SCALE.m, edge in q(0..1).
-const GREATAXE: Item = {
+const GREATAXE = {
   id:         "wpn_greataxe",
   name:       "Greataxe",
   kind:       "weapon",
@@ -248,7 +246,7 @@ Dagger wielder shock:   0.95
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 // sidecar/src/main.ts — minimal 20 Hz sidecar
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 import { serializeBridgeFrame } from "@its-not-rocket-science/ananke/host-loop";
@@ -293,17 +291,17 @@ setInterval(() => {
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import {
   createPolity, createPolityRegistry, stepPolityDay,
   type PolityPair,
 } from "@its-not-rocket-science/ananke/polity";
 import { q } from "@its-not-rocket-science/ananke";
-import { TechEra } from "@its-not-rocket-science/ananke";
 
 // 1. Define two polities.
-const england  = createPolity("england",  "England",  "f_england",  ["loc_london"],  60_000, 3_000, TechEra.Medieval);
-const france   = createPolity("france",   "France",   "f_france",   ["loc_paris"],  120_000, 5_000, TechEra.Medieval);
+const MEDIEVAL_ERA = 2; // TechEra.Medieval
+const england  = createPolity("england",  "England",  "f_england",  ["loc_london"],  60_000, 3_000, MEDIEVAL_ERA);
+const france   = createPolity("france",   "France",   "f_france",   ["loc_paris"],  120_000, 5_000, MEDIEVAL_ERA);
 const registry = createPolityRegistry([england, france]);
 
 // 2. Connect them with a trade route.
@@ -344,7 +342,7 @@ Day 90: England pop=60721 treasury=5140  France pop=121408 treasury=9380
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q, SCALE } from "@its-not-rocket-science/ananke";
 
 // 1. Define what you expect — a named scenario with a tolerance band.
@@ -424,7 +422,7 @@ RUNS=500 npm run run:what-if
 
 **Customise a scenario in `tools/what-if.ts`:**
 
-```typescript
+```typescript pseudocode
 {
   name: "My custom what-if",
   durationDays: 365,
@@ -453,7 +451,7 @@ RUNS=500 npm run run:what-if
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 import { serializeBridgeFrame } from "@its-not-rocket-science/ananke/host-loop";
 
@@ -518,7 +516,7 @@ for (let tick = 0; tick < 600; tick++) {
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import { createWorld, stepWorld, q } from "@its-not-rocket-science/ananke";
 
 // 1. Create and advance a world.
@@ -573,7 +571,7 @@ Entity 1 shock — original: 1823   restored: 1823
 
 **Steps:**
 
-```typescript
+```typescript pseudocode
 import {
   createWorld, stepWorld, q,
   ReplayRecorder, replayTo, serializeReplay, deserializeReplay,
@@ -668,7 +666,7 @@ Replay determinism check: ✅ identical
 
 **2. Load the pack at runtime:**
 
-```typescript
+```typescript pseudocode
 import { loadPack, listLoadedPacks } from "@its-not-rocket-science/ananke/content-pack";
 import { createWorld, q } from "@its-not-rocket-science/ananke";
 import { readFileSync } from "node:fs";
@@ -697,7 +695,7 @@ World created — entities: 2
 
 **3. Validate a pack before loading:**
 
-```typescript
+```typescript pseudocode
 import { validatePack } from "@its-not-rocket-science/ananke/content-pack";
 
 const errors = validatePack(manifest);
@@ -718,7 +716,7 @@ if (errors.length > 0) {
 
 All internal values use fixed-point integers.  Divide by the appropriate `SCALE` constant to get real SI values:
 
-```typescript
+```typescript pseudocode
 import { SCALE, q } from "@its-not-rocket-science/ananke";
 
 // Reading values:
@@ -738,7 +736,7 @@ Given the same seed and command sequence, `stepWorld` always produces identical 
 - Replay (recipe 11)
 - Server/client sync in multiplayer
 
-```typescript
+```typescript pseudocode
 // Two worlds with identical seed + commands produce identical output.
 const w1 = createWorld(42, entities);
 const w2 = createWorld(42, entities);
@@ -749,15 +747,21 @@ assert(w1.entities[0]!.injury.shock === w2.entities[0]!.injury.shock); // always
 
 ### RNG in custom code
 
-Never use `Math.random()` in simulation logic.  Use `eventSeed` + `makeRng` instead:
+Never use `Math.random()` in simulation logic.  Use a deterministic PRNG seeded from stable inputs instead:
 
-```typescript
-import { eventSeed, makeRng } from "@its-not-rocket-science/ananke";
+```typescript pseudocode
+function xorshift32(seed: number): number {
+  let x = seed | 0;
+  x ^= x << 13;
+  x ^= x >>> 17;
+  x ^= x << 5;
+  return x >>> 0;
+}
 
 function rollCustomEvent(worldSeed: number, tick: number, entityId: number): boolean {
-  const seed = eventSeed(worldSeed, tick, entityId, 0, 99);
-  const rng  = makeRng(seed);
-  return rng() < 0.25; // 25% chance — deterministic per tick
+  const seed = (worldSeed ^ (tick * 0x9e3779b9) ^ entityId) >>> 0;
+  const value01 = xorshift32(seed) / 0x1_0000_0000;
+  return value01 < 0.25; // 25% chance — deterministic per tick
 }
 ```
 

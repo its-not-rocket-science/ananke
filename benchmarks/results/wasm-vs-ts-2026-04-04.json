@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2026-04-04T11:03:46.837Z",
+  "measures": [
+    {
+      "backend": "ts",
+      "scenario": "small",
+      "tickMs": 0.7623168393333334,
+      "ticksPerSec": 1311.7905159677791
+    },
+    {
+      "backend": "wasm",
+      "scenario": "small",
+      "tickMs": 0.0013041093333332962,
+      "ticksPerSec": 766806.8730433863
+    },
+    {
+      "backend": "ts",
+      "scenario": "large",
+      "tickMs": 6.89032369,
+      "ticksPerSec": 145.1310627759492
+    },
+    {
+      "backend": "wasm",
+      "scenario": "large",
+      "tickMs": 0.015162107499999139,
+      "ticksPerSec": 65953.89196390125
+    }
+  ]
+}

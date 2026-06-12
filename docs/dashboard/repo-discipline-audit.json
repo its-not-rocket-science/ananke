@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-16T18:23:59.055Z",
+  "finalVerdict": "fail",
+  "totals": {
+    "totalAreas": 7,
+    "verifiedAreas": 4,
+    "totalTrustCritical": 7,
+    "verifiedTrustCritical": 4
+  },
+  "results": [
+    {
+      "key": "public-contract",
+      "label": "Public contract checks",
+      "trustCritical": true,
+      "command": "npm run check-public-contract",
+      "commandExitCode": 0,
+      "commandPassed": true,
+      "artifacts": [
+        {
+          "path": "docs/public-contract.md",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 90,
+          "lastModified": "2026-04-16T18:03:03.994Z"
+        },
+        {
+          "path": "docs/stable-api-manifest.json",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 90,
+          "lastModified": "2026-04-16T18:03:03.994Z"
+        },
+        {
+          "path": "STABLE_API.md",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 90,
+          "lastModified": "2026-04-16T18:03:03.978Z"
+        }
+      ],
+      "artifactProblems": [],
+      "verified": true,
+      "stdout": "> @its-not-rocket-science/ananke@0.3.0 check-public-contract\n> node dist/tools/check-public-contract.js\n\nPublic contract check passed.",
+      "stderr": "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm."
+    },
+    {
+      "key": "docs-semantic-consistency",
+      "label": "Docs semantic consistency",
+      "trustCritical": true,
+      "command": "npm run check-doc-semantic-consistency",
+      "commandExitCode": 0,
+      "commandPassed": true,
+      "artifacts": [
+        {
+          "path": "docs/doc-consistency-report.json",
+          "status": "fresh",
+          "ageDays": 0,
+          "maxAgeDays": 30,
+          "lastModified": "2026-04-16T18:24:03.488Z"
+        }
+      ],
+      "artifactProblems": [],
+      "verified": true,
+      "stdout": "> @its-not-rocket-science/ananke@0.3.0 check-doc-semantic-consistency\n> node dist/tools/check-doc-semantic-consistency.js\n\n✅ Doc semantic consistency passed (526 files, 21 import claim(s)).\nReport: docs/doc-consistency-report.json",
+      "stderr": "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm."
+    },
+    {
+      "key": "doc-examples",
+      "label": "Doc examples",
+      "trustCritical": true,
+      "command": "npm run check:doc-examples",
+      "commandExitCode": 0,
+      "commandPassed": true,
+      "artifacts": [],
+      "artifactProblems": [],
+      "verified": true,
+      "stdout": "> @its-not-rocket-science/ananke@0.3.0 check:doc-examples\n> node dist/tools/check-doc-examples.js\n\n✅ Typechecked 19 TypeScript doc example block(s); skipped 135 pseudocode block(s).",
+      "stderr": "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm."
+    },
+    {
+      "key": "doc-links-and-references",
+      "label": "Link/reference checks",
+      "trustCritical": true,
+      "command": "node dist/tools/check-doc-links-and-references.js",
+      "commandExitCode": 0,
+      "commandPassed": true,
+      "artifacts": [],
+      "artifactProblems": [],
+      "verified": true,
+      "stdout": "✅ Docs freshness checks passed across 512 markdown file(s).",
+      "stderr": ""
+    },
+    {
+      "key": "trust-dashboard-artifacts",
+      "label": "Trust dashboard artifact checks",
+      "trustCritical": true,
+      "command": "npm run check-trust-dashboard-artifacts",
+      "commandExitCode": 1,
+      "commandPassed": false,
+      "artifacts": [
+        {
+          "path": "docs/trust-dashboard.md",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 30,
+          "lastModified": "2026-04-16T18:03:03.994Z"
+        },
+        {
+          "path": "docs/dashboard/ci-trust-report.json",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 30,
+          "lastModified": "2026-04-16T18:03:03.986Z"
+        },
+        {
+          "path": "docs/dashboard/verification-check-inventory.json",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 30,
+          "lastModified": "2026-04-16T18:03:03.986Z"
+        }
+      ],
+      "artifactProblems": [],
+      "verified": false,
+      "stdout": "> @its-not-rocket-science/ananke@0.3.0 check-trust-dashboard-artifacts\n> node dist/tools/generate-trust-dashboard.js --check",
+      "stderr": "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\ndocs/trust-dashboard.md is stale or manually edited. Run: npm run generate-trust-dashboard"
+    },
+    {
+      "key": "release-check-quick",
+      "label": "Release-check quick mode",
+      "trustCritical": true,
+      "command": "npm run release-check:quick",
+      "commandExitCode": 1,
+      "commandPassed": false,
+      "artifacts": [
+        {
+          "path": "docs/release-readiness-bundle.md",
+          "status": "fresh",
+          "ageDays": 0,
+          "maxAgeDays": 30,
+          "lastModified": "2026-04-16T18:24:47.173Z"
+        },
+        {
+          "path": "docs/releases/v1.0.0-beta.1-readiness-checklist.md",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 365,
+          "lastModified": "2026-04-16T18:03:03.994Z"
+        }
+      ],
+      "artifactProblems": [],
+      "verified": false,
+      "stdout": "> @its-not-rocket-science/ananke@0.3.0 release-check:quick\n> node dist/tools/release-check.js --quick\n\n\nAnanke — Release Discipline Dashboard  v0.3.0\n═════════════════════════════════════════════════════════════════\n  [quick mode — slow gates skipped]\n\n  [1/12] Schema migration tests … ✅  (2720 ms)\n  [2/12] Golden replay / fixture round-trip … ✅  (3287 ms)\n  [3/12] Bridge contract type-check (tsc --noEmit) … ✅  (9792 ms)\n  [4/12] Coverage artifact contract (coverage/coverage-summary.json) … ❌  (110 ms)\n          Coverage artifact generation/verification failed\n  [5/12] Required determinism suites (WASM parity + corpus + regression) … ✅  (3645 ms)\n  [6/12] Determinism release artifacts … ❌  (110 ms)\n          Determinism artifacts are missing or below threshold\n  [7/12] Trust-critical evidence freshness & completeness … ❌  (2 ms)\n          3 trust-critical release blocker(s)\n  [8/12] Required example verification suite … ✅  (7314 ms)\n  [9/12] Required protocol round-trip suites … ✅  (4604 ms)\n  [10/12] Benchmark regression check … ⚠️  (0 ms)\n          Not run in --quick mode\n  [11/12] Emergent behaviour validation … ⚠️  (0 ms)\n          Not run in --quick mode\n  [12/12] Module-index freshness (idempotent diff) … ⚠️  (121 ms)\n          Module index is stale — run `npm run generate-module-index`\n\n─────────────────────────────────────────────────────────────────\n  Gate results:\n\n  ✅  Schema migration tests                       Schema migration tests passed\n  ✅  Golden replay / fixture round-trip           Fixture round-trips passed\n  ✅  Bridge contract type-check (tsc --noEmit)    No TypeScript errors\n  ❌  Coverage artifact contract (coverage/coverage-summary.json) Coverage artifact generation/verificatio\n  ✅  Required determinism suites (WASM parity + corpus + regression) Required determinism suites executed wit\n  ❌  Determinism release artifacts                Determinism artifacts are missing or bel\n  ❌  Trust-critical evidence freshness & completeness 3 trust-critical release blocker(s)\n  ✅  Required example verification suite          Example verification suite executed with\n  ✅  Required protocol round-trip suites          Protocol round-trip suites executed with\n  ⚠️  Benchmark regression check                   Not run in --quick mode\n  ⚠️  Emergent behaviour validation                Not run in --quick mode\n  ⚠️  Module-index freshness (idempotent diff)     Module index is stale — run `npm run gen\n\n─────────────────────────────────────────────────────────────────\n  Passed: 6  Failed: 3  Warned: 3\n  Verdict: ❌ NOT RELEASABLE\n\n  Wrote docs/release-report.json\n  Wrote docs/release-dashboard.md\n\n  Wrote docs/release-readiness-bundle.json\n  Wrote docs/release-readiness-bundle.md",
+      "stderr": "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm."
+    },
+    {
+      "key": "determinism-artifact-validation",
+      "label": "Determinism artifact validation",
+      "trustCritical": true,
+      "command": "npm run check-determinism-release-artifacts",
+      "commandExitCode": 1,
+      "commandPassed": false,
+      "artifacts": [
+        {
+          "path": "docs/dashboard/determinism-release-status.json",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 30,
+          "lastModified": "2026-04-16T18:03:03.986Z"
+        },
+        {
+          "path": "docs/dashboard/determinism-matrix-summary.json",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 30,
+          "lastModified": "2026-04-16T18:03:03.986Z"
+        },
+        {
+          "path": "docs/determinism-status.md",
+          "status": "fresh",
+          "ageDays": 0.01,
+          "maxAgeDays": 30,
+          "lastModified": "2026-04-16T18:03:03.986Z"
+        }
+      ],
+      "artifactProblems": [],
+      "verified": false,
+      "stdout": "> @its-not-rocket-science/ananke@0.3.0 check-determinism-release-artifacts\n> node tools/check-determinism-release-artifacts.mjs --summary=docs/dashboard/determinism-release-status.json",
+      "stderr": "npm warn Unknown env config \"http-proxy\". This will stop working in the next major version of npm.\nDeterminism artifact check failed:\n - scenario corpus suite did not pass"
+    }
+  ]
+}

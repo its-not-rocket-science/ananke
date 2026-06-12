@@ -1,0 +1,13 @@
+{
+  "totalPopulation": 208000,
+  "totalTreasury_cu": 83098,
+  "avgStability_Q": 605,
+  "avgMorale_Q": 170,
+  "activeWars": 0,
+  "activeTreaties": 1,
+  "viableTradeRoutes": 0,
+  "activeEpidemics": 0,
+  "activeClimateEvents": 0,
+  "migrationsThisStep": 0,
+  "migrationsTotalPopulation": 0
+}

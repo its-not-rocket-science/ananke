@@ -1,0 +1,22 @@
+[
+  {
+    "name": "ananke-plugin-logger",
+    "manifestUrl": "https://raw.githubusercontent.com/its-not-rocket-science/ananke-plugins/main/ananke-plugin-logger/plugin.json",
+    "moduleUrl": "https://raw.githubusercontent.com/its-not-rocket-science/ananke-plugins/main/ananke-plugin-logger/index.js"
+  },
+  {
+    "name": "ananke-plugin-visualizer",
+    "manifestUrl": "https://raw.githubusercontent.com/its-not-rocket-science/ananke-plugins/main/ananke-plugin-visualizer/plugin.json",
+    "moduleUrl": "https://raw.githubusercontent.com/its-not-rocket-science/ananke-plugins/main/ananke-plugin-visualizer/index.js"
+  },
+  {
+    "name": "ananke-plugin-balance-analyzer",
+    "manifestUrl": "https://raw.githubusercontent.com/its-not-rocket-science/ananke-plugins/main/ananke-plugin-balance-analyzer/plugin.json",
+    "moduleUrl": "https://raw.githubusercontent.com/its-not-rocket-science/ananke-plugins/main/ananke-plugin-balance-analyzer/index.js"
+  },
+  {
+    "name": "ananke-plugin-achievements",
+    "manifestUrl": "https://raw.githubusercontent.com/its-not-rocket-science/ananke-plugins/main/ananke-plugin-achievements/plugin.json",
+    "moduleUrl": "https://raw.githubusercontent.com/its-not-rocket-science/ananke-plugins/main/ananke-plugin-achievements/index.js"
+  }
+]

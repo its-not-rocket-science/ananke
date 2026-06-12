@@ -1,0 +1,9 @@
+{
+  "worldSeed": 90210,
+  "tickStart": 0,
+  "steps": 6,
+  "finalTick": 6,
+  "profileId": "balanced",
+  "checkpoints": 2,
+  "deltas": 6
+}

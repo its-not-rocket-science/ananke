@@ -114,7 +114,7 @@ describe.skipIf(!wasmAvailable)("AS injury.wasm vs TypeScript reference", () => 
   // ── Constants ──────────────────────────────────────────────────────────────
 
   it("constants match TypeScript source values", () => {
-    expect(ex.MAX_ENTITIES.value).toBe(64);
+    expect(ex.MAX_ENTITIES.value).toBe(256);
     expect(ex.N_REGIONS.value).toBe(6);
     expect(ex.FATAL_FLUID_LOSS.value).toBe(q(0.80));
     expect(ex.SHOCK_FROM_FLUID.value).toBe(q(0.0040));

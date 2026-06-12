@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-13T19:44:52.475Z",
+  "determinism": {
+    "ciMatrixPasses": true,
+    "matrix": null,
+    "wasmCoverage": {
+      "pct": 90,
+      "threshold": 90
+    },
+    "fuzz": {
+      "executions": 2000,
+      "threshold": 2000
+    }
+  }
+}

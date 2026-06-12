@@ -1,209 +1,140 @@
-# Ananke — Wire Protocol & Save Format
+# Ananke Wire Protocol & Schema Formats
 
-This document specifies how Ananke state is serialised for persistence, replay, and
-network transport.  All formats are deterministic: the same simulation state always
-produces the same bytes.
+This page documents only what is currently shipped in code. It avoids treating roadmap ideas as current protocol guarantees.
 
----
+For maintainer promises/non-promises and pinning recommendations, see `docs/support-boundaries.md`.
 
-## 1. Concepts
+Status badge legend:
+- 🟢 **Implemented + public**: implemented and exported on documented package entrypoints.
+- 🟡 **Partial**: implemented API exists, but completeness/coverage is intentionally limited.
+- 🟠 **Implemented + internal**: implemented and exported only on internal/advanced surfaces.
+- 🔵 **Planned**: not shipped as a canonical helper/module.
 
-| Term | Meaning |
-|------|---------|
-| **Snapshot** | A serialised `WorldState` — complete enough to resume simulation |
-| **Replay** | An initial snapshot + a sequence of command frames |
-| **Diff** | A compact binary diff between two consecutive snapshots (CE-9) |
-| **Wire message** | A single unit transmitted between host and client over the network |
-| **Q value** | A fixed-point integer scaled by `SCALE.Q = 10 000` (e.g. `q(0.75) = 7500`) |
+## Compatibility table (current)
 
----
+| Surface | Status | Current contract |
+|---|---|---|
+| Save format | 🟢 Implemented + public | JSON snapshots stamped with `_ananke_version`/`_schema` via `stampSnapshot` on `@its-not-rocket-science/ananke/schema` (and `./schema-migration` alias). |
+| Replay format | 🟢 Implemented + public | `Replay` JSON via `serializeReplay` / `deserializeReplay` on root entrypoint `@its-not-rocket-science/ananke`. |
+| Schema migration | 🟡 Partial | `migrateWorld` + `registerMigration` are shipped; only explicitly registered migration edges run (no built-in universal chain). |
+| Binary diff | 🟠 Implemented + internal | `diffWorldState` / `packDiff` / `unpackDiff` / `applyDiff` are shipped on `@its-not-rocket-science/ananke/tier3` (advanced/internal surface). |
+| Lockstep messages | 🔵 Planned | No canonical exported lockstep message envelope/type module. Hosts define their own message schema today. |
 
-## 2. JSON Snapshot Format
+Versioning note: production hosts should pin exact patch versions for schema migration and any non-root protocol helpers.
 
-JSON is the recommended format for long-term save files and editor tooling.
+## 1) Save snapshots (JSON)
 
-### 2.1 Deterministic key ordering
+**Status:** 🟢 Implemented + public
 
-When computing hash-checks across clients, keys must appear in insertion order.
-The canonical TypeScript implementation (`JSON.stringify`) preserves insertion
-order for string keys.  Third-party deserializers must preserve or sort keys
-identically.
+Shipped helpers:
+- `stampSnapshot(snapshot, schemaKind)`
+- `validateSnapshot(snapshot)`
+- `detectVersion(snapshot)`
+- `isValidSnapshot(snapshot)`
 
-### 2.2 Q values
+Entrypoints:
+- `@its-not-rocket-science/ananke/schema`
+- `@its-not-rocket-science/ananke/schema-migration` (alias)
 
-All `Q`-typed fields are serialised as plain integers.  Do **not** divide by
-`SCALE.Q` before saving — the raw integer is the canonical representation.
+Example:
 
-```json
-{ "fearQ": 7500 }    // correct — q(0.75)
-{ "fearQ": 0.75 }    // WRONG — will cause precision loss and replay divergence
+```ts
+import { stampSnapshot, validateSnapshot } from "@its-not-rocket-science/ananke/schema";
+
+const world = {} as Parameters<typeof stampSnapshot>[0];
+const stamped = stampSnapshot(world, "world");
+const errors = validateSnapshot(stamped);
+if (errors.length > 0) throw new Error("invalid snapshot");
+const json = JSON.stringify(stamped);
 ```
 
-### 2.3 Maps
+Notes:
+- `validateSnapshot` validates core structural fields required by simulation, and permits extra host fields.
+- Canonical schema files are shipped in `schema/world.schema.json` and `schema/replay.schema.json`.
 
-JavaScript `Map` instances do not serialise to JSON automatically.  Ananke
-serialises `Map<K, V>` as an array of `[K, V]` pairs:
+## 2) Replay format
 
-```json
-{ "runtimeState": { "nutritionAccum": 0 } }
+**Status:** 🟢 Implemented + public
+
+Shipped helpers (root entrypoint):
+- `ReplayRecorder`
+- `replayTo`
+- `serializeReplay`
+- `deserializeReplay`
+
+Example:
+
+```ts
+import { ReplayRecorder, serializeReplay, deserializeReplay, replayTo } from "@its-not-rocket-science/ananke";
+
+const world = {} as ConstructorParameters<typeof ReplayRecorder>[0];
+const ctx = {} as Parameters<typeof replayTo>[2];
+const recorder = new ReplayRecorder(world);
+// ... record frames while stepping
+const json = serializeReplay(recorder.toReplay());
+const replay = deserializeReplay(json);
+const worldAt100 = replayTo(replay, 100, ctx);
 ```
 
-> Note: `runtimeState.nutritionAccum` is represented as a scalar field in v0.1.  If a `Map`
-> field is added in a future version, its pairs will use the array format above.
+Notes:
+- Replay JSON includes custom Map handling used by serializer/reviver.
+- This is the shipped deterministic replay contract.
 
-### 2.4 Version stamping
+## 3) Schema migration
 
-Always call `stampSnapshot(world, "world")` before persisting.  This adds
-`_ananke_version` and `_schema` fields that enable forward migration:
+**Status:** 🟡 Partial
 
-```typescript
-import { stampSnapshot } from "@its-not-rocket-science/ananke/schema";
-// or: import { stampSnapshot } from "@ananke/core";   (when published)
+Shipped helpers:
+- `registerMigration(fromVersion, toVersion, fn)`
+- `migrateWorld(snapshot, toVersion?)`
 
-const save = JSON.stringify(stampSnapshot(world, "world"), null, 2);
-```
+Behavior today:
+- If snapshot version equals target version, `migrateWorld` returns unchanged.
+- If no migration is registered for the requested edge, `migrateWorld` throws.
+- Legacy snapshots without `_ananke_version` are treated as `"0.0"`.
 
-### 2.5 JSON Schema files
+This is a real API, but migration coverage is only as complete as registered migration paths.
 
-Canonical schemas ship with the package:
+## 4) Binary diff format
 
-| File | Validates |
-|------|-----------|
-| `schema/world.schema.json` | `WorldState` snapshots |
-| `schema/replay.schema.json` | `Replay` objects |
+**Status:** 🟠 Implemented + internal
 
-Use `validateSnapshot(raw)` from `@its-not-rocket-science/ananke/schema` to
-check conformance programmatically before calling `stepWorld`.
+Shipped helpers (Tier 3 surface):
+- `diffWorldState(prev, next)`
+- `packDiff(diff)`
+- `unpackDiff(bytes)`
+- `applyDiff(base, diff)`
 
----
+Entrypoint:
+- `@its-not-rocket-science/ananke/tier3`
 
-## 3. Binary Diff Format
+Scope:
+- Useful for incremental state transport/storage.
+- Not part of Tier-1 root stability contract.
 
-For tick-to-tick state synchronisation (multiplayer, streaming), use the binary
-diff format implemented in `src/snapshot.ts`.
+## 5) Lockstep message protocol
 
-### 3.1 Encoding
+**Status:** 🔵 Planned
 
-```
-[magic: "ANKD" (4 bytes)] [version: 1 (u8)] [payload: tag-value stream]
-```
+Current code provides deterministic primitives (`stepWorld`, replay, and `hashWorldState` in netcode), but **does not** provide a canonical exported lockstep message protocol module with fixed message kinds/envelopes.
 
-Tag values:
+Roadmap/proposed protocol details have been moved to `docs/planned-protocol-work.md`.
 
-| Tag | Byte | Encodes |
-|-----|------|---------|
-| NULL | 0x00 | `null` |
-| TRUE | 0x01 | `true` |
-| FALSE | 0x02 | `false` |
-| UINT8 | 0x10 | Unsigned integer 0–255 |
-| INT32 | 0x11 | Signed 32-bit integer (big-endian) |
-| FLOAT64 | 0x12 | IEEE 754 double (big-endian) — use only for non-Q floats |
-| STRING | 0x20 | Length-prefixed UTF-8 |
-| ARRAY | 0x30 | Length-prefixed sequence of tag-value items |
-| OBJECT | 0x40 | Length-prefixed sequence of (string key, tag-value) pairs |
+## 6) Helper/path audit (docs ↔ code)
 
-### 3.2 Usage
+| Item | Exists in code | Exported | Classification |
+|---|---|---|---|
+| `stampSnapshot` (`src/schema-migration.ts`) | yes | `./schema`, `./schema-migration` | implemented + public |
+| `validateSnapshot` (`src/schema-migration.ts`) | yes | `./schema`, `./schema-migration` | implemented + public |
+| `migrateWorld` (`src/schema-migration.ts`) | yes | `./schema`, `./schema-migration` | partial |
+| `registerMigration` (`src/schema-migration.ts`) | yes | `./schema`, `./schema-migration` | implemented + public |
+| `serializeReplay` (`src/replay.ts`) | yes | root `.` | implemented + public |
+| `deserializeReplay` (`src/replay.ts`) | yes | root `.` | implemented + public |
+| `diffWorldState` (`src/snapshot.ts`) | yes | `./tier3` | implemented + internal |
+| `packDiff` (`src/snapshot.ts`) | yes | `./tier3` | implemented + internal |
+| `unpackDiff` (`src/snapshot.ts`) | yes | `./tier3` | implemented + internal |
+| `applyDiff` (`src/snapshot.ts`) | yes | `./tier3` | implemented + internal |
+| `schema/world.schema.json` | yes | package file artifact | implemented + public artifact |
+| `schema/replay.schema.json` | yes | package file artifact | implemented + public artifact |
+| Canonical lockstep message module | no | n/a | planned |
 
-```typescript
-import { diffWorldState, packDiff, unpackDiff, applyDiff } from "@its-not-rocket-science/ananke";
-
-// Sender
-const diff   = diffWorldState(prevState, nextState);
-const bytes  = packDiff(diff);
-socket.send(bytes);
-
-// Receiver
-const diff2  = unpackDiff(bytes);
-const state2 = applyDiff(prevState, diff2);
-```
-
-### 3.3 Determinism guarantee
-
-A diff produced from identical states must produce identical bytes.  Do not
-include wall-clock timestamps or random nonces in diff payloads.
-
----
-
-## 4. Multiplayer Message Protocol
-
-For lockstep multiplayer, hosts exchange command frames rather than full state.
-
-### 4.1 Message types
-
-| `kind` | Direction | Payload |
-|--------|-----------|---------|
-| `"cmd"` | Client → Server | `{ tick, commands: Command[] }` |
-| `"ack"` | Server → Client | `{ tick, stateHash: number }` |
-| `"resync"` | Server → Client | `{ tick, snapshot: WorldState }` |
-| `"hash_mismatch"` | Server → Client | `{ tick, expected: number, got: number }` |
-
-### 4.2 State hash
-
-Use the built-in tick counter and entity count as a cheap hash for divergence
-detection:
-
-```typescript
-function stateHash(world: WorldState): number {
-  return world.tick * 0x10000 + (world.entities.length & 0xFFFF);
-}
-```
-
-A full structural hash is more robust but expensive; use it only on resync.
-
-### 4.3 Lockstep loop
-
-```
-┌──────────────────────────────────────────────────────────┐
-│ Client                       Server                      │
-│                                                          │
-│ collect commands ──── cmd ──► apply to authoritative     │
-│                               state                      │
-│                   ◄── ack ─── broadcast stateHash        │
-│ verify hash                                              │
-│ if mismatch ─── resync req ─► send full snapshot        │
-│                ◄── resync ──                             │
-│ restore snapshot                                         │
-└──────────────────────────────────────────────────────────┘
-```
-
-### 4.4 Transport encoding
-
-Use JSON for development and debugging.  For production, encode wire messages
-as CBOR (RFC 8949) or MessagePack for ~30% size reduction.  The message
-structure is identical; only the outer encoding changes.
-
----
-
-## 5. Save File Recommendations
-
-| Scenario | Format | Compression |
-|----------|--------|-------------|
-| Development / debugging | JSON (pretty-printed) | none |
-| Production saves | JSON (compact) | gzip or zstd |
-| Network sync (full state) | JSON or CBOR | none (already compact) |
-| Network sync (incremental) | Binary diff (`packDiff`) | none |
-| Replay archives | JSON replay schema | zstd |
-
----
-
-## 6. Migration
-
-Load a save and bring it to the current schema version before simulating:
-
-```typescript
-import {
-  migrateWorld, validateSnapshot, stampSnapshot,
-} from "@its-not-rocket-science/ananke/schema";
-
-function loadSave(json: string): WorldState {
-  const raw      = JSON.parse(json) as Record<string, unknown>;
-  const migrated = migrateWorld(raw);          // no-op until 0.2 is released
-  const errors   = validateSnapshot(migrated);
-  if (errors.length > 0) {
-    throw new Error(`Invalid save: ${errors.map(e => `${e.path}: ${e.message}`).join("; ")}`);
-  }
-  return migrated as WorldState;
-}
-```
-
-See `docs/migration-monolith-to-modular.md` for package-level migration guidance.

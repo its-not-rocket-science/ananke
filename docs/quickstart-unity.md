@@ -110,7 +110,7 @@ Replace the placeholder capsule with your humanoid character:
 
 Edit `sidecar/src/scenario.ts` to change who fights:
 
-```typescript
+```typescript pseudocode
 import { createWorld, loadScenario } from "@its-not-rocket-science/ananke";
 
 export function createScenario() {
@@ -134,7 +134,7 @@ Restart the sidecar — Unity will pick up the new scenario automatically.
 
 The sidecar uses `serializeBridgeFrame` from `@its-not-rocket-science/ananke/host-loop`:
 
-```typescript
+```typescript pseudocode
 import { serializeBridgeFrame } from "@its-not-rocket-science/ananke/host-loop";
 
 const frame = serializeBridgeFrame(world, { scenarioId: "my-scene", tickHz: 20 });

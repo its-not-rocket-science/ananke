@@ -14,6 +14,12 @@ This roadmap now uses maturity levels instead of binary **M4 VALIDATED** claims:
 
 Historical "M4 VALIDATED" wording is preserved in git history and reflected as **M4 Validated** where equivalent.
 For subsystem-level evidence, see `docs/maturity-matrix.md` and `docs/maturity-matrix.json`.
+For claim-by-claim drift analysis between this legacy phase list and current source reality, see
+`docs/roadmap-claim-audit-2026-04-09.md`.
+
+> **Legacy note (2026-04-09):** this file contains historical phase language, including many
+> "complete" / "M4 validated" statements. Treat those claims as historical context unless they are
+> corroborated by current evidence in the maturity matrix, conformance fixtures, tests, and release artifacts.
 
 ---
 

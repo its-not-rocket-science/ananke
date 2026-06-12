@@ -39,6 +39,63 @@ export interface TradeEvaluation {
   feasible: boolean;
 }
 
+export interface DurabilityValuePolicy {
+  /**
+   * Minimum retained value fraction even at zero condition.
+   * Useful for salvage economies.
+   */
+  salvageFloorFraction?: number;
+  /**
+   * Curvature applied to condition in [0, 1].
+   * - >1 discounts damaged gear harder.
+   * - <1 is more forgiving to worn gear.
+   */
+  conditionExponent?: number;
+}
+
+export interface ItemizedCount {
+  itemId: string;
+  count: number;
+}
+
+export interface DropResolution {
+  dropped: string[];
+  guaranteed: string[];
+  probabilistic: string[];
+  preventedByState: boolean;
+  source: "dead" | "incapacitated" | "none";
+}
+
+export interface TradeInventorySnapshot {
+  ownedCount: number;
+  shortageCount: number;
+  entryUnitValue: number;
+  offerUnitValue: number;
+}
+
+export interface TradeEvaluationDetailed extends TradeEvaluation {
+  giveValue: number;
+  wantValue: number;
+  shortages: Array<{ itemId: string; missingCount: number }>;
+  snapshots: Map<string, TradeInventorySnapshot>;
+}
+
+export interface EconomyHostReport {
+  label: string;
+  totals: {
+    grossValue: number;
+    netValue: number;
+    lineCount: number;
+  };
+  lines: Array<{
+    itemId: string;
+    count: number;
+    unitValue: number;
+    totalValue: number;
+  }>;
+  tags: string[];
+}
+
 /**
  * Campaign-level item inventory: maps itemId → { count, unitValue }.
  * `unitValue` is in cost units; used by totalInventoryValue.
@@ -64,6 +121,10 @@ export const WEAR_FUMBLE_THRESHOLD: Q     = q(0.70);
 const FUMBLE_CHANCE_Q                     = q(0.20);  // 20%
 const DEFAULT_SELL_FRACTION               = 0.40;     // weapons/armour
 const MEDICAL_SELL_FRACTION               = 0.50;
+const DEFAULT_DURABILITY_VALUE_POLICY: Required<DurabilityValuePolicy> = {
+  salvageFloorFraction: 0.05,
+  conditionExponent: 1.35,
+};
 
 // ── computeItemValue ──────────────────────────────────────────────────────────
 
@@ -121,17 +182,47 @@ export function computeItemValue(
 }
 
 /**
- * Convert armour degradation state to a wear_Q fraction.
+ * Convert armour state to condition fraction.
  *
  * ```
- * wear = q(1.0) − resistRemaining_J / resist_J
+ * condition = resistRemaining_J / resist_J
  * ```
- * Used to derive `condition_Q` for ablative armour via `computeItemValue`.
+ *
+ * The result can be converted to wear via `conditionToWearQ`.
  */
 export function armourConditionQ(resist_J: number, resistRemaining_J: number): Q {
-  if (resist_J <= 0) return q(1.0);
+  if (resist_J <= 0) return q(0);
   const fraction = Math.trunc((resistRemaining_J * SCALE.Q) / resist_J);
   return clampQ(fraction, 0, SCALE.Q) as Q;
+}
+
+/** Convert condition to wear (`wear = 1 - condition`) in fixed-point space. */
+export function conditionToWearQ(condition_Q: Q): Q {
+  return clampQ(SCALE.Q - condition_Q, 0, SCALE.Q) as Q;
+}
+
+/**
+ * Convert an ItemValue into market-usable unit values.
+ *
+ * This keeps `computeItemValue` stable and lets hosts pick stricter/looser
+ * durability discounting.
+ */
+export function toMarketValue(
+  itemValue: ItemValue,
+  policy: DurabilityValuePolicy = DEFAULT_DURABILITY_VALUE_POLICY,
+): { buyValue: number; sellValue: number; conditionMultiplier: number } {
+  const configured = {
+    salvageFloorFraction: policy.salvageFloorFraction ?? DEFAULT_DURABILITY_VALUE_POLICY.salvageFloorFraction,
+    conditionExponent: policy.conditionExponent ?? DEFAULT_DURABILITY_VALUE_POLICY.conditionExponent,
+  };
+
+  const condition = Math.max(0, Math.min(1, itemValue.condition_Q / SCALE.Q));
+  const curved = Math.pow(condition, Math.max(0.01, configured.conditionExponent));
+  const multiplier = configured.salvageFloorFraction + (1 - configured.salvageFloorFraction) * curved;
+
+  const buyValue = Math.max(0, Math.round(itemValue.baseValue * multiplier));
+  const sellValue = Math.max(0, Math.round(buyValue * itemValue.sellFraction));
+  return { buyValue, sellValue, conditionMultiplier: multiplier };
 }
 
 // ── applyWear ─────────────────────────────────────────────────────────────────
@@ -169,6 +260,62 @@ export function applyWear(weapon: Weapon, actionIntensity_Q: Q, seed?: number): 
 
 // ── resolveDrops ──────────────────────────────────────────────────────────────
 
+function shouldResolveDrops(entity: Entity, config?: { dropOnIncapacitated?: boolean }): { shouldDrop: boolean; source: DropResolution["source"] } {
+  if (entity.injury.dead) return { shouldDrop: true, source: "dead" };
+  if (config?.dropOnIncapacitated ?? false) return { shouldDrop: true, source: "incapacitated" };
+  return { shouldDrop: false, source: "none" };
+}
+
+/**
+ * Structured drop resolution for host-facing UI and telemetry.
+ */
+export function resolveDropsDetailed(
+  entity: Entity,
+  seed:   number,
+  extra?: DropTable,
+  config?: { dropOnIncapacitated?: boolean },
+): DropResolution {
+  const dropState = shouldResolveDrops(entity, config);
+  if (!dropState.shouldDrop) {
+    return {
+      dropped: [],
+      guaranteed: [],
+      probabilistic: [],
+      preventedByState: true,
+      source: dropState.source,
+    };
+  }
+
+  const guaranteed: string[] = [];
+  const probabilistic: string[] = [];
+
+  for (const item of entity.loadout.items) {
+    if (item.kind === "weapon" || item.kind === "armour" || item.kind === "ranged") {
+      guaranteed.push(item.id);
+    }
+  }
+
+  if (extra) {
+    guaranteed.push(...extra.guaranteed);
+    for (let i = 0; i < extra.probabilistic.length; i++) {
+      const entry    = extra.probabilistic[i]!;
+      const rollSeed = eventSeed(seed, i, 0, 0, 0xD50A5);
+      const rng      = makeRng(rollSeed, SCALE.Q);
+      if (rng.q01() < entry.chance_Q) {
+        probabilistic.push(entry.itemId);
+      }
+    }
+  }
+
+  return {
+    dropped: [...guaranteed, ...probabilistic],
+    guaranteed,
+    probabilistic,
+    preventedByState: false,
+    source: dropState.source,
+  };
+}
+
 /**
  * Compute the list of item IDs dropped by an entity on death or incapacitation.
  *
@@ -185,35 +332,7 @@ export function resolveDrops(
   extra?: DropTable,
   config?: { dropOnIncapacitated?: boolean },
 ): string[] {
-  const shouldDrop = entity.injury.dead || (config?.dropOnIncapacitated ?? false);
-  if (!shouldDrop) return [];
-
-  const result: string[] = [];
-
-  // Guaranteed: all equipped weapons and armour
-  for (const item of entity.loadout.items) {
-    if (item.kind === "weapon" || item.kind === "armour" || item.kind === "ranged") {
-      result.push(item.id);
-    }
-  }
-
-  if (extra) {
-    for (const id of extra.guaranteed) {
-      result.push(id);
-    }
-
-    // Probabilistic roll — deterministic per item index
-    for (let i = 0; i < extra.probabilistic.length; i++) {
-      const entry    = extra.probabilistic[i]!;
-      const rollSeed = eventSeed(seed, i, 0, 0, 0xD50A5);
-      const rng      = makeRng(rollSeed, SCALE.Q);
-      if (rng.q01() < entry.chance_Q) {
-        result.push(entry.itemId);
-      }
-    }
-  }
-
-  return result;
+  return resolveDropsDetailed(entity, seed, extra, config).dropped;
 }
 
 // ── evaluateTradeOffer ────────────────────────────────────────────────────────
@@ -229,19 +348,157 @@ export function resolveDrops(
  * `feasible` — the accepting party has all `want` items in sufficient quantities.
  */
 export function evaluateTradeOffer(offer: TradeOffer, inventory: ItemInventory): TradeEvaluation {
-  // Feasibility: does the accepting party have all wanted items?
-  let feasible = true;
+  const detailed = evaluateTradeOfferDetailed(offer, inventory);
+  return { netValue: detailed.netValue, feasible: detailed.feasible };
+}
+
+/**
+ * Inventory-aware trade evaluation that surfaces shortages and value breakdown.
+ */
+export function evaluateTradeOfferDetailed(
+  offer: TradeOffer,
+  inventory: ItemInventory,
+): TradeEvaluationDetailed {
+  const snapshots = new Map<string, TradeInventorySnapshot>();
+
+  const giveValue = offer.give.reduce((sum, g) => sum + g.count * g.unitValue, 0);
+  const wantValue = offer.want.reduce((sum, w) => sum + w.count * w.unitValue, 0);
+
+  const shortages: Array<{ itemId: string; missingCount: number }> = [];
+
   for (const w of offer.want) {
     const entry = inventory.get(w.itemId);
-    if (!entry || entry.count < w.count) { feasible = false; break; }
+    const owned = entry?.count ?? 0;
+    const shortage = Math.max(0, w.count - owned);
+    if (shortage > 0) shortages.push({ itemId: w.itemId, missingCount: shortage });
+
+    snapshots.set(w.itemId, {
+      ownedCount: owned,
+      shortageCount: shortage,
+      entryUnitValue: entry?.unitValue ?? 0,
+      offerUnitValue: w.unitValue,
+    });
   }
 
-  // Net value for accepting party: receive give items, pay want items
-  let netValue = 0;
-  for (const g of offer.give) netValue += g.count * g.unitValue;
-  for (const w of offer.want) netValue -= w.count * w.unitValue;
+  for (const g of offer.give) {
+    if (!snapshots.has(g.itemId)) {
+      snapshots.set(g.itemId, {
+        ownedCount: inventory.get(g.itemId)?.count ?? 0,
+        shortageCount: 0,
+        entryUnitValue: inventory.get(g.itemId)?.unitValue ?? 0,
+        offerUnitValue: g.unitValue,
+      });
+    }
+  }
 
-  return { netValue, feasible };
+  const feasible = shortages.length === 0;
+  const netValue = giveValue - wantValue;
+
+  return { netValue, feasible, giveValue, wantValue, shortages, snapshots };
+}
+
+// ── host reporting helpers ────────────────────────────────────────────────────
+
+/** Merge simple itemized counts into an ItemInventory map. */
+export function mergeIntoInventory(
+  inventory: ItemInventory,
+  items: ItemizedCount[],
+  resolver: (itemId: string) => number,
+): ItemInventory {
+  for (const item of items) {
+    if (item.count <= 0) continue;
+    const existing = inventory.get(item.itemId);
+    if (existing) {
+      existing.count += item.count;
+      continue;
+    }
+    inventory.set(item.itemId, { count: item.count, unitValue: resolver(item.itemId) });
+  }
+  return inventory;
+}
+
+/** Build a host-facing value report for any itemized list. */
+export function createEconomyReport(
+  label: string,
+  entries: ItemizedCount[],
+  resolver: (itemId: string) => number,
+  tags: string[] = [],
+): EconomyHostReport {
+  const lines = entries
+    .filter(e => e.count > 0)
+    .map((entry) => {
+      const unitValue = Math.max(0, resolver(entry.itemId));
+      return {
+        itemId: entry.itemId,
+        count: entry.count,
+        unitValue,
+        totalValue: unitValue * entry.count,
+      };
+    });
+
+  const grossValue = lines.reduce((sum, line) => sum + line.totalValue, 0);
+
+  return {
+    label,
+    totals: {
+      grossValue,
+      netValue: grossValue,
+      lineCount: lines.length,
+    },
+    lines,
+    tags,
+  };
+}
+
+/**
+ * Example flow: post-battle loot screen.
+ */
+export function examplePostBattleLootFlow(
+  entity: Entity,
+  seed: number,
+  resolver: (itemId: string) => number,
+): EconomyHostReport {
+  const drops = resolveDropsDetailed(entity, seed);
+  const counts = countItems(drops.dropped);
+  return createEconomyReport(
+    "post_battle_loot",
+    counts,
+    resolver,
+    ["loot", drops.source],
+  );
+}
+
+/**
+ * Example flow: repair/reuse loop that compares pre-repair vs post-repair resale.
+ */
+export function exampleRepairReuseLoop(item: Item, startingWear_Q: Q, repairedWear_Q: Q): EconomyHostReport {
+  const before = toMarketValue(computeItemValue(item, startingWear_Q));
+  const after = toMarketValue(computeItemValue(item, repairedWear_Q));
+  return {
+    label: "repair_reuse_loop",
+    totals: {
+      grossValue: after.sellValue,
+      netValue: after.sellValue - before.sellValue,
+      lineCount: 1,
+    },
+    lines: [{
+      itemId: item.id,
+      count: 1,
+      unitValue: after.sellValue,
+      totalValue: after.sellValue,
+    }],
+    tags: ["repair", "reuse", after.sellValue >= before.sellValue ? "improved" : "degraded"],
+  };
+}
+
+/**
+ * Example flow: settlement/shop interaction, including affordability and shortages.
+ */
+export function exampleSettlementTradeFlow(
+  offer: TradeOffer,
+  inventory: ItemInventory,
+): TradeEvaluationDetailed {
+  return evaluateTradeOfferDetailed(offer, inventory);
 }
 
 // ── totalInventoryValue ───────────────────────────────────────────────────────
@@ -253,4 +510,12 @@ export function totalInventoryValue(inventory: ItemInventory): number {
   let total = 0;
   for (const [, entry] of inventory) total += entry.count * entry.unitValue;
   return total;
+}
+
+function countItems(ids: string[]): ItemizedCount[] {
+  const counts = new Map<string, number>();
+  for (const id of ids) {
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([itemId, count]) => ({ itemId, count }));
 }

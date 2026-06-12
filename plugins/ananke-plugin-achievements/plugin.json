@@ -1,0 +1,7 @@
+{
+  "id": "ananke-plugin-achievements",
+  "version": "1.0.0",
+  "hooks": ["afterDamage", "matchEnd"],
+  "dependencies": {},
+  "permissions": ["read:events", "write:artifacts", "write:telemetry"]
+}

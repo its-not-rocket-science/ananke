@@ -1,6 +1,6 @@
 {
   "name": "@its-not-rocket-science/ananke",
-  "version": "0.2.11",
+  "version": "0.5.0",
   "type": "module",
   "description": "Deterministic lockstep-friendly SI-units RPG/physics core (fixed-point TS)",
   "license": "MIT",
@@ -38,11 +38,19 @@
       "import": "./dist/src/campaign-layer.js",
       "types": "./dist/src/campaign-layer.d.ts"
     },
+    "./campaign-layer": {
+      "import": "./dist/src/campaign-layer.js",
+      "types": "./dist/src/campaign-layer.d.ts"
+    },
     "./social": {
       "import": "./dist/src/social.js",
       "types": "./dist/src/social.d.ts"
     },
     "./narrative": {
+      "import": "./dist/src/narrative-layer.js",
+      "types": "./dist/src/narrative-layer.d.ts"
+    },
+    "./narrative-layer": {
       "import": "./dist/src/narrative-layer.js",
       "types": "./dist/src/narrative-layer.d.ts"
     },
@@ -178,6 +186,10 @@
       "import": "./dist/src/schema-migration.js",
       "types": "./dist/src/schema-migration.d.ts"
     },
+    "./schema-migration": {
+      "import": "./dist/src/schema-migration.js",
+      "types": "./dist/src/schema-migration.d.ts"
+    },
     "./content-pack": {
       "import": "./dist/src/content-pack.js",
       "types": "./dist/src/content-pack.d.ts"
@@ -217,6 +229,30 @@
     "./tier3": {
       "import": "./dist/src/tier3.js",
       "types": "./dist/src/tier3.d.ts"
+    },
+    "./data-governance": {
+      "import": "./dist/src/data-governance.js",
+      "types": "./dist/src/data-governance.d.ts"
+    },
+    "./world-evolution-backend": {
+      "import": "./dist/src/world-evolution-backend/index.js",
+      "types": "./dist/src/world-evolution-backend/index.d.ts"
+    },
+    "./world-evolution": {
+      "import": "./dist/src/world-evolution.js",
+      "types": "./dist/src/world-evolution.d.ts"
+    },
+    "./world-evolution-engine": {
+      "import": "./dist/src/world-evolution-backend/public.js",
+      "types": "./dist/src/world-evolution-backend/public.d.ts"
+    },
+    "./world-evolution-host-backend": {
+      "import": "./dist/src/world-evolution-host-backend.js",
+      "types": "./dist/src/world-evolution-host-backend.d.ts"
+    },
+    "./session": {
+      "import": "./dist/src/session.js",
+      "types": "./dist/src/session.d.ts"
     }
   },
   "workspaces": [
@@ -231,11 +267,19 @@
     "docs/host-contract.md",
     "docs/integration-primer.md",
     "docs/bridge-contract.md",
+    "docs/plugins/README.md",
+    "docs/plugins/hooks.md",
+    "docs/plugins/publishing.md",
+    "docs/plugins/security-model.md",
     "docs/performance.md",
     "docs/release-dashboard.md",
     "docs/versioning.md",
+    "docs/world-evolution-backend.md",
+    "docs/world-evolution-orchestration.md",
+    "docs/session-api.md",
     "docs/emergent-validation-report.md",
     "docs/completion-evidence-dashboard.md",
+    "docs/trust-dashboard.md",
     "docs/package-architecture.md",
     "docs/migration-monolith-to-modular.md",
     "docs/wire-protocol.md",
@@ -243,9 +287,14 @@
     "schema/replay.schema.json",
     "schema/pack.schema.json",
     "schema/content-pack.schema.json",
+    "schema/plugin.schema.json",
     "CHANGELOG.md",
     "STABLE_API.md",
-    "docs/stable-api-manifest.json"
+    "docs/stable-api-manifest.json",
+    "docs/host-world-evolution-schema.md",
+    "schema/world-evolution-input.schema.json",
+    "docs/world-evolution-engine.md",
+    "docs/world-evolution-host-backend.md"
   ],
   "engines": {
     "node": ">=18"
@@ -269,11 +318,11 @@
   "scripts": {
     "release": "bash scripts/tag-release.sh",
     "prepublishOnly": "npm run build && npm run test:coverage && npm run audit-deprecations -- --check",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "npm run sync-version && tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "ci": "npm run build && npm run test:coverage && npm run check-boundaries && npm run check-stable-api && npm run check-maturity-evidence",
+    "ci": "npm run check-version-sync && npm run build && npm run test:coverage && npm run check-boundaries && npm run check-stable-api && npm run check-maturity-evidence && npm run check-trust-dashboard-artifacts && npm run check-public-contract && npm run check-export-status-matrix && npm run check:docs",
     "release-check": "node dist/tools/release-check.js",
     "release-check:quick": "node dist/tools/release-check.js --quick",
     "check-boundaries": "node dist/tools/check-package-boundaries.js",
@@ -330,21 +379,55 @@
     "build:wasm": "asc as/units.ts --outFile dist/as/units.wasm --textFile dist/as/units.wat --runtime stub --optimize",
     "build:wasm:push": "asc as/push.ts --outFile dist/as/push.wasm --textFile dist/as/push.wat --runtime stub --optimize --initialMemory 1",
     "build:wasm:injury": "asc as/injury.ts --outFile dist/as/injury.wasm --textFile dist/as/injury.wat --runtime stub --optimize --initialMemory 1",
-    "build:wasm:all": "npm run build:wasm && npm run build:wasm:push && npm run build:wasm:injury",
+    "build:wasm:all": "npm run build:wasm && npm run build:wasm:push && npm run build:wasm:injury && npm run build:wasm:core",
     "test:wasm": "npm run build:wasm:all && vitest run test/as/",
     "check-stable-api": "node dist/tools/check-stable-api.js",
     "check-boundaries:report": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md",
     "example:first-hour": "node dist/examples/guided-first-hour.js",
     "check-maturity-evidence": "node tools/check-maturity-evidence.mjs",
     "test:determinism": "npm run build:wasm:all && node tools/run-determinism-tests.mjs test/determinism/fuzz-against-wasm.spec.ts test/determinism/regression.spec.ts",
-    "test:determinism:nightly": "DETERMINISM_WORLD_STATES=10000 DETERMINISM_COMMANDS_PER_STATE=1000 npm run test:determinism -- --seed=1337",
+    "test:determinism:nightly": "ANANKE_STRICT_DETERMINISM=1 DETERMINISM_WORLD_STATES=10000 DETERMINISM_COMMANDS_PER_STATE=1000 npm run test:determinism -- --seed=1337",
+    "test:determinism:ci": "ANANKE_STRICT_DETERMINISM=1 DETERMINISM_WORLD_STATES=2000 DETERMINISM_COMMANDS_PER_STATE=500 npm run test:determinism -- --seed=1337",
     "benchmark:run": "node dist/tools/benchmark-dashboard/run.js",
     "benchmark:history": "node dist/tools/benchmark-dashboard/publish-history.js",
     "benchmark:dashboard": "node dist/tools/benchmark-dashboard/generate-dashboard.js",
     "benchmark:budget": "node dist/tools/benchmark-dashboard/check-budget.js",
     "extract-api-surface": "node dist/tools/api-surface.js --out=api/api-surface-v1.0.0.json",
     "check-api-diff": "node dist/tools/api-diff-check.js --base=api-surface-main.json --head=api-surface-pr.json",
-    "check-semver": "node dist/tools/semver-check.js --baseSurface=api-surface-main.json --headSurface=api-surface-pr.json --basePackage=package-main.json --headPackage=package.json"
+    "check-semver": "node dist/tools/semver-check.js --baseSurface=api-surface-main.json --headSurface=api-surface-pr.json --basePackage=package-main.json --headPackage=package.json",
+    "build:wasm:core": "asc as/ananke-core.ts --outFile wasm/ananke-core.wasm --runtime stub --optimize --noAssert",
+    "benchmark": "node dist/tools/wasm-benchmark.js",
+    "docs:api": "npm run sync-version && node tools/generate-api-docs.mjs",
+    "check:beta-readiness": "node tools/check-beta-readiness.mjs --file=.github/beta-launch-readiness.json",
+    "run:proof-of-use": "node dist/tools/proof-of-use-stable.js",
+    "sync-version": "node tools/sync-version.mjs --write",
+    "check-version-sync": "node tools/sync-version.mjs --check",
+    "run:proof-of-use:extended": "node dist/tools/proof-of-use-extended.js",
+    "check-boundaries:strict-all": "node dist/tools/check-package-boundaries.js --strict-all",
+    "check-boundaries:ci": "node dist/tools/check-package-boundaries.js --report-md=docs/package-boundary-report.md --max-hard=84 --max-suspicious=60",
+    "ref:host-coherence": "node dist/examples/reference/host-coherence/index.js",
+    "ref:host-coherence:web": "node examples/reference/host-coherence/server.mjs",
+    "check-docs-tier1-imports": "node tools/check-docs-tier1-imports.mjs",
+    "check-doc-version-sync": "node tools/check-doc-version-sync.mjs",
+    "check-doc-ts-examples": "npm run check:doc-examples",
+    "check-public-contract": "node dist/tools/check-public-contract.js",
+    "check:doc-examples": "node dist/tools/check-doc-examples.js",
+    "generate-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --write",
+    "check-export-status-matrix": "node dist/tools/generate-export-status-matrix.js --check",
+    "test:first-hour-smoke": "npm run build && node tools/first-hour-smoke.mjs",
+    "check-trust-dashboard-artifacts": "node dist/tools/generate-trust-dashboard.js --check",
+    "check:docs": "node dist/tools/check-doc-links-and-references.js && node dist/tools/check-doc-semantic-consistency.js && node dist/tools/check-doc-language.js",
+    "check-doc-semantic-consistency": "node dist/tools/check-doc-semantic-consistency.js",
+    "generate-trust-dashboard": "node dist/tools/generate-trust-dashboard.js --write",
+    "check-doc-language": "node dist/tools/check-doc-language.js",
+    "generate-ci-trust-report": "node tools/generate-ci-trust-report.mjs --output=docs/dashboard/ci-trust-report.json",
+    "check-trust-dashboard-main": "node dist/tools/generate-trust-dashboard.js --fail-on-unverified",
+    "generate-determinism-release-artifacts": "node tools/generate-determinism-release-artifacts.mjs --input=determinism-report/results.json --summary=docs/dashboard/determinism-release-status.json --matrix=docs/dashboard/determinism-matrix-summary.json --doc=docs/determinism-status.md",
+    "check-determinism-release-artifacts": "node tools/check-determinism-release-artifacts.mjs --summary=docs/dashboard/determinism-release-status.json",
+    "check-coverage-summary": "node tools/check-coverage-summary.mjs --input=coverage/coverage-summary.json",
+    "generate-coverage-status": "node tools/check-coverage-summary.mjs --input=coverage/coverage-summary.json --markdown-out=docs/dashboard/coverage-status.md",
+    "audit:repo-discipline": "node tools/audit-repo-discipline.mjs",
+    "example:session-embedding-minimal": "node dist/examples/session-embedding-minimal/index.js"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",

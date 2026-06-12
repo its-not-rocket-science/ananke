@@ -47,7 +47,7 @@ A developer can:
    - Compare canonical hash stream against Node reference run.
 
 ### Suggested test skeleton
-```ts
+```ts pseudocode
 import fc from 'fast-check';
 import { createWorld, applyCommand, exportCanonicalBytes } from '../helpers';
 
@@ -194,7 +194,7 @@ repro: npm run benchmark -- --scenario battle-500 --seed 4441 --profile
    - Demonstrate rolling save strategy (`slot-0..slot-2`) to avoid corruption risk.
 
 ### Example API usage
-```ts
+```ts pseudocode
 if (world.tick % 100 === 0) {
   const snapshot = exportWorldState(world);
   fs.writeFileSync(`./saves/campaign-${world.tick}.ank`, snapshot);
@@ -254,7 +254,7 @@ file=./saves/campaign-1200.ank likely truncated (len=91832 expected=91904)
    - “first bad tick” workflow and triage checklist.
 
 ### Example hook registration
-```ts
+```ts pseudocode
 engine.observe.onStep((evt) => {
   logger.info({
     tick: evt.tick,

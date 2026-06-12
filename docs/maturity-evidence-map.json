@@ -112,7 +112,6 @@
           "test/performance.test.ts"
         ],
         "requiredValidationArtifacts": [
-          "docs/release-report.json",
           "docs/release-dashboard.md"
         ],
         "requiredCoverageSignals": [

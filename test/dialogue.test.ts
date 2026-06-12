@@ -5,6 +5,7 @@ import { q, to, SCALE } from "../src/units.js";
 import {
   resolveDialogue,
   applyDialogueOutcome,
+  applyDialogueState,
   narrateDialogue,
   dialogueProbability,
   PERSUADE_FACTION_BONUS,
@@ -17,6 +18,9 @@ import {
 } from "../src/dialogue.js";
 import { mkHumanoidEntity } from "../src/sim/testing.js";
 import type { Entity } from "../src/sim/entity.js";
+import { createFactionRegistry } from "../src/faction.js";
+import { createRelationshipGraph, getRelationship } from "../src/relationships.js";
+import { createCampaign } from "../src/campaign.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -151,6 +155,26 @@ describe("persuade", () => {
     expect(pBase - pPenalty).toBe(3 * PERSUADE_FAILURE_PENALTY);
   });
 
+  it("renown and trust increase persuasion probability; infamy and hostility reduce it", () => {
+    const hostile = makeContext({
+      factionStanding_Q: q(0.20),
+      relationshipTrust_Q: q(0.20),
+      relationshipAffinity_Q: -q(0.30),
+      initiatorRenown_Q: q(0.10),
+      initiatorInfamy_Q: q(0.70),
+    });
+    const friendly = makeContext({
+      factionStanding_Q: q(0.80),
+      relationshipTrust_Q: q(0.80),
+      relationshipAffinity_Q: q(0.30),
+      initiatorRenown_Q: q(0.70),
+      initiatorInfamy_Q: q(0.10),
+    });
+    const pHostile = dialogueProbability({ kind: "persuade" }, hostile);
+    const pFriendly = dialogueProbability({ kind: "persuade" }, friendly);
+    expect(pFriendly).toBeGreaterThan(pHostile);
+  });
+
   it("priorFailedAttempts state serialises round-trip", () => {
     const state = { priorFailedAttempts: 2, sharedFaction: true };
     const restored = JSON.parse(JSON.stringify(state));
@@ -237,6 +261,19 @@ describe("surrender", () => {
     ctx.target.condition.fearQ = (SURRENDER_THRESHOLD + 1);
     const o = resolveDialogue({ kind: "surrender" }, ctx);
     expect(o.result).toBe("success");
+  });
+
+  it("campaign pressure can flip borderline surrender into acceptance", () => {
+    const lowPressure = makeContext({
+      campaignPressure_Q: q(0),
+      target: { ...makeEntity(2), condition: { ...makeEntity(2).condition, fearQ: q(0.39) } },
+    });
+    const highPressure = makeContext({
+      campaignPressure_Q: q(0.80),
+      target: { ...makeEntity(2), condition: { ...makeEntity(2).condition, fearQ: q(0.39) } },
+    });
+    expect(resolveDialogue({ kind: "surrender" }, lowPressure).result).toBe("failure");
+    expect(resolveDialogue({ kind: "surrender" }, highPressure).result).toBe("success");
   });
 });
 
@@ -398,6 +435,22 @@ describe("negotiate", () => {
     expect(P).toBe(0);
   });
 
+  it("equal offer can succeed when faction/relationship context is positive", () => {
+    const ctx = makeContext({
+      factionStanding_Q: q(0.90),
+      relationshipTrust_Q: q(0.90),
+      relationshipAffinity_Q: q(0.40),
+    });
+    const action: DialogueAction = {
+      kind: "negotiate",
+      offer: {
+        giving: [{ id: "gem", value: 30 }],
+        receiving: [{ id: "gem2", value: 30 }],
+      },
+    };
+    expect(resolveDialogue(action, ctx).result).toBe("success");
+  });
+
   it("favourable offer resolves as success (deterministic — no RNG, line 225-228)", () => {
     const ctx = makeContext();
     const action: DialogueAction = {
@@ -446,6 +499,44 @@ describe("negotiate", () => {
     };
     const P = dialogueProbability(action, ctx);
     expect(P).toBe(0);
+  });
+});
+
+describe("applyDialogueState", () => {
+  it("successful negotiation updates faction reputation and relationship graph", () => {
+    const factionRegistry = createFactionRegistry([
+      { id: "guards", name: "City Guard", allies: new Set(), rivals: new Set() },
+    ]);
+    const relationshipGraph = createRelationshipGraph();
+    const ctx = makeContext({
+      target: { ...makeEntity(2), faction: "guards" },
+      tick: 12,
+    });
+    const action: DialogueAction = {
+      kind: "negotiate",
+      offer: { giving: [{ id: "gold", value: 100 }], receiving: [{ id: "map", value: 20 }] },
+    };
+    const outcome = resolveDialogue(action, ctx);
+    expect(outcome.result).toBe("success");
+
+    const report = applyDialogueState(action, outcome, ctx, { factionRegistry, relationshipGraph });
+    expect(report.reputationDelta_Q).toBeGreaterThan(0);
+    const rep = factionRegistry.entityReputations.get(ctx.initiator.id)?.get("guards");
+    expect(rep).toBeGreaterThan(q(0.50));
+    const rel = getRelationship(relationshipGraph, ctx.initiator.id, ctx.target.id);
+    expect(rel?.history.at(-1)?.type).toBe("gift_given");
+  });
+
+  it("surrender success can write campaign consequence log entry", () => {
+    const campaign = createCampaign("dlg", [makeEntity(1), makeEntity(2)], "2025-01-01T00:00:00.000Z");
+    const ctx = makeContext();
+    ctx.target.condition.fearQ = q(0.90);
+    const action: DialogueAction = { kind: "surrender" };
+    const outcome = resolveDialogue(action, ctx);
+    const report = applyDialogueState(action, outcome, ctx, { campaign });
+    expect(report.campaignLogEntry).toContain("surrendered");
+    expect(campaign.log.at(-1)?.text).toContain("surrendered");
+    expect(ctx.target.condition.surrendered).toBe(true);
   });
 });
 

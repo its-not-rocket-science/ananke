@@ -7,7 +7,7 @@
 ## Purpose
 
 > **New to Ananke?** Start with [`docs/host-contract.md`](host-contract.md) — it covers the
-> complete stable integration surface with working code examples.  Return here for
+> current Tier 1 stable integration surface with working code examples. Return here for
 > architecture diagrams, type glossary, and integration gotchas.
 
 This document captures the technical insights, data‑flow diagrams, type glossaries, and gotchas discovered during the 2–4 week evaluation spike described in the ROADMAP’s **Deep Integration & Technical Onboarding** milestone. It is intended as an internal reference for engineers who will be integrating Ananke into a production game or simulation.
@@ -16,28 +16,29 @@ The spike consisted of three concrete experiments:
 
 1. **Tracing the data flow of a simple melee attack** — from `Command` input through the kernel to injury output (`tools/trace‑attack.ts`).
 2. **Building a minimal observer** that reads `WorldState` after each `stepWorld` call and prints entity positions, condition, and injury summaries (`tools/observer.ts`).
-3. **Experimenting with saving and loading a complete `WorldState`** to understand the serialisation format and any Map/BigInt round‑trip concerns (`tools/serialize.ts`).
+3. **Experimenting with saving and loading a full `WorldState` snapshot** to understand the serialisation format and any Map/BigInt round‑trip concerns (`tools/serialize.ts`).
 
 Each experiment is documented below, followed by a glossary of critical types and a list of integration gotchas.
 
 ## Choose your entry point
 
 Use the table below to find the right subpath export for your use case.
-The full module index with all 41 exports is in [`docs/module-index.md`](module-index.md).
+The full module index is in [`docs/module-index.md`](module-index.md).
 
 | I want to… | Start with | Then add |
 |---|---|---|
 | **Simulate a duel or battle** | `"@its-not-rocket-science/ananke"` (main) | `"…/combat"` for grapple, ranged, formation |
 | **Run a campaign / world simulation** | `"…"` + `"…/polity"` | `"…/campaign"` + whichever campaign extensions you need |
 | **Design a species or xenobiology** | `"…"` + `"…/species"` + `"…/anatomy"` | `"…/character"` for aging, sleep, disease |
-| **Drive a 3D renderer** | `"…"` (bridge exports are in main bundle) | See [`docs/bridge-contract.md`](bridge-contract.md) |
+| **Drive a 3D renderer** | `"…/host-loop"` for stable wire frames | Add `"…/tier2"` only if you need experimental bridge internals (`BridgeEngine`, mapping helpers) — see [`docs/bridge-contract.md`](bridge-contract.md) |
 | **Build a multiplayer host** | `"…"` (deterministic by design) | See [`docs/host-contract.md`](host-contract.md) for lockstep pattern |
+| **Run host session workflows** | `"…/session"` | See [`docs/session-api.md`](session-api.md) for the Tier 2 / experimental session facade |
 | **Add narrative / storytelling** | `"…/narrative"` + `"…/narrative-prose"` | `"…/renown"` for legend-building |
 | **Craft / economic simulation** | `"…/crafting"` + `"…/catalog"` | `"…/social"` for trade and faction effects |
 | **Grand strategy / 4X** | `"…/polity"` + `"…/campaign"` | Any combination of the 26 campaign extension modules |
 
-**Stability:** `"."` and `"./polity"` are **Tier 1 (Stable)** — no breaking changes without a major version bump.
-All other subpaths are **Tier 2 (Experimental)** — changelog documents any breaking changes.
+**Stability:** `"."` and `"./polity"` are **Tier 1 stable** — no breaking changes without a major version bump.
+All other subpaths are **Experimental** — changelog documents any breaking changes.
 See [`STABLE_API.md`](../STABLE_API.md) for the full tier table.
 
 ---
@@ -48,7 +49,7 @@ Ananke is a deterministic, lockstep‑friendly simulation kernel that models ent
 
 ### Core data structures
 
-```typescript
+```typescript no-check-example
 interface WorldState {
   tick: number;
   seed: number;
@@ -84,7 +85,7 @@ type CommandMap = Map<number, Command[]>;
 
 ### Kernel entry point
 
-```typescript
+```typescript no-check-example
 function stepWorld(
   world: WorldState,
   commands: CommandMap,
@@ -131,7 +132,7 @@ The observer (`tools/observer.ts`) demonstrates how to hook into the `stepWorld`
 
 ### Observer pattern
 
-```typescript
+```typescript no-check-example
 for (let tick = 0; tick < maxTicks; tick++) {
   // 1. Build indexes (required for AI decisions, but we hard‑code commands)
   const index   = buildWorldIndex(world);
@@ -167,7 +168,7 @@ The serialisation demo (`tools/serialize.ts`) shows how to round‑trip a `World
 
 Optional Map fields on `Entity` (`foodInventory`, `armourState`, `reputations`) must be explicitly converted to an array of entries for JSON serialisation:
 
-```typescript
+```typescript no-check-example
 function serializeEntity(e: Entity): unknown {
   const obj: any = { ...e };
   if (e.foodInventory instanceof Map) {
@@ -180,7 +181,7 @@ function serializeEntity(e: Entity): unknown {
 
 On deserialisation, reconstruct the Map from the array:
 
-```typescript
+```typescript no-check-example
 function deserializeEntity(e: any): Entity {
   const entity = { ...e } as Entity;
   if (Array.isArray(e.foodInventory)) {
@@ -201,18 +202,18 @@ After deserialisation, the simulation can be continued from the saved state and 
 
 ## 5. Connecting to a Renderer (Bridge API)
 
-Milestone 3 delivers a complete bridge module (`src/bridge/`) that handles tick‑rate conversion, segment‑to‑bone mapping, and deterministic interpolation between simulation ticks. The bridge is a double‑buffered engine that ingests simulation snapshots at 20 Hz and provides smooth interpolated state at render frequency (60 Hz or higher).
+Milestone 3 delivers a Tier 1 stable bridge module (`src/bridge/`) that handles tick‑rate conversion, segment‑to‑bone mapping, and deterministic interpolation between simulation ticks. The bridge is a double‑buffered engine that ingests simulation snapshots at 20 Hz and provides smooth interpolated state at render frequency (60 Hz or higher).
 
 ### Key features
 
 - **Mapping system** – connect simulation segment IDs (`"leftArm"`, `"torso"`) to your skeleton’s bone names (`"arm_L"`, `"spine_02"`).
 - **Fixed‑point interpolation** – deterministic linear interpolation of positions, velocities, animation weights, pose modifiers, and condition.
 - **Extrapolation control** – optional velocity‑based prediction when render time runs ahead of simulation.
-- **Full API documentation** – see [`bridge‑api.md`](./bridge‑api.md) for detailed reference and examples.
+- **Full API documentation** – see [`bridge‑api.md`](./bridge-contract.md) for detailed reference and examples.
 
 ### Minimal setup example
 
-```typescript
+```typescript no-check-example
 import { BridgeEngine } from "ananke";
 import { extractRigSnapshots, extractMotionVectors, extractConditionSamples } from "ananke";
 
@@ -243,11 +244,11 @@ if (state) {
 
 ### Working demo
 
-Run `npm run run:bridge‑demo` to see a complete bridge workflow with humanoid and quadruped body plans, simulation loop, render‑loop simulation, and determinism verification.
+Run `npm run run:bridge-demo` to see an end-to-end bridge workflow with humanoid and quadruped body plans, simulation loop, render‑loop simulation, and determinism verification.
 
 ### Integration steps
 
-1. Read the [bridge API documentation](./bridge‑api.md) to understand mapping and interpolation details.
+1. Read the [bridge API documentation](./bridge-contract.md) to understand mapping and interpolation details.
 2. Author mappings for each body plan your game uses (humanoid, quadruped, avian, etc.).
 3. Integrate the bridge into your simulation and render threads as shown above.
 4. Use the `poseModifiers` array to drive vertex‑shader weights or morph targets for injury visualisation.
@@ -279,7 +280,7 @@ Run `npm run run:bridge‑demo` to see a complete bridge workflow with humanoid 
 
 TypeScript’s `exactOptionalPropertyTypes` is enabled in the project. This means an optional property set to `undefined` is **not** the same as omitting the property. For example:
 
-```typescript
+```typescript no-check-example
 // ❌ Wrong – will cause type errors
 entity.cognition = undefined;
 
@@ -323,11 +324,11 @@ When mapping injury regions to a 3D skeleton, note that region IDs are **camelCa
 
 ## 8. Recommended Integration Steps
 
-1. **Start with the vertical slice** (`npm run run:vertical-slice`) to see a complete 1v1 duel.
+1. **Start with the vertical slice** (`npm run run:vertical-slice`) to see an end-to-end 1v1 duel.
 2. **Trace a single attack** (`npm run run:trace-attack`) to internalise the data flow.
 3. **Build an observer** that logs the state of your own entities each tick (copy `observer.ts`).
 4. **Implement save/load** using the serialisation pattern (`serialize.ts`).
-5. **Connect the 3D rig** using the bridge API (`npm run run:bridge‑demo`). See [Bridge API documentation](./bridge‑api.md).
+5. **Connect the 3D rig** using the bridge API (`npm run run:bridge-demo`). See [Bridge API documentation](./bridge-contract.md).
 6. **Profile performance** with many entities (100+) to ensure your bridge does not become a bottleneck.
 
 ---

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://ananke.dev/schema/scenario.v1",
+  "id": "proof-of-use-duel",
+  "seed": 20260409,
+  "maxTicks": 240,
+  "tractionCoeff": 0.9,
+  "entities": [
+    {
+      "id": 101,
+      "teamId": 1,
+      "archetype": "KNIGHT_INFANTRY",
+      "weapon": "wpn_longsword",
+      "armour": "arm_mail",
+      "x_m": 0,
+      "y_m": 0
+    },
+    {
+      "id": 202,
+      "teamId": 2,
+      "archetype": "HUMAN_BASE",
+      "weapon": "wpn_club",
+      "x_m": 0.7,
+      "y_m": 0
+    }
+  ]
+}

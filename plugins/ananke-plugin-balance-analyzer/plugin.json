@@ -1,0 +1,7 @@
+{
+  "id": "ananke-plugin-balance-analyzer",
+  "version": "1.0.0",
+  "hooks": ["matchEnd"],
+  "dependencies": {},
+  "permissions": ["read:events", "write:artifacts", "write:telemetry"]
+}

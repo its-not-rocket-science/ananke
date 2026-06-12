@@ -46,7 +46,7 @@ export const CLOT_RATE_PER_TICK:  i32 = 2;    // q(0.0002)
 //
 // Total per entity: (6 + 24) × 4 = 120 bytes.
 
-export const MAX_ENTITIES: i32 = 64;
+export const MAX_ENTITIES: i32 = 256;
 export const N_REGIONS:    i32 = 6;    // head, torso, leftArm, rightArm, leftLeg, rightLeg
 
 const VITALS:        i32 = 6;         // number of vital fields
