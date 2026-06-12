@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Governance — Ananke</title>
+<meta name="description" content="Provenance, validation, trust, and data governance for Ananke.">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #050816;
+  --bg-mid:   #0b1020;
+  --surface:  #111827;
+  --surface2: #1a2235;
+  --border:   #1e2a40;
+  --border2:  #2a3a55;
+  --accent:   #fbbf24;
+  --acc-dim:  #78530a;
+  --acc-glow: rgba(251,191,36,0.07);
+  --ring:     #7dd3fc;
+  --violet:   #a78bfa;
+  --text:     #e5e7eb;
+  --muted:    #6b7fa0;
+  --live:     #34d399;
+  --stub:     #475569;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Inter', system-ui, sans-serif;
+  --r:        6px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans);
+       line-height: 1.6; min-height: 100vh; }
+
+/* nav */
+.topnav {
+  border-bottom: 1px solid var(--border);
+  padding: .55rem 2rem;
+  display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;
+  font-family: var(--mono); font-size: .7rem;
+}
+.topnav a { color: var(--muted); text-decoration: none; transition: color .15s; }
+.topnav a:hover { color: var(--text); }
+.topnav a.home { color: var(--accent); }
+.topnav .sep { color: var(--border2); }
+
+/* page header */
+.page-header {
+  padding: 2rem 2rem 1.5rem;
+  max-width: 1100px; margin: 0 auto;
+  border-bottom: 1px solid var(--border);
+}
+.page-header h1 {
+  font-family: var(--mono); font-size: 1.35rem; font-weight: 500;
+  color: var(--text); letter-spacing: -.01em; margin-bottom: .35rem;
+}
+.page-header .subtitle {
+  font-size: .875rem; color: var(--muted); max-width: 560px;
+}
+.stub-notice {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-family: var(--mono); font-size: .65rem;
+  background: #1a1225; color: var(--violet);
+  border: 1px solid #3a2560; border-radius: 3px;
+  padding: 3px 9px; margin-top: .6rem;
+}
+
+/* main layout */
+.page-body {
+  max-width: 1100px; margin: 0 auto;
+  padding: 1.75rem 2rem 3rem;
+  display: flex; flex-direction: column; gap: 1.5rem;
+}
+
+/* section card */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.section-head {
+  padding: .7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: .6rem;
+}
+.section-title {
+  font-family: var(--mono); font-size: .72rem; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+}
+.section-body { padding: 1rem; }
+
+/* two-col grid inside section */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+/* code block */
+pre {
+  background: var(--bg-mid); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: .85rem 1rem;
+  font-family: var(--mono); font-size: .72rem; color: var(--ring);
+  overflow-x: auto; line-height: 1.65; white-space: pre;
+}
+code { font-family: var(--mono); font-size: .78rem; color: var(--ring); }
+
+/* form controls */
+textarea, input, select {
+  width: 100%; background: var(--bg-mid); border: 1px solid var(--border2);
+  border-radius: var(--r); color: var(--text); font-family: var(--mono);
+  font-size: .72rem; padding: .6rem .75rem; resize: vertical;
+  transition: border-color .15s;
+}
+textarea:focus, input:focus, select:focus {
+  outline: none; border-color: var(--accent);
+}
+label {
+  font-family: var(--mono); font-size: .68rem; color: var(--muted);
+  display: block; margin-bottom: .3rem;
+}
+.field { margin-bottom: .75rem; }
+.field:last-child { margin-bottom: 0; }
+
+/* button */
+.btn {
+  font-family: var(--mono); font-size: .72rem; color: var(--accent);
+  background: none; border: 1px solid var(--acc-dim);
+  border-radius: 3px; padding: 4px 14px; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.btn:hover { background: var(--acc-glow); border-color: var(--accent); }
+
+/* tag/pill */
+.pill {
+  font-family: var(--mono); font-size: .6rem; font-weight: 500;
+  padding: 2px 7px; border-radius: 3px; white-space: nowrap;
+}
+.pill-stub   { background: #111827; color: var(--stub); border: 1px solid var(--border2); }
+.pill-live   { background: #052018; color: var(--live); }
+.pill-ring   { background: #041828; color: var(--ring); }
+.pill-violet { background: #160f2a; color: var(--violet); }
+
+/* info row */
+.info-row {
+  display: flex; align-items: baseline; gap: .5rem;
+  padding: .45rem 0; border-bottom: 1px solid var(--border);
+  font-size: .8rem;
+}
+.info-row:last-child { border-bottom: none; }
+.info-key { font-family: var(--mono); font-size: .7rem; color: var(--muted); min-width: 160px; }
+.info-val { color: var(--text); }
+
+/* link list */
+.link-list { display: flex; flex-direction: column; gap: .4rem; }
+.link-list a {
+  font-family: var(--mono); font-size: .72rem; color: var(--ring);
+  text-decoration: none; border-bottom: 1px solid transparent;
+  transition: border-color .15s;
+}
+.link-list a:hover { border-color: var(--ring); }
+
+/* checklist */
+.checklist { list-style: none; display: flex; flex-direction: column; gap: .35rem; }
+.checklist li {
+  font-size: .8rem; color: var(--muted); padding-left: 1.1rem; position: relative;
+}
+.checklist li::before {
+  content: '○'; position: absolute; left: 0;
+  font-family: var(--mono); font-size: .7rem; color: var(--border2);
+}
+.checklist li.done { color: var(--text); }
+.checklist li.done::before { content: '●'; color: var(--live); }
+
+/* flow diagram (flex row of nodes) */
+.flow { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.flow-node {
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: .4rem .75rem;
+  font-family: var(--mono); font-size: .72rem; color: var(--text);
+}
+.flow-arrow { color: var(--muted); font-size: .8rem; flex-shrink: 0; }
+
+/* table */
+.data-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.data-table th {
+  font-family: var(--mono); font-size: .65rem; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--muted); text-align: left;
+  padding: .4rem .6rem; border-bottom: 1px solid var(--border2);
+}
+.data-table td {
+  padding: .4rem .6rem; color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--surface2); }
+
+/* meter bar */
+.meter { height: 5px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: .2rem; }
+.meter-fill { height: 100%; border-radius: 4px; background: var(--accent); }
+
+@media (max-width: 600px) {
+  .topnav, .page-header, .page-body { padding-left: 1rem; padding-right: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<nav class="topnav" aria-label="Breadcrumb">
+  <a class="home" href="../hub/">Hub</a>
+  <span class="sep">/</span>
+  <span>Data Governance</span>
+  <span style="flex:1"></span>
+  <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub ↗</a>
+  <a href="../api/" target="_blank" rel="noopener">API ↗</a>
+</nav>
+<div class="page-header">
+  <h1>Data Governance</h1>
+  <p class="subtitle">Provenance tracking, trust artefacts, validation results, and release integrity for Ananke content and releases.</p>
+  <span class="stub-notice">● static preview — trust dashboard coming</span>
+</div>
+<div class="page-body">
+
+  <div class="section">
+    <div class="section-head"><span class="section-title">Provenance checklist</span></div>
+    <div class="section-body">
+      <ul class="checklist">
+        <li class="done">All content packs include a <code>provenance</code> block (author, date, source)</li>
+        <li class="done">Release artefacts include SHA-256 checksums</li>
+        <li class="done">npm package published from CI (not local dev)</li>
+        <li class="done">All determinism tests pass before release tag</li>
+        <li>SLSA provenance attestation for npm releases (planned)</li>
+        <li>Signed git tags for all version releases</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span class="section-title">Trust artefacts</span></div>
+    <div class="section-body">
+      <div class="info-row"><span class="info-key">Determinism badge</span><span class="info-val"><span class="pill pill-live">passing</span> — all seeds, all platforms</span></div>
+      <div class="info-row"><span class="info-key">CI provenance</span><span class="info-val"><span class="pill pill-live">GitHub Actions</span> — no local builds in releases</span></div>
+      <div class="info-row"><span class="info-key">Validation dashboard</span><span class="info-val"><span class="pill pill-ring">last run: CI</span></span></div>
+      <div class="info-row"><span class="info-key">SLSA level</span><span class="info-val"><span class="pill pill-stub">level 1</span> — attestation planned</span></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span class="section-title">Links</span></div>
+    <div class="section-body">
+      <div class="link-list">
+        <a href="../dashboard/">Validation Dashboard ↗</a>
+        <a href="../content-packs/">Content Pack Registry ↗</a>
+        <a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/data-governance.md" target="_blank" rel="noopener">data-governance.md ↗</a>
+        <a href="https://github.com/its-not-rocket-science/ananke/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog ↗</a>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

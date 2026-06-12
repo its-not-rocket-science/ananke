@@ -64,6 +64,10 @@ jobs:
           [ -d examples/games/narrative-campaign/web ]  && cp -r examples/games/narrative-campaign/web/.  docs/examples/narrative-campaign/
           [ -d examples/reference/host-coherence/web ]  && cp -r examples/reference/host-coherence/web/.  docs/examples/host-coherence/
         continue-on-error: true
+      
+      - name: Generate stub pages
+        run: node scripts/template.js
+        continue-on-error: true
 
       - name: Generate site manifest
         run: node scripts/generate-site-manifest.js
