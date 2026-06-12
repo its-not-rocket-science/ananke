@@ -1,0 +1,108 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build site
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build kernel (produces dist/)
+        run: npm run build
+
+      - name: Generate validation dashboard data
+        run: npm run run:validation-dashboard
+        continue-on-error: true   # don't fail deploy if data gen fails
+
+      - name: Generate playground scenarios
+        run: npm run generate-playground
+        continue-on-error: true
+
+      - name: Generate zoo data
+        run: npm run generate-zoo
+        continue-on-error: true
+
+      - name: Generate map data
+        run: npm run generate-map
+        continue-on-error: true
+
+      - name: Build TypeDoc API reference
+        run: npx typedoc --out docs/api
+        continue-on-error: true
+
+      - name: Copy example web apps into docs/examples/
+        run: |
+          mkdir -p docs/examples/tactics-duel
+          mkdir -p docs/examples/narrative-campaign
+          mkdir -p docs/examples/host-coherence
+
+          # Copy compiled example web apps if they exist post-build
+          [ -d examples/games/tactics-duel/web ]        && cp -r examples/games/tactics-duel/web/.        docs/examples/tactics-duel/
+          [ -d examples/games/narrative-campaign/web ]  && cp -r examples/games/narrative-campaign/web/.  docs/examples/narrative-campaign/
+          [ -d examples/reference/host-coherence/web ]  && cp -r examples/reference/host-coherence/web/.  docs/examples/host-coherence/
+        continue-on-error: true
+
+      - name: Generate site manifest
+        run: node scripts/generate-site-manifest.js
+        continue-on-error: true
+
+      - name: Set hub as Pages root
+        run: |
+          # If Pages is configured to serve from docs/, the hub is at docs/hub/index.html.
+          # This step creates docs/index.html as a redirect to docs/hub/ so the root
+          # URL lands on the hub rather than a file listing.
+          cat > docs/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+          <meta charset="UTF-8">
+          <meta http-equiv="refresh" content="0; url=hub/">
+          <title>Ananke</title>
+          <link rel="icon" type="image/svg+xml" href="favicon.svg">
+          </head>
+          <body>
+          <p>Redirecting to <a href="hub/">Ananke Hub</a>…</p>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload Pages artefact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
