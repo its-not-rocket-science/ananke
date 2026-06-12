@@ -1,0 +1,258 @@
+You are working in the Ananke repository.
+
+Goal:
+Create missing standalone documentation/demo containers for major Ananke feature areas, and update the existing hub so it becomes a real launcher rather than a role-based mock dashboard.
+
+Context:
+The repo already has several static HTML pages under `docs/`, including:
+- `docs/hub/index.html`
+- `docs/playground/index.html`
+- `docs/dashboard/index.html`
+- `docs/debugger/index.html`
+- `docs/perf/index.html`
+- `docs/zoo/index.html`
+- `docs/map/index.html`
+- `docs/editors/index.html`
+- `docs/world-client/index.html`
+
+Current issue:
+`docs/hub/index.html` is currently a self-contained role mock/dashboard with placeholder panels. It should be converted into a practical launcher/index page linking to the existing tools and the new pages below.
+
+Create these new standalone pages:
+
+- `docs/session/index.html`
+- `docs/content-packs/index.html`
+- `docs/world-evolution/index.html`
+- `docs/combat/index.html`
+- `docs/replay/index.html`
+- `docs/narrative-stress/index.html`
+- `docs/arena/index.html`
+- `docs/politics/index.html`
+- `docs/economy/index.html`
+- `docs/medical/index.html`
+- `docs/environment/index.html`
+- `docs/epidemiology/index.html`
+- `docs/technology/index.html`
+- `docs/campaign/index.html`
+- `docs/mythology/index.html`
+- `docs/conformance/index.html`
+- `docs/data-governance/index.html`
+
+Important constraints:
+- Keep these as static standalone HTML pages.
+- Do not introduce a heavy frontend framework.
+- Prefer simple HTML/CSS/vanilla JS.
+- Do not add a separate build system unless absolutely necessary.
+- Pages should work from GitHub Pages when served from `docs/`.
+- Use relative links.
+- If a page needs generated data, use adjacent JSON files and graceful fallback messages.
+- Do not fake live functionality as if it is wired. If a panel is illustrative, label it clearly as “static preview” or “planned integration”.
+- Reuse existing repo docs, package exports, scripts, schemas, examples, and generated artifacts where available.
+- Avoid making unsupported claims about stability. Mark experimental/Tier 2/Tier 3 surfaces where appropriate.
+- Keep visual style consistent with existing Ananke docs pages: dark theme, cards, compact monospace/dashboard style.
+
+For each new page:
+1. Add a clear title and one-sentence purpose.
+2. Add a “What this uses” section listing relevant source modules, package exports, scripts, docs, or schemas.
+3. Add a “Try this” section with practical next steps or commands.
+4. Add a small interactive or semi-interactive container where useful:
+   - filters
+   - textarea JSON validator
+   - seed/config selector
+   - static data explorer
+   - mini timeline
+   - import/export preview
+5. Add links back to:
+   - `../hub/`
+   - relevant existing docs pages
+   - relevant generated dashboards/examples
+6. Keep the page self-contained unless there is already adjacent generated JSON data to consume.
+
+Page-specific requirements:
+
+1. `docs/session/index.html`
+Purpose: embeddable NPM runtime/session API.
+Include:
+- create/run/fork/serialize lifecycle diagram
+- sample import from `@its-not-rocket-science/ananke/session`
+- links to `docs/session-api.md` if present
+- JSON session envelope preview
+
+2. `docs/content-packs/index.html`
+Purpose: content pack and registry workflow.
+Include:
+- pack manifest validator textarea for simple JSON shape checks
+- sections for weapons, armour, archetypes, scenarios, provenance, checksum
+- link to pack schema/docs if present
+
+3. `docs/world-evolution/index.html`
+Purpose: world evolution branching/checkpoint viewer.
+Include:
+- static branch tree/timeline mock using clear “static preview” language
+- checkpoint/diff concepts
+- links to world-evolution docs and map page
+
+4. `docs/combat/index.html`
+Purpose: tactical combat kernel explorer.
+Include:
+- links to playground, tactics duel, debugger
+- controls for archetype/weapon/armour/seed as a static explorer or link-out
+- explain deterministic tick stepping
+
+5. `docs/replay/index.html`
+Purpose: replay/trace/deterministic diff viewer.
+Include:
+- upload/textarea for replay JSON preview
+- tick/frame list placeholder
+- deterministic comparison explanation
+- links to host coherence example/debugger
+
+6. `docs/narrative-stress/index.html`
+Purpose: plot-armour/narrative plausibility analyser.
+Include:
+- beat sequence editor mock or textarea
+- “narrative push” scale explanation
+- link to narrative stress docs/scripts if present
+
+7. `docs/arena/index.html`
+Purpose: batch simulation runner.
+Include:
+- scenario/trials/expectations form
+- static report preview
+- links to arena docs or scripts if present
+
+8. `docs/politics/index.html`
+Purpose: faction, diplomacy, reputation systems.
+Include:
+- polity/faction relation matrix preview
+- links to diplomacy, faction, polity docs/modules where available
+
+9. `docs/economy/index.html`
+Purpose: economy, trade, inventory, crafting.
+Include:
+- item valuation/trade offer preview
+- inventory table
+- crafting/content references where available
+
+10. `docs/medical/index.html`
+Purpose: injury, recovery, downtime.
+Include:
+- injury state and recovery timeline preview
+- care-level selector
+- links to downtime/medical docs or modules
+
+11. `docs/environment/index.html`
+Purpose: weather, atmosphere, hazards, climate.
+Include:
+- weather/hazard controls
+- effect summary cards
+- links to map/world evolution where relevant
+
+12. `docs/epidemiology/index.html`
+Purpose: disease, epidemic, quarantine, famine.
+Include:
+- infection state/timeline preview
+- epidemic spread controls
+- links to world evolution/polity systems
+
+13. `docs/technology/index.html`
+Purpose: tech diffusion, research, eras.
+Include:
+- tech era ladder
+- diffusion pressure preview
+- links to world evolution and research modules
+
+14. `docs/campaign/index.html`
+Purpose: quest, settlement, campaign systems.
+Include:
+- campaign state summary
+- location/entity/inventory tabs
+- links to existing campaign examples
+
+15. `docs/mythology/index.html`
+Purpose: mythology, chronicle, legend systems.
+Include:
+- chronicle-to-legend-to-myth flow
+- myth effect preview
+- links to narrative systems
+
+16. `docs/conformance/index.html`
+Purpose: conformance, host-loop, netcode.
+Include:
+- host integration checklist
+- import surface/status cards
+- link to host coherence app and conformance docs if present
+
+17. `docs/data-governance/index.html`
+Purpose: provenance, validation, trust.
+Include:
+- provenance checklist
+- trust dashboard links
+- validation dashboard links
+- release/trust artifact explanation
+
+Hub update:
+Replace or heavily revise `docs/hub/index.html` so it becomes a real launcher with three audience sections:
+
+1. Adopters / integrators
+- session
+- playground
+- WASM example if linkable
+- host coherence
+- combat
+- replay
+- conformance
+- world-client
+
+2. Content creators
+- body plan editor
+- species forge
+- culture forge
+- scenario builder
+- content packs
+- zoo
+- map
+- mythology
+- campaign
+
+3. Developers / contributors
+- debugger
+- perf dashboard
+- validation dashboard
+- data governance
+- world evolution
+- arena
+- narrative stress
+- environment
+- epidemiology
+- technology
+
+Hub requirements:
+- Include all existing HTML pages and all new pages.
+- Indicate whether each page is:
+  - existing live tool
+  - generated dashboard
+  - new static container
+  - example app
+- Use relative links that work from `docs/hub/index.html`.
+- Keep it visually polished but simple.
+
+Optional:
+- Add `docs/favicon.svg` or link to an existing `favicon.svg` if present.
+- Add favicon references to new pages and the hub.
+- Add a small shared CSS file only if this significantly reduces duplication, but do not create a complicated asset pipeline.
+
+Validation:
+- Run or add a simple link-check/doc-check if the repo already has one.
+- Ensure all new HTML pages are reachable from the hub.
+- Ensure no new page has broken relative links to obvious repo docs.
+- Ensure pages render without a bundler.
+- Ensure generated pages that depend on JSON show a helpful message when opened directly via `file://`.
+
+Deliverables:
+- 17 new `docs/.../index.html` pages
+- updated `docs/hub/index.html`
+- any small shared static asset if needed
+- summary of files changed
+- list of any pages that are static previews rather than wired live tools
+- suggested follow-up work for wiring pages to real generated data
