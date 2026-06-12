@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Narrative Stress</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .beat-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.75rem; }
+  .beat-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.4rem 0.65rem;
+  }
+  .beat-num { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 20px; flex-shrink: 0; }
+  .beat-type {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    width: 110px;
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-align: center;
+  }
+  .bt-tension   { background: rgba(239,68,68,0.1); color: var(--fail); }
+  .bt-relief    { background: rgba(52,211,153,0.1); color: var(--live); }
+  .bt-escalate  { background: rgba(251,191,36,0.1); color: var(--accent); }
+  .bt-reveal    { background: rgba(125,211,252,0.1); color: var(--ring); }
+  .bt-neutral   { background: var(--surface-2); color: var(--muted); }
+  .beat-desc { font-size: 0.78rem; color: var(--text); flex: 1; }
+  .beat-push  { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); width: 50px; text-align: right; flex-shrink: 0; }
+  .push-bar {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    margin-top: 0.5rem;
+    overflow: hidden;
+    position: relative;
+  }
+  .push-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--live), var(--accent), var(--fail));
+    transition: width 0.3s;
+  }
+  .push-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+  .scale-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
+  .scale-row:last-child { border-bottom: none; }
+  .scale-range { font-family: var(--mono); font-size: 0.7rem; color: var(--accent); width: 80px; flex-shrink: 0; }
+  .scale-label { font-size: 0.78rem; font-weight: 500; color: var(--text); width: 110px; flex-shrink: 0; }
+  .scale-desc  { font-size: 0.75rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Narrative Stress</div>
+  <h1 class="page-title">Narrative Stress</h1>
+  <p class="page-desc">Plot-armour plausibility analyser — model beat sequences, measure narrative tension, and identify when simulation outcomes push against story structure.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag">src/sim/morale.ts</span>
+      <span class="module-tag">src/sim/condition.ts</span>
+      <span class="module-tag">src/sim/wound-aging.ts</span>
+      <span class="module-tag">src/sim/impairment.ts</span>
+      <span class="module-tag">src/sim/combat.ts</span>
+      <span class="module-tag">src/sim/events.ts</span>
+      <span class="module-tag doc">docs/use-case-validation.md</span>
+    </div>
+    <p class="note">Narrative stress measures the gap between what the physics demands and what the story requires. A high-stress beat is one where the simulation outcome is unlikely given the characters' physical state — e.g., a badly wounded character landing a decisive killing blow against a fresh opponent.</p>
+    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 3 — planned</span>&ensp;A formal narrative-stress API is not yet implemented. The concepts below are design-stage. The underlying simulation primitives (morale, shock, conditions) are stable.</p>
+  </section>
+
+  <!-- Push scale -->
+  <section class="section">
+    <h2 class="section-title">Narrative push scale</h2>
+    <div class="scale-row"><span class="scale-range">0.0 – 0.2</span><span class="scale-label" style="color:var(--live)">Natural</span><span class="scale-desc">Outcome is well within what the physics supports. No narrative armour required.</span></div>
+    <div class="scale-row"><span class="scale-range">0.2 – 0.4</span><span class="scale-label" style="color:var(--accent)">Low push</span><span class="scale-desc">Outcome is unlikely but plausible — high-skill roll or lucky seed. Acceptable in fiction.</span></div>
+    <div class="scale-row"><span class="scale-range">0.4 – 0.65</span><span class="scale-label" style="color:var(--warn)">Medium push</span><span class="scale-desc">Outcome requires special circumstances (adrenaline, environment, artefact). Needs justification in story.</span></div>
+    <div class="scale-row"><span class="scale-range">0.65 – 0.85</span><span class="scale-label" style="color:var(--fail)">High push</span><span class="scale-desc">Physics strongly contradicts outcome. Classic plot-armour territory. Suspension of disbelief required.</span></div>
+    <div class="scale-row"><span class="scale-range">0.85 – 1.0</span><span class="scale-label" style="color:#c026d3">Implausible</span><span class="scale-desc">Simulation gives near-zero probability to this outcome. Explicit narrative override needed (magic, divine intervention).</span></div>
+  </section>
+
+  <!-- Beat sequence editor -->
+  <section class="section">
+    <h2 class="section-title">Beat sequence editor — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.75rem">A beat sequence describes a scene's narrative arc. Each beat has a type, description, and estimated narrative push. Aggregate push across the sequence flags high-stress scenes.</p>
+
+    <div class="beat-list" id="beat-list">
+      <div class="beat-row">
+        <span class="beat-num">1</span>
+        <span class="beat-type bt-neutral">setup</span>
+        <span class="beat-desc">Knight and mercenary face off, equal footing</span>
+        <span class="beat-push">0.05</span>
+      </div>
+      <div class="beat-row">
+        <span class="beat-num">2</span>
+        <span class="beat-type bt-tension">tension</span>
+        <span class="beat-desc">Knight takes a deep cut to the sword arm</span>
+        <span class="beat-push" style="color:var(--warn)">0.10</span>
+      </div>
+      <div class="beat-row">
+        <span class="beat-num">3</span>
+        <span class="beat-type bt-escalate">escalate</span>
+        <span class="beat-desc">Mercenary presses advantage — rapid combos</span>
+        <span class="beat-push" style="color:var(--warn)">0.15</span>
+      </div>
+      <div class="beat-row">
+        <span class="beat-num">4</span>
+        <span class="beat-type bt-reveal">reveal</span>
+        <span class="beat-desc">Knight draws on rage — attacks despite wounds</span>
+        <span class="beat-push" style="color:var(--accent)">0.42</span>
+      </div>
+      <div class="beat-row">
+        <span class="beat-num">5</span>
+        <span class="beat-type bt-tension">climax</span>
+        <span class="beat-desc">One-hit KO from critically injured combatant</span>
+        <span class="beat-push" style="color:var(--fail)">0.78</span>
+      </div>
+      <div class="beat-row">
+        <span class="beat-num">6</span>
+        <span class="beat-type bt-relief">resolution</span>
+        <span class="beat-desc">Victor collapses immediately after — physics reasserts</span>
+        <span class="beat-push" style="color:var(--live)">0.08</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="push-bar"><div class="push-bar-fill" id="aggregate-bar" style="width:30%"></div></div>
+      <div class="push-label">
+        <span>natural</span>
+        <span id="aggregate-label" style="color:var(--warn)">aggregate push: <strong>0.26</strong> — low push</span>
+        <span>implausible</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Add beat form -->
+  <section class="section">
+    <h2 class="section-title">Add a beat</h2>
+    <div class="experimental-badge">planned integration</div>
+    <div class="two-col">
+      <div class="form-group">
+        <label>Beat type</label>
+        <select id="beat-type-sel">
+          <option value="neutral">setup / neutral</option>
+          <option value="tension">tension</option>
+          <option value="escalate">escalate</option>
+          <option value="relief">relief</option>
+          <option value="reveal">reveal / twist</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Estimated push (0–1)</label>
+        <input type="number" id="beat-push-input" min="0" max="1" step="0.05" value="0.2" style="width:100%">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <input type="text" id="beat-desc-input" placeholder="Describe what happens in this beat">
+    </div>
+    <button class="btn-primary" onclick="addBeat()">Add beat</button>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Map your scene's key moments to beat types. Assign push estimates based on how badly injured the protagonist is at each moment.</li>
+      <li>Keep aggregate push below 0.35 for a grounded story. Above 0.65 you will need in-world justification (magic, poison, special training).</li>
+      <li>Run the equivalent scenario in the <a href="../playground/">Playground</a> with different seeds to see the natural probability distribution for the scene's outcome.</li>
+      <li>Use high push consciously: reserve the 0.7+ range for the story's defining mythic moment — not every chapter.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../mythology/">Mythology</a></li>
+      <li><a href="../combat/">Combat kernel</a></li>
+      <li><a href="../campaign/">Campaign</a></li>
+      <li><a href="../playground/">Playground <span class="link-note">live</span></a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/use-case-validation.md" target="_blank" rel="noopener">use-case-validation.md ↗</a></li>
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+
+<script>
+let beats = [
+  { num:1, type:'neutral',  desc:'Knight and mercenary face off, equal footing',              push:0.05 },
+  { num:2, type:'tension',  desc:'Knight takes a deep cut to the sword arm',                  push:0.10 },
+  { num:3, type:'escalate', desc:'Mercenary presses advantage — rapid combos',                push:0.15 },
+  { num:4, type:'reveal',   desc:'Knight draws on rage — attacks despite wounds',             push:0.42 },
+  { num:5, type:'tension',  desc:'One-hit KO from critically injured combatant',              push:0.78 },
+  { num:6, type:'relief',   desc:'Victor collapses immediately after — physics reasserts',    push:0.08 },
+];
+
+function pushColor(v) {
+  if (v < 0.2)  return 'var(--live)';
+  if (v < 0.4)  return 'var(--accent)';
+  if (v < 0.65) return 'var(--warn)';
+  return 'var(--fail)';
+}
+
+function typeClass(t) {
+  return { neutral:'bt-neutral', tension:'bt-tension', escalate:'bt-escalate', relief:'bt-relief', reveal:'bt-reveal' }[t] || 'bt-neutral';
+}
+
+function renderBeats() {
+  const list = document.getElementById('beat-list');
+  list.innerHTML = beats.map((b,i) => `
+    <div class="beat-row">
+      <span class="beat-num">${i+1}</span>
+      <span class="beat-type ${typeClass(b.type)}">${b.type}</span>
+      <span class="beat-desc">${b.desc}</span>
+      <span class="beat-push" style="color:${pushColor(b.push)}">${b.push.toFixed(2)}</span>
+    </div>`).join('');
+  const avg = beats.reduce((s,b)=>s+b.push,0) / beats.length;
+  document.getElementById('aggregate-bar').style.width = (avg * 100) + '%';
+  const lvl = avg < 0.2 ? 'natural' : avg < 0.4 ? 'low push' : avg < 0.65 ? 'medium push' : avg < 0.85 ? 'high push' : 'implausible';
+  document.getElementById('aggregate-label').style.color = pushColor(avg);
+  document.getElementById('aggregate-label').innerHTML = `aggregate push: <strong>${avg.toFixed(2)}</strong> — ${lvl}`;
+}
+
+function addBeat() {
+  const type = document.getElementById('beat-type-sel').value;
+  const push = parseFloat(document.getElementById('beat-push-input').value) || 0.2;
+  const desc = document.getElementById('beat-desc-input').value.trim() || '(no description)';
+  beats.push({ num: beats.length+1, type, desc, push: Math.min(1, Math.max(0, push)) });
+  renderBeats();
+  document.getElementById('beat-desc-input').value = '';
+}
+</script>
+</body>
+</html>

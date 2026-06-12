@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — World Evolution</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .branch-tree {
+    overflow-x: auto;
+    padding: 0.5rem 0 1rem;
+  }
+  .bt-track {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+    padding: 0.2rem 0;
+  }
+  .bt-node {
+    background: var(--bg-mid);
+    border: 1px solid var(--border-2);
+    border-radius: 4px;
+    padding: 0.35rem 0.65rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text);
+    white-space: nowrap;
+    flex-shrink: 0;
+    position: relative;
+    cursor: default;
+  }
+  .bt-node:hover { border-color: var(--ring); }
+  .bt-node.main { border-color: var(--accent-dim); color: var(--accent); }
+  .bt-node.branch { border-color: rgba(167,139,250,0.4); color: var(--violet); }
+  .bt-node.checkpoint { border-color: rgba(52,211,153,0.4); color: var(--live); }
+  .bt-connector {
+    width: 2rem;
+    height: 1px;
+    background: var(--border-2);
+    flex-shrink: 0;
+  }
+  .bt-fork {
+    width: 0;
+    height: 0;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .bt-branch-line {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 1.5rem;
+    height: 1px;
+    background: rgba(167,139,250,0.4);
+  }
+  .bt-branch-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 0.5rem;
+  }
+  .bt-branch-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0.15rem 0;
+  }
+  .bt-indent {
+    width: 1.5rem;
+    height: 20px;
+    border-left: 1px solid rgba(167,139,250,0.3);
+    border-bottom: 1px solid rgba(167,139,250,0.3);
+    flex-shrink: 0;
+    margin-right: 0.3rem;
+    border-radius: 0 0 0 4px;
+  }
+  .diff-row { display: flex; gap: 0.75rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+  .diff-row:last-child { border-bottom: none; }
+  .diff-key { font-family: var(--mono); font-size: 0.72rem; color: var(--ring); width: 180px; flex-shrink: 0; }
+  .diff-a   { font-family: var(--mono); font-size: 0.7rem; color: var(--fail); background: rgba(239,68,68,0.06); padding: 1px 4px; border-radius: 2px; }
+  .diff-b   { font-family: var(--mono); font-size: 0.7rem; color: var(--live); background: rgba(52,211,153,0.06); padding: 1px 4px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / World Evolution</div>
+  <h1 class="page-title">World Evolution</h1>
+  <p class="page-desc">Branching world state, checkpoints, and diff-based progression — deterministic forking of simulation timelines.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag">src/sim/world.ts</span>
+      <span class="module-tag">src/sim/kernel.ts</span>
+      <span class="module-tag">src/sim/tech.ts</span>
+      <span class="module-tag">src/sim/disease.ts</span>
+      <span class="module-tag">src/sim/weather.ts</span>
+      <span class="module-tag">src/sim/biome.ts</span>
+      <span class="module-tag stable">forkSession</span>
+      <span class="module-tag stable">serializeSession</span>
+      <span class="module-tag doc">docs/host-contract.md</span>
+    </div>
+    <p class="note">World evolution is the mechanism by which a host branches, checkpoints, and replays deterministic world states. Ananke provides the forking primitives; the host manages the branch graph. Because all state is deterministic, any checkpoint can be restored and re-simulated from that point.</p>
+    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 2 — experimental</span>&ensp;World-level branching API is not yet in the stable contract. Track <code>STABLE_API.md</code> for promotion.</p>
+  </section>
+
+  <!-- Branch tree static preview -->
+  <section class="section">
+    <h2 class="section-title">Branch tree — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.85rem">Illustrative branch graph. A real host would generate this from checkpoint metadata.</p>
+
+    <div class="branch-tree">
+      <!-- Main timeline -->
+      <div class="bt-track">
+        <div class="bt-node main">⬡ genesis<br><span style="font-size:0.6rem;color:var(--muted)">tick 0</span></div>
+        <div class="bt-connector"></div>
+        <div class="bt-node checkpoint">◉ cp-100<br><span style="font-size:0.6rem;color:var(--muted)">tick 100</span></div>
+        <div class="bt-connector"></div>
+        <div class="bt-node main">● main<br><span style="font-size:0.6rem;color:var(--muted)">tick 200</span></div>
+        <div class="bt-connector"></div>
+        <div class="bt-node checkpoint">◉ cp-300<br><span style="font-size:0.6rem;color:var(--muted)">tick 300</span></div>
+        <div class="bt-connector"></div>
+        <div class="bt-node main" style="border-color:var(--accent);box-shadow:0 0 8px rgba(251,191,36,0.1)">● HEAD<br><span style="font-size:0.6rem;color:var(--muted)">tick 450</span></div>
+      </div>
+
+      <!-- Branch off cp-100 -->
+      <div class="bt-branch-wrap">
+        <div class="bt-branch-row">
+          <div class="bt-indent"></div>
+          <div class="bt-connector" style="width:3.6rem;background:rgba(167,139,250,0.3)"></div>
+          <div class="bt-node branch">⤷ alt-diplomacy<br><span style="font-size:0.6rem;color:var(--muted)">fork tick 100</span></div>
+          <div class="bt-connector" style="background:rgba(167,139,250,0.3)"></div>
+          <div class="bt-node branch">● alt tick 180<br><span style="font-size:0.6rem;color:var(--muted)">abandoned</span></div>
+        </div>
+        <div class="bt-branch-row" style="margin-top:0.15rem">
+          <div class="bt-indent" style="margin-left:7.2rem"></div>
+          <div class="bt-connector" style="width:1.5rem;background:rgba(125,211,252,0.3)"></div>
+          <div class="bt-node" style="border-color:rgba(125,211,252,0.3);color:var(--ring);font-size:0.68rem">⤷ what-if-war<br><span style="font-size:0.58rem;color:var(--muted)">fork tick 150</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:0.75rem">
+      <span style="font-family:var(--mono);font-size:0.65rem;color:var(--muted)"><span style="color:var(--accent)">⬡●</span> main</span>
+      <span style="font-family:var(--mono);font-size:0.65rem;color:var(--muted)"><span style="color:var(--live)">◉</span> checkpoint</span>
+      <span style="font-family:var(--mono);font-size:0.65rem;color:var(--muted)"><span style="color:var(--violet)">⤷</span> branch</span>
+    </div>
+  </section>
+
+  <!-- Checkpoint diff preview -->
+  <section class="section">
+    <h2 class="section-title">Checkpoint diff — sample</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.75rem">State deltas between <code>cp-100</code> (main) and <code>alt-diplomacy tick 180</code>. Real diffs are produced by diffing two serialized session envelopes.</p>
+
+    <div class="diff-row">
+      <span class="diff-key">entity[3].vitals.shock_Q</span>
+      <span class="diff-a">4096</span>
+      <span style="color:var(--muted);font-size:0.7rem">→</span>
+      <span class="diff-b">1024</span>
+    </div>
+    <div class="diff-row">
+      <span class="diff-key">world.polities[1].stability_Q</span>
+      <span class="diff-a">32768</span>
+      <span style="color:var(--muted);font-size:0.7rem">→</span>
+      <span class="diff-b">52428</span>
+    </div>
+    <div class="diff-row">
+      <span class="diff-key">world.tech.currentEra</span>
+      <span class="diff-a">"iron_age"</span>
+      <span style="color:var(--muted);font-size:0.7rem">→</span>
+      <span class="diff-b">"iron_age"</span>
+      <span style="font-family:var(--mono);font-size:0.6rem;color:var(--muted);margin-left:0.5rem">unchanged</span>
+    </div>
+    <div class="diff-row">
+      <span class="diff-key">world.weather.temperature_Q</span>
+      <span class="diff-a">12903</span>
+      <span style="color:var(--muted);font-size:0.7rem">→</span>
+      <span class="diff-b">13500</span>
+    </div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Create a session with <code>createSession(config)</code> and step it to a stable state — this is your genesis point.</li>
+      <li>Serialize the session: <code>const snap = serializeSession(session)</code>. Store this as a named checkpoint.</li>
+      <li>Fork the session: <code>const branch = forkSession(session)</code>. Apply divergent commands to the branch.</li>
+      <li>To diff two checkpoints, deserialize both and compare entity/world state field-by-field.</li>
+      <li>Because steps are deterministic, restoring a checkpoint and re-running the same commands always yields the same world state.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../session/">Session API</a></li>
+      <li><a href="../replay/">Replay viewer</a></li>
+      <li><a href="../map/">Generative Cartography <span class="link-note">live</span></a></li>
+      <li><a href="../technology/">Technology</a></li>
+      <li><a href="../campaign/">Campaign</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/host-contract.md" target="_blank" rel="noopener">host-contract.md ↗</a></li>
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+</body>
+</html>

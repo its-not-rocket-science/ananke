@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Session API</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .lifecycle {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    padding: 0.75rem 0;
+    flex-wrap: nowrap;
+  }
+  .lc-node {
+    background: var(--bg-mid);
+    border: 1px solid var(--border-2);
+    border-radius: 4px;
+    padding: 0.45rem 0.75rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .lc-node.accent { border-color: var(--accent-dim); color: var(--accent); }
+  .lc-arrow {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    padding: 0 0.4rem;
+    flex-shrink: 0;
+  }
+  .lc-label {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 0.2rem;
+  }
+  .lc-group { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .json-key { color: var(--ring); }
+  .json-str { color: var(--live); }
+  .json-num { color: var(--accent); }
+  .json-bool { color: var(--violet); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Session API</div>
+  <h1 class="page-title">Session API</h1>
+  <p class="page-desc">Embeddable npm runtime — session lifecycle, command dispatch, snapshot extraction, and fork/restore patterns.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">@its-not-rocket-science/ananke/session</span>
+      <span class="module-tag stable">createSession</span>
+      <span class="module-tag stable">runSession</span>
+      <span class="module-tag stable">forkSession</span>
+      <span class="module-tag stable">serializeSession</span>
+      <span class="module-tag">src/session.ts</span>
+      <span class="module-tag">src/sim/kernel.ts</span>
+      <span class="module-tag">src/sim/commands.ts</span>
+      <span class="module-tag doc">docs/host-contract.md</span>
+      <span class="module-tag doc">docs/integration-primer.md</span>
+    </div>
+    <p class="note">The session facade wraps the deterministic kernel tick loop in a managed lifecycle. It is the recommended integration surface for host applications — prefer it over calling the kernel directly. Exported under the <code>session</code> subpath.</p>
+    <p class="note" style="margin-top:0.4rem">Tier-1 stable API. Covered by the semantic versioning contract in <code>STABLE_API.md</code>.</p>
+  </section>
+
+  <!-- Lifecycle -->
+  <section class="section">
+    <h2 class="section-title">Lifecycle diagram <span style="font-size:0.6rem;color:var(--stub-c);text-transform:none;font-weight:400;letter-spacing:0">&mdash; static preview</span></h2>
+    <div class="preview-badge">static preview</div>
+    <div class="lifecycle">
+      <div class="lc-group">
+        <div class="lc-node accent">createSession(config)</div>
+        <div class="lc-label">init world seed,<br>entity map</div>
+      </div>
+      <div class="lc-arrow">→</div>
+      <div class="lc-group">
+        <div class="lc-node">runSession(session, cmds)</div>
+        <div class="lc-label">step N ticks,<br>emit events</div>
+      </div>
+      <div class="lc-arrow">→</div>
+      <div class="lc-group">
+        <div class="lc-node">forkSession(session)</div>
+        <div class="lc-label">clone snapshot,<br>branch world</div>
+      </div>
+      <div class="lc-arrow">→</div>
+      <div class="lc-group">
+        <div class="lc-node accent">serializeSession(session)</div>
+        <div class="lc-label">JSON envelope,<br>portable state</div>
+      </div>
+    </div>
+    <div style="margin-top:0.85rem;border-top:1px solid var(--border);padding-top:0.85rem">
+      <p class="note">A forked session shares no mutable state with its parent. Both branches can be stepped independently. Determinism is preserved: given the same command sequence, both produce identical tick-by-tick outcomes.</p>
+    </div>
+  </section>
+
+  <!-- Import snippet -->
+  <section class="section">
+    <h2 class="section-title">Import example</h2>
+<pre><span class="json-key">import</span> {
+  createSession,
+  runSession,
+  forkSession,
+  serializeSession,
+} <span class="json-key">from</span> <span class="json-str">'@its-not-rocket-science/ananke/session'</span>;
+
+<span class="json-key">const</span> session = createSession({
+  worldSeed: 42,
+  tickRateHz: 20,
+  entities: [
+    { id: 1, label: <span class="json-str">'knight'</span>, archetype: <span class="json-str">'FIGHTER'</span> },
+    { id: 2, label: <span class="json-str">'archer'</span>, archetype: <span class="json-str">'ARCHER'</span>  },
+  ],
+});
+
+<span class="json-key">const</span> result = runSession(session, [
+  { tick: 0, type: <span class="json-str">'MOVE'</span>, entityId: 1, target: { x_Sm: 10000, y_Sm: 0 } },
+  { tick: 5, type: <span class="json-str">'ATTACK'</span>, entityId: 1, targetId: 2 },
+]);
+
+console.log(result.events);          <span style="color:var(--muted)">// typed SimEvent[]</span>
+console.log(result.finalTick);       <span style="color:var(--muted)">// last stepped tick</span>
+
+<span class="json-key">const</span> snapshot = serializeSession(session);  <span style="color:var(--muted)">// → JSON string</span>
+</pre>
+  </section>
+
+  <!-- JSON envelope preview -->
+  <section class="section">
+    <h2 class="section-title">Session envelope — JSON shape</h2>
+    <div class="preview-badge">static preview</div>
+<pre>{
+  <span class="json-key">"anankeVersion"</span>: <span class="json-str">"0.5.0"</span>,
+  <span class="json-key">"sessionId"</span>:    <span class="json-str">"s_42_1748736000"</span>,
+  <span class="json-key">"worldSeed"</span>:    <span class="json-num">42</span>,
+  <span class="json-key">"tickRateHz"</span>:   <span class="json-num">20</span>,
+  <span class="json-key">"currentTick"</span>:  <span class="json-num">100</span>,
+  <span class="json-key">"entities"</span>: {
+    <span class="json-key">"1"</span>: { <span class="json-key">"id"</span>: <span class="json-num">1</span>, <span class="json-key">"label"</span>: <span class="json-str">"knight"</span>, <span class="json-key">"vitals"</span>: { <span class="json-key">"shock_Q"</span>: <span class="json-num">1820</span> }, <span class="json-key">"...</span><span class="json-str">"</span>: <span class="json-str">"..."</span> },
+    <span class="json-key">"2"</span>: { <span class="json-key">"id"</span>: <span class="json-num">2</span>, <span class="json-key">"label"</span>: <span class="json-str">"archer"</span>, <span class="json-key">"vitals"</span>: { <span class="json-key">"shock_Q"</span>: <span class="json-num">3200</span> }, <span class="json-key">"...</span><span class="json-str">"</span>: <span class="json-str">"..."</span> }
+  },
+  <span class="json-key">"forkDepth"</span>:    <span class="json-num">0</span>,
+  <span class="json-key">"parentSessionId"</span>: <span class="json-bool">null</span>
+}</pre>
+    <p class="note" style="margin-top:0.6rem">All numeric fields using fixed-point arithmetic store integer Q values (scale 65536). Divide by 65536 to get the floating-point equivalent for display purposes only — never use floats in the simulation path.</p>
+  </section>
+
+  <!-- Validator -->
+  <section class="section">
+    <h2 class="section-title">Envelope validator</h2>
+    <div class="form-group">
+      <label>Paste session JSON</label>
+      <textarea id="env-input" rows="8" placeholder='{"anankeVersion":"0.5.0","worldSeed":42,"currentTick":0,"entities":{}}'></textarea>
+    </div>
+    <button class="btn-primary" onclick="validateEnvelope()">Validate shape</button>
+    <div class="status-msg" id="env-status"></div>
+  </section>
+
+</div><!-- .content-area -->
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../combat/">Combat kernel</a></li>
+      <li><a href="../replay/">Replay viewer</a></li>
+      <li><a href="../conformance/">Conformance</a></li>
+      <li><a href="../debugger/">Visual debugger <span class="link-note">live</span></a></li>
+      <li><a href="../playground/">Playground <span class="link-note">live</span></a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/host-contract.md" target="_blank" rel="noopener">host-contract.md ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/integration-primer.md" target="_blank" rel="noopener">integration-primer.md ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/STABLE_API.md" target="_blank" rel="noopener">STABLE_API.md ↗</a></li>
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Install: <code>npm i @its-not-rocket-science/ananke</code></li>
+      <li>Import from <code>/session</code> subpath</li>
+      <li>Call <code>createSession</code> with a seed + entity list</li>
+      <li>Step with <code>runSession</code></li>
+      <li>Snapshot with <code>serializeSession</code></li>
+    </ol>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+
+<script>
+function validateEnvelope() {
+  const input = document.getElementById('env-input').value.trim();
+  const status = document.getElementById('env-status');
+  status.className = 'status-msg';
+  if (!input) {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'Error: empty input';
+    return;
+  }
+  let obj;
+  try { obj = JSON.parse(input); } catch (e) {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'JSON parse error: ' + e.message;
+    return;
+  }
+  const required = ['worldSeed', 'currentTick', 'entities'];
+  const missing = required.filter(k => !(k in obj));
+  if (missing.length) {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'Missing required fields: ' + missing.join(', ');
+    return;
+  }
+  if (typeof obj.worldSeed !== 'number') {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'worldSeed must be a number';
+    return;
+  }
+  if (typeof obj.entities !== 'object' || Array.isArray(obj.entities)) {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'entities must be an object (id → entity)';
+    return;
+  }
+  const count = Object.keys(obj.entities).length;
+  status.className = 'status-msg status-ok visible';
+  status.textContent = `Valid envelope — seed ${obj.worldSeed}, tick ${obj.currentTick}, ${count} entities`;
+}
+</script>
+</body>
+</html>

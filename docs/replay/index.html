@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Replay &amp; Diff Viewer</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .tick-list {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    margin-top: 0.75rem;
+  }
+  .tick-entry {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    align-items: baseline;
+  }
+  .tick-entry:last-child { border-bottom: none; }
+  .tick-entry:hover { background: var(--surface-2); }
+  .tick-num { color: var(--muted); min-width: 55px; flex-shrink: 0; }
+  .tick-event { color: var(--text); flex: 1; }
+  .tick-entity { color: var(--ring); margin-right: 0.35rem; }
+  .tick-detail { color: var(--muted); font-size: 0.68rem; }
+  .tick-hit    { color: var(--warn); }
+  .tick-death  { color: var(--fail); }
+  .tick-end    { color: var(--live); }
+  .empty-state { padding: 2rem; text-align: center; color: var(--muted); font-size: 0.82rem; }
+  .det-row { display: flex; gap: 0.75rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border); align-items: baseline; font-size: 0.78rem; }
+  .det-row:last-child { border-bottom: none; }
+  .det-label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); width: 180px; flex-shrink: 0; }
+  .det-val   { font-family: var(--mono); color: var(--text); }
+  .file-notice { background: var(--prev-bg); border: 1px solid rgba(125,211,252,0.2); border-radius: 4px; padding: 0.5rem 0.75rem; font-family: var(--mono); font-size: 0.7rem; color: var(--prev); margin-bottom: 0.65rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Replay &amp; Diff Viewer</div>
+  <h1 class="page-title">Replay &amp; Diff Viewer</h1>
+  <p class="page-desc">Load and inspect replay JSON traces — browse tick-by-tick events, entity state, and deterministic diff comparisons between two traces.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag">src/sim/trace.ts</span>
+      <span class="module-tag">src/sim/events.ts</span>
+      <span class="module-tag stable">serializeSession</span>
+      <span class="module-tag stable">runSession</span>
+      <span class="module-tag">tools/trace-attack.ts</span>
+      <span class="module-tag doc">docs/host-contract.md</span>
+    </div>
+    <p class="note">A replay is a serialized session envelope plus the ordered command log that produced the recorded world state. Because Ananke is deterministic, replaying the same commands against the same seed always reproduces the identical sequence of events — making replay an exact reproducibility guarantee rather than an approximation.</p>
+  </section>
+
+  <!-- Determinism explainer -->
+  <section class="section">
+    <h2 class="section-title">Deterministic replay — how it works</h2>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot done"></div>
+        <div class="tl-line"></div>
+        <div class="tl-body">
+          <div class="tl-label">Record phase</div>
+          <div class="tl-desc">Host saves <code>worldSeed</code> + ordered command log as each command is dispatched. No state snapshot needed — commands alone are sufficient.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot done"></div>
+        <div class="tl-line"></div>
+        <div class="tl-body">
+          <div class="tl-label">Replay phase</div>
+          <div class="tl-desc">Reconstruct session from <code>worldSeed</code>, replay all commands in order. Every tick produces the same output as the original run.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot active"></div>
+        <div class="tl-line"></div>
+        <div class="tl-body">
+          <div class="tl-label">Diff phase</div>
+          <div class="tl-desc">Load two replay traces (e.g. v0.4.x vs v0.5.x). Step both to the same tick. Compare serialized entity state field-by-field to identify divergence.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-line"></div>
+        <div class="tl-body">
+          <div class="tl-label">Golden fixture tests</div>
+          <div class="tl-desc">Check specific snapshots against committed golden files to catch regressions — any change that shifts tick outcomes appears immediately as a diff failure.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Replay loader -->
+  <section class="section">
+    <h2 class="section-title">Replay trace loader</h2>
+    <div class="file-notice" id="file-notice" style="display:none">
+      Note: loading from <code>file://</code> is blocked by browser security. Open this page via a local server (e.g. <code>npx serve docs</code>) or GitHub Pages to use file-load features.
+    </div>
+    <div class="form-group">
+      <label>Paste replay JSON or drag and drop a <code>.replay.json</code> file</label>
+      <textarea id="replay-input" rows="8" placeholder='{"anankeVersion":"0.5.0","worldSeed":42,"commands":[{"tick":0,"type":"ATTACK","entityId":1,"targetId":2}],"events":[]}'></textarea>
+    </div>
+    <div class="flex-row" style="margin-bottom:0.5rem">
+      <button class="btn-primary" onclick="loadReplay()">Load replay</button>
+      <button class="btn" onclick="loadSample()">Load sample</button>
+      <button class="btn" onclick="clearReplay()" style="color:var(--muted)">Clear</button>
+    </div>
+    <div class="status-msg" id="replay-status"></div>
+
+    <div id="tick-list" class="tick-list" style="display:none">
+      <div class="empty-state" id="tick-empty">No events loaded</div>
+    </div>
+
+    <div id="replay-meta" style="display:none;margin-top:0.75rem">
+      <div class="det-row"><span class="det-label">worldSeed</span><span class="det-val" id="meta-seed">—</span></div>
+      <div class="det-row"><span class="det-label">totalTicks</span><span class="det-val" id="meta-ticks">—</span></div>
+      <div class="det-row"><span class="det-label">commands</span><span class="det-val" id="meta-cmds">—</span></div>
+      <div class="det-row"><span class="det-label">events</span><span class="det-val" id="meta-evts">—</span></div>
+      <div class="det-row"><span class="det-label">anankeVersion</span><span class="det-val" id="meta-ver">—</span></div>
+    </div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Run <code>npm run run:trace-attack</code> to generate a trace of a single attack sequence.</li>
+      <li>Serialize a session after a duel using <code>serializeSession(session)</code> and save the JSON — that is your replay file.</li>
+      <li>Load it here to browse the tick/event timeline.</li>
+      <li>To diff two versions: serialize the same seed from different Ananke builds and compare with <code>JSON.diff</code> or similar.</li>
+      <li>Golden fixtures live in <code>test/</code> — add a new fixture when you want a specific scenario locked against regressions.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../debugger/">Visual Debugger <span class="link-note">live</span></a></li>
+      <li><a href="../session/">Session API</a></li>
+      <li><a href="../combat/">Combat kernel</a></li>
+      <li><a href="../conformance/">Conformance</a></li>
+      <li><a href="../world-client/">World Client</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/host-contract.md" target="_blank" rel="noopener">host-contract.md ↗</a></li>
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+
+<script>
+// Detect file:// and warn
+if (location.protocol === 'file:') {
+  document.getElementById('file-notice').style.display = '';
+}
+
+const SAMPLE = {
+  anankeVersion: "0.5.0",
+  worldSeed: 42,
+  commands: [
+    { tick: 0,  type: "ATTACK", entityId: 1, targetId: 2 },
+    { tick: 3,  type: "ATTACK", entityId: 2, targetId: 1 },
+    { tick: 7,  type: "ATTACK", entityId: 1, targetId: 2 },
+    { tick: 12, type: "DEFEND", entityId: 2 },
+    { tick: 15, type: "ATTACK", entityId: 1, targetId: 2 },
+  ],
+  events: [
+    { tick: 0,  type: "HIT",   attacker: 1, target: 2, region: "torso", energy_J: 2048, injury: "surface" },
+    { tick: 3,  type: "HIT",   attacker: 2, target: 1, region: "arm",   energy_J: 1536, injury: "surface" },
+    { tick: 7,  type: "HIT",   attacker: 1, target: 2, region: "torso", energy_J: 2560, injury: "internal" },
+    { tick: 7,  type: "SHOCK", entityId: 2, shock_Q: 12288 },
+    { tick: 12, type: "MISS",  attacker: 1, target: 2 },
+    { tick: 15, type: "HIT",   attacker: 1, target: 2, region: "head",  energy_J: 3072, injury: "structural" },
+    { tick: 15, type: "DEATH", entityId: 2 },
+  ]
+};
+
+function loadSample() {
+  document.getElementById('replay-input').value = JSON.stringify(SAMPLE, null, 2);
+  loadReplay();
+}
+
+function loadReplay() {
+  const input = document.getElementById('replay-input').value.trim();
+  const status = document.getElementById('replay-status');
+  status.className = 'status-msg';
+  if (!input) { status.className = 'status-msg status-err visible'; status.textContent = 'Error: empty input'; return; }
+  let obj;
+  try { obj = JSON.parse(input); } catch (e) {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'JSON parse error: ' + e.message;
+    return;
+  }
+  if (!obj.worldSeed || !Array.isArray(obj.events)) {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'Missing worldSeed or events array';
+    return;
+  }
+
+  // Populate meta
+  document.getElementById('meta-seed').textContent = obj.worldSeed;
+  document.getElementById('meta-ticks').textContent = obj.events.length > 0 ? Math.max(...obj.events.map(e=>e.tick)) : 0;
+  document.getElementById('meta-cmds').textContent  = (obj.commands || []).length;
+  document.getElementById('meta-evts').textContent  = obj.events.length;
+  document.getElementById('meta-ver').textContent   = obj.anankeVersion || '—';
+  document.getElementById('replay-meta').style.display = '';
+
+  // Populate tick list
+  const list = document.getElementById('tick-list');
+  list.style.display = '';
+  document.getElementById('tick-empty').style.display = 'none';
+  list.innerHTML = '';
+  for (const ev of obj.events) {
+    const d = document.createElement('div');
+    d.className = 'tick-entry';
+    let cls = '';
+    let desc = ev.type;
+    if (ev.type === 'HIT')   { cls = 'tick-hit';   desc = `HIT — e${ev.attacker}→e${ev.target} ${ev.region||''} ${ev.energy_J ? ev.energy_J+'J' : ''} (${ev.injury||''})`; }
+    if (ev.type === 'DEATH') { cls = 'tick-death';  desc = `DEATH — entity ${ev.entityId}`; }
+    if (ev.type === 'MISS')  { cls = '';            desc = `MISS — e${ev.attacker}→e${ev.target}`; }
+    if (ev.type === 'SHOCK') { cls = 'tick-hit';    desc = `SHOCK — e${ev.entityId} shock_Q=${ev.shock_Q}`; }
+    d.innerHTML = `<span class="tick-num">tick ${ev.tick}</span><span class="tick-event ${cls}">${desc}</span>`;
+    list.appendChild(d);
+  }
+  status.className = 'status-msg status-ok visible';
+  status.textContent = `Loaded — ${obj.events.length} events, seed ${obj.worldSeed}`;
+}
+
+function clearReplay() {
+  document.getElementById('replay-input').value = '';
+  document.getElementById('replay-status').className = 'status-msg';
+  document.getElementById('tick-list').style.display = 'none';
+  document.getElementById('replay-meta').style.display = 'none';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Conformance</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .check-group-title {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin: 0.85rem 0 0.4rem;
+  }
+  .check-group-title:first-child { margin-top: 0; }
+  .export-card {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.6rem 0.8rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: baseline;
+  }
+  .export-card + .export-card { margin-top: 0.4rem; }
+  .export-path { font-family: var(--mono); font-size: 0.72rem; color: var(--ring); flex: 1; }
+  .export-tier { font-family: var(--mono); font-size: 0.62rem; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; }
+  .tier-1 { background: rgba(251,191,36,0.12); color: var(--accent); border: 1px solid var(--accent-dim); }
+  .tier-2 { background: var(--build-bg); color: var(--build-c); }
+  .tier-3 { background: var(--surface-2); color: var(--muted); }
+  .export-status { font-family: var(--mono); font-size: 0.62rem; color: var(--live); flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Conformance</div>
+  <h1 class="page-title">Conformance</h1>
+  <p class="page-desc">Host integration checklist, import surface status, and netcode conformance requirements for integrators building on Ananke.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">@its-not-rocket-science/ananke</span>
+      <span class="module-tag stable">@its-not-rocket-science/ananke/session</span>
+      <span class="module-tag">examples/reference/host-coherence/</span>
+      <span class="module-tag doc">docs/host-contract.md</span>
+      <span class="module-tag doc">docs/bridge-contract.md</span>
+      <span class="module-tag doc">STABLE_API.md</span>
+    </div>
+    <p class="note">Conformance means your host correctly implements the Ananke integration contract: deterministic tick stepping, correct command dispatch, and coherent state management. Non-conformant integrations will exhibit world state drift, incorrect physics outcomes, or replay failures.</p>
+  </section>
+
+  <!-- Integration checklist -->
+  <section class="section">
+    <h2 class="section-title">Host integration checklist</h2>
+    <div id="checklist-progress" class="check-progress">
+      <span id="check-count">0 / 0</span>
+      <div class="check-bar"><div class="check-bar-fill" id="check-bar" style="width:0%"></div></div>
+    </div>
+
+    <div class="check-group-title">Session lifecycle</div>
+    <ul class="checklist" id="checklist">
+      <li><input type="checkbox" onchange="updateProgress()"><span>Use <code>createSession</code> with a fixed <code>worldSeed</code> — never use <code>Math.random()</code> anywhere in the simulation path</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Advance world time with <code>runSession</code> — do not manually increment tick counters or call kernel functions directly</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Serialize with <code>serializeSession</code> before persistence — do not JSON-stringify internal entity maps directly</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Fork with <code>forkSession</code> for branching — do not deep-clone session objects manually</span></li>
+
+      <div class="check-group-title">Fixed-point arithmetic</div>
+      <li><input type="checkbox" onchange="updateProgress()"><span>All simulation values use fixed-point integers (Q scale = 65536). Never convert to floats in the simulation path</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Display-only conversion: <code>displayValue = q_int / 65536</code> — never feed converted floats back into the kernel</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Distance in sub-metres (Sm): 1 Sm = 0.0001 m. Mass in Skg: 1 Skg = 0.001 kg</span></li>
+
+      <div class="check-group-title">Determinism</div>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Same <code>worldSeed</code> + same command sequence → identical tick-by-tick outcomes on any platform</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Command log is the authoritative record — not entity snapshots. Store the command log, not the state.</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>No async operations inside the simulation tick loop — all commands dispatched synchronously per tick</span></li>
+
+      <div class="check-group-title">Command dispatch</div>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Commands are validated before dispatch — see <code>src/sim/commands.ts</code> for the full command schema</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Entity IDs are stable across ticks — never reuse a dead entity's ID in the same session</span></li>
+
+      <div class="check-group-title">Netcode / replication</div>
+      <li><input type="checkbox" onchange="updateProgress()"><span>All clients receive identical command streams — lock-step or deterministic rollback only</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>Clock synchronisation: tick dispatch times must be consistent across peers (within ±½ tick tolerance)</span></li>
+      <li><input type="checkbox" onchange="updateProgress()"><span>State divergence detected: compare <code>serializeSession</code> hashes across peers every N ticks</span></li>
+    </ul>
+  </section>
+
+  <!-- Import surface -->
+  <section class="section">
+    <h2 class="section-title">Import surface status</h2>
+    <div class="export-card">
+      <span class="export-path">@its-not-rocket-science/ananke</span>
+      <span class="export-tier tier-1">Tier 1</span>
+      <span class="export-status">stable ✓</span>
+    </div>
+    <div class="export-card">
+      <span class="export-path">@its-not-rocket-science/ananke/session</span>
+      <span class="export-tier tier-1">Tier 1</span>
+      <span class="export-status">stable ✓</span>
+    </div>
+    <div class="export-card">
+      <span class="export-path">@its-not-rocket-science/ananke/units</span>
+      <span class="export-tier tier-1">Tier 1</span>
+      <span class="export-status">stable ✓</span>
+    </div>
+    <div class="export-card">
+      <span class="export-path">@its-not-rocket-science/ananke/sim/combat</span>
+      <span class="export-tier tier-2">Tier 2</span>
+      <span class="export-status" style="color:var(--build-c)">experimental</span>
+    </div>
+    <div class="export-card">
+      <span class="export-path">@its-not-rocket-science/ananke/sim/disease</span>
+      <span class="export-tier tier-2">Tier 2</span>
+      <span class="export-status" style="color:var(--build-c)">experimental</span>
+    </div>
+    <div class="export-card">
+      <span class="export-path">@its-not-rocket-science/ananke/sim/hazard</span>
+      <span class="export-tier tier-2">Tier 2</span>
+      <span class="export-status" style="color:var(--build-c)">experimental</span>
+    </div>
+    <p class="note" style="margin-top:0.6rem">Tier 1 exports are covered by the semantic versioning contract — no breaking changes without a major version bump. Tier 2/3 surfaces may change between minor versions. Always check <code>STABLE_API.md</code> before upgrading.</p>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Read <a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/host-contract.md">host-contract.md</a> first — it is the normative integration spec.</li>
+      <li>Run the host coherence reference implementation to see a conformant integration: <a href="../../examples/reference/host-coherence/web/">examples/reference/host-coherence/</a></li>
+      <li>Check the validation dashboard after each upgrade: <a href="../dashboard/">Validation Dashboard</a> — regressions appear immediately.</li>
+      <li>Add a golden replay fixture in <code>test/</code> for your core scenario — CI will catch any physics regressions.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../session/">Session API</a></li>
+      <li><a href="../replay/">Replay viewer</a></li>
+      <li><a href="../data-governance/">Data Governance</a></li>
+      <li><a href="../dashboard/">Validation Dashboard <span class="link-note">live</span></a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/host-contract.md" target="_blank" rel="noopener">host-contract.md ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/bridge-contract.md" target="_blank" rel="noopener">bridge-contract.md ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/STABLE_API.md" target="_blank" rel="noopener">STABLE_API.md ↗</a></li>
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Reference impl</h2>
+    <ul class="link-list">
+      <li><a href="../../examples/reference/host-coherence/web/" target="_blank" rel="noopener">host-coherence ↗</a></li>
+      <li><a href="../world-client/replication-client.html" target="_blank" rel="noopener">Replication Client</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+function updateProgress() {
+  const items   = document.querySelectorAll('#checklist input[type=checkbox]');
+  const checked = document.querySelectorAll('#checklist input[type=checkbox]:checked');
+  const pct     = items.length ? Math.round(checked.length / items.length * 100) : 0;
+  document.getElementById('check-count').textContent = checked.length + ' / ' + items.length;
+  document.getElementById('check-bar').style.width   = pct + '%';
+  document.querySelectorAll('#checklist li').forEach(li => {
+    const cb = li.querySelector('input[type=checkbox]');
+    if (cb) li.classList.toggle('checked', cb.checked);
+  });
+}
+updateProgress();
+</script>
+</body>
+</html>

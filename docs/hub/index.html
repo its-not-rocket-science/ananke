@@ -17,11 +17,11 @@
     --surface-2:  #1a2235;
     --border:     #1e2a40;
     --border-2:   #2a3a55;
-    --accent:     #fbbf24;   /* amber fixed-point node */
+    --accent:     #fbbf24;
     --accent-dim: #78530a;
     --accent-glow:rgba(251,191,36,0.08);
-    --ring:       #7dd3fc;   /* orbit ring */
-    --violet:     #a78bfa;   /* third node */
+    --ring:       #7dd3fc;
+    --violet:     #a78bfa;
     --text:       #e5e7eb;
     --muted:      #6b7fa0;
     --live:       #34d399;
@@ -56,66 +56,17 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .wordmark {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .wordmark-icon {
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-  }
-
-  .wordmark-text {}
-
-  .wordmark-name {
-    font-family: var(--mono);
-    font-size: 1.75rem;
-    font-weight: 500;
-    color: var(--text);
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-
-  .wordmark-annotation {
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    color: var(--muted);
-    margin-top: 0.2rem;
-    display: block;
-    letter-spacing: 0.01em;
-  }
-
+  .wordmark { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
+  .wordmark-icon { width: 40px; height: 40px; flex-shrink: 0; }
+  .wordmark-name { font-family: var(--mono); font-size: 1.75rem; font-weight: 500; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+  .wordmark-annotation { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); margin-top: 0.2rem; display: block; letter-spacing: 0.01em; }
   .wordmark-annotation .q  { color: var(--accent); }
   .wordmark-annotation .ar { color: var(--ring); }
 
-  header > p {
-    font-size: 0.875rem;
-    color: var(--muted);
-    max-width: 560px;
-    line-height: 1.6;
-  }
+  header > p { font-size: 0.875rem; color: var(--muted); max-width: 560px; line-height: 1.6; }
 
-  .header-links {
-    display: flex;
-    gap: 1.25rem;
-    margin-top: 0.85rem;
-    flex-wrap: wrap;
-  }
-
-  .header-links a {
-    font-family: var(--mono);
-    font-size: 0.72rem;
-    color: var(--muted);
-    text-decoration: none;
-    border-bottom: 1px solid var(--border-2);
-    padding-bottom: 1px;
-    transition: color 0.15s, border-color 0.15s;
-  }
-
+  .header-links { display: flex; gap: 1.25rem; margin-top: 0.85rem; flex-wrap: wrap; }
+  .header-links a { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--border-2); padding-bottom: 1px; transition: color 0.15s, border-color 0.15s; }
   .header-links a:hover { color: var(--text); border-color: var(--muted); }
 
   /* ── Status bar ── */
@@ -132,17 +83,8 @@
     color: var(--muted);
     flex-wrap: wrap;
   }
-
   .status-bar .kv { color: var(--accent); }
-
-  .status-dot {
-    display: inline-block;
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--live);
-    margin-right: 0.35rem;
-    vertical-align: middle;
-  }
+  .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--live); margin-right: 0.35rem; vertical-align: middle; }
 
   /* ── Main ── */
   main {
@@ -164,29 +106,9 @@
   }
 
   /* ── Lane ── */
-  .lane-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 0.7rem;
-    padding-bottom: 0.6rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .lane-title {
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-  }
-
-  .lane-count {
-    font-family: var(--mono);
-    font-size: 0.62rem;
-    color: var(--stub-c);
-  }
+  .lane-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.7rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border); }
+  .lane-title { font-family: var(--mono); font-size: 0.68rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .lane-count { font-family: var(--mono); font-size: 0.62rem; color: var(--stub-c); }
 
   /* ── Card ── */
   .card {
@@ -200,49 +122,18 @@
     gap: 0.35rem;
     transition: border-color 0.15s, background 0.15s;
   }
-
-  .card:hover {
-    border-color: var(--border-2);
-    background: var(--surface-2);
-  }
-
-  .card-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0.5rem;
-  }
-
-  .card-name {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text);
-    line-height: 1.3;
-  }
+  .card:hover { border-color: var(--border-2); background: var(--surface-2); }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+  .card-name { font-size: 0.85rem; font-weight: 500; color: var(--text); line-height: 1.3; }
 
   /* pills */
-  .pill {
-    font-family: var(--mono);
-    font-size: 0.6rem;
-    font-weight: 500;
-    padding: 2px 7px;
-    border-radius: 3px;
-    white-space: nowrap;
-    flex-shrink: 0;
-    align-self: flex-start;
-    letter-spacing: 0.04em;
-  }
-
+  .pill { font-family: var(--mono); font-size: 0.6rem; font-weight: 500; padding: 2px 7px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; align-self: flex-start; letter-spacing: 0.04em; }
   .pill-live    { background: var(--live-bg);  color: var(--live);    }
   .pill-preview { background: var(--prev-bg);  color: var(--prev);    }
   .pill-stub    { background: var(--stub-bg);  color: var(--stub-c);  border: 1px solid var(--border-2); }
   .pill-build   { background: var(--build-bg); color: var(--build-c); }
 
-  .card-desc {
-    font-size: 0.78rem;
-    color: var(--muted);
-    line-height: 1.55;
-  }
+  .card-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.55; }
 
   .card-launch {
     margin-top: 0.2rem;
@@ -258,18 +149,8 @@
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
-
-  .card-launch:hover:not(.disabled) {
-    background: var(--accent-glow);
-    border-color: var(--accent);
-  }
-
-  .card-launch.disabled {
-    color: var(--stub-c);
-    border-color: var(--border);
-    cursor: default;
-    pointer-events: none;
-  }
+  .card-launch:hover:not(.disabled) { background: var(--accent-glow); border-color: var(--accent); }
+  .card-launch.disabled { color: var(--stub-c); border-color: var(--border); cursor: default; pointer-events: none; }
 
   /* ── Footer ── */
   footer {
@@ -283,13 +164,7 @@
     flex-wrap: wrap;
     gap: 0.75rem;
   }
-
-  footer p {
-    font-family: var(--mono);
-    font-size: 0.68rem;
-    color: var(--stub-c);
-  }
-
+  footer p { font-family: var(--mono); font-size: 0.68rem; color: var(--stub-c); }
   footer a { color: var(--muted); text-decoration: none; }
   footer a:hover { color: var(--text); }
 
@@ -308,7 +183,7 @@
       </span>
     </div>
   </div>
-  <p>Deterministic simulation kernel for host applications. 678 commits. Stable API contract. Fixed-point arithmetic throughout.</p>
+  <p>Deterministic simulation kernel for host applications. Stable API contract. Fixed-point arithmetic throughout.</p>
   <nav class="header-links" aria-label="External links">
     <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub ↗</a>
     <a href="../api/" target="_blank" rel="noopener">API docs ↗</a>
@@ -334,6 +209,13 @@
       <span class="lane-count" id="count-adopters"></span>
     </div>
 
+    <div class="card" data-tool="session-api">
+      <div class="card-top"><span class="card-name">Session API</span>
+        <span class="pill pill-preview" data-status="session-api">preview</span></div>
+      <p class="card-desc">Embeddable npm runtime — session lifecycle, command dispatch, and snapshot extraction.</p>
+      <a class="card-launch" href="../session/">Launch →</a>
+    </div>
+
     <div class="card" data-tool="playground">
       <div class="card-top"><span class="card-name">Playground</span>
         <span class="pill pill-live" data-status="playground">live</span></div>
@@ -351,29 +233,43 @@
     <div class="card" data-tool="host-coherence">
       <div class="card-top"><span class="card-name">Host Coherence Reference</span>
         <span class="pill pill-build" data-status="host-coherence">needs build</span></div>
-      <p class="card-desc">Reference integration showing a host maintaining coherence across command streams. Imports from <code style="font-size:0.72rem;color:var(--muted)">dist/</code>.</p>
-      <a class="card-launch disabled" href="../examples/host-coherence/" target="_blank" rel="noopener">Coming →</a>
+      <p class="card-desc">Reference integration showing a host maintaining coherence across command streams.</p>
+      <a class="card-launch" href="../../examples/reference/host-coherence/web/" target="_blank" rel="noopener">Launch →</a>
     </div>
 
-    <div class="card" data-tool="tactics-duel">
-      <div class="card-top"><span class="card-name">Tactics Duel</span>
-        <span class="pill pill-preview" data-status="tactics-duel">preview</span></div>
-      <p class="card-desc">Turn-based tactics game UI driven by Ananke's deterministic combat kernel.</p>
-      <a class="card-launch" href="../examples/tactics-duel/" target="_blank" rel="noopener">Launch →</a>
+    <div class="card" data-tool="combat">
+      <div class="card-top"><span class="card-name">Combat Kernel</span>
+        <span class="pill pill-preview" data-status="combat">preview</span></div>
+      <p class="card-desc">Deterministic tick-stepping combat — archetype explorer, tick phase diagram, and live playground links.</p>
+      <a class="card-launch" href="../combat/">Launch →</a>
     </div>
 
-    <div class="card" data-tool="narrative-campaign">
-      <div class="card-top"><span class="card-name">Narrative Campaign</span>
-        <span class="pill pill-preview" data-status="narrative-campaign">preview</span></div>
-      <p class="card-desc">Long-form narrative campaign game UI — branching storylines anchored to deterministic world state.</p>
-      <a class="card-launch" href="../examples/narrative-campaign/" target="_blank" rel="noopener">Launch →</a>
+    <div class="card" data-tool="replay">
+      <div class="card-top"><span class="card-name">Replay &amp; Diff Viewer</span>
+        <span class="pill pill-preview" data-status="replay">preview</span></div>
+      <p class="card-desc">Load replay JSON traces — browse tick-by-tick events and compare deterministic outputs between versions.</p>
+      <a class="card-launch" href="../replay/">Launch →</a>
     </div>
 
-    <div class="card" data-tool="session-api">
-      <div class="card-top"><span class="card-name">Session API Demo</span>
-        <span class="pill pill-stub" data-status="session-api">stub</span></div>
-      <p class="card-desc">Embeddable npm runtime — session lifecycle, command dispatch, and snapshot extraction.</p>
-      <a class="card-launch disabled" href="../session/" target="_blank" rel="noopener">Coming →</a>
+    <div class="card" data-tool="conformance">
+      <div class="card-top"><span class="card-name">Conformance Checklist</span>
+        <span class="pill pill-preview" data-status="conformance">preview</span></div>
+      <p class="card-desc">Host integration requirements — determinism, fixed-point, command dispatch, and netcode contract.</p>
+      <a class="card-launch" href="../conformance/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="world-client">
+      <div class="card-top"><span class="card-name">Persistent World Client</span>
+        <span class="pill pill-preview" data-status="world-client">preview</span></div>
+      <p class="card-desc">Connect to a running Ananke world server — observe, command, and replay live simulation state.</p>
+      <a class="card-launch" href="../world-client/" target="_blank" rel="noopener">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="medical">
+      <div class="card-top"><span class="card-name">Medical &amp; Recovery</span>
+        <span class="pill pill-preview" data-status="medical">preview</span></div>
+      <p class="card-desc">Injury state, wound aging, care levels, and recovery timelines — physics-grounded medical API.</p>
+      <a class="card-launch" href="../medical/">Launch →</a>
     </div>
 
   </section>
@@ -383,20 +279,6 @@
     <div class="lane-header">
       <h2 class="lane-title" id="lane-creators">Content Creators</h2>
       <span class="lane-count" id="count-creators"></span>
-    </div>
-
-    <div class="card" data-tool="zoo">
-      <div class="card-top"><span class="card-name">Simulation Zoo</span>
-        <span class="pill pill-live" data-status="zoo">live</span></div>
-      <p class="card-desc">Browse and inspect all named entity archetypes, body plans, and species in the corpus.</p>
-      <a class="card-launch" href="../zoo/" target="_blank" rel="noopener">Launch →</a>
-    </div>
-
-    <div class="card" data-tool="map">
-      <div class="card-top"><span class="card-name">Generative Cartography</span>
-        <span class="pill pill-live" data-status="map">live</span></div>
-      <p class="card-desc">World map generation seeded from Ananke world state — deterministic terrain, biomes, settlements.</p>
-      <a class="card-launch" href="../map/" target="_blank" rel="noopener">Launch →</a>
     </div>
 
     <div class="card" data-tool="body-plan-editor">
@@ -427,18 +309,53 @@
       <a class="card-launch" href="../editors/scenario-builder.html" target="_blank" rel="noopener">Launch →</a>
     </div>
 
-    <div class="card" data-tool="world-client">
-      <div class="card-top"><span class="card-name">Persistent World Client</span>
-        <span class="pill pill-preview" data-status="world-client">preview</span></div>
-      <p class="card-desc">Connect to a running Ananke world server — observe, command, and replay live simulation state.</p>
-      <a class="card-launch" href="../world-client/" target="_blank" rel="noopener">Launch →</a>
-    </div>
-
     <div class="card" data-tool="content-packs">
       <div class="card-top"><span class="card-name">Content Pack Registry</span>
-        <span class="pill pill-stub" data-status="content-packs">stub</span></div>
-      <p class="card-desc">Browse, install, and validate community content packs — species, scenarios, and culture bundles.</p>
-      <a class="card-launch disabled" href="../content-packs/" target="_blank" rel="noopener">Coming →</a>
+        <span class="pill pill-preview" data-status="content-packs">preview</span></div>
+      <p class="card-desc">Browse, validate, and understand content pack manifests — weapons, armour, archetypes, and scenarios.</p>
+      <a class="card-launch" href="../content-packs/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="zoo">
+      <div class="card-top"><span class="card-name">Simulation Zoo</span>
+        <span class="pill pill-live" data-status="zoo">live</span></div>
+      <p class="card-desc">Browse and inspect all named entity archetypes, body plans, and species in the corpus.</p>
+      <a class="card-launch" href="../zoo/" target="_blank" rel="noopener">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="map">
+      <div class="card-top"><span class="card-name">Generative Cartography</span>
+        <span class="pill pill-live" data-status="map">live</span></div>
+      <p class="card-desc">World map generation seeded from Ananke world state — deterministic terrain, biomes, settlements.</p>
+      <a class="card-launch" href="../map/" target="_blank" rel="noopener">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="mythology">
+      <div class="card-top"><span class="card-name">Mythology &amp; Chronicles</span>
+        <span class="pill pill-preview" data-status="mythology">preview</span></div>
+      <p class="card-desc">Chronicle events from simulation outputs, promote to legend and myth, apply mechanical effects.</p>
+      <a class="card-launch" href="../mythology/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="campaign">
+      <div class="card-top"><span class="card-name">Campaign</span>
+        <span class="pill pill-preview" data-status="campaign">preview</span></div>
+      <p class="card-desc">Long-form campaign state — quests, settlements, party entities, inventory, and downtime simulation.</p>
+      <a class="card-launch" href="../campaign/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="politics">
+      <div class="card-top"><span class="card-name">Politics &amp; Factions</span>
+        <span class="pill pill-preview" data-status="politics">preview</span></div>
+      <p class="card-desc">Faction relations, polity stability, diplomacy modelling, and reputation mechanics.</p>
+      <a class="card-launch" href="../politics/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="economy">
+      <div class="card-top"><span class="card-name">Economy &amp; Trade</span>
+        <span class="pill pill-preview" data-status="economy">preview</span></div>
+      <p class="card-desc">Item valuation, trade offers, inventory management, and crafting references.</p>
+      <a class="card-launch" href="../economy/">Launch →</a>
     </div>
 
   </section>
@@ -471,6 +388,55 @@
       <a class="card-launch" href="../dashboard/" target="_blank" rel="noopener">Launch →</a>
     </div>
 
+    <div class="card" data-tool="data-governance">
+      <div class="card-top"><span class="card-name">Data Governance</span>
+        <span class="pill pill-preview" data-status="data-governance">preview</span></div>
+      <p class="card-desc">Provenance tracking, validation trust levels, release artifacts, and content integrity chain.</p>
+      <a class="card-launch" href="../data-governance/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="world-evolution">
+      <div class="card-top"><span class="card-name">World Evolution</span>
+        <span class="pill pill-preview" data-status="world-evolution">preview</span></div>
+      <p class="card-desc">Branching world state, checkpoints, and diff-based progression — deterministic timeline forking.</p>
+      <a class="card-launch" href="../world-evolution/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="arena">
+      <div class="card-top"><span class="card-name">Arena Batch Runner</span>
+        <span class="pill pill-preview" data-status="arena">preview</span></div>
+      <p class="card-desc">Multi-trial batch simulations, statistical expectations, and aggregate outcome reports for balance testing.</p>
+      <a class="card-launch" href="../arena/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="narrative-stress">
+      <div class="card-top"><span class="card-name">Narrative Stress</span>
+        <span class="pill pill-preview" data-status="narrative-stress">preview</span></div>
+      <p class="card-desc">Beat sequence editor and narrative push scale — identifies where simulation physics contradict story needs.</p>
+      <a class="card-launch" href="../narrative-stress/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="environment">
+      <div class="card-top"><span class="card-name">Environment &amp; Hazards</span>
+        <span class="pill pill-preview" data-status="environment">preview</span></div>
+      <p class="card-desc">Weather systems, hazard zones, thermoregulation, and atmospheric effects on entity survival.</p>
+      <a class="card-launch" href="../environment/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="epidemiology">
+      <div class="card-top"><span class="card-name">Epidemiology</span>
+        <span class="pill pill-preview" data-status="epidemiology">preview</span></div>
+      <p class="card-desc">Disease profiles, epidemic spread, infection phase tracking, and population SIR modelling.</p>
+      <a class="card-launch" href="../epidemiology/">Launch →</a>
+    </div>
+
+    <div class="card" data-tool="technology">
+      <div class="card-top"><span class="card-name">Technology</span>
+        <span class="pill pill-preview" data-status="technology">preview</span></div>
+      <p class="card-desc">Tech diffusion, research progression, era advancement, and capability gating.</p>
+      <a class="card-launch" href="../technology/">Launch →</a>
+    </div>
+
     <div class="card" data-tool="api-docs">
       <div class="card-top"><span class="card-name">API Reference</span>
         <span class="pill pill-live" data-status="api-docs">live</span></div>
@@ -485,27 +451,13 @@
       <a class="card-launch" href="../world-client/replication-client.html" target="_blank" rel="noopener">Launch →</a>
     </div>
 
-    <div class="card" data-tool="replay">
-      <div class="card-top"><span class="card-name">Replay &amp; Diff Viewer</span>
-        <span class="pill pill-stub" data-status="replay">stub</span></div>
-      <p class="card-desc">Load two replay traces and diff them tick-by-tick — identify divergence points and state deltas.</p>
-      <a class="card-launch disabled" href="../replay/" target="_blank" rel="noopener">Coming →</a>
-    </div>
-
-    <div class="card" data-tool="conformance">
-      <div class="card-top"><span class="card-name">Conformance Dashboard</span>
-        <span class="pill pill-stub" data-status="conformance">stub</span></div>
-      <p class="card-desc">Host-loop and netcode conformance test results — verifies integrator contract compliance.</p>
-      <a class="card-launch disabled" href="../conformance/" target="_blank" rel="noopener">Coming →</a>
-    </div>
-
   </section>
 
 </main>
 
 <footer>
   <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">its-not-rocket-science/ananke</a></p>
-  <p id="footer-manifest">Hub v1.0</p>
+  <p id="footer-manifest">Hub v2.0</p>
 </footer>
 
 <script>
@@ -528,7 +480,7 @@
       const d = new Date(manifest.builtAt);
       timeEl.textContent = `built ${d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })}`;
     }
-    footerEl.textContent = `Hub v1.0 · manifest ${manifest.manifestVersion ?? 1}`;
+    footerEl.textContent = `Hub v2.0 · manifest ${manifest.manifestVersion ?? 1}`;
 
     if (manifest.tools) {
       for (const [id, data] of Object.entries(manifest.tools)) {

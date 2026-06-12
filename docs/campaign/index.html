@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Campaign</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+  .tab { font-family: var(--mono); font-size: 0.7rem; padding: 0.45rem 0.9rem; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; transition: color 0.12s; background: none; border-top: none; border-left: none; border-right: none; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .entity-row { display: flex; gap: 0.75rem; align-items: center; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); border-radius: 3px; }
+  .entity-row:last-child { border-bottom: none; }
+  .entity-row:hover { background: var(--surface-2); }
+  .entity-name { font-size: 0.82rem; font-weight: 500; color: var(--text); flex: 1; }
+  .entity-role { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 90px; flex-shrink: 0; }
+  .entity-health { display: flex; gap: 0.3rem; align-items: center; width: 80px; flex-shrink: 0; }
+  .health-bar { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .health-fill { height: 100%; border-radius: 3px; }
+  .entity-status { font-family: var(--mono); font-size: 0.62rem; padding: 1px 6px; border-radius: 3px; flex-shrink: 0; }
+  .st-active   { background: var(--live-bg); color: var(--live); }
+  .st-injured  { background: rgba(245,158,11,0.1); color: var(--warn); }
+  .st-downed   { background: rgba(239,68,68,0.1); color: var(--fail); }
+  .location-card { background: var(--bg-mid); border: 1px solid var(--border); border-radius: 4px; padding: 0.6rem 0.8rem; margin-bottom: 0.4rem; }
+  .loc-name  { font-family: var(--mono); font-size: 0.8rem; font-weight: 500; color: var(--text); margin-bottom: 0.15rem; }
+  .loc-type  { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); }
+  .loc-props { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.35rem; }
+  .loc-prop  { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); }
+  .loc-prop span { color: var(--accent); }
+  .inv-row { display: flex; gap: 0.5rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+  .inv-row:last-child { border-bottom: none; }
+  .inv-item { color: var(--text); flex: 1; }
+  .inv-qty  { font-family: var(--mono); font-size: 0.72rem; color: var(--accent); width: 40px; text-align: right; flex-shrink: 0; }
+  .inv-mass { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 60px; text-align: right; flex-shrink: 0; }
+  .quest-card { background: var(--bg-mid); border: 1px solid var(--border); border-radius: 4px; padding: 0.6rem 0.8rem; margin-bottom: 0.4rem; }
+  .quest-title { font-size: 0.82rem; font-weight: 500; color: var(--text); margin-bottom: 0.15rem; }
+  .quest-status { font-family: var(--mono); font-size: 0.62rem; margin-right: 0.5rem; }
+  .qs-active  { color: var(--live); }
+  .qs-pending { color: var(--warn); }
+  .qs-done    { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Campaign</div>
+  <h1 class="page-title">Campaign</h1>
+  <p class="page-desc">Long-form campaign state — quests, settlements, party entities, inventory, and the simulation scaffolding that makes campaign persistence work.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">src/sim/entity.ts</span>
+      <span class="module-tag stable">src/sim/world.ts</span>
+      <span class="module-tag">src/sim/wound-aging.ts</span>
+      <span class="module-tag">src/sim/sleep.ts</span>
+      <span class="module-tag">src/sim/aging.ts</span>
+      <span class="module-tag">src/sim/nutrition.ts</span>
+      <span class="module-tag">src/sim/collective-activities.ts</span>
+      <span class="module-tag">src/sim/disease.ts</span>
+      <span class="module-tag">src/sim/tech.ts</span>
+      <span class="module-tag doc">docs/integration-primer.md</span>
+    </div>
+    <p class="note">Campaign state is managed by the host. Ananke provides the physics substrate: entity injury heals over downtime, sleep debt accumulates during long watches, nutrition depletes on the march. These outputs drive the strategic layer — a depleted, wounded party is a mechanically weaker party.</p>
+  </section>
+
+  <!-- Campaign state browser -->
+  <section class="section">
+    <h2 class="section-title">Campaign state — static preview</h2>
+    <div class="preview-badge">static preview</div>
+
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('entities')">Entities</button>
+      <button class="tab" onclick="switchTab('locations')">Locations</button>
+      <button class="tab" onclick="switchTab('inventory')">Inventory</button>
+      <button class="tab" onclick="switchTab('quests')">Quests</button>
+    </div>
+
+    <div id="tab-entities" class="tab-panel active">
+      <div class="entity-row">
+        <span class="entity-name">Aldric Vane</span>
+        <span class="entity-role">fighter (knight)</span>
+        <div class="entity-health"><div class="health-bar"><div class="health-fill" style="width:72%;background:var(--live)"></div></div></div>
+        <span class="entity-status st-active">active</span>
+      </div>
+      <div class="entity-row">
+        <span class="entity-name">Mira Dusk</span>
+        <span class="entity-role">archer</span>
+        <div class="entity-health"><div class="health-bar"><div class="health-fill" style="width:91%;background:var(--live)"></div></div></div>
+        <span class="entity-status st-active">active</span>
+      </div>
+      <div class="entity-row">
+        <span class="entity-name">Brother Oswin</span>
+        <span class="entity-role">physician</span>
+        <div class="entity-health"><div class="health-bar"><div class="health-fill" style="width:55%;background:var(--warn)"></div></div></div>
+        <span class="entity-status st-injured">injured</span>
+      </div>
+      <div class="entity-row">
+        <span class="entity-name">Torsten</span>
+        <span class="entity-role">brawler</span>
+        <div class="entity-health"><div class="health-bar"><div class="health-fill" style="width:18%;background:var(--fail)"></div></div></div>
+        <span class="entity-status st-downed">downed</span>
+      </div>
+      <p class="note" style="margin-top:0.65rem">Health bar represents 1 − average(shock_Q, fatigue_Q). Downed = shock_Q &gt; CONSCIOUSNESS threshold.</p>
+    </div>
+
+    <div id="tab-locations" class="tab-panel">
+      <div class="location-card">
+        <div class="loc-name">Ashford Village <span style="font-family:var(--mono);font-size:0.6rem;color:var(--live);margin-left:0.5rem">current</span></div>
+        <div class="loc-type">settlement · safe zone</div>
+        <div class="loc-props">
+          <span class="loc-prop">pop: <span>340</span></span>
+          <span class="loc-prop">physician: <span>yes</span></span>
+          <span class="loc-prop">supplies: <span>good</span></span>
+          <span class="loc-prop">faction: <span>Empire</span></span>
+        </div>
+      </div>
+      <div class="location-card">
+        <div class="loc-name">Thornmere Forest</div>
+        <div class="loc-type">wilderness · hostile · 3h travel</div>
+        <div class="loc-props">
+          <span class="loc-prop">hazards: <span>extreme_cold</span></span>
+          <span class="loc-prop">visibility: <span>poor (fog)</span></span>
+        </div>
+      </div>
+      <div class="location-card">
+        <div class="loc-name">Crag Keep</div>
+        <div class="loc-type">dungeon · unknown · 6h travel</div>
+        <div class="loc-props">
+          <span class="loc-prop">quest: <span>Find the Seal</span></span>
+          <span class="loc-prop">discovered: <span>yes</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-inventory" class="tab-panel">
+      <table>
+        <thead><tr><th>Item</th><th style="text-align:right">Qty</th><th style="text-align:right">Mass</th></tr></thead>
+        <tbody>
+          <tr class="inv-row"><td class="inv-item">arming sword</td><td class="inv-qty">2</td><td class="inv-mass">1.6 kg</td></tr>
+          <tr class="inv-row"><td class="inv-item">mail hauberk</td><td class="inv-qty">1</td><td class="inv-mass">9.0 kg</td></tr>
+          <tr class="inv-row"><td class="inv-item">leather jack</td><td class="inv-qty">2</td><td class="inv-mass">4.0 kg</td></tr>
+          <tr class="inv-row"><td class="inv-item">hardtack (7-day rations)</td><td class="inv-qty">4</td><td class="inv-mass">11.2 kg</td></tr>
+          <tr class="inv-row"><td class="inv-item">bandage roll</td><td class="inv-qty">8</td><td class="inv-mass">0.4 kg</td></tr>
+          <tr class="inv-row"><td class="inv-item">torch</td><td class="inv-qty">6</td><td class="inv-mass">1.8 kg</td></tr>
+          <tr class="inv-row"><td class="inv-item">rope (10 m)</td><td class="inv-qty">2</td><td class="inv-mass">2.4 kg</td></tr>
+        </tbody>
+      </table>
+      <p class="note" style="margin-top:0.5rem">Total carry: ~30.4 kg across 4 party members. <code>entity.carry</code> tracks per-entity load; exceeding <code>maxCarryCapacity_kg</code> imposes fatigue penalties.</p>
+    </div>
+
+    <div id="tab-quests" class="tab-panel">
+      <div class="quest-card">
+        <div><span class="quest-status qs-active">● active</span><span class="quest-title" style="display:inline">Find the Seal of Rath</span></div>
+        <div class="note" style="margin-top:0.3rem">Enter Crag Keep and recover the Seal. Faction: Empire. Reward: q(2.0) AU + garrison access.</div>
+      </div>
+      <div class="quest-card">
+        <div><span class="quest-status qs-active">● active</span><span class="quest-title" style="display:inline">Heal Torsten</span></div>
+        <div class="note" style="margin-top:0.3rem">Torsten needs 5 days of physician care to recover from structural arm damage. Care level: physician at Ashford.</div>
+      </div>
+      <div class="quest-card">
+        <div><span class="quest-status qs-pending">◌ pending</span><span class="quest-title" style="display:inline">Escort grain caravan to Fort Durn</span></div>
+        <div class="note" style="margin-top:0.3rem">6-day journey. Supply sufficiency q(0.72). Faction: Merchant Guild.</div>
+      </div>
+      <div class="quest-card" style="opacity:0.5">
+        <div><span class="quest-status qs-done">✓ complete</span><span class="quest-title" style="display:inline">Clear Thornmere wolves</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Each campaign day, call <code>stepWoundAging(entity, 86400)</code> for all party members to advance healing.</li>
+      <li>Call <code>stepSleep(entity, elapsedSeconds, isSleeping)</code> to model sleep debt from long marches or watches.</li>
+      <li>Use <code>planCaravanRoute</code> from <code>collective-activities.ts</code> to validate supply for multi-day journeys.</li>
+      <li>See <code>examples/games/narrative-campaign/</code> for a working campaign game built on Ananke.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../economy/">Economy</a></li>
+      <li><a href="../medical/">Medical</a></li>
+      <li><a href="../mythology/">Mythology</a></li>
+      <li><a href="../politics/">Politics</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Examples</h2>
+    <ul class="link-list">
+      <li><a href="../../examples/games/narrative-campaign/web/" target="_blank" rel="noopener">Narrative Campaign ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

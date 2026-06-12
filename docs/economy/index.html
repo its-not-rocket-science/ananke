@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Economy &amp; Trade</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .item-row td:first-child { font-family: var(--mono); font-size: 0.72rem; color: var(--text); }
+  .item-row td:nth-child(2) { font-family: var(--mono); font-size: 0.72rem; color: var(--accent); }
+  .item-row td:nth-child(3) { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+  .recipe-line { font-family: var(--mono); font-size: 0.75rem; padding: 0.3rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: center; }
+  .recipe-line:last-child { border-bottom: none; }
+  .recipe-out { color: var(--live); width: 130px; flex-shrink: 0; }
+  .recipe-eq  { color: var(--muted); }
+  .recipe-in  { color: var(--ring); flex: 1; }
+  .recipe-time { color: var(--muted); font-size: 0.65rem; }
+  .offer-row { display: flex; gap: 0.75rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
+  .offer-row:last-child { border-bottom: none; }
+  .offer-give  { font-family: var(--mono); font-size: 0.72rem; color: var(--fail); flex: 1; }
+  .offer-recv  { font-family: var(--mono); font-size: 0.72rem; color: var(--live); flex: 1; }
+  .offer-ratio { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); }
+  .offer-fair  { color: var(--live); }
+  .offer-poor  { color: var(--warn); }
+  .offer-bad   { color: var(--fail); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Economy &amp; Trade</div>
+  <h1 class="page-title">Economy &amp; Trade</h1>
+  <p class="page-desc">Item valuation, trade offers, inventory management, and crafting recipes grounded in simulation supply and demand.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag">src/sim/nutrition.ts</span>
+      <span class="module-tag">src/sim/substance.ts</span>
+      <span class="module-tag">src/sim/collective-activities.ts</span>
+      <span class="module-tag">src/sim/world.ts</span>
+      <span class="module-tag">src/sim/entity.ts</span>
+      <span class="module-tag">tools/vertical-slice.ts</span>
+    </div>
+    <p class="note">Economy is a host-level domain. Ananke provides the physical substrate — nutrition depletion, injury recovery costs, material supply — from which economic pressure emerges. Item mass, material properties, and energy costs inform valuation. The host implements price signals and trade resolution.</p>
+    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 3 — planned</span>&ensp;A formal economy API is not yet implemented. These previews show typical host-side usage patterns.</span></p>
+  </section>
+
+  <!-- Item table -->
+  <section class="section">
+    <h2 class="section-title">Item catalogue — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <div class="form-group" style="margin-bottom:0.6rem">
+      <label>Filter by category</label>
+      <select id="item-filter" onchange="filterItems()">
+        <option value="all">All</option>
+        <option value="weapon">Weapons</option>
+        <option value="armour">Armour</option>
+        <option value="food">Food</option>
+        <option value="material">Materials</option>
+      </select>
+    </div>
+    <table>
+      <thead><tr><th>Item</th><th>Base value</th><th>Mass</th><th>Category</th></tr></thead>
+      <tbody id="item-tbody">
+        <tr class="item-row" data-cat="weapon"><td>arming sword</td><td>q(0.55) AU</td><td>800 g</td><td>weapon</td></tr>
+        <tr class="item-row" data-cat="weapon"><td>longsword</td><td>q(0.80) AU</td><td>1 400 g</td><td>weapon</td></tr>
+        <tr class="item-row" data-cat="weapon"><td>dagger</td><td>q(0.18) AU</td><td>300 g</td><td>weapon</td></tr>
+        <tr class="item-row" data-cat="weapon"><td>shortbow</td><td>q(0.30) AU</td><td>600 g</td><td>weapon</td></tr>
+        <tr class="item-row" data-cat="armour"><td>mail hauberk</td><td>q(1.20) AU</td><td>9 000 g</td><td>armour</td></tr>
+        <tr class="item-row" data-cat="armour"><td>plate cuirass</td><td>q(3.50) AU</td><td>7 500 g</td><td>armour</td></tr>
+        <tr class="item-row" data-cat="armour"><td>leather jack</td><td>q(0.35) AU</td><td>2 000 g</td><td>armour</td></tr>
+        <tr class="item-row" data-cat="food"><td>hardtack (1 day)</td><td>q(0.02) AU</td><td>400 g</td><td>food</td></tr>
+        <tr class="item-row" data-cat="food"><td>salted meat (1 day)</td><td>q(0.04) AU</td><td>500 g</td><td>food</td></tr>
+        <tr class="item-row" data-cat="material"><td>iron ingot (1 kg)</td><td>q(0.12) AU</td><td>1 000 g</td><td>material</td></tr>
+        <tr class="item-row" data-cat="material"><td>leather hide</td><td>q(0.08) AU</td><td>800 g</td><td>material</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin-top:0.5rem">AU = arbitrary units relative to a base daily wage of q(0.03) AU. Values are illustrative; host sets its own currency base.</p>
+  </section>
+
+  <!-- Trade offer evaluator -->
+  <section class="section">
+    <h2 class="section-title">Trade offer evaluator — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <div class="offer-row"><span class="offer-give">give: longsword</span><span class="offer-recv">receive: 2× mail hauberks</span><span class="offer-ratio offer-fair">fair</span></div>
+    <div class="offer-row"><span class="offer-give">give: 10× hardtack</span><span class="offer-recv">receive: dagger</span><span class="offer-ratio offer-poor">slightly unfavourable</span></div>
+    <div class="offer-row"><span class="offer-give">give: plate cuirass</span><span class="offer-recv">receive: arming sword</span><span class="offer-ratio offer-bad">bad deal</span></div>
+    <div class="offer-row"><span class="offer-give">give: 5× iron ingots</span><span class="offer-recv">receive: leather hide</span><span class="offer-ratio offer-fair">fair (material parity)</span></div>
+  </section>
+
+  <!-- Crafting -->
+  <section class="section">
+    <h2 class="section-title">Crafting recipes — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <div class="recipe-line"><span class="recipe-out">arming sword</span><span class="recipe-eq">=</span><span class="recipe-in">5× iron ingot + 1× leather</span><span class="recipe-time">4h smith time</span></div>
+    <div class="recipe-line"><span class="recipe-out">mail hauberk</span><span class="recipe-eq">=</span><span class="recipe-in">18× iron ingot</span><span class="recipe-time">40h smith time</span></div>
+    <div class="recipe-line"><span class="recipe-out">plate cuirass</span><span class="recipe-eq">=</span><span class="recipe-in">12× iron ingot + 2× coal</span><span class="recipe-time">80h smith time</span></div>
+    <div class="recipe-line"><span class="recipe-out">leather jack</span><span class="recipe-eq">=</span><span class="recipe-in">6× leather hide</span><span class="recipe-time">8h tanner time</span></div>
+    <div class="recipe-line"><span class="recipe-out">hardtack (7 days)</span><span class="recipe-eq">=</span><span class="recipe-in">2× grain + 0.5× salt</span><span class="recipe-time">2h cook time</span></div>
+    <p class="note" style="margin-top:0.5rem">Craft time feeds into <code>contributeToCollectiveProject</code> from <code>src/sim/collective-activities.ts</code>. Competence attributes affect production speed.</p>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Use <code>src/sim/nutrition.ts</code> to drive food demand — track <code>entity.nutrition.calorieBalance_Q</code> to know when supply is critical.</li>
+      <li>Link item mass to carrying capacity via <code>entity.carry.currentLoad_kg</code> — overfilled inventories impose speed and fatigue penalties.</li>
+      <li>See <code>planCaravanRoute</code> in <code>src/sim/collective-activities.ts</code> for supply sufficiency calculations over a multi-day route.</li>
+      <li>Price volatility: when faction casualties spike, demand for weapons rises and food supply drops — model this with simple Q-value adjustments.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../politics/">Politics</a></li>
+      <li><a href="../campaign/">Campaign</a></li>
+      <li><a href="../content-packs/">Content Packs</a></li>
+      <li><a href="../zoo/">Simulation Zoo <span class="link-note">live</span></a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+function filterItems() {
+  const cat = document.getElementById('item-filter').value;
+  document.querySelectorAll('#item-tbody tr').forEach(tr => {
+    tr.style.display = (cat === 'all' || tr.dataset.cat === cat) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>

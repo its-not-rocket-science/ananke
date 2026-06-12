@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Arena Batch Runner</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .report-row { display: flex; gap: 0.75rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); align-items: center; }
+  .report-row:last-child { border-bottom: none; }
+  .report-label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); width: 150px; flex-shrink: 0; }
+  .report-bar-wrap { flex: 1; display: flex; align-items: center; gap: 0.5rem; }
+  .report-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .report-bar-a  { height: 100%; background: #6366f1; border-radius: 3px; }
+  .report-bar-b  { height: 100%; background: var(--warn); border-radius: 3px; }
+  .report-pct { font-family: var(--mono); font-size: 0.7rem; width: 40px; text-align: right; flex-shrink: 0; }
+  .trial-chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.62rem;
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin: 1px;
+  }
+  .trial-a { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+  .trial-b { background: rgba(245,158,11,0.12); color: #fcd34d; }
+  .trial-d { background: var(--surface-2); color: var(--muted); }
+  .expectation-row { display: flex; gap: 0.5rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+  .expectation-row:last-child { border-bottom: none; }
+  .exp-status { font-family: var(--mono); font-size: 0.68rem; width: 14px; flex-shrink: 0; }
+  .exp-pass { color: var(--live); }
+  .exp-fail { color: var(--fail); }
+  .exp-label { color: var(--text); flex: 1; }
+  .exp-value { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Arena Batch Runner</div>
+  <h1 class="page-title">Arena Batch Runner</h1>
+  <p class="page-desc">Configure multi-trial batch simulations, define statistical expectations, and inspect aggregate outcome reports across seeds and matchups.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">runSession</span>
+      <span class="module-tag stable">createSession</span>
+      <span class="module-tag">src/sim/combat.ts</span>
+      <span class="module-tag">src/sim/kernel.ts</span>
+      <span class="module-tag">src/sim/seeds.ts</span>
+      <span class="module-tag">tools/validation.ts</span>
+    </div>
+    <p class="note">Arena runs the same matchup N times across different seeds to produce statistical outcome distributions. It is the primary tool for balance testing — does Archetype A beat Archetype B at a reasonable rate? Does plate armour reduce lethality by the expected margin?</p>
+  </section>
+
+  <!-- Config form -->
+  <section class="section">
+    <h2 class="section-title">Run configuration</h2>
+    <div class="preview-badge">static preview</div>
+    <div class="two-col">
+      <div>
+        <div class="form-group">
+          <label>Fighter A (archetype)</label>
+          <select id="f-a">
+            <option value="FIGHTER">Fighter</option>
+            <option value="KNIGHT" selected>Knight</option>
+            <option value="BRAWLER">Brawler</option>
+            <option value="ARCHER">Archer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fighter A weapon</label>
+          <select id="w-a">
+            <option>longsword</option>
+            <option>arming_sword</option>
+            <option>spear</option>
+            <option>halberd</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <div class="form-group">
+          <label>Fighter B (archetype)</label>
+          <select id="f-b">
+            <option value="FIGHTER" selected>Fighter</option>
+            <option value="KNIGHT">Knight</option>
+            <option value="BRAWLER">Brawler</option>
+            <option value="ARCHER">Archer</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fighter B weapon</label>
+          <select id="w-b">
+            <option>arming_sword</option>
+            <option>longsword</option>
+            <option>dagger</option>
+            <option>axe</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="form-group">
+        <label>Trials</label>
+        <select id="trials">
+          <option>100</option>
+          <option selected>500</option>
+          <option>1000</option>
+          <option>5000</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Seed range start</label>
+        <input type="number" id="seed-start" value="1" style="width:100%">
+      </div>
+    </div>
+    <button class="btn-primary" onclick="runArena()">Generate run plan</button>
+    <div class="status-msg" id="arena-status"></div>
+  </section>
+
+  <!-- Static report preview -->
+  <section class="section">
+    <h2 class="section-title">Sample report — Knight vs Fighter (500 trials)</h2>
+    <div class="preview-badge">static preview</div>
+
+    <div class="report-row">
+      <span class="report-label">Knight wins</span>
+      <div class="report-bar-wrap">
+        <div class="report-bar"><div class="report-bar-a" style="width:63%"></div></div>
+        <span class="report-pct" style="color:#a5b4fc">63%</span>
+      </div>
+    </div>
+    <div class="report-row">
+      <span class="report-label">Fighter wins</span>
+      <div class="report-bar-wrap">
+        <div class="report-bar"><div class="report-bar-b" style="width:31%"></div></div>
+        <span class="report-pct" style="color:var(--warn)">31%</span>
+      </div>
+    </div>
+    <div class="report-row">
+      <span class="report-label">Draw / timeout</span>
+      <div class="report-bar-wrap">
+        <div class="report-bar"><div style="height:100%;width:6%;background:var(--muted);border-radius:3px"></div></div>
+        <span class="report-pct" style="color:var(--muted)">6%</span>
+      </div>
+    </div>
+
+    <div style="margin-top:0.85rem;margin-bottom:0.5rem;font-family:var(--mono);font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em">Last 20 trials</div>
+    <div id="trial-chips">
+      <span class="trial-a">K</span><span class="trial-b">F</span><span class="trial-a">K</span><span class="trial-a">K</span>
+      <span class="trial-b">F</span><span class="trial-a">K</span><span class="trial-d">D</span><span class="trial-a">K</span>
+      <span class="trial-b">F</span><span class="trial-a">K</span><span class="trial-a">K</span><span class="trial-b">F</span>
+      <span class="trial-a">K</span><span class="trial-a">K</span><span class="trial-b">F</span><span class="trial-a">K</span>
+      <span class="trial-d">D</span><span class="trial-a">K</span><span class="trial-b">F</span><span class="trial-a">K</span>
+    </div>
+
+    <div style="margin-top:0.85rem">
+      <div style="font-family:var(--mono);font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:0.5rem">Expectations</div>
+      <div class="expectation-row"><span class="exp-status exp-pass">✓</span><span class="exp-label">Knight win rate &gt; 55%</span><span class="exp-value">63% ✓</span></div>
+      <div class="expectation-row"><span class="exp-status exp-pass">✓</span><span class="exp-label">Mean fight duration &gt; 8 ticks</span><span class="exp-value">14.2 ticks ✓</span></div>
+      <div class="expectation-row"><span class="exp-status exp-pass">✓</span><span class="exp-label">Draw rate &lt; 10%</span><span class="exp-value">6% ✓</span></div>
+      <div class="expectation-row"><span class="exp-status exp-fail">✗</span><span class="exp-label">Fighter win rate &gt; 35%</span><span class="exp-value">31% ✗ — needs rebalance</span></div>
+    </div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Run <code>npm run run:validation</code> for built-in calibration scenarios — this is the closest existing batch runner.</li>
+      <li>For custom arena runs: loop <code>createSession({worldSeed: i, ...})</code> over a seed range, collect winner from <code>runSession</code> events.</li>
+      <li>Define expectations as pass/fail predicates on the aggregated results — e.g., <code>knightWins / total &gt; 0.55</code>.</li>
+      <li>Add golden fixture assertions to <code>test/</code> to lock the distribution and catch balance regressions in CI.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../combat/">Combat kernel</a></li>
+      <li><a href="../playground/">Playground <span class="link-note">live</span></a></li>
+      <li><a href="../dashboard/">Validation Dashboard <span class="link-note">live</span></a></li>
+      <li><a href="../data-governance/">Data Governance</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Scripts</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/tools/validation.ts" target="_blank" rel="noopener">tools/validation.ts ↗</a></li>
+      <li><code style="font-size:0.7rem;color:var(--muted)">npm run run:validation</code></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+
+<script>
+function runArena() {
+  const fA     = document.getElementById('f-a').value;
+  const fB     = document.getElementById('f-b').value;
+  const wA     = document.getElementById('w-a').value;
+  const wB     = document.getElementById('w-b').value;
+  const trials = document.getElementById('trials').value;
+  const seed   = document.getElementById('seed-start').value;
+  const status = document.getElementById('arena-status');
+  status.className = 'status-msg status-info visible';
+  status.textContent = `Plan: ${fA}(${wA}) vs ${fB}(${wB}), ${trials} trials, seeds ${seed}–${parseInt(seed)+parseInt(trials)-1}. Run via: npm run run:validation (arena CLI not yet implemented — use validation.ts as base).`;
+}
+</script>
+</body>
+</html>

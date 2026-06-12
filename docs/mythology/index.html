@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Mythology &amp; Chronicles</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .flow-diagram {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+  }
+  .flow-stage {
+    flex: 1;
+    min-width: 130px;
+    border: 1px solid var(--border);
+    border-right: none;
+    padding: 0.75rem 0.8rem;
+    position: relative;
+  }
+  .flow-stage:last-child { border-right: 1px solid var(--border); border-radius: 0 4px 4px 0; }
+  .flow-stage:first-child { border-radius: 4px 0 0 4px; }
+  .flow-stage-name {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+  .flow-stage-desc {
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .flow-stage-arrow {
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 0.9rem;
+    color: var(--border-2);
+    z-index: 1;
+    background: var(--bg);
+    padding: 0 2px;
+  }
+  .flow-chronicle { background: rgba(52,211,153,0.05); }
+  .flow-legend    { background: rgba(125,211,252,0.05); }
+  .flow-myth      { background: rgba(167,139,250,0.08); }
+  .chronicle-entry {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 0.4rem;
+  }
+  .ce-tick { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); margin-bottom: 0.15rem; }
+  .ce-event { font-size: 0.82rem; color: var(--text); }
+  .ce-weight { font-family: var(--mono); font-size: 0.62rem; color: var(--accent); margin-left: 0.5rem; }
+  .myth-effect { padding: 0.35rem 0; border-bottom: 1px solid var(--border); display: flex; gap: 0.5rem; align-items: baseline; }
+  .myth-effect:last-child { border-bottom: none; }
+  .me-type  { font-family: var(--mono); font-size: 0.7rem; color: var(--violet); width: 130px; flex-shrink: 0; }
+  .me-desc  { font-size: 0.78rem; color: var(--muted); flex: 1; }
+  .me-val   { font-family: var(--mono); font-size: 0.7rem; color: var(--accent); flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Mythology &amp; Chronicles</div>
+  <h1 class="page-title">Mythology &amp; Chronicles</h1>
+  <p class="page-desc">Chronicle events that arise from simulation outcomes, condense into legend over time, and eventually calcify into myth — with mechanical effects on faction morale, entity behaviour, and world state.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag">src/sim/morale.ts</span>
+      <span class="module-tag">src/sim/events.ts</span>
+      <span class="module-tag">src/sim/world.ts</span>
+      <span class="module-tag">src/sim/collective-activities.ts</span>
+      <span class="module-tag">src/sim/condition.ts</span>
+      <span class="module-tag">src/sim/trace.ts</span>
+    </div>
+    <p class="note">Mythology is a host-level domain built on simulation event streams. Ananke generates the raw events — DEATH, ROUT, VICTORY, MORALE_BREAK. The host assigns narrative weight to these events, accumulates them into chronicle entries, and promotes high-weight entries into legend and myth over simulation time.</p>
+    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 3 — planned</span>&ensp;A formal mythology/chronicle API is not yet implemented. The event stream and morale modules are stable.</span></p>
+  </section>
+
+  <!-- Flow diagram -->
+  <section class="section">
+    <h2 class="section-title">Chronicle → Legend → Myth flow</h2>
+    <div class="preview-badge">static preview</div>
+    <div class="flow-diagram">
+      <div class="flow-stage flow-chronicle">
+        <div class="flow-stage-name">⚔ Chronicle</div>
+        <div class="flow-stage-desc">Raw simulation events with narrative weight. Tick-level. Objective record.</div>
+        <div class="flow-stage-arrow">›</div>
+      </div>
+      <div class="flow-stage flow-legend">
+        <div class="flow-stage-name">📖 Legend</div>
+        <div class="flow-stage-desc">High-weight events survive across generations. Details compress. Agency amplifies.</div>
+        <div class="flow-stage-arrow">›</div>
+      </div>
+      <div class="flow-stage flow-myth">
+        <div class="flow-stage-name">⚡ Myth</div>
+        <div class="flow-stage-desc">Canonical narrative. Causes mechanical effects: morale, fear, ritual bonuses.</div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:0.65rem">Promotion criteria are host-defined. A simple model: chronicle entries with weight ≥ 0.6 survive to legend; those re-encountered by ≥ 3 faction groups over ≥ 30 days become myth.</p>
+  </section>
+
+  <!-- Chronicle entry form -->
+  <section class="section">
+    <h2 class="section-title">Chronicle entry log — static preview</h2>
+    <div class="preview-badge">static preview</div>
+
+    <div id="chronicle-log">
+      <div class="chronicle-entry">
+        <div class="ce-tick">tick 4582 · session s_42</div>
+        <div class="ce-event">DEATH of Aldric Vane's warhorse in the defence of Ashford Gate<span class="ce-weight">weight: 0.72</span></div>
+      </div>
+      <div class="chronicle-entry">
+        <div class="ce-tick">tick 5901 · session s_42</div>
+        <div class="ce-event">ROUT of the Corsair warband at Thornmere — 34 killed, 8 captured<span class="ce-weight">weight: 0.85</span></div>
+      </div>
+      <div class="chronicle-entry">
+        <div class="ce-tick">tick 7230 · session s_42</div>
+        <div class="ce-event">VICTORY — Aldric Vane defeats the Corsair warlord in single combat (MORALE_BREAK event)<span class="ce-weight">weight: 0.94</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid var(--border)">
+      <div class="form-group">
+        <label>New chronicle entry (from event stream)</label>
+        <input type="text" id="chronicle-input" placeholder="e.g. DEATH of the Harbour Master at siege of Fort Durn">
+      </div>
+      <div class="form-group">
+        <label>Narrative weight (0–1)</label>
+        <input type="number" id="chronicle-weight" min="0" max="1" step="0.05" value="0.5" style="width:100%">
+      </div>
+      <button class="btn-primary" onclick="addChronicle()">Add entry</button>
+    </div>
+  </section>
+
+  <!-- Myth effects preview -->
+  <section class="section">
+    <h2 class="section-title">Active myth effects — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.65rem">Mechanical effects granted to factions by active myths. Implemented as morale multipliers and fear threshold adjustments.</p>
+
+    <div class="myth-effect"><span class="me-type">moraleMul_Q</span><span class="me-desc">Empire soldiers who know the "Victory at Ashford Gate" myth gain morale bonus in defensive scenarios</span><span class="me-val">+q(0.15)</span></div>
+    <div class="myth-effect"><span class="me-type">fearThresholdMul</span><span class="me-desc">Corsair entities who face the "Thornmere Slayer" bear a fear penalty on morale check</span><span class="me-val">×q(0.80)</span></div>
+    <div class="myth-effect"><span class="me-type">ritualBonus_Q</span><span class="me-desc">Ritual ceremonies invoking the myth grant additional morale boost (via stepRitual)</span><span class="me-val">+q(0.08)</span></div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Hook into the event stream from <code>runSession</code> — listen for DEATH, ROUT, and VICTORY event types with high entity significance.</li>
+      <li>Assign weight based on: entity importance (named vs anonymous), faction size affected, narrative rarity.</li>
+      <li>Each in-game month, tick chronicle entry weights down — entries below threshold are forgotten. Survivors become legend.</li>
+      <li>Apply myth effects as morale multipliers in <code>src/sim/morale.ts</code> — add them as permanent entity or faction attributes.</li>
+      <li>See <code>stepRitual</code> in <code>collective-activities.ts</code> — ceremonies re-enacting myths grant the <code>moraleBonus_Q</code> effect.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../narrative-stress/">Narrative Stress</a></li>
+      <li><a href="../campaign/">Campaign</a></li>
+      <li><a href="../politics/">Politics</a></li>
+      <li><a href="../editors/culture-forge.html">Culture Forge</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+let tick = 8000;
+function addChronicle() {
+  const text   = document.getElementById('chronicle-input').value.trim() || '(event)';
+  const weight = parseFloat(document.getElementById('chronicle-weight').value) || 0.5;
+  const log    = document.getElementById('chronicle-log');
+  const entry  = document.createElement('div');
+  entry.className = 'chronicle-entry';
+  entry.innerHTML = `<div class="ce-tick">tick ${tick} · session s_42</div>
+    <div class="ce-event">${text}<span class="ce-weight">weight: ${weight.toFixed(2)}</span></div>`;
+  log.appendChild(entry);
+  tick += Math.floor(Math.random() * 500 + 100);
+  document.getElementById('chronicle-input').value = '';
+}
+</script>
+</body>
+</html>

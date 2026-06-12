@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Environment &amp; Hazards</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .hazard-card { background: var(--bg-mid); border: 1px solid var(--border); border-radius: 4px; padding: 0.7rem 0.9rem; margin-bottom: 0.4rem; cursor: pointer; transition: border-color 0.12s; }
+  .hazard-card:hover, .hazard-card.active { border-color: var(--accent-dim); }
+  .hazard-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.4rem; }
+  .hazard-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .hazard-name { font-family: var(--mono); font-size: 0.82rem; font-weight: 500; color: var(--text); }
+  .hazard-type { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); margin-left: auto; }
+  .effect-row { display: flex; gap: 0.5rem; align-items: center; padding: 0.2rem 0; }
+  .effect-key { font-family: var(--mono); font-size: 0.67rem; color: var(--muted); width: 140px; flex-shrink: 0; }
+  .effect-val { font-family: var(--mono); font-size: 0.7rem; color: var(--accent); }
+  .effect-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .effect-fill { height: 100%; border-radius: 2px; }
+  .weather-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 0.75rem; }
+  @media (max-width:600px) { .weather-grid { grid-template-columns: 1fr 1fr; } }
+  .weather-card { background: var(--bg-mid); border: 1px solid var(--border); border-radius: 4px; padding: 0.55rem 0.7rem; cursor: pointer; transition: border-color 0.12s; }
+  .weather-card.active { border-color: var(--ring); }
+  .wc-icon { font-size: 1.1rem; margin-bottom: 0.15rem; }
+  .wc-name { font-family: var(--mono); font-size: 0.7rem; color: var(--text); }
+  .wc-temp { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); margin-top: 0.15rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Environment &amp; Hazards</div>
+  <h1 class="page-title">Environment &amp; Hazards</h1>
+  <p class="page-desc">Weather systems, atmospheric conditions, environmental hazard zones, and their effects on entity fatigue, temperature, and survival.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">src/sim/hazard.ts</span>
+      <span class="module-tag stable">src/sim/weather.ts</span>
+      <span class="module-tag stable">src/sim/thermoregulation.ts</span>
+      <span class="module-tag">src/sim/biome.ts</span>
+      <span class="module-tag">src/sim/nutrition.ts</span>
+      <span class="module-tag">src/sim/disease.ts</span>
+      <span class="module-tag doc">docs/validation-thermoregulation-core-stability.md</span>
+      <span class="module-tag doc">docs/validation-hazard-fatigue-drain.md</span>
+    </div>
+    <p class="note">Environmental effects are applied per-tick. Hazard zones have physical extent (<code>radius_Sm</code>) and intensity (<code>intensity_Q</code>). Effect rates scale linearly with proximity. Weather affects thermoregulation which feeds into fatigue and consciousness.</p>
+  </section>
+
+  <!-- Weather selector -->
+  <section class="section">
+    <h2 class="section-title">Weather conditions</h2>
+    <div class="preview-badge">static preview</div>
+    <div class="weather-grid">
+      <div class="weather-card" onclick="setWeather('clear',this)"><div class="wc-icon">☀</div><div class="wc-name">Clear</div><div class="wc-temp">+18°C</div></div>
+      <div class="weather-card active" onclick="setWeather('overcast',this)"><div class="wc-icon">⛅</div><div class="wc-name">Overcast</div><div class="wc-temp">+12°C</div></div>
+      <div class="weather-card" onclick="setWeather('rain',this)"><div class="wc-icon">🌧</div><div class="wc-name">Heavy Rain</div><div class="wc-temp">+8°C</div></div>
+      <div class="weather-card" onclick="setWeather('fog',this)"><div class="wc-icon">🌫</div><div class="wc-name">Dense Fog</div><div class="wc-temp">+5°C</div></div>
+      <div class="weather-card" onclick="setWeather('blizzard',this)"><div class="wc-icon">❄</div><div class="wc-name">Blizzard</div><div class="wc-temp">−15°C</div></div>
+      <div class="weather-card" onclick="setWeather('extreme_heat',this)"><div class="wc-icon">🔆</div><div class="wc-name">Extreme Heat</div><div class="wc-temp">+42°C</div></div>
+    </div>
+    <div id="weather-effects">
+      <div class="effect-row"><span class="effect-key">thermalDelta_Q/s</span><div class="effect-bar"><div class="effect-fill" id="ef-thermal" style="width:20%;background:var(--ring)"></div></div><span class="effect-val" id="ev-thermal">−200</span></div>
+      <div class="effect-row"><span class="effect-key">fatigueInc_Q/s</span><div class="effect-bar"><div class="effect-fill" id="ef-fatigue" style="width:10%;background:var(--warn)"></div></div><span class="effect-val" id="ev-fatigue">q(0.001)</span></div>
+      <div class="effect-row"><span class="effect-key">sensorPenalty_Q</span><div class="effect-bar"><div class="effect-fill" id="ef-sensor" style="width:30%;background:var(--muted)"></div></div><span class="effect-val" id="ev-sensor">q(0.30)</span></div>
+    </div>
+  </section>
+
+  <!-- Hazard zone browser -->
+  <section class="section">
+    <h2 class="section-title">Hazard zones — built-in profiles</h2>
+    <div id="hazard-cards">
+      <div class="hazard-card active" onclick="selectHazard('fire',this)">
+        <div class="hazard-header"><span class="hazard-icon">🔥</span><span class="hazard-name">CAMPFIRE</span><span class="hazard-type">fire · 3 m · 1 h</span></div>
+        <div class="effect-row"><span class="effect-key">fatigue/s</span><div class="effect-bar"><div class="effect-fill" style="width:40%;background:var(--warn)"></div></div><span class="effect-val">q(0.020)</span></div>
+        <div class="effect-row"><span class="effect-key">thermalDelta_Q</span><div class="effect-bar"><div class="effect-fill" style="width:50%;background:var(--fail)"></div></div><span class="effect-val">+1000 ≈ +5.4°C</span></div>
+        <div class="effect-row"><span class="effect-key">surfaceDamage/s</span><div class="effect-bar"><div class="effect-fill" style="width:10%;background:var(--fail)"></div></div><span class="effect-val">q(0.005)</span></div>
+      </div>
+      <div class="hazard-card" onclick="selectHazard('radiation',this)">
+        <div class="hazard-header"><span class="hazard-icon">☢</span><span class="hazard-name">RADIATION_ZONE</span><span class="hazard-type">radiation · 50 m · permanent</span></div>
+      </div>
+      <div class="hazard-card" onclick="selectHazard('gas',this)">
+        <div class="hazard-header"><span class="hazard-icon">☁</span><span class="hazard-name">MUSTARD_GAS</span><span class="hazard-type">toxic_gas · 20 m · 30 min</span></div>
+      </div>
+      <div class="hazard-card" onclick="selectHazard('acid',this)">
+        <div class="hazard-header"><span class="hazard-icon">⚗</span><span class="hazard-name">ACID_POOL</span><span class="hazard-type">acid · 2 m · 2 h</span></div>
+      </div>
+      <div class="hazard-card" onclick="selectHazard('cold',this)">
+        <div class="hazard-header"><span class="hazard-icon">🌨</span><span class="hazard-name">BLIZZARD_ZONE</span><span class="hazard-type">extreme_cold · 100 m · 6 h</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Import built-in zones: <code>import { CAMPFIRE, RADIATION_ZONE } from '@its-not-rocket-science/ananke/hazard'</code></li>
+      <li>Each tick: call <code>computeHazardExposure(dist_Sm, zone)</code> for each entity/zone pair. Apply the returned Q to <code>deriveHazardEffect</code>.</li>
+      <li>Use <code>isInsideHazard(x_Sm, y_Sm, zone)</code> for broad-phase filtering before computing exact effects.</li>
+      <li>Step zone duration: <code>stepHazardZone(zone, elapsedSeconds)</code>. Check <code>isHazardExpired(zone)</code> to remove finished zones.</li>
+      <li>See <code>docs/validation-hazard-fatigue-drain.md</code> for calibration against real fire/cold exposure data.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../epidemiology/">Epidemiology</a></li>
+      <li><a href="../medical/">Medical</a></li>
+      <li><a href="../map/">Generative Cartography <span class="link-note">live</span></a></li>
+      <li><a href="../world-evolution/">World Evolution</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Validation docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/validation-thermoregulation-core-stability-2026-03-15T18-22-34.md" target="_blank" rel="noopener">thermoregulation ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/validation-hazard-fatigue-drain-2026-03-15T19-21-46.md" target="_blank" rel="noopener">hazard-fatigue-drain ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+const WEATHER = {
+  clear:       { thermal: 5,  fatigue: 0.000, sensor: 0,    thermalStr: '+500', fatigueStr: 'none', sensorStr: 'none' },
+  overcast:    { thermal: -2, fatigue: 0.001, sensor: 0.10, thermalStr: '−200', fatigueStr: 'q(0.001)', sensorStr: 'q(0.10)' },
+  rain:        { thermal:-5,  fatigue: 0.003, sensor: 0.25, thermalStr: '−500', fatigueStr: 'q(0.003)', sensorStr: 'q(0.25)' },
+  fog:         { thermal:-2,  fatigue: 0.001, sensor: 0.55, thermalStr: '−200', fatigueStr: 'q(0.001)', sensorStr: 'q(0.55)' },
+  blizzard:    { thermal:-20, fatigue: 0.015, sensor: 0.70, thermalStr: '−2000', fatigueStr: 'q(0.015)', sensorStr: 'q(0.70)' },
+  extreme_heat:{ thermal: 20, fatigue: 0.012, sensor: 0.20, thermalStr: '+2000', fatigueStr: 'q(0.012)', sensorStr: 'q(0.20)' },
+};
+function setWeather(id, el) {
+  document.querySelectorAll('.weather-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const w = WEATHER[id];
+  const tPct = Math.min(100, Math.abs(w.thermal) * 5);
+  document.getElementById('ef-thermal').style.width  = tPct + '%';
+  document.getElementById('ef-thermal').style.background = w.thermal > 0 ? 'var(--fail)' : 'var(--ring)';
+  document.getElementById('ev-thermal').textContent  = w.thermalStr;
+  document.getElementById('ef-fatigue').style.width  = Math.min(100, w.fatigue * 10000) + '%';
+  document.getElementById('ev-fatigue').textContent  = w.fatigueStr;
+  document.getElementById('ef-sensor').style.width   = (w.sensor * 100) + '%';
+  document.getElementById('ev-sensor').textContent   = w.sensor > 0 ? 'q(' + w.sensor.toFixed(2) + ')' : 'none';
+}
+function selectHazard(id, el) {
+  document.querySelectorAll('.hazard-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>

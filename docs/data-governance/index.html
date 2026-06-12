@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Data Governance</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .artifact-row {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    font-size: 0.78rem;
+  }
+  .artifact-row:last-child { border-bottom: none; }
+  .artifact-name { font-family: var(--mono); font-size: 0.72rem; color: var(--text); flex: 1; }
+  .artifact-type { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); width: 90px; flex-shrink: 0; }
+  .artifact-status { font-family: var(--mono); font-size: 0.62rem; padding: 1px 7px; border-radius: 3px; flex-shrink: 0; }
+  .as-present   { background: var(--live-bg); color: var(--live); }
+  .as-missing   { background: rgba(239,68,68,0.1); color: var(--fail); }
+  .as-partial   { background: rgba(245,158,11,0.1); color: var(--warn); }
+  .trust-card {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.6rem 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .trust-card + .trust-card { margin-top: 0.4rem; }
+  .tc-icon  { font-size: 1.1rem; flex-shrink: 0; }
+  .tc-name  { font-family: var(--mono); font-size: 0.78rem; font-weight: 500; color: var(--text); }
+  .tc-desc  { font-size: 0.73rem; color: var(--muted); margin-top: 0.1rem; }
+  .tc-link  { margin-left: auto; flex-shrink: 0; }
+  .tc-link a { font-family: var(--mono); font-size: 0.68rem; color: var(--accent); text-decoration: none; }
+  .tc-link a:hover { text-decoration: underline; }
+  .provenance-row {
+    display: flex; gap: 0.5rem; padding: 0.35rem 0;
+    border-bottom: 1px solid var(--border);
+    align-items: baseline;
+  }
+  .provenance-row:last-child { border-bottom: none; }
+  .prov-key { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); width: 160px; flex-shrink: 0; }
+  .prov-val { font-family: var(--mono); font-size: 0.72rem; color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Data Governance</div>
+  <h1 class="page-title">Data Governance</h1>
+  <p class="page-desc">Provenance tracking, validation trust levels, release artifacts, and content integrity — the trust chain from physics constants to simulation outputs.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">STABLE_API.md</span>
+      <span class="module-tag stable">CHANGELOG.md</span>
+      <span class="module-tag">tools/validation.ts</span>
+      <span class="module-tag">scripts/generate-site-manifest.js</span>
+      <span class="module-tag doc">docs/emergent-validation-report.md</span>
+      <span class="module-tag doc">docs/versioning.md</span>
+    </div>
+    <p class="note">Data governance in Ananke spans three layers: <strong>physics constants</strong> (validated against real-world datasets), <strong>API stability</strong> (covered by semantic versioning and the Tier 1/2/3 contract), and <strong>content integrity</strong> (provenance and checksums in content packs and validation reports).</p>
+  </section>
+
+  <!-- Release artifacts -->
+  <section class="section">
+    <h2 class="section-title">Release artifacts</h2>
+    <div class="artifact-row"><span class="artifact-name">STABLE_API.md</span><span class="artifact-type">stability contract</span><span class="artifact-status as-present">present</span></div>
+    <div class="artifact-row"><span class="artifact-name">CHANGELOG.md</span><span class="artifact-type">version history</span><span class="artifact-status as-present">present</span></div>
+    <div class="artifact-row"><span class="artifact-name">package.json version</span><span class="artifact-type">semver</span><span class="artifact-status as-present">present</span></div>
+    <div class="artifact-row"><span class="artifact-name">site-manifest.json</span><span class="artifact-type">build metadata</span><span class="artifact-status as-partial">generated at build</span></div>
+    <div class="artifact-row"><span class="artifact-name">docs/emergent-validation-report.md</span><span class="artifact-type">validation report</span><span class="artifact-status as-present">present</span></div>
+    <div class="artifact-row"><span class="artifact-name">TypeDoc API (dist/api/)</span><span class="artifact-type">generated docs</span><span class="artifact-status as-partial">generated at build</span></div>
+    <div class="artifact-row"><span class="artifact-name">golden replay fixtures</span><span class="artifact-type">regression guard</span><span class="artifact-status as-partial">partial — see test/</span></div>
+    <div class="artifact-row"><span class="artifact-name">npm provenance</span><span class="artifact-type">supply chain</span><span class="artifact-status as-partial">via GitHub Actions</span></div>
+  </section>
+
+  <!-- Provenance checklist -->
+  <section class="section">
+    <h2 class="section-title">Provenance checklist</h2>
+    <ul class="checklist" id="prov-checklist">
+      <li><input type="checkbox" checked onchange="updateProv()"><span>Physics constants validated against peer-reviewed datasets (see <code>docs/validation-*.md</code>)</span></li>
+      <li><input type="checkbox" checked onchange="updateProv()"><span>Calibration scenarios pass expected ranges (run <code>npm run run:validation</code>)</span></li>
+      <li><input type="checkbox" checked onchange="updateProv()"><span>Stable API contract documented in <code>STABLE_API.md</code> with Tier 1/2/3 annotations</span></li>
+      <li><input type="checkbox" checked onchange="updateProv()"><span>CHANGELOG updated for every version bump</span></li>
+      <li><input type="checkbox" onchange="updateProv()"><span>Golden replay fixtures committed and CI-verified for core scenarios</span></li>
+      <li><input type="checkbox" onchange="updateProv()"><span>Content pack SHA-256 checksums in <code>provenance.sha256</code> field</span></li>
+      <li><input type="checkbox" onchange="updateProv()"><span>npm publish includes provenance attestation (GitHub Actions OIDC)</span></li>
+      <li><input type="checkbox" onchange="updateProv()"><span>Emergent validation report regenerated for current release</span></li>
+    </ul>
+    <div class="check-progress" id="prov-progress">
+      <span id="prov-count">4 / 8</span>
+      <div class="check-bar"><div class="check-bar-fill" id="prov-bar" style="width:50%"></div></div>
+    </div>
+  </section>
+
+  <!-- Trust dashboard links -->
+  <section class="section">
+    <h2 class="section-title">Trust dashboards</h2>
+    <div class="trust-card">
+      <span class="tc-icon">🧪</span>
+      <div>
+        <div class="tc-name">Validation Dashboard</div>
+        <div class="tc-desc">Conformance tests, seed matrix, and API boundary checks from last CI run</div>
+      </div>
+      <div class="tc-link"><a href="../dashboard/">Open →</a></div>
+    </div>
+    <div class="trust-card">
+      <span class="tc-icon">⚡</span>
+      <div>
+        <div class="tc-name">Performance Dashboard</div>
+        <div class="tc-desc">Tick timing, throughput benchmarks, and memory usage across entity counts</div>
+      </div>
+      <div class="tc-link"><a href="../perf/">Open →</a></div>
+    </div>
+    <div class="trust-card">
+      <span class="tc-icon">🎯</span>
+      <div>
+        <div class="tc-name">Arena Batch Runner</div>
+        <div class="tc-desc">Multi-trial outcome distribution — balance and statistical expectation testing</div>
+      </div>
+      <div class="tc-link"><a href="../arena/">Open →</a></div>
+    </div>
+    <div class="trust-card">
+      <span class="tc-icon">📋</span>
+      <div>
+        <div class="tc-name">Conformance Checklist</div>
+        <div class="tc-desc">Host integration compliance — determinism, fixed-point, command dispatch</div>
+      </div>
+      <div class="tc-link"><a href="../conformance/">Open →</a></div>
+    </div>
+  </section>
+
+  <!-- Package provenance -->
+  <section class="section">
+    <h2 class="section-title">Package provenance — current release</h2>
+    <div class="preview-badge">static preview</div>
+    <div class="provenance-row"><span class="prov-key">package</span><span class="prov-val">@its-not-rocket-science/ananke</span></div>
+    <div class="provenance-row"><span class="prov-key">npm registry</span><span class="prov-val"><a href="https://www.npmjs.com/package/@its-not-rocket-science/ananke" style="color:var(--accent);text-decoration:none" target="_blank" rel="noopener">npmjs.com ↗</a></span></div>
+    <div class="provenance-row"><span class="prov-key">licence</span><span class="prov-val">MIT</span></div>
+    <div class="provenance-row"><span class="prov-key">repository</span><span class="prov-val"><a href="https://github.com/its-not-rocket-science/ananke" style="color:var(--accent);text-decoration:none" target="_blank" rel="noopener">its-not-rocket-science/ananke ↗</a></span></div>
+    <div class="provenance-row"><span class="prov-key">build pipeline</span><span class="prov-val">.github/workflows/deploy-pages.yml</span></div>
+    <div class="provenance-row"><span class="prov-key">test coverage</span><span class="prov-val">statements 97%, branches 88%, functions 96% (see CI)</span></div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Verify a physics constant: grep for it in <code>docs/validation-*.md</code> — each constant has a corresponding validation report with real-world source data.</li>
+      <li>Check the stable API contract: open <a href="https://github.com/its-not-rocket-science/ananke/blob/main/STABLE_API.md">STABLE_API.md</a> — Tier 1 surfaces are safe to depend on without guards.</li>
+      <li>Run <code>npm run test:coverage</code> to verify coverage thresholds locally before a release.</li>
+      <li>Validate content pack integrity: check <code>provenance.sha256</code> in a pack manifest against a recomputed hash of the pack's canonical JSON.</li>
+      <li>For golden fixture regression testing, add a replay to <code>test/fixtures/</code> and import it in a determinism test.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../conformance/">Conformance</a></li>
+      <li><a href="../dashboard/">Validation Dashboard <span class="link-note">live</span></a></li>
+      <li><a href="../content-packs/">Content Packs</a></li>
+      <li><a href="../arena/">Arena</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/STABLE_API.md" target="_blank" rel="noopener">STABLE_API.md ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/versioning.md" target="_blank" rel="noopener">versioning.md ↗</a></li>
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+function updateProv() {
+  const items   = document.querySelectorAll('#prov-checklist input[type=checkbox]');
+  const checked = document.querySelectorAll('#prov-checklist input[type=checkbox]:checked');
+  const pct     = items.length ? Math.round(checked.length / items.length * 100) : 0;
+  document.getElementById('prov-count').textContent = checked.length + ' / ' + items.length;
+  document.getElementById('prov-bar').style.width   = pct + '%';
+  document.querySelectorAll('#prov-checklist li').forEach(li => {
+    const cb = li.querySelector('input[type=checkbox]');
+    if (cb) li.classList.toggle('checked', cb.checked);
+  });
+}
+updateProv();
+</script>
+</body>
+</html>

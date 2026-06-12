@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Content Pack Registry</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 1rem; }
+  .tab { font-family: var(--mono); font-size: 0.7rem; padding: 0.45rem 0.9rem; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; transition: color 0.12s; background: none; border-top: none; border-left: none; border-right: none; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .schema-row { display: flex; gap: 0.75rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+  .schema-row:last-child { border-bottom: none; }
+  .schema-key { font-family: var(--mono); font-size: 0.72rem; color: var(--ring); width: 160px; flex-shrink: 0; }
+  .schema-type { font-family: var(--mono); font-size: 0.65rem; color: var(--violet); width: 80px; flex-shrink: 0; }
+  .schema-desc { font-size: 0.78rem; color: var(--muted); }
+  .req { font-family: var(--mono); font-size: 0.58rem; color: var(--accent); margin-left: 0.25rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Content Pack Registry</div>
+  <h1 class="page-title">Content Pack Registry</h1>
+  <p class="page-desc">Browse, validate, and understand the structure of community content packs — species definitions, weapon sets, scenarios, and culture bundles.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag">src/sim/body.ts</span>
+      <span class="module-tag">src/sim/bodyplan.ts</span>
+      <span class="module-tag">src/sim/weapon_dynamics.ts</span>
+      <span class="module-tag">src/sim/kinds.ts</span>
+      <span class="module-tag">src/sim/entity.ts</span>
+      <span class="module-tag stable">@its-not-rocket-science/ananke</span>
+      <span class="module-tag doc">docs/integration-primer.md</span>
+    </div>
+    <p class="note">Content packs are JSON manifests describing named entities, species, weapon profiles, armour schemes, and scenarios. The host loads packs at session creation time. Pack validation is the host's responsibility — Ananke provides TypeScript types for each section.</p>
+    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 2 — experimental</span>&ensp;The content-pack manifest format is not yet part of the stable API contract.</p>
+  </section>
+
+  <!-- Manifest schema explorer -->
+  <section class="section">
+    <h2 class="section-title">Manifest schema explorer</h2>
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchTab('root')">Root</button>
+      <button class="tab" onclick="switchTab('weapons')">Weapons</button>
+      <button class="tab" onclick="switchTab('armour')">Armour</button>
+      <button class="tab" onclick="switchTab('archetypes')">Archetypes</button>
+      <button class="tab" onclick="switchTab('scenarios')">Scenarios</button>
+      <button class="tab" onclick="switchTab('provenance')">Provenance</button>
+    </div>
+
+    <div id="tab-root" class="tab-panel active">
+      <div class="schema-row"><span class="schema-key">packId<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Unique pack identifier, reverse-domain style (e.g. <code>com.example.medieval</code>)</span></div>
+      <div class="schema-row"><span class="schema-key">name<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Human-readable display name</span></div>
+      <div class="schema-row"><span class="schema-key">version<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">SemVer string, e.g. <code>"1.0.0"</code></span></div>
+      <div class="schema-row"><span class="schema-key">anankeMinVersion</span><span class="schema-type">string</span><span class="schema-desc">Minimum Ananke version required, e.g. <code>"0.5.0"</code></span></div>
+      <div class="schema-row"><span class="schema-key">weapons</span><span class="schema-type">object[]</span><span class="schema-desc">Array of weapon profiles (see Weapons tab)</span></div>
+      <div class="schema-row"><span class="schema-key">armour</span><span class="schema-type">object[]</span><span class="schema-desc">Array of armour scheme definitions</span></div>
+      <div class="schema-row"><span class="schema-key">archetypes</span><span class="schema-type">object[]</span><span class="schema-desc">Entity archetypes — physiology and initial stats</span></div>
+      <div class="schema-row"><span class="schema-key">scenarios</span><span class="schema-type">object[]</span><span class="schema-desc">Preset world scenarios</span></div>
+      <div class="schema-row"><span class="schema-key">provenance<span class="req">*</span></span><span class="schema-type">object</span><span class="schema-desc">Author, licence, checksum fields (see Provenance tab)</span></div>
+    </div>
+
+    <div id="tab-weapons" class="tab-panel">
+      <div class="schema-row"><span class="schema-key">id<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Unique weapon id, e.g. <code>"longsword"</code></span></div>
+      <div class="schema-row"><span class="schema-key">name<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Display name</span></div>
+      <div class="schema-row"><span class="schema-key">mass_kg<span class="req">*</span></span><span class="schema-type">number</span><span class="schema-desc">Mass in kilograms × 1000 (fixed-point Skg integer)</span></div>
+      <div class="schema-row"><span class="schema-key">strikeEnergy_J</span><span class="schema-type">number</span><span class="schema-desc">Typical strike kinetic energy in joules × 65536</span></div>
+      <div class="schema-row"><span class="schema-key">reachMin_Sm</span><span class="schema-type">number</span><span class="schema-desc">Minimum effective reach in sub-metres (1 Sm = 0.0001 m)</span></div>
+      <div class="schema-row"><span class="schema-key">reachMax_Sm</span><span class="schema-type">number</span><span class="schema-desc">Maximum effective reach</span></div>
+      <div class="schema-row"><span class="schema-key">damageType</span><span class="schema-type">string</span><span class="schema-desc"><code>"blunt"</code> | <code>"slash"</code> | <code>"pierce"</code> | <code>"combined"</code></span></div>
+    </div>
+
+    <div id="tab-armour" class="tab-panel">
+      <div class="schema-row"><span class="schema-key">id<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Unique armour id</span></div>
+      <div class="schema-row"><span class="schema-key">name<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Display name</span></div>
+      <div class="schema-row"><span class="schema-key">totalMass_kg</span><span class="schema-type">number</span><span class="schema-desc">Full set mass in Skg</span></div>
+      <div class="schema-row"><span class="schema-key">regions<span class="req">*</span></span><span class="schema-type">object</span><span class="schema-desc">Per-region coverage map (head, torso, arms, legs) with absorb_Q values</span></div>
+      <div class="schema-row"><span class="schema-key">material</span><span class="schema-type">string</span><span class="schema-desc"><code>"plate"</code> | <code>"mail"</code> | <code>"leather"</code> | <code>"padded"</code> | <code>"none"</code></span></div>
+    </div>
+
+    <div id="tab-archetypes" class="tab-panel">
+      <div class="schema-row"><span class="schema-key">id<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Archetype identifier</span></div>
+      <div class="schema-row"><span class="schema-key">name<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Display name</span></div>
+      <div class="schema-row"><span class="schema-key">bodyPlanId<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Reference to a body plan id (built-in or from this pack)</span></div>
+      <div class="schema-row"><span class="schema-key">mass_kg</span><span class="schema-type">number</span><span class="schema-desc">Body mass in Skg</span></div>
+      <div class="schema-row"><span class="schema-key">attributes</span><span class="schema-type">object</span><span class="schema-desc">IndividualAttributes override (strength, speed, cognition…)</span></div>
+      <div class="schema-row"><span class="schema-key">defaultWeaponId</span><span class="schema-type">string</span><span class="schema-desc">Default equipped weapon id</span></div>
+      <div class="schema-row"><span class="schema-key">defaultArmourId</span><span class="schema-type">string</span><span class="schema-desc">Default equipped armour id</span></div>
+    </div>
+
+    <div id="tab-scenarios" class="tab-panel">
+      <div class="schema-row"><span class="schema-key">id<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Scenario identifier</span></div>
+      <div class="schema-row"><span class="schema-key">name<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Display name</span></div>
+      <div class="schema-row"><span class="schema-key">worldSeed<span class="req">*</span></span><span class="schema-type">number</span><span class="schema-desc">Deterministic world seed</span></div>
+      <div class="schema-row"><span class="schema-key">entities</span><span class="schema-type">object[]</span><span class="schema-desc">Initial entity placements and states</span></div>
+      <div class="schema-row"><span class="schema-key">tickLimit</span><span class="schema-type">number</span><span class="schema-desc">Optional maximum tick count</span></div>
+      <div class="schema-row"><span class="schema-key">description</span><span class="schema-type">string</span><span class="schema-desc">Prose description of scenario goals</span></div>
+    </div>
+
+    <div id="tab-provenance" class="tab-panel">
+      <div class="schema-row"><span class="schema-key">author<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">Pack author name or organisation</span></div>
+      <div class="schema-row"><span class="schema-key">licence<span class="req">*</span></span><span class="schema-type">string</span><span class="schema-desc">SPDX licence identifier, e.g. <code>"MIT"</code>, <code>"CC-BY-4.0"</code></span></div>
+      <div class="schema-row"><span class="schema-key">homepage</span><span class="schema-type">string</span><span class="schema-desc">URL for pack repository or documentation</span></div>
+      <div class="schema-row"><span class="schema-key">sha256</span><span class="schema-type">string</span><span class="schema-desc">SHA-256 checksum of the canonical pack JSON (hex string)</span></div>
+      <div class="schema-row"><span class="schema-key">createdAt</span><span class="schema-type">string</span><span class="schema-desc">ISO 8601 creation timestamp</span></div>
+      <div class="schema-row"><span class="schema-key">tags</span><span class="schema-type">string[]</span><span class="schema-desc">Discovery tags, e.g. <code>["medieval","fantasy","weapons"]</code></span></div>
+    </div>
+  </section>
+
+  <!-- Validator -->
+  <section class="section">
+    <h2 class="section-title">Manifest validator</h2>
+    <div class="form-group">
+      <label>Paste pack manifest JSON</label>
+      <textarea id="pack-input" rows="10" placeholder='{"packId":"com.example.test","name":"Test Pack","version":"1.0.0","provenance":{"author":"Me","licence":"MIT"}}'></textarea>
+    </div>
+    <button class="btn-primary" onclick="validatePack()">Validate manifest</button>
+    <div class="status-msg" id="pack-status"></div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Start with the root schema — all packs need <code>packId</code>, <code>name</code>, <code>version</code>, and <code>provenance</code>.</li>
+      <li>Add weapon, armour, and archetype arrays as needed. IDs must be unique within each section.</li>
+      <li>Use fixed-point integers for all numeric simulation values: mass in Skg (× 1000), energy in J (× 65536), distance in Sm (× 10000).</li>
+      <li>Provide a SHA-256 checksum in <code>provenance.sha256</code> for pack integrity verification.</li>
+      <li>Load the pack at session creation: pass it to <code>createSession({ packs: [myPack] })</code>.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../zoo/">Simulation Zoo <span class="link-note">live</span></a></li>
+      <li><a href="../editors/species-forge.html">Species Forge</a></li>
+      <li><a href="../editors/scenario-builder.html">Scenario Builder</a></li>
+      <li><a href="../data-governance/">Data Governance</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/integration-primer.md" target="_blank" rel="noopener">integration-primer.md ↗</a></li>
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function validatePack() {
+  const input = document.getElementById('pack-input').value.trim();
+  const status = document.getElementById('pack-status');
+  status.className = 'status-msg';
+  if (!input) { status.className = 'status-msg status-err visible'; status.textContent = 'Error: empty input'; return; }
+  let obj;
+  try { obj = JSON.parse(input); } catch (e) {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'JSON parse error: ' + e.message;
+    return;
+  }
+  const required = ['packId', 'name', 'version', 'provenance'];
+  const missing = required.filter(k => !(k in obj));
+  if (missing.length) {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'Missing required root fields: ' + missing.join(', ');
+    return;
+  }
+  if (!obj.provenance.author || !obj.provenance.licence) {
+    status.className = 'status-msg status-err visible';
+    status.textContent = 'provenance must include author and licence';
+    return;
+  }
+  const sections = ['weapons','armour','archetypes','scenarios'].filter(k => k in obj);
+  const counts = sections.map(k => `${k}: ${Array.isArray(obj[k]) ? obj[k].length : '?'}`).join(', ');
+  status.className = 'status-msg status-ok visible';
+  status.textContent = `Valid — ${obj.packId} v${obj.version} by ${obj.provenance.author}${counts ? ' · ' + counts : ''}`;
+}
+</script>
+</body>
+</html>

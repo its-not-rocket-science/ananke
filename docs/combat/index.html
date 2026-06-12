@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Combat Kernel</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .archetype-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.75rem; }
+  @media (max-width:600px) { .archetype-grid { grid-template-columns: 1fr 1fr; } }
+  .archetype-btn {
+    background: var(--bg-mid);
+    border: 1px solid var(--border-2);
+    border-radius: 4px;
+    padding: 0.5rem 0.4rem;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--muted);
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.12s, color 0.12s;
+  }
+  .archetype-btn:hover { border-color: var(--border-2); color: var(--text); }
+  .archetype-btn.selected { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-glow); }
+  .archetype-icon { font-size: 1rem; display: block; margin-bottom: 0.2rem; }
+  .stat-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+  .stat-bar-label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 90px; flex-shrink: 0; text-align: right; }
+  .stat-bar-track { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .stat-bar-fill { height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.2s; }
+  .stat-bar-val { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 35px; text-align: right; flex-shrink: 0; }
+  .match-table td:first-child { color: var(--muted); font-family: var(--mono); font-size: 0.7rem; }
+  .match-table td:not(:first-child) { font-family: var(--mono); font-size: 0.75rem; }
+  .tick-diagram { display: flex; gap: 0; overflow-x: auto; padding: 0.5rem 0; }
+  .tick-phase {
+    flex: 1;
+    min-width: 90px;
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    padding: 0.5rem 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-align: center;
+    position: relative;
+  }
+  .tick-phase:not(:first-child) { border-left: none; }
+  .tick-phase-name { color: var(--text); font-size: 0.72rem; display: block; margin-bottom: 0.25rem; }
+  .tick-phase:first-child { border-radius: 4px 0 0 4px; }
+  .tick-phase:last-child  { border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Combat Kernel</div>
+  <h1 class="page-title">Combat Kernel</h1>
+  <p class="page-desc">Deterministic tick-stepping combat — physics-grounded weapon dynamics, skill contests, injury accumulation, and formation resolution.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">src/sim/combat.ts</span>
+      <span class="module-tag stable">src/sim/kernel.ts</span>
+      <span class="module-tag">src/sim/weapon_dynamics.ts</span>
+      <span class="module-tag">src/sim/injury.ts</span>
+      <span class="module-tag">src/sim/skills.ts</span>
+      <span class="module-tag">src/sim/grapple.ts</span>
+      <span class="module-tag">src/sim/formation.ts</span>
+      <span class="module-tag">src/sim/formation-combat.ts</span>
+      <span class="module-tag">src/sim/ranged.ts</span>
+      <span class="module-tag">src/sim/morale.ts</span>
+      <span class="module-tag">src/sim/mount.ts</span>
+      <span class="module-tag">src/sim/seeds.ts</span>
+      <span class="module-tag doc">docs/use-case-validation.md</span>
+    </div>
+    <p class="note">Combat resolution is pair-based and deterministic. Given the same <code>worldSeed</code> and command sequence, every fight produces identical tick-by-tick outcomes. Injury is physical — based on energy transfer, region coverage, and anatomical tolerances — not a simple HP pool.</p>
+  </section>
+
+  <!-- Tick diagram -->
+  <section class="section">
+    <h2 class="section-title">Tick step phases</h2>
+    <div class="tick-diagram">
+      <div class="tick-phase">
+        <span class="tick-phase-name">Intent</span>
+        resolve action queue,<br>stance, target lock
+      </div>
+      <div class="tick-phase">
+        <span class="tick-phase-name">Skill contest</span>
+        attack vs defence,<br>resolveHit()
+      </div>
+      <div class="tick-phase">
+        <span class="tick-phase-name">Energy calc</span>
+        weapon KE,<br>armour absorption
+      </div>
+      <div class="tick-phase">
+        <span class="tick-phase-name">Injury</span>
+        surface / internal /<br>structural damage
+      </div>
+      <div class="tick-phase">
+        <span class="tick-phase-name">Vitals</span>
+        shock, fatigue,<br>consciousness
+      </div>
+      <div class="tick-phase">
+        <span class="tick-phase-name">Conditions</span>
+        bleeding, fracture,<br>morale, grapple
+      </div>
+    </div>
+    <p class="note" style="margin-top:0.65rem">Each tick advances all entities simultaneously. There is no turn order — simultaneous resolution is inherent to the fixed-point tick model at 20 Hz by default. Adjust <code>tickRateHz</code> in session config for tactical vs real-time resolution.</p>
+  </section>
+
+  <!-- Explorer -->
+  <section class="section">
+    <h2 class="section-title">Archetype explorer — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.75rem">Select an archetype to view typical combat parameters. Values derived from built-in archetypes. For a live 1v1 duel, see the <a href="../playground/" style="color:var(--accent);text-decoration:none">Playground →</a></p>
+
+    <div class="archetype-grid">
+      <div class="archetype-btn selected" onclick="selectArchetype('fighter', this)"><span class="archetype-icon">⚔</span>Fighter</div>
+      <div class="archetype-btn" onclick="selectArchetype('archer', this)"><span class="archetype-icon">🏹</span>Archer</div>
+      <div class="archetype-btn" onclick="selectArchetype('brawler', this)"><span class="archetype-icon">👊</span>Brawler</div>
+      <div class="archetype-btn" onclick="selectArchetype('knight', this)"><span class="archetype-icon">🛡</span>Knight</div>
+    </div>
+
+    <div id="archetype-stats">
+      <div class="stat-bar"><span class="stat-bar-label">strength</span><div class="stat-bar-track"><div class="stat-bar-fill" id="bar-strength" style="width:72%"></div></div><span class="stat-bar-val" id="val-strength">q(0.72)</span></div>
+      <div class="stat-bar"><span class="stat-bar-label">speed</span><div class="stat-bar-track"><div class="stat-bar-fill" id="bar-speed" style="width:65%;background:var(--ring)"></div></div><span class="stat-bar-val" id="val-speed">q(0.65)</span></div>
+      <div class="stat-bar"><span class="stat-bar-label">skill</span><div class="stat-bar-track"><div class="stat-bar-fill" id="bar-skill" style="width:70%;background:var(--violet)"></div></div><span class="stat-bar-val" id="val-skill">q(0.70)</span></div>
+      <div class="stat-bar"><span class="stat-bar-label">armour (chest)</span><div class="stat-bar-track"><div class="stat-bar-fill" id="bar-armour" style="width:35%;background:var(--live)"></div></div><span class="stat-bar-val" id="val-armour">q(0.35)</span></div>
+    </div>
+
+    <div style="margin-top:0.85rem">
+      <table class="match-table">
+        <thead><tr><th>Parameter</th><th>Value</th><th>Notes</th></tr></thead>
+        <tbody id="archetype-table">
+          <tr><td>mass_kg</td><td>80 kg</td><td>affects KE at charge</td></tr>
+          <tr><td>weapon</td><td>arming_sword</td><td>800 g, 30 J typical strike</td></tr>
+          <tr><td>reach_Sm</td><td>80 000</td><td>8 m max (incl. weapon)</td></tr>
+          <tr><td>fearThreshold_Q</td><td>q(0.35)</td><td>morale break threshold</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Open the <a href="../playground/">Playground</a> for a live pre-computed 1v1 duel with configurable archetypes, weapons, and seeds.</li>
+      <li>Step through a fight in the <a href="../debugger/">Visual Debugger</a> to inspect per-tick entity state.</li>
+      <li>Run <code>npm run run:trace-attack</code> in the repo to trace a single attack through the full kernel pipeline.</li>
+      <li>See <code>src/sim/combat.ts:resolveHit()</code> for the skill-contest resolution and energy-transfer calculation.</li>
+      <li>Vary <code>worldSeed</code> in <code>createSession</code> to explore outcome distributions — same archetypes, different results per seed.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../playground/">Playground <span class="link-note">live</span></a></li>
+      <li><a href="../debugger/">Visual Debugger <span class="link-note">live</span></a></li>
+      <li><a href="../session/">Session API</a></li>
+      <li><a href="../replay/">Replay viewer</a></li>
+      <li><a href="../arena/">Arena runner</a></li>
+      <li><a href="../medical/">Medical / injury</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Examples</h2>
+    <ul class="link-list">
+      <li><a href="../../examples/games/tactics-duel/web/" target="_blank" rel="noopener">Tactics Duel ↗</a></li>
+      <li><a href="../../examples/reference/host-coherence/web/" target="_blank" rel="noopener">Host Coherence ↗</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/use-case-validation.md" target="_blank" rel="noopener">use-case-validation.md ↗</a></li>
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+
+<script>
+const ARCHETYPES = {
+  fighter: { strength: 72, speed: 65, skill: 70, armour: 35,
+    rows: [['mass_kg','80 kg','affects KE at charge'],['weapon','arming_sword','800 g, 30 J typical strike'],['reach_Sm','80 000','8 m max (incl. weapon)'],['fearThreshold_Q','q(0.35)','morale break threshold']] },
+  archer:  { strength: 55, speed: 75, skill: 78, armour: 15,
+    rows: [['mass_kg','65 kg','lighter for mobility'],['weapon','longbow','range 20 m, 45 J draw'],['reach_Sm','200 000','20 m max range'],['fearThreshold_Q','q(0.45)','higher fear in melee']] },
+  brawler: { strength: 85, speed: 60, skill: 55, armour: 5,
+    rows: [['mass_kg','90 kg','heavy muscle mass'],['weapon','fists / clubs','15 J typical strike'],['reach_Sm','20 000','2 m reach, grapple priority'],['fearThreshold_Q','q(0.25)','aggressive, low fear']] },
+  knight:  { strength: 78, speed: 40, skill: 75, armour: 75,
+    rows: [['mass_kg','95 kg','incl. ~25 kg armour'],['weapon','longsword','1.4 kg, 50 J typical'],['reach_Sm','100 000','10 m with lance on horse'],['fearThreshold_Q','q(0.20)','trained, low morale break']] },
+};
+function selectArchetype(id, el) {
+  document.querySelectorAll('.archetype-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  const a = ARCHETYPES[id];
+  ['strength','speed','skill','armour'].forEach(k => {
+    const v = k === 'armour' ? a[k] : a[k];
+    document.getElementById('bar-' + k).style.width = v + '%';
+    document.getElementById('val-' + k).textContent = 'q(' + (v/100).toFixed(2) + ')';
+  });
+  const tbody = document.getElementById('archetype-table');
+  tbody.innerHTML = a.rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+}
+</script>
+</body>
+</html>

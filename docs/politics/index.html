@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Politics &amp; Factions</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .relation-matrix {
+    overflow-x: auto;
+    margin: 0.5rem 0;
+  }
+  .relation-matrix table { min-width: 480px; }
+  .relation-matrix th:first-child,
+  .relation-matrix td:first-child { width: 110px; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); }
+  .relation-matrix th:not(:first-child),
+  .relation-matrix td:not(:first-child) { text-align: center; font-family: var(--mono); font-size: 0.72rem; }
+  .rel-cell { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 0.68rem; cursor: default; }
+  .rel-allied   { background: rgba(52,211,153,0.12); color: var(--live); border: 1px solid rgba(52,211,153,0.2); }
+  .rel-friendly { background: rgba(125,211,252,0.1); color: var(--ring); border: 1px solid rgba(125,211,252,0.15); }
+  .rel-neutral  { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+  .rel-rival    { background: rgba(245,158,11,0.1); color: var(--warn); border: 1px solid rgba(245,158,11,0.15); }
+  .rel-war      { background: rgba(239,68,68,0.1); color: var(--fail); border: 1px solid rgba(239,68,68,0.15); }
+  .rel-self     { background: transparent; color: var(--border-2); }
+  .faction-card {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.7rem 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.12s;
+  }
+  .faction-card:hover, .faction-card.selected { border-color: var(--accent-dim); }
+  .faction-name { font-family: var(--mono); font-size: 0.8rem; font-weight: 500; color: var(--text); margin-bottom: 0.2rem; }
+  .faction-type { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); }
+  .rep-bar { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.3rem; }
+  .rep-label { font-family: var(--mono); font-size: 0.62rem; color: var(--muted); width: 70px; flex-shrink: 0; }
+  .rep-track { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .rep-fill  { height: 100%; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Politics &amp; Factions</div>
+  <h1 class="page-title">Politics &amp; Factions</h1>
+  <p class="page-desc">Faction relations, polity stability, diplomacy modelling, and reputation mechanics grounded in simulation state.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag">src/sim/world.ts</span>
+      <span class="module-tag">src/sim/morale.ts</span>
+      <span class="module-tag">src/sim/formation.ts</span>
+      <span class="module-tag">src/sim/team.ts</span>
+      <span class="module-tag">src/sim/collective-activities.ts</span>
+    </div>
+    <p class="note">Faction and polity mechanics are host-level concerns. Ananke provides the physics substrate — morale, casualties, supply pressure — from which faction stability and diplomatic pressure naturally emerge. The host tracks polity objects and uses simulation outputs as inputs to political state transitions.</p>
+    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 3 — planned</span>&ensp;A formal polity/faction API is not yet implemented. These previews show the design direction.</span></p>
+  </section>
+
+  <!-- Faction grid -->
+  <section class="section">
+    <h2 class="section-title">Faction browser — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <div class="three-col" style="margin-bottom:0.75rem">
+      <div class="faction-card selected" onclick="selectFaction('empire',this)">
+        <div class="faction-name">Empire of Karath</div>
+        <div class="faction-type">monarchy · large</div>
+        <div class="rep-bar"><span class="rep-label">stability</span><div class="rep-track"><div class="rep-fill" style="width:72%;background:var(--accent)"></div></div></div>
+        <div class="rep-bar"><span class="rep-label">military</span><div class="rep-track"><div class="rep-fill" style="width:85%;background:var(--ring)"></div></div></div>
+      </div>
+      <div class="faction-card" onclick="selectFaction('guild',this)">
+        <div class="faction-name">Merchant Guild</div>
+        <div class="faction-type">oligarchy · medium</div>
+        <div class="rep-bar"><span class="rep-label">stability</span><div class="rep-track"><div class="rep-fill" style="width:60%;background:var(--accent)"></div></div></div>
+        <div class="rep-bar"><span class="rep-label">military</span><div class="rep-track"><div class="rep-fill" style="width:25%;background:var(--ring)"></div></div></div>
+      </div>
+      <div class="faction-card" onclick="selectFaction('tribes',this)">
+        <div class="faction-name">Hill Tribes</div>
+        <div class="faction-type">tribal · small</div>
+        <div class="rep-bar"><span class="rep-label">stability</span><div class="rep-track"><div class="rep-fill" style="width:45%;background:var(--accent)"></div></div></div>
+        <div class="rep-bar"><span class="rep-label">military</span><div class="rep-track"><div class="rep-fill" style="width:55%;background:var(--ring)"></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Relation matrix -->
+  <section class="section">
+    <h2 class="section-title">Relation matrix — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.65rem">Diplomatic stance between faction pairs. Derived from simulation outputs: battle casualties, trade volume, proximity pressure.</p>
+    <div class="relation-matrix">
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>Empire</th>
+            <th>Guild</th>
+            <th>Hill Tribes</th>
+            <th>Church</th>
+            <th>Corsairs</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Empire</td>
+            <td><span class="rel-cell rel-self">—</span></td>
+            <td><span class="rel-cell rel-friendly">friendly</span></td>
+            <td><span class="rel-cell rel-war">war</span></td>
+            <td><span class="rel-cell rel-allied">allied</span></td>
+            <td><span class="rel-cell rel-war">war</span></td>
+          </tr>
+          <tr>
+            <td>Guild</td>
+            <td><span class="rel-cell rel-friendly">friendly</span></td>
+            <td><span class="rel-cell rel-self">—</span></td>
+            <td><span class="rel-cell rel-neutral">neutral</span></td>
+            <td><span class="rel-cell rel-neutral">neutral</span></td>
+            <td><span class="rel-cell rel-rival">rival</span></td>
+          </tr>
+          <tr>
+            <td>Hill Tribes</td>
+            <td><span class="rel-cell rel-war">war</span></td>
+            <td><span class="rel-cell rel-neutral">neutral</span></td>
+            <td><span class="rel-cell rel-self">—</span></td>
+            <td><span class="rel-cell rel-rival">rival</span></td>
+            <td><span class="rel-cell rel-friendly">friendly</span></td>
+          </tr>
+          <tr>
+            <td>Church</td>
+            <td><span class="rel-cell rel-allied">allied</span></td>
+            <td><span class="rel-cell rel-neutral">neutral</span></td>
+            <td><span class="rel-cell rel-rival">rival</span></td>
+            <td><span class="rel-cell rel-self">—</span></td>
+            <td><span class="rel-cell rel-war">war</span></td>
+          </tr>
+          <tr>
+            <td>Corsairs</td>
+            <td><span class="rel-cell rel-war">war</span></td>
+            <td><span class="rel-cell rel-rival">rival</span></td>
+            <td><span class="rel-cell rel-friendly">friendly</span></td>
+            <td><span class="rel-cell rel-war">war</span></td>
+            <td><span class="rel-cell rel-self">—</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-top:0.65rem">
+      <span class="rel-cell rel-allied">allied</span>
+      <span class="rel-cell rel-friendly">friendly</span>
+      <span class="rel-cell rel-neutral">neutral</span>
+      <span class="rel-cell rel-rival">rival</span>
+      <span class="rel-cell rel-war">war</span>
+    </div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Track faction stability as a Q value updated each session step: large battle casualties → stability_Q decreases.</li>
+      <li>Use <code>src/sim/morale.ts</code> outputs (fear, rout) as inputs to faction morale — army rout events shift diplomatic stance toward desperation or capitulation.</li>
+      <li>Model reputation as a cumulative sum of event scores — KILL events weight negatively, TRADE events positively.</li>
+      <li>Use <code>src/sim/team.ts</code> to associate entities with factions and aggregate faction-level vitals.</li>
+      <li>See <code>src/sim/collective-activities.ts</code> for ritual and caravan mechanics that affect inter-faction relations.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../economy/">Economy</a></li>
+      <li><a href="../campaign/">Campaign</a></li>
+      <li><a href="../mythology/">Mythology</a></li>
+      <li><a href="../world-evolution/">World Evolution</a></li>
+      <li><a href="../epidemiology/">Epidemiology</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+function selectFaction(id, el) {
+  document.querySelectorAll('.faction-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+</body>
+</html>

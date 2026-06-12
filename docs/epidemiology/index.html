@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Epidemiology</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .disease-pill {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    background: var(--bg-mid); border: 1px solid var(--border-2);
+    border-radius: 4px; padding: 0.4rem 0.65rem; cursor: pointer;
+    font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+    margin: 0.2rem; transition: border-color 0.12s, color 0.12s;
+  }
+  .disease-pill:hover, .disease-pill.active { border-color: var(--accent-dim); color: var(--accent); }
+  .phase-track { display: flex; gap: 0; border-radius: 4px; overflow: hidden; margin: 0.5rem 0; }
+  .phase-seg { flex: 1; height: 18px; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.05em; transition: flex 0.3s; }
+  .ph-susceptible { background: var(--surface-2); color: var(--muted); }
+  .ph-incubating  { background: rgba(245,158,11,0.25); color: var(--warn); }
+  .ph-symptomatic { background: rgba(239,68,68,0.25); color: var(--fail); }
+  .ph-recovered   { background: rgba(52,211,153,0.2); color: var(--live); }
+  .ph-immune      { background: rgba(125,211,252,0.15); color: var(--ring); }
+  .ph-dead        { background: rgba(100,50,50,0.4); color: #a05050; }
+  .spread-row { display: flex; gap: 0.75rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
+  .spread-row:last-child { border-bottom: none; }
+  .spread-key { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); width: 160px; flex-shrink: 0; }
+  .spread-val { font-family: var(--mono); font-size: 0.72rem; color: var(--text); }
+  .spread-bar { flex: 1; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .spread-fill { height: 100%; border-radius: 3px; }
+  .pop-row { display: flex; gap: 0.4rem; align-items: center; padding: 0.25rem 0; }
+  .pop-label { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 70px; flex-shrink: 0; }
+  .pop-track { flex: 1; height: 10px; background: var(--border); border-radius: 3px; overflow: hidden; display: flex; }
+  .pop-s { background: var(--surface-2); }
+  .pop-i { background: rgba(239,68,68,0.6); }
+  .pop-r { background: rgba(52,211,153,0.5); }
+  .pop-pct { font-family: var(--mono); font-size: 0.65rem; width: 60px; text-align: right; color: var(--muted); flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Epidemiology</div>
+  <h1 class="page-title">Epidemiology</h1>
+  <p class="page-desc">Disease transmission, epidemic spread, quarantine mechanics, immunity tracking, and population-level infection modelling.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">src/sim/disease.ts</span>
+      <span class="module-tag">src/sim/hazard.ts</span>
+      <span class="module-tag">src/sim/nutrition.ts</span>
+      <span class="module-tag">src/sim/world.ts</span>
+      <span class="module-tag">src/sim/seeds.ts</span>
+      <span class="module-tag doc">docs/validation-disease-mortality-rate.md</span>
+    </div>
+    <p class="note">Disease modelling is entity-level: each entity carries an <code>activeDiseases</code> array and an <code>immunity</code> record. Spread is computed pair-by-pair using proximity and transmission route. A full population simulation is driven by the host iterating over entity pairs each tick.</p>
+  </section>
+
+  <!-- Disease selector -->
+  <section class="section">
+    <h2 class="section-title">Disease profiles</h2>
+    <div style="margin-bottom:0.5rem">
+      <div class="disease-pill active" onclick="selectDisease('common_fever',this)">🤧 common fever</div>
+      <div class="disease-pill" onclick="selectDisease('wound_fever',this)">🩸 wound fever</div>
+      <div class="disease-pill" onclick="selectDisease('plague',this)">☠ pneumonic plague</div>
+      <div class="disease-pill" onclick="selectDisease('dysentery',this)">💧 dysentery</div>
+      <div class="disease-pill" onclick="selectDisease('marsh',this)">🦟 marsh fever</div>
+      <div class="disease-pill" onclick="selectDisease('wasting',this)">💀 wasting sickness</div>
+    </div>
+
+    <div id="disease-detail">
+      <div class="spread-row"><span class="spread-key">transmission route</span><div class="spread-bar"><div class="spread-fill" id="dd-route-bar" style="width:60%;background:var(--ring)"></div></div><span class="spread-val" id="dd-route">airborne</span></div>
+      <div class="spread-row"><span class="spread-key">base transmission rate</span><div class="spread-bar"><div class="spread-fill" id="dd-rate-bar" style="width:35%;background:var(--warn)"></div></div><span class="spread-val" id="dd-rate">q(0.35)</span></div>
+      <div class="spread-row"><span class="spread-key">incubation period</span><span class="spread-val" id="dd-incubation">2 days</span></div>
+      <div class="spread-row"><span class="spread-key">symptomatic duration</span><span class="spread-val" id="dd-duration">7 days</span></div>
+      <div class="spread-row"><span class="spread-key">mortality rate</span><div class="spread-bar"><div class="spread-fill" id="dd-mort-bar" style="width:5%;background:var(--fail)"></div></div><span class="spread-val" id="dd-mort">q(0.05)</span></div>
+      <div class="spread-row"><span class="spread-key">immunity duration</span><span class="spread-val" id="dd-immunity">30 days</span></div>
+      <div class="spread-row"><span class="spread-key">airborne range</span><span class="spread-val" id="dd-range">5 m</span></div>
+    </div>
+  </section>
+
+  <!-- Phase timeline -->
+  <section class="section">
+    <h2 class="section-title">Infection phase track — entity view</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.5rem">Entity lifecycle for the selected disease. Width proportional to duration.</p>
+    <div class="phase-track" id="phase-track">
+      <div class="phase-seg ph-susceptible" style="flex:1">S</div>
+      <div class="phase-seg ph-incubating"  style="flex:2" id="pt-incubate">incubating</div>
+      <div class="phase-seg ph-symptomatic" style="flex:7" id="pt-symptomatic">symptomatic</div>
+      <div class="phase-seg ph-immune"      style="flex:30" id="pt-immune">immune</div>
+    </div>
+    <div style="display:flex;gap:0.65rem;flex-wrap:wrap;margin-top:0.4rem;font-family:var(--mono);font-size:0.62rem">
+      <span><span class="phase-seg ph-susceptible" style="padding:1px 6px;border-radius:2px">S</span> susceptible</span>
+      <span><span class="phase-seg ph-incubating"  style="padding:1px 6px;border-radius:2px">I</span> incubating</span>
+      <span><span class="phase-seg ph-symptomatic" style="padding:1px 6px;border-radius:2px">S</span> symptomatic</span>
+      <span><span class="phase-seg ph-immune"      style="padding:1px 6px;border-radius:2px">R</span> immune</span>
+      <span><span class="phase-seg ph-dead"        style="padding:1px 6px;border-radius:2px">D</span> dead</span>
+    </div>
+  </section>
+
+  <!-- Population SIR -->
+  <section class="section">
+    <h2 class="section-title">Population spread — SIR model preview</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.65rem">Illustrative day-by-day infection spread in a population of 100 entities. Based on common_fever parameters with ~50% close-contact pairs per day.</p>
+    <div id="sir-rows">
+      <div class="pop-row"><span class="pop-label">Day 0</span><div class="pop-track"><div class="pop-s" style="flex:99"></div><div class="pop-i" style="flex:1"></div><div class="pop-r" style="flex:0"></div></div><span class="pop-pct">I: 1%</span></div>
+      <div class="pop-row"><span class="pop-label">Day 3</span><div class="pop-track"><div class="pop-s" style="flex:85"></div><div class="pop-i" style="flex:14"></div><div class="pop-r" style="flex:1"></div></div><span class="pop-pct">I: 14%</span></div>
+      <div class="pop-row"><span class="pop-label">Day 7</span><div class="pop-track"><div class="pop-s" style="flex:55"></div><div class="pop-i" style="flex:35"></div><div class="pop-r" style="flex:10"></div></div><span class="pop-pct">I: 35%</span></div>
+      <div class="pop-row"><span class="pop-label">Day 14</span><div class="pop-track"><div class="pop-s" style="flex:20"></div><div class="pop-i" style="flex:30"></div><div class="pop-r" style="flex:50"></div></div><span class="pop-pct">I: 30%</span></div>
+      <div class="pop-row"><span class="pop-label">Day 21</span><div class="pop-track"><div class="pop-s" style="flex:5"></div><div class="pop-i" style="flex:10"></div><div class="pop-r" style="flex:85"></div></div><span class="pop-pct">I: 10%</span></div>
+      <div class="pop-row"><span class="pop-label">Day 30</span><div class="pop-track"><div class="pop-s" style="flex:2"></div><div class="pop-i" style="flex:2"></div><div class="pop-r" style="flex:96"></div></div><span class="pop-pct">I: 2%</span></div>
+    </div>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Expose an entity: <code>exposeToDisease(entity, 'common_fever')</code>. Returns <code>true</code> if exposure succeeded (not immune, not already infected).</li>
+      <li>Step disease each tick: <code>stepDiseaseForEntity(entity, delta_s, worldSeed, tick)</code>. Returns events (onset, death, recovery).</li>
+      <li>Model spread: call <code>spreadDisease(entityMap, pairs, worldSeed, tick)</code> per tick with an array of entity-pair objects.</li>
+      <li>Quarantine: simply don't include quarantined entities in the pairs array — they won't spread.</li>
+      <li>See <code>MARSH_FEVER</code> for vector-borne disease (triggered by <code>MUSTARD_GAS</code>-style hazard zone with <code>diseaseExposureId</code>).</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../environment/">Environment</a></li>
+      <li><a href="../medical/">Medical</a></li>
+      <li><a href="../politics/">Politics &amp; Factions</a></li>
+      <li><a href="../world-evolution/">World Evolution</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Validation</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/validation-disease-mortality-rate-2026-03-15T19-16-19.md" target="_blank" rel="noopener">disease-mortality-rate ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+const DISEASES = {
+  common_fever: { route:'airborne', rate:'q(0.35)', ratePct:35, incubation:'2 days', duration:'7 days', mort:'q(0.05)', mortPct:5, immunity:'30 days', range:'5 m', incubFlex:2, sympFlex:7, immuneFlex:30 },
+  wound_fever:  { route:'contact',  rate:'q(0.60)', ratePct:60, incubation:'1 day',  duration:'5 days', mort:'q(0.10)', mortPct:10, immunity:'90 days', range:'2 m (contact)', incubFlex:1, sympFlex:5, immuneFlex:90 },
+  plague:       { route:'airborne', rate:'q(0.80)', ratePct:80, incubation:'3 days', duration:'6 days', mort:'q(0.60)', mortPct:60, immunity:'permanent', range:'15 m', incubFlex:3, sympFlex:6, immuneFlex:99 },
+  dysentery:    { route:'waterborne',rate:'q(0.70)',ratePct:70, incubation:'2 days', duration:'10 days',mort:'q(0.08)', mortPct:8, immunity:'none',      range:'shared water', incubFlex:2, sympFlex:10, immuneFlex:0 },
+  marsh:        { route:'vector',   rate:'q(0.40)', ratePct:40, incubation:'7 days', duration:'14 days',mort:'q(0.03)', mortPct:3, immunity:'none (recurring)', range:'hazard zone', incubFlex:7, sympFlex:14, immuneFlex:0 },
+  wasting:      { route:'contact',  rate:'q(0.30)', ratePct:30, incubation:'14 days',duration:'30 days',mort:'q(0.25)', mortPct:25,immunity:'permanent', range:'2 m (contact)', incubFlex:14, sympFlex:30, immuneFlex:99 },
+};
+function selectDisease(id, el) {
+  document.querySelectorAll('.disease-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const d = DISEASES[id];
+  document.getElementById('dd-route').textContent    = d.route;
+  document.getElementById('dd-rate').textContent     = d.rate;
+  document.getElementById('dd-rate-bar').style.width = d.ratePct + '%';
+  document.getElementById('dd-incubation').textContent = d.incubation;
+  document.getElementById('dd-duration').textContent   = d.duration;
+  document.getElementById('dd-mort').textContent       = d.mort;
+  document.getElementById('dd-mort-bar').style.width   = d.mortPct + '%';
+  document.getElementById('dd-immunity').textContent   = d.immunity;
+  document.getElementById('dd-range').textContent      = d.range;
+  document.getElementById('pt-incubate').style.flex   = d.incubFlex;
+  document.getElementById('pt-symptomatic').style.flex = d.sympFlex;
+  document.getElementById('pt-immune').style.flex     = Math.max(1, d.immuneFlex);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Medical &amp; Recovery</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .region-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.75rem; }
+  @media (max-width:600px) { .region-grid { grid-template-columns: 1fr 1fr; } }
+  .region-card {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 0.6rem;
+    text-align: center;
+  }
+  .region-name { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); margin-bottom: 0.3rem; }
+  .region-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 0 auto; }
+  .region-fill { height: 100%; border-radius: 3px; }
+  .dmg-surface  { background: var(--accent); }
+  .dmg-internal { background: var(--warn); }
+  .dmg-struct   { background: var(--fail); }
+  .region-dmg { font-family: var(--mono); font-size: 0.65rem; color: var(--text); margin-top: 0.2rem; }
+  .care-row { display: flex; gap: 0.75rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+  .care-row:last-child { border-bottom: none; }
+  .care-level { font-family: var(--mono); font-size: 0.72rem; width: 120px; flex-shrink: 0; }
+  .care-rate  { font-family: var(--mono); font-size: 0.72rem; color: var(--accent); width: 100px; flex-shrink: 0; }
+  .care-desc  { font-size: 0.75rem; color: var(--muted); }
+  .recovery-day { display: flex; gap: 0.4rem; align-items: center; padding: 0.25rem 0; }
+  .rd-day  { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 45px; flex-shrink: 0; }
+  .rd-bar  { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; position: relative; }
+  .rd-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--fail), var(--warn), var(--live)); }
+  .rd-note { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); width: 80px; text-align: right; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Medical &amp; Recovery</div>
+  <h1 class="page-title">Medical &amp; Recovery</h1>
+  <p class="page-desc">Injury state tracking, wound aging, recovery timelines, care levels, and long-term sequelae — physics-grounded medical simulation.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">src/sim/injury.ts</span>
+      <span class="module-tag stable">src/sim/wound-aging.ts</span>
+      <span class="module-tag stable">src/sim/medical.ts</span>
+      <span class="module-tag">src/sim/condition.ts</span>
+      <span class="module-tag">src/sim/impairment.ts</span>
+      <span class="module-tag">src/sim/limb.ts</span>
+      <span class="module-tag">src/sim/hydrostatic.ts</span>
+      <span class="module-tag">src/sim/nutrition.ts</span>
+      <span class="module-tag doc">docs/validation-untreated-knife-wound.md</span>
+      <span class="module-tag doc">docs/validation-first-aid-saves-lives.md</span>
+      <span class="module-tag doc">docs/validation-fracture-recovery.md</span>
+    </div>
+    <p class="note">Injury in Ananke is physical — surface, internal, and structural damage accumulate per body region. Healing rates depend on care level, nutrition, time, and whether infection is present. Permanent damage leaves lasting impairments. All rates are validated against real-world medical data.</p>
+  </section>
+
+  <!-- Injury state -->
+  <section class="section">
+    <h2 class="section-title">Injury state — static preview</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.65rem">Sample entity after a sword fight — surface, internal, and structural damage per body region.</p>
+
+    <div class="region-grid" id="region-grid">
+      <div class="region-card">
+        <div class="region-name">Head</div>
+        <div class="region-bar"><div class="region-fill dmg-surface" style="width:15%"></div></div>
+        <div class="region-dmg" style="color:var(--accent)">S 0.15</div>
+      </div>
+      <div class="region-card">
+        <div class="region-name">Torso</div>
+        <div class="region-bar"><div class="region-fill dmg-internal" style="width:62%"></div></div>
+        <div class="region-dmg" style="color:var(--warn)">I 0.62</div>
+      </div>
+      <div class="region-card">
+        <div class="region-name">L. Arm</div>
+        <div class="region-bar"><div class="region-fill dmg-struct" style="width:45%"></div></div>
+        <div class="region-dmg" style="color:var(--fail)">Str 0.45 ✦frac</div>
+      </div>
+      <div class="region-card">
+        <div class="region-name">R. Arm</div>
+        <div class="region-bar"><div class="region-fill dmg-surface" style="width:28%"></div></div>
+        <div class="region-dmg" style="color:var(--accent)">S 0.28</div>
+      </div>
+      <div class="region-card">
+        <div class="region-name">Abdomen</div>
+        <div class="region-bar"><div class="region-fill dmg-internal" style="width:38%"></div></div>
+        <div class="region-dmg" style="color:var(--warn)">I 0.38</div>
+      </div>
+      <div class="region-card">
+        <div class="region-name">L. Leg</div>
+        <div class="region-bar"><div class="region-fill dmg-surface" style="width:5%"></div></div>
+        <div class="region-dmg" style="color:var(--muted)">S 0.05</div>
+      </div>
+      <div class="region-card">
+        <div class="region-name">R. Leg</div>
+        <div class="region-bar"><div class="region-fill dmg-surface" style="width:0%"></div></div>
+        <div class="region-dmg" style="color:var(--muted)">intact</div>
+      </div>
+      <div class="region-card">
+        <div class="region-name">Vitals</div>
+        <div class="region-bar"><div class="region-fill" style="width:48%;background:var(--ring)"></div></div>
+        <div class="region-dmg" style="color:var(--ring)">shock 0.48</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="info-card">
+        <div class="info-card-label">Condition flags</div>
+        <div class="info-card-value" style="font-size:0.75rem;line-height:1.7">
+          <span style="color:var(--fail)">●</span> bleeding (torso)<br>
+          <span style="color:var(--warn)">●</span> fracture (L. arm)<br>
+          <span style="color:var(--warn)">●</span> infection risk<br>
+          <span style="color:var(--muted)">○</span> no sepsis
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Vitals summary</div>
+        <div class="info-card-value" style="font-size:0.75rem;line-height:1.7">
+          shock: <span class="hi">q(0.48)</span><br>
+          fatigue: <span class="hi">q(0.71)</span><br>
+          consciousness: <span style="color:var(--live)">q(0.52)</span><br>
+          fluid loss: <span style="color:var(--warn)">q(0.22)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Care level selector -->
+  <section class="section">
+    <h2 class="section-title">Care level &amp; healing rates</h2>
+    <div class="form-group" style="margin-bottom:0.6rem">
+      <label>Active care level</label>
+      <select id="care-sel" onchange="updateCare()">
+        <option value="none">None — field conditions</option>
+        <option value="first-aid" selected>First aid — basic treatment</option>
+        <option value="physician">Physician — trained care</option>
+        <option value="hospital">Hospital / chirurgeon — advanced</option>
+      </select>
+    </div>
+    <div id="care-rates">
+      <div class="care-row"><span class="care-level">Surface heal</span><span class="care-rate" id="cr-surface">q(0.020)/day</span><span class="care-desc" id="cd-surface">Wounds cleaned and dressed; basic bandaging</span></div>
+      <div class="care-row"><span class="care-level">Internal heal</span><span class="care-rate" id="cr-internal">q(0.010)/day</span><span class="care-desc" id="cd-internal">Reduces internal bleeding; improves prognosis</span></div>
+      <div class="care-row"><span class="care-level">Fracture heal</span><span class="care-rate" id="cr-fracture">q(0.006)/day</span><span class="care-desc" id="cd-fracture">Splinting; aligned healing reduces permanent damage</span></div>
+      <div class="care-row"><span class="care-level">Infection risk</span><span class="care-rate" id="cr-infection" style="color:var(--live)">−40%</span><span class="care-desc" id="cd-infection">Clean dressings and wound hygiene reduce infection</span></div>
+    </div>
+  </section>
+
+  <!-- Recovery timeline -->
+  <section class="section">
+    <h2 class="section-title">Recovery timeline — first-aid care</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.65rem">Days to recovery for the sample entity above. Values from <code>stepWoundAging</code> rates in <code>src/sim/wound-aging.ts</code>.</p>
+    <div id="recovery-tl">
+      <div class="recovery-day"><span class="rd-day">Day 0</span><div class="rd-bar"><div class="rd-fill" style="width:62%"></div></div><span class="rd-note">shock 0.48</span></div>
+      <div class="recovery-day"><span class="rd-day">Day 3</span><div class="rd-bar"><div class="rd-fill" style="width:52%"></div></div><span class="rd-note">surface healing</span></div>
+      <div class="recovery-day"><span class="rd-day">Day 7</span><div class="rd-bar"><div class="rd-fill" style="width:42%"></div></div><span class="rd-note">infection cleared</span></div>
+      <div class="recovery-day"><span class="rd-day">Day 14</span><div class="rd-bar"><div class="rd-fill" style="width:30%"></div></div><span class="rd-note">internal improving</span></div>
+      <div class="recovery-day"><span class="rd-day">Day 30</span><div class="rd-bar"><div class="rd-fill" style="width:15%"></div></div><span class="rd-note">fracture callus</span></div>
+      <div class="recovery-day"><span class="rd-day">Day 90</span><div class="rd-bar"><div class="rd-fill" style="width:4%"></div></div><span class="rd-note">near full recovery</span></div>
+    </div>
+    <p class="note" style="margin-top:0.5rem">Permanent damage floor from the fracture prevents full q(0) restoration. <code>PHANTOM_PAIN_THRESHOLD</code> = q(0.30) — fractures with structural ≥ q(0.30) cause phantom pain.</p>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Call <code>stepWoundAging(entity, elapsedSeconds)</code> each downtime tick — it handles healing, infection worsening, sepsis detection, and phantom pain.</li>
+      <li>Set care level by adjusting the <code>careLevel</code> parameter in <code>src/sim/medical.ts</code> to modify healing multipliers.</li>
+      <li>Check <code>SEPSIS_THRESHOLD = q(0.85)</code> — infection above this triggers a mortality roll.</li>
+      <li>See <code>docs/validation-untreated-knife-wound.md</code> for the real-world baseline the healing model is calibrated against.</li>
+      <li>Run <code>npm run run:validation</code> to verify the fracture recovery and first-aid calibration scenarios.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../combat/">Combat kernel</a></li>
+      <li><a href="../environment/">Environment</a></li>
+      <li><a href="../epidemiology/">Epidemiology</a></li>
+      <li><a href="../dashboard/">Validation Dashboard <span class="link-note">live</span></a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Validation docs</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/validation-untreated-knife-wound-2026-03-15T11-21-41.md" target="_blank" rel="noopener">untreated-knife-wound ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/validation-first-aid-saves-lives-2026-03-15T11-21-41.md" target="_blank" rel="noopener">first-aid-saves-lives ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/validation-fracture-recovery-2026-03-15T11-21-41.md" target="_blank" rel="noopener">fracture-recovery ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+const CARE = {
+  none:       { surface: 'q(0.010)/day', internal: 'q(0.005)/day', fracture: 'q(0.003)/day', infection: '+20%',
+    cd: ['Untreated — natural healing only','High internal bleeding risk','Misaligned fracture likely','Infection worsens at q(0.015)/day'] },
+  'first-aid':{ surface: 'q(0.020)/day', internal: 'q(0.010)/day', fracture: 'q(0.006)/day', infection: '−40%',
+    cd: ['Wounds cleaned and dressed; basic bandaging','Reduces internal bleeding; improves prognosis','Splinting; aligned healing reduces permanent damage','Clean dressings and wound hygiene reduce infection'] },
+  physician:  { surface: 'q(0.035)/day', internal: 'q(0.018)/day', fracture: 'q(0.010)/day', infection: '−70%',
+    cd: ['Sutures and proper dressing','Wound packing and drainage','Set fracture, cast or splint','Trained hygiene; antimicrobial herbs'] },
+  hospital:   { surface: 'q(0.050)/day', internal: 'q(0.030)/day', fracture: 'q(0.015)/day', infection: '−90%',
+    cd: ['Best-practice wound closure','Surgical drainage if needed','Traction and optimal alignment','Clean environment + systemic treatment'] },
+};
+function updateCare() {
+  const c = CARE[document.getElementById('care-sel').value];
+  document.getElementById('cr-surface').textContent   = c.surface;
+  document.getElementById('cr-internal').textContent  = c.internal;
+  document.getElementById('cr-fracture').textContent  = c.fracture;
+  document.getElementById('cr-infection').textContent = c.infection;
+  document.getElementById('cr-infection').style.color = c.infection.startsWith('+') ? 'var(--fail)' : 'var(--live)';
+  document.getElementById('cd-surface').textContent   = c.cd[0];
+  document.getElementById('cd-internal').textContent  = c.cd[1];
+  document.getElementById('cd-fracture').textContent  = c.cd[2];
+  document.getElementById('cd-infection').textContent = c.cd[3];
+}
+</script>
+</body>
+</html>

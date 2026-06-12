@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Technology</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .era-ladder { display: flex; flex-direction: column; gap: 0; }
+  .era-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    align-items: flex-start;
+  }
+  .era-item:first-child { border-radius: 4px 4px 0 0; }
+  .era-item:last-child  { border-radius: 0 0 4px 4px; border-bottom: 1px solid var(--border); }
+  .era-item:hover { background: var(--surface-2); }
+  .era-item.active { background: var(--accent-glow); border-color: var(--accent-dim); }
+  .era-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--border-2);
+    border: 2px solid var(--border-2);
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .era-item.active .era-dot { background: var(--accent); border-color: var(--accent); }
+  .era-item.past .era-dot   { background: var(--live);   border-color: var(--live); }
+  .era-name { font-family: var(--mono); font-size: 0.8rem; font-weight: 500; color: var(--text); }
+  .era-range { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); margin-left: auto; flex-shrink: 0; }
+  .era-desc { font-size: 0.75rem; color: var(--muted); margin-top: 0.2rem; line-height: 1.5; }
+  .era-unlocks { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+  .era-unlock {
+    font-family: var(--mono); font-size: 0.62rem;
+    padding: 1px 6px; border-radius: 3px;
+    background: var(--bg-mid); border: 1px solid var(--border-2); color: var(--muted);
+  }
+  .diffusion-bar { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
+  .diffusion-bar:last-child { border-bottom: none; }
+  .diff-label { font-family: var(--mono); font-size: 0.7rem; color: var(--muted); width: 130px; flex-shrink: 0; }
+  .diff-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .diff-fill  { height: 100%; border-radius: 3px; background: var(--violet); }
+  .diff-pct   { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); width: 40px; text-align: right; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / Technology</div>
+  <h1 class="page-title">Technology</h1>
+  <p class="page-desc">Tech diffusion, research progression, era advancement, and the effect of technological era on entity capabilities and available equipment.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- What this uses -->
+  <section class="section">
+    <h2 class="section-title">What this uses</h2>
+    <div class="module-list">
+      <span class="module-tag stable">src/sim/tech.ts</span>
+      <span class="module-tag">src/sim/world.ts</span>
+      <span class="module-tag">src/sim/collective-activities.ts</span>
+      <span class="module-tag">src/sim/entity.ts</span>
+      <span class="module-tag">src/sim/weapon_dynamics.ts</span>
+    </div>
+    <p class="note">Technology in Ananke is a world-level property (<code>world.tech</code>). The current era gates which weapon profiles, armour schemes, and entity capabilities are available. Advancement is driven by collective research activities and inter-polity diffusion pressure.</p>
+    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 2 — experimental</span>&ensp;Technology diffusion API is available but not yet stable. Verify against current source before using.</span></p>
+  </section>
+
+  <!-- Era ladder -->
+  <section class="section">
+    <h2 class="section-title">Tech era ladder</h2>
+    <div class="era-ladder">
+      <div class="era-item past" onclick="selectEra(this)">
+        <div class="era-dot"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:0.5rem"><span class="era-name">Stone Age</span><span class="era-range">pre-history</span></div>
+          <div class="era-desc">Knapped stone tools, bone weapons, hide armour. No metal.</div>
+          <div class="era-unlocks"><span class="era-unlock">clubs</span><span class="era-unlock">stone_spear</span><span class="era-unlock">hide_armour</span></div>
+        </div>
+      </div>
+      <div class="era-item past" onclick="selectEra(this)">
+        <div class="era-dot"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:0.5rem"><span class="era-name">Bronze Age</span><span class="era-range">~3000–1200 BCE</span></div>
+          <div class="era-desc">Cast bronze weapons and armour. Chariots. Early fortification.</div>
+          <div class="era-unlocks"><span class="era-unlock">bronze_sword</span><span class="era-unlock">bronze_spear</span><span class="era-unlock">scale_armour</span><span class="era-unlock">chariot</span></div>
+        </div>
+      </div>
+      <div class="era-item past" onclick="selectEra(this)">
+        <div class="era-dot"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:0.5rem"><span class="era-name">Iron Age</span><span class="era-range">~1200–400 BCE</span></div>
+          <div class="era-desc">Wrought iron weapons. Mail armour. Organized infantry formations.</div>
+          <div class="era-unlocks"><span class="era-unlock">iron_sword</span><span class="era-unlock">spear</span><span class="era-unlock">mail_shirt</span><span class="era-unlock">shield</span></div>
+        </div>
+      </div>
+      <div class="era-item active" onclick="selectEra(this)">
+        <div class="era-dot"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:0.5rem"><span class="era-name" style="color:var(--accent)">Medieval</span><span class="era-range" style="color:var(--accent)">~400–1400 CE ← current</span></div>
+          <div class="era-desc">Steel plate armour. Longswords, halberds, crossbows. Mounted knights. Siege engines.</div>
+          <div class="era-unlocks">
+            <span class="era-unlock" style="border-color:var(--accent-dim);color:var(--accent)">longsword</span>
+            <span class="era-unlock" style="border-color:var(--accent-dim);color:var(--accent)">plate_armour</span>
+            <span class="era-unlock" style="border-color:var(--accent-dim);color:var(--accent)">crossbow</span>
+            <span class="era-unlock" style="border-color:var(--accent-dim);color:var(--accent)">halberd</span>
+            <span class="era-unlock" style="border-color:var(--accent-dim);color:var(--accent)">warhorse</span>
+          </div>
+        </div>
+      </div>
+      <div class="era-item" onclick="selectEra(this)">
+        <div class="era-dot"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:0.5rem"><span class="era-name">Early Modern</span><span class="era-range">~1400–1700 CE</span></div>
+          <div class="era-desc">Gunpowder. Muskets, cannon. Decline of plate armour. Professional standing armies.</div>
+          <div class="era-unlocks"><span class="era-unlock">musket</span><span class="era-unlock">cannon</span><span class="era-unlock">pistol</span></div>
+        </div>
+      </div>
+      <div class="era-item" onclick="selectEra(this)">
+        <div class="era-dot"></div>
+        <div>
+          <div style="display:flex;align-items:center;gap:0.5rem"><span class="era-name">Industrial</span><span class="era-range">~1700–1900 CE</span></div>
+          <div class="era-desc">Rifled weapons. Breech-loading. Mass conscript armies. Railways change logistics.</div>
+          <div class="era-unlocks"><span class="era-unlock">rifle</span><span class="era-unlock">artillery</span><span class="era-unlock">bayonet</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Diffusion pressure -->
+  <section class="section">
+    <h2 class="section-title">Diffusion pressure — current tick</h2>
+    <div class="preview-badge">static preview</div>
+    <p class="note" style="margin-bottom:0.65rem">How much of each era's knowledge has reached each polity, expressed as a fraction q(0–1).</p>
+    <div class="diffusion-bar"><span class="diff-label">Empire of Karath</span><div class="diff-track"><div class="diff-fill" style="width:92%"></div></div><span class="diff-pct">0.92</span></div>
+    <div class="diffusion-bar"><span class="diff-label">Merchant Guild</span><div class="diff-track"><div class="diff-fill" style="width:78%"></div></div><span class="diff-pct">0.78</span></div>
+    <div class="diffusion-bar"><span class="diff-label">Hill Tribes</span><div class="diff-track"><div class="diff-fill" style="width:34%"></div></div><span class="diff-pct">0.34</span></div>
+    <div class="diffusion-bar"><span class="diff-label">Sea Kingdoms</span><div class="diff-track"><div class="diff-fill" style="width:61%"></div></div><span class="diff-pct">0.61</span></div>
+    <p class="note" style="margin-top:0.5rem">Diffusion rate increases with trade routes (see <code>planCaravanRoute</code>), military contact, and shared borders. Isolated polities advance more slowly.</p>
+  </section>
+
+  <!-- Try this -->
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Access current era: <code>world.tech.currentEra</code> — use this to gate which weapon and armour IDs are valid for the world.</li>
+      <li>Advance era with collective research: call <code>contributeToCollectiveProject(entity, project, hours)</code> where project kind is <code>'research'</code>.</li>
+      <li>Model tech diffusion by ticking a per-polity <code>diffusionPressure_Q</code> value up when polities are in contact.</li>
+      <li>Gate content pack item availability by checking era: reject <code>longsword</code> in a Stone Age scenario.</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../world-evolution/">World Evolution</a></li>
+      <li><a href="../content-packs/">Content Packs</a></li>
+      <li><a href="../economy/">Economy</a></li>
+      <li><a href="../politics/">Politics</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Docs</h2>
+    <ul class="link-list">
+      <li><a href="../api/" target="_blank" rel="noopener">API reference ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+<script>
+function selectEra(el) {
+  document.querySelectorAll('.era-item').forEach(e => { e.classList.remove('active'); });
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
