@@ -1,16 +1,242 @@
 <!doctype html>
-<html>
-  <body>
-    <pre id="out"></pre>
-    <script type="module">
-      import { initAnankeWasm } from "../dist/src/wasm/bridge.js";
-      const bridge = await initAnankeWasm();
-      bridge.world_create(7);
-      bridge.world_step(new Int32Array([0, 1, 0]));
-      document.getElementById("out").textContent = JSON.stringify({
-        backend: bridge.backend,
-        first: bridge.world_extractSnapshot()[0]
-      }, null, 2);
-    </script>
-  </body>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — WASM / Browser Example</title>
+<meta name="description" content="Ananke deterministic simulation running in the browser — pure-JS fallback always active, upgrades to WebAssembly when the compiled binary is present.">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .backend-badge {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    font-family: var(--mono); font-size: 0.72rem;
+    padding: 0.2rem 0.6rem; border-radius: 3px; border: 1px solid var(--border-2);
+  }
+  .backend-badge.wasm { color: var(--live); border-color: rgba(52,211,153,0.4); background: var(--live-bg); }
+  .backend-badge.ts   { color: var(--ring); border-color: rgba(125,211,252,0.4); background: var(--prev-bg); }
+  .entity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.4rem; }
+  .entity-card { background: var(--bg-mid); border: 1px solid var(--border); border-radius: 4px; padding: 0.4rem 0.5rem; font-family: var(--mono); font-size: 0.65rem; }
+  .entity-card.dead { opacity: 0.3; }
+  .entity-id   { color: var(--accent); font-size: 0.68rem; margin-bottom: 0.2rem; }
+  .entity-hp   { height: 4px; background: var(--border); border-radius: 2px; margin: 0.2rem 0; overflow: hidden; }
+  .entity-hp-fill { height: 100%; border-radius: 2px; background: var(--live); transition: width 0.1s; }
+  .entity-pos  { color: var(--muted); }
+  .controls    { display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: flex-end; }
+  .stat-row    { display: flex; gap: 1.5rem; flex-wrap: wrap; font-family: var(--mono); font-size: 0.75rem; margin-bottom: 0.75rem; }
+  .stat-row .kv { color: var(--muted); }
+  .stat-row .kv span { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / WASM Example</div>
+  <h1 class="page-title">WASM / Browser Example</h1>
+  <p class="page-desc">Ananke running entirely in the browser — pure-JS fallback always active; upgrades to WebAssembly if the compiled binary is available alongside this page.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <section class="section">
+    <div style="display:flex; align-items:center; gap:1rem; margin-bottom:0.75rem; flex-wrap:wrap">
+      <div id="backend-badge" class="backend-badge ts">⬡ ts fallback</div>
+      <div class="stat-row" style="margin:0">
+        <span class="kv">tick <span id="tick-val">0</span></span>
+        <span class="kv">entities <span id="entity-count">—</span></span>
+        <span class="kv">alive <span id="alive-count">—</span></span>
+      </div>
+    </div>
+
+    <div class="controls" style="margin-bottom:0.85rem">
+      <div class="form-group" style="margin:0">
+        <label>Seed</label>
+        <input id="seed-in" type="number" value="7" min="1" max="99999" style="width:80px">
+      </div>
+      <button class="btn-primary" id="btn-create">Create world</button>
+      <button class="btn-primary" id="btn-step1">Step ×1</button>
+      <button class="btn-primary" id="btn-step10">Step ×10</button>
+      <button class="btn-primary" id="btn-step100">Step ×100</button>
+    </div>
+
+    <div id="entity-grid" class="entity-grid"></div>
+    <p class="note" style="margin-top:0.6rem">HP drains each step. Entity 0 moves right (+x) per step command; others are stationary in this demo.</p>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">How this works</h2>
+<pre>// 1. Try browser-native WASM
+const resp = await fetch('./ananke-core.wasm');
+const { instance } = await WebAssembly.instantiate(
+  await resp.arrayBuffer(), {}
+);
+
+// 2. Pure-JS fallback if binary absent
+function createTsFallback() { /* deterministic LCG */ }
+
+// 3. Same API surface regardless of backend
+bridge.world_create(seed);
+bridge.world_step(new Int32Array([entityIdx, dx, dy]));
+bridge.world_extractSnapshot();</pre>
+    <p class="note" style="margin-top:0.5rem">WASM binary built via <code>npm run build:wasm:core</code>. Without it the TS fallback provides deterministic step semantics using a simple LCG simulation. Both backends expose the same <code>AnankeWasmBridge</code> interface.</p>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../host-coherence/">Host Coherence App</a></li>
+      <li><a href="../session/">Session API</a></li>
+      <li><a href="../playground/">Playground <span class="link-note">live</span></a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Try this</h2>
+    <ol class="steps">
+      <li>Change the seed and click <strong>Create world</strong> — entities reposition deterministically.</li>
+      <li>Step many times to watch HP drain and entities die off.</li>
+      <li>Build the real WASM: <code>npm run build:wasm:core</code>, then serve this directory locally. The badge will switch to <strong>wasm</strong>.</li>
+    </ol>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Source</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/src/wasm/bridge.ts" target="_blank" rel="noopener">src/wasm/bridge.ts ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/as/ananke-core.ts" target="_blank" rel="noopener">as/ananke-core.ts ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div>
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+
+<script type="module">
+// ── Pure-JS fallback — always works in any browser ──────────────────────────
+function createTsFallback() {
+  const ents = [];
+  let seed = 1;
+  const next = () => { seed = (Math.imul(seed, 1664525) + 1013904223) | 0; return seed; };
+  return {
+    backend: 'ts',
+    world_create(worldSeed) {
+      ents.length = 0;
+      seed = worldSeed | 0;
+      for (let i = 0; i < 16; i++) {
+        ents.push({ x: (next() & 0x3fff) - 0x1fff, y: (next() & 0x3fff) - 0x1fff, hp: 1000, alive: 1 });
+      }
+      return ents.length;
+    },
+    world_step(commands) {
+      for (let i = 0; i < commands.length; i += 3) {
+        const e = ents[commands[i]];
+        if (!e || !e.alive) continue;
+        e.x += commands[i + 1];
+        e.y += commands[i + 2];
+        e.hp = Math.max(0, e.hp - 8);
+        if (e.hp === 0) e.alive = 0;
+      }
+      return ents.filter(e => e.alive).length;
+    },
+    world_extractSnapshot() { return ents.map(e => ({ ...e })); },
+  };
+}
+
+// ── Browser-native WASM loader ───────────────────────────────────────────────
+async function tryWasm() {
+  if (typeof WebAssembly === 'undefined') return null;
+  try {
+    const resp = await fetch('./ananke-core.wasm');
+    if (!resp.ok) return null;
+    const { instance } = await WebAssembly.instantiate(await resp.arrayBuffer(), {});
+    const ex = instance.exports;
+    let cmdPtr = 0, cmdCap = 0;
+    const ensure = (n) => {
+      if (n <= cmdCap && cmdPtr !== 0) return cmdPtr;
+      cmdPtr = ex.alloc(n * 4); cmdCap = n; return cmdPtr;
+    };
+    return {
+      backend: 'wasm',
+      world_create: (s) => ex.world_create(s | 0),
+      world_step(cmds) {
+        const ptr = ensure(cmds.length);
+        new Int32Array(ex.memory.buffer, ptr, cmds.length).set(cmds);
+        return ex.world_step(ptr, Math.trunc(cmds.length / 3));
+      },
+      world_extractSnapshot() {
+        const count = ex.world_step(ex.alloc(0), 0);
+        const size = ex.snapshot_size_for(count);
+        const out = ex.alloc(size);
+        ex.world_extractSnapshot(out);
+        const raw = new Int32Array(ex.memory.buffer, out, size >> 2);
+        const n = raw[0] ?? 0;
+        const result = [];
+        for (let i = 0; i < n; i++) {
+          const o = 1 + i * 4;
+          result.push({ x: raw[o], y: raw[o + 1], hp: raw[o + 2], alive: raw[o + 3] });
+        }
+        return result;
+      },
+    };
+  } catch { return null; }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+const wasmBridge = await tryWasm();
+const bridge = wasmBridge ?? createTsFallback();
+let tick = 0;
+
+const badgeEl  = document.getElementById('backend-badge');
+const tickEl   = document.getElementById('tick-val');
+const countEl  = document.getElementById('entity-count');
+const aliveEl  = document.getElementById('alive-count');
+const gridEl   = document.getElementById('entity-grid');
+
+badgeEl.className   = `backend-badge ${bridge.backend}`;
+badgeEl.textContent = bridge.backend === 'wasm' ? '⬡ wasm' : '⬡ ts fallback';
+
+function render() {
+  const snap  = bridge.world_extractSnapshot();
+  const alive = snap.filter(e => e.alive).length;
+  tickEl.textContent  = String(tick);
+  countEl.textContent = String(snap.length);
+  aliveEl.textContent = String(alive);
+  gridEl.innerHTML = snap.map((e, i) => `
+    <div class="entity-card${e.alive ? '' : ' dead'}">
+      <div class="entity-id">E${i}</div>
+      <div class="entity-hp"><div class="entity-hp-fill" style="width:${e.alive ? Math.round(e.hp / 10) : 0}%"></div></div>
+      <div class="entity-pos">x=${e.x} y=${e.y}</div>
+      <div class="entity-pos">${e.alive ? 'hp=' + e.hp : 'dead'}</div>
+    </div>`).join('');
+}
+
+function createWorld() {
+  tick = 0;
+  bridge.world_create(parseInt(document.getElementById('seed-in').value, 10) || 7);
+  render();
+}
+
+function step(n) {
+  const cmds = new Int32Array([0, 1, 0]);
+  for (let i = 0; i < n; i++) { bridge.world_step(cmds); tick++; }
+  render();
+}
+
+document.getElementById('btn-create').onclick  = createWorld;
+document.getElementById('btn-step1').onclick   = () => step(1);
+document.getElementById('btn-step10').onclick  = () => step(10);
+document.getElementById('btn-step100').onclick = () => step(100);
+
+createWorld();
+</script>
+</body>
 </html>

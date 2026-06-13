@@ -1,61 +1,125 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ananke Reference Host Coherence</title>
-    <style>
-      body { font-family: Inter, system-ui, sans-serif; margin: 24px; color: #111; }
-      .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-      button { border: 1px solid #d0d0d0; border-radius: 8px; padding: 8px 10px; background: #fff; cursor: pointer; }
-      button:hover { background: #f7f7f7; }
-      .panel { border: 1px solid #ececec; border-radius: 12px; padding: 14px; margin-top: 12px; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { text-align: left; padding: 6px 4px; border-bottom: 1px solid #f1f1f1; }
-      .muted { color: #666; font-size: 13px; }
-      pre { background: #f8f8f8; border-radius: 8px; padding: 10px; overflow-x: auto; }
-    </style>
-  </head>
-  <body>
-    <h1>Reference Host Coherence App</h1>
-    <p class="muted">Scenario load → step loop → replay capture → bridge extraction → inspection → save/load.</p>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — Host Coherence App</title>
+<meta name="description" content="Reference host coherence app — scenario load, step loop, replay capture, bridge extraction, session save/load.">
+<!-- Social -->
+<meta property="og:type"         content="website">
+<meta property="og:site_name"    content="Ananke">
+<meta property="og:title"        content="Ananke — Host Coherence App">
+<meta property="og:description"  content="Reference host coherence app — scenario load, step loop, replay capture, bridge extraction, session save/load.">
+<meta property="og:image"        content="https://its-not-rocket-science.github.io/ananke/dashboard/ANANKE-social-media-preview.png">
+<meta property="og:url"          content="https://its-not-rocket-science.github.io/ananke/examples/host-coherence/">
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="Ananke — Host Coherence App">
+<meta name="twitter:description" content="Reference host coherence app — scenario load, step loop, replay capture, bridge extraction, session save/load.">
+<meta name="twitter:image"       content="https://its-not-rocket-science.github.io/ananke/dashboard/ANANKE-social-media-preview.png">
+<link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared.css">
+<style>
+  .status        { font-family: var(--mono); font-size: 0.72rem; padding: 0.25rem 0.6rem; border-radius: 3px; border: 1px solid var(--border-2); }
+  .status.ok     { color: var(--live); border-color: rgba(52,211,153,0.4); background: var(--live-bg); }
+  .status.error  { color: var(--fail); border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.06); }
+  .entity-table  { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.72rem; }
+  .entity-table th { text-align: left; padding: 0.35rem 0.5rem; color: var(--muted); border-bottom: 1px solid var(--border); }
+  .entity-table td { padding: 0.3rem 0.5rem; border-bottom: 1px solid var(--border); color: var(--text); }
+  .entity-table tr:last-child td { border-bottom: none; }
+  .entity-table td.dead { opacity: 0.4; }
+  .btn-row       { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.75rem; }
+  .headline      { font-family: var(--mono); font-size: 0.78rem; color: var(--accent); margin-bottom: 0.25rem; }
+  .sub-headline  { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); margin-bottom: 0.5rem; }
+</style>
+</head>
+<body>
 
-    <div class="row">
-      <button id="load-scenario">Load Scenario</button>
-      <button id="step">Step Once</button>
-      <button id="run">Run 30 Steps</button>
-      <button id="run-terminal">Run To Terminal</button>
-      <button id="save">Save Session</button>
-      <button id="load">Load Session</button>
-      <button id="replay">Export Replay</button>
-      <input id="upload" type="file" accept="application/json" />
+<header>
+  <div class="breadcrumb"><a href="../../hub/">Hub</a> / Host Coherence</div>
+  <h1 class="page-title">Host Coherence App</h1>
+  <p class="page-desc">Reference implementation — scenario load → step loop → replay capture → bridge extraction → session save/load. Runs entirely in the browser via CDN import.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <section class="section">
+    <div class="btn-row">
+      <button class="btn-primary" id="load-scenario">Load Scenario</button>
+      <button class="btn-primary" id="step">Step Once</button>
+      <button class="btn-primary" id="run">Run 30 Steps</button>
+      <button class="btn-primary" id="run-terminal">Run To Terminal</button>
+      <button class="btn-primary" id="save">Save Session</button>
+      <button class="btn-primary" id="load">Load Session</button>
+      <button class="btn-primary" id="replay">Export Replay</button>
+      <input id="upload" type="file" accept="application/json" style="font-size:0.72rem;color:var(--muted)">
     </div>
+    <div id="status" class="status" style="display:inline-block">Ready — click Load Scenario to begin</div>
+  </section>
 
-    <div class="panel">
-      <strong id="headline">No scenario loaded.</strong>
-      <div id="summary" class="muted"></div>
-    </div>
+  <section class="section">
+    <div id="headline" class="headline">No scenario loaded.</div>
+    <div id="summary" class="sub-headline">Use Load Scenario to begin.</div>
 
-    <div class="panel">
-      <h3>Inspection UI</h3>
-      <table>
-        <thead>
-          <tr><th>Entity</th><th>Team</th><th>Position</th><th>Consciousness</th><th>Dead</th></tr>
-        </thead>
-        <tbody id="entities"></tbody>
-      </table>
-    </div>
+    <table class="entity-table">
+      <thead><tr><th>Entity</th><th>Team</th><th>Position</th><th>Consciousness</th><th>Dead</th></tr></thead>
+      <tbody id="entities"></tbody>
+    </table>
+  </section>
 
-    <div class="panel">
-      <h3>Bridge Extraction</h3>
-      <pre id="bridge">{}</pre>
-    </div>
+  <section class="section">
+    <h2 class="section-title">Bridge Extraction</h2>
+    <pre id="bridge">{}</pre>
+  </section>
 
-    <div class="panel">
-      <h3>Event Log</h3>
-      <pre id="events"></pre>
-    </div>
+  <section class="section">
+    <h2 class="section-title">Event Log</h2>
+    <pre id="events" style="min-height:3rem"></pre>
+  </section>
 
-    <script type="module" src="/examples/reference/host-coherence/web/main.js"></script>
-  </body>
+</div>
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../../hub/">← Hub</a></li>
+      <li><a href="../../session/">Session API</a></li>
+      <li><a href="../../replay/">Replay viewer</a></li>
+      <li><a href="../wasm-browser.html">WASM example</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Scenario</h2>
+    <p class="note">2v2 skirmish: two KNIGHT_INFANTRY + two AMATEUR_BOXER, opposing teams, seed 9001, max 240 ticks. Loaded from <code>scenario.json</code> alongside this page.</p>
+  </section>
+  <section class="section">
+    <h2 class="section-title">How it works</h2>
+    <ol class="steps">
+      <li>Fetches <code>scenario.json</code>, calls <code>loadScenario()</code> from the CDN package.</li>
+      <li>Each step selects commands: entities move toward and attack the nearest enemy.</li>
+      <li><code>ReplayRecorder</code> captures every tick. <strong>Export Replay</strong> downloads the full replay JSON.</li>
+      <li><strong>Save/Load Session</strong> uses <code>localStorage</code> — round-trips via <code>serializeReplay</code> + <code>replayTo</code>.</li>
+    </ol>
+  </section>
+  <section class="section">
+    <h2 class="section-title">Source</h2>
+    <ul class="link-list">
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/examples/reference/host-coherence/index.ts" target="_blank" rel="noopener">index.ts ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/examples/reference/host-coherence/scenario.json" target="_blank" rel="noopener">scenario.json ↗</a></li>
+    </ul>
+  </section>
+</aside>
+</div>
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../../hub/">← Hub</a></p>
+</footer>
+
+<script type="module" src="./main.js"></script>
+</body>
 </html>
