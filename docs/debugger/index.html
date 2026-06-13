@@ -76,6 +76,10 @@ canvas{display:block;width:100%;height:100%}
 
 /* ── Tooltip ── */
 #tooltip{position:fixed;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:.3rem .5rem;font-size:.69rem;pointer-events:none;display:none;z-index:100;max-width:200px;line-height:1.5}
+.help-bar{background:var(--surface);border-bottom:1px solid var(--border);padding:.35rem 1rem;display:flex;gap:1.5rem;flex-wrap:wrap;font-size:.7rem;color:var(--muted);flex-shrink:0}
+.help-bar strong{color:var(--cyan);margin-right:.25rem}
+.help-bar a{color:var(--accent);text-decoration:none}
+.help-bar a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -99,6 +103,14 @@ canvas{display:block;width:100%;height:100%}
     <span class="tick-badge" id="tickBadge">t=0</span>
   </div>
 </header>
+
+<div class="help-bar">
+  <span><strong>↖ Force Vectors</strong>Canvas overlay — hover entity to see velocity &amp; impact force arrows. Toggle layers with the buttons top-right.</span>
+  <span><strong>↗ Hit Zone Heatmap</strong>Click a region row to highlight it on the silhouette. Injury depth shown surface→internal→structural.</span>
+  <span><strong>↙ Command Queue</strong>Every tick's commands listed in order. Filter by entity or type with the toolbar dropdowns. Click a row to jump to that tick.</span>
+  <span><strong>↘ Spatial Index</strong>Grid cells show entity density. Drag to pan, scroll to zoom. Bucket count shown per cell.</span>
+  <span>⏸ / ⏭ — pause or single-step the demo. Speed selector sets ticks/sec.</span>
+</div>
 
 <div class="grid">
 

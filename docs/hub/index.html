@@ -211,6 +211,43 @@
   <span id="manifest-time"></span>
 </div>
 
+<div style="max-width:1200px;margin:0 auto;padding:1.5rem 2rem 0;border-bottom:1px solid var(--border)">
+  <details style="font-size:.82rem;color:var(--muted);line-height:1.7">
+    <summary style="cursor:pointer;color:var(--text);font-family:var(--mono);font-size:.75rem;letter-spacing:.04em;list-style:none;margin-bottom:.5rem">
+      <span style="color:var(--accent)">▸</span> What is Ananke?
+    </summary>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;padding:.75rem 0 1rem;align-items:start">
+      <div>
+        <p style="color:var(--text);font-family:var(--mono);font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem;color:var(--warn)">The Engine</p>
+        <p>Ananke is a deterministic, physics-first simulation kernel for characters, combat, and survivability. Every outcome — wound severity, fatigue accumulation, consciousness loss — is derived from SI-unit physics and fixed-point arithmetic. No floating point, no randomness outside explicitly seeded draws.</p>
+        <p style="margin-top:.5rem">The same seed always produces the same world. This makes every simulation replay-exact, diff-able, and network-safe without lock-step sync.</p>
+      </div>
+      <div>
+        <p style="color:var(--text);font-family:var(--mono);font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem;color:var(--warn)">What it simulates</p>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:.25rem">
+          <li>⚔️ Deterministic tick-stepping combat — forces, impacts, energy</li>
+          <li>🩸 Per-region injury — surface, internal, structural damage</li>
+          <li>🧠 Consciousness, shock, fatigue, sleep debt, pain</li>
+          <li>🌡️ Thermoregulation, hazard zones, environmental stress</li>
+          <li>🦠 Disease spread, epidemic simulation, wound aging</li>
+          <li>🐎 Mounted combat, multi-species body plans</li>
+          <li>🏛️ Polities, factions, economy, technology progression</li>
+          <li>📜 Mythology, narrative stress, cultural profiles</li>
+        </ul>
+      </div>
+      <div>
+        <p style="color:var(--text);font-family:var(--mono);font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem;color:var(--warn)">Who it is for</p>
+        <p><strong style="color:var(--text)">Adopters &amp; Integrators</strong> — game engines, TTRPGs, and simulation hosts that want a physics-grounded kernel they can embed via npm. Ananke provides the deterministic simulation; your host owns rendering and UI.</p>
+        <p style="margin-top:.5rem"><strong style="color:var(--text)">Content Creators</strong> — world-builders, game designers, and modders who want to define species, cultures, scenarios, and content packs without writing simulation code.</p>
+        <p style="margin-top:.5rem"><strong style="color:var(--text)">Developers &amp; Contributors</strong> — engineers who want to extend, benchmark, or integrate Ananke into CI pipelines, physics engines, or game servers.</p>
+        <p style="margin-top:.75rem;font-family:var(--mono);font-size:.7rem">
+          <code>npm install @its-not-rocket-science/ananke</code>
+        </p>
+      </div>
+    </div>
+  </details>
+</div>
+
 <main>
 
   <!-- ── Adopters & Integrators ── -->
@@ -516,6 +553,11 @@
     versionEl.textContent = '';
     buildEl.textContent   = 'offline — showing defaults';
   }
+
+  // Ensure all card-launch links open in new tab
+  document.querySelectorAll('.card-launch[href]').forEach(a => {
+    if (!a.target) { a.target = '_blank'; a.rel = 'noopener'; }
+  });
 
   // Lane active counts
   for (const [laneId, countId] of [

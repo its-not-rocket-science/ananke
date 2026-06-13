@@ -78,13 +78,45 @@
   .section-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:1rem 1.25rem;margin-bottom:1rem}
   .preset-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
   .preset-label{color:var(--muted);font-size:.75rem;margin-right:.25rem}
+  .breadcrumb{font-size:.72rem;color:var(--muted);margin-bottom:.6rem}
+  .breadcrumb a{color:#fbbf24;text-decoration:none}.breadcrumb a:hover{text-decoration:underline}
+  .btn.amber{background:#78530a;border:1px solid #fbbf24;color:#fbbf24}
+  .cta-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.6rem 1rem;margin-bottom:1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+  .cta-bar span{color:var(--muted);font-size:.75rem;margin-right:.25rem}
+  .saved-list{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:inherit;font-size:12px;padding:.2rem .4rem;min-width:160px}
+  .toast{position:fixed;bottom:1rem;right:1rem;background:#1a3d2b;border:1px solid var(--pass);border-radius:4px;color:var(--pass);font-size:.75rem;padding:.4rem .9rem;pointer-events:none;opacity:0;transition:opacity .25s;z-index:100}
+  .toast.show{opacity:1}
+  .gov-note{background:rgba(163,120,250,.07);border:1px solid rgba(163,120,250,.25);border-radius:4px;padding:.5rem .85rem;font-size:.75rem;color:var(--muted);margin-bottom:.75rem}
+  .gov-note a{color:#a78bfa;text-decoration:none}.gov-note a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
 
+<div class="breadcrumb"><a href="../hub/">Hub</a> / Culture Forge</div>
 <h1>Culture Forge</h1>
 <p class="sub">Design a culture's values, taboos, myth predispositions, and diplomacy modifiers.
 Generates a <code>CultureProfile</code> TypeScript constant ready to paste into <code>src/</code>.</p>
+
+<div class="gov-note">
+  <strong style="color:#a78bfa">Global Governance Models</strong> — this tool outputs
+  <code>CultureProfile</code> data compatible with the
+  <a href="https://github.com/its-not-rocket-science/global-governance-models" target="_blank" rel="noopener">global-governance-models</a>
+  repository, which extends Ananke's culture simulation to state-level governance, institutional dynamics, and inter-polity conflict.
+  Saved culture JSON files from this editor can be imported directly into that repo's scenario loader.
+</div>
+
+<!-- ── Persist CTAs ── -->
+<div class="cta-bar">
+  <span>Cultures:</span>
+  <button class="btn sm amber" onclick="saveCulture()">💾 Save culture</button>
+  <select class="saved-list" id="savedCultureList" onchange="loadSavedCulture(this.value)">
+    <option value="">— load saved culture —</option>
+  </select>
+  <button class="btn sm sec" onclick="deleteSavedCulture()">✕ Delete</button>
+  <button class="btn sm sec" onclick="downloadCulture()">⬇ Download JSON</button>
+  <button class="btn sm sec" onclick="importCultureClick()">⬆ Import JSON</button>
+  <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importCulture(this)">
+</div>
 
 <div class="row">
   <div class="field w200"><label>Culture name</label><input id="cultureName" value="Iron Clans" oninput="regen()"></div>
@@ -285,8 +317,12 @@ Generates a <code>CultureProfile</code> TypeScript constant ready to paste into 
   <textarea id="output" readonly spellcheck="false"></textarea>
   <div class="copy-row">
     <button class="btn sec sm" onclick="copyCode()">Copy to clipboard</button>
+    <button class="btn sm amber" onclick="saveCulture()">💾 Save culture</button>
+    <button class="btn sm sec" onclick="downloadCulture()">⬇ Download JSON</button>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 // ── State ───────────────────────────────────────────────────────────────────
@@ -679,11 +715,182 @@ function copyCode() {
   });
 }
 
+// ── Persist ───────────────────────────────────────────────────────────────────
+const CULTURE_KEY = 'ananke-cultures';
+
+function showToast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isErr ? '#2d0a0a' : '#1a3d2b';
+  t.style.borderColor = isErr ? 'var(--fail)' : 'var(--pass)';
+  t.style.color = isErr ? 'var(--fail)' : 'var(--pass)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function getCultureData() {
+  return {
+    id:         document.getElementById('cultureId').value.trim() || 'my_culture',
+    name:       document.getElementById('cultureName').value.trim() || 'MyCulture',
+    values:     { ...vals },
+    taboos:     Object.fromEntries(Object.entries(taboos)),
+    mythBias:   { ...mythBias },
+    mythParams: { ...mythParams },
+    diplo:      { ...diplo },
+    code:       document.getElementById('output').value,
+    savedAt:    new Date().toISOString(),
+  };
+}
+
+function saveCulture() {
+  const c = getCultureData();
+  let all = [];
+  try { all = JSON.parse(localStorage.getItem(CULTURE_KEY) || '[]'); } catch {}
+  all = all.filter(x => x.id !== c.id);
+  all.unshift(c);
+  localStorage.setItem(CULTURE_KEY, JSON.stringify(all));
+  populateSavedCultureList();
+  showToast(`Culture "${c.name}" saved`);
+}
+
+function populateSavedCultureList() {
+  let all = [];
+  try { all = JSON.parse(localStorage.getItem(CULTURE_KEY) || '[]'); } catch {}
+  const sel = document.getElementById('savedCultureList');
+  sel.innerHTML = '<option value="">— load saved culture —</option>' +
+    all.map(c => `<option value="${encodeURIComponent(c.id)}">${c.name}</option>`).join('');
+}
+
+function loadSavedCulture(encId) {
+  if (!encId) return;
+  const id = decodeURIComponent(encId);
+  let all = [];
+  try { all = JSON.parse(localStorage.getItem(CULTURE_KEY) || '[]'); } catch {}
+  const c = all.find(x => x.id === id);
+  if (!c) { showToast('Culture not found', true); return; }
+  document.getElementById('cultureName').value = c.name;
+  document.getElementById('cultureId').value = c.id;
+  if (c.values) VALUES_KEYS.forEach(k => {
+    vals[k] = c.values[k] ?? 0;
+    const sl = document.getElementById('sl-' + k);
+    if (sl) sl.value = vals[k];
+    valUpdate(k, vals[k]);
+  });
+  if (c.taboos) TABOO_DEFS.forEach(td => {
+    const cfg = c.taboos[td.id] || { active: false, severity: 3 };
+    taboos[td.id] = cfg;
+    const cb = document.getElementById('tb-' + td.id);
+    const sl = document.getElementById('tsl-' + td.id);
+    const sev = document.getElementById('tsev-' + td.id);
+    if (cb) cb.checked = cfg.active;
+    if (sl) sl.value = cfg.severity;
+    if (sev) sev.classList.toggle('active', cfg.active);
+    tabooSeverity(td.id, cfg.severity);
+  });
+  if (c.mythBias) MYTH_DEFS.forEach(m => {
+    mythBias[m.id] = c.mythBias[m.id] ?? 0;
+    const sl = document.getElementById('msl-' + m.id);
+    const sv = document.getElementById('msv-' + m.id);
+    if (sl) sl.value = Math.round(mythBias[m.id] * 100);
+    if (sv) sv.textContent = mythBias[m.id].toFixed(2);
+  });
+  if (c.mythParams) Object.keys(c.mythParams).forEach(k => {
+    mythParams[k] = c.mythParams[k];
+    const sl = document.getElementById('sl-' + k);
+    if (sl) sl.value = c.mythParams[k];
+    paramUpdate(k, c.mythParams[k]);
+  });
+  if (c.diplo) Object.keys(c.diplo).forEach(k => {
+    diplo[k] = c.diplo[k];
+    const sl = document.getElementById('sl-' + k);
+    if (sl) sl.value = c.diplo[k];
+    diploUpdate(k, c.diplo[k]);
+  });
+  regen();
+  showToast(`Culture "${c.name}" loaded`);
+  document.getElementById('savedCultureList').value = '';
+}
+
+function deleteSavedCulture() {
+  const sel = document.getElementById('savedCultureList');
+  const encId = sel.value;
+  if (!encId) { showToast('Select a culture to delete', true); return; }
+  const id = decodeURIComponent(encId);
+  let all = [];
+  try { all = JSON.parse(localStorage.getItem(CULTURE_KEY) || '[]'); } catch {}
+  all = all.filter(x => x.id !== id);
+  localStorage.setItem(CULTURE_KEY, JSON.stringify(all));
+  populateSavedCultureList();
+  showToast('Culture deleted');
+}
+
+function downloadCulture() {
+  const c = getCultureData();
+  const blob = new Blob([JSON.stringify(c, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `culture-${c.id}.json`;
+  a.click();
+}
+
+function importCultureClick() {
+  document.getElementById('importFile').click();
+}
+
+function importCulture(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  file.text().then(raw => {
+    try {
+      const c = JSON.parse(raw);
+      if (c.id) document.getElementById('cultureId').value = c.id;
+      if (c.name) document.getElementById('cultureName').value = c.name;
+      loadSavedCulture && (() => {
+        document.getElementById('savedCultureList').value = '';
+        if (c.values) VALUES_KEYS.forEach(k => {
+          vals[k] = c.values[k] ?? 0;
+          const sl = document.getElementById('sl-' + k);
+          if (sl) sl.value = vals[k];
+          valUpdate(k, vals[k]);
+        });
+        if (c.taboos) TABOO_DEFS.forEach(td => {
+          const cfg = c.taboos[td.id] || { active: false, severity: 3 };
+          taboos[td.id] = cfg;
+          const cb = document.getElementById('tb-' + td.id);
+          const sl = document.getElementById('tsl-' + td.id);
+          const sev = document.getElementById('tsev-' + td.id);
+          if (cb) cb.checked = cfg.active;
+          if (sl) sl.value = cfg.severity;
+          if (sev) sev.classList.toggle('active', cfg.active);
+          tabooSeverity(td.id, cfg.severity);
+        });
+        if (c.mythBias) MYTH_DEFS.forEach(m => {
+          mythBias[m.id] = c.mythBias[m.id] ?? 0;
+          const sl = document.getElementById('msl-' + m.id);
+          const sv = document.getElementById('msv-' + m.id);
+          if (sl) sl.value = Math.round(mythBias[m.id] * 100);
+          if (sv) sv.textContent = mythBias[m.id].toFixed(2);
+        });
+        if (c.diplo) Object.keys(c.diplo).forEach(k => {
+          diplo[k] = c.diplo[k];
+          const sl = document.getElementById('sl-' + k);
+          if (sl) sl.value = c.diplo[k];
+          diploUpdate(k, c.diplo[k]);
+        });
+        regen();
+        showToast(`Imported "${c.name || c.id}"`);
+      })();
+    } catch (e) { showToast('Import failed: ' + e.message, true); }
+    input.value = '';
+  });
+}
+
 // ── Initialise ───────────────────────────────────────────────────────────────
 initTaboos();
 initMyths();
 initCompat();
 regen();
+populateSavedCultureList();
 </script>
 </body>
 </html>

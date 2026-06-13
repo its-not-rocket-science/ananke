@@ -58,12 +58,38 @@
   .src { color: var(--muted); font-size: 11px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .meta { color: var(--muted); font-size: 11px; margin-top: 1.25rem; }
   .hidden { display: none; }
+  .explain { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; font-size: 0.82rem; line-height: 1.7; color: var(--muted); }
+  .explain strong { color: var(--text); }
+  .explain a { color: var(--accent); text-decoration: none; }
+  .explain a:hover { text-decoration: underline; }
+  .explain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem; }
+  @media (max-width: 700px) { .explain-grid { grid-template-columns: 1fr; } }
+  .explain-block { background: rgba(99,102,241,0.06); border: 1px solid rgba(99,102,241,0.2); border-radius: 4px; padding: 0.65rem 0.85rem; }
+  .explain-block h3 { font-size: 0.78rem; color: var(--accent); margin-bottom: 0.3rem; letter-spacing: 0.04em; }
 </style>
 </head>
 <body>
 
 <h1>Ananke — Validation Dashboard</h1>
 <p class="subtitle" id="subtitle">Loading…</p>
+
+<div class="explain">
+  <strong>What this dashboard shows.</strong> Every scenario runs the Ananke simulation kernel and compares outcomes against <em>real-world empirical data</em> — published medical literature, historical casualty rates, material-science constants. A scenario <span style="color:var(--pass);font-weight:700">PASS</span>es when the simulated value lands within the tolerance band; it <span style="color:var(--fail);font-weight:700">FAIL</span>s otherwise.
+  <div class="explain-grid">
+    <div class="explain-block">
+      <h3>CALIBRATION scenarios</h3>
+      End-to-end functional checks against well-known empirical baselines — e.g. "untreated wound fever kills within 3–7 days", "plate armour reduces strike damage by 60–80%". These validate that the <em>combined</em> simulation pipeline behaves realistically.
+    </div>
+    <div class="explain-block">
+      <h3>DIRECT scenarios</h3>
+      Low-level constant checks — surface/internal/structural damage constants, bleeding rate scaling, impact energy distribution, thermoregulation stability. These validate individual <em>physical constants</em> against SI-unit references, catching regressions in the fixed-point arithmetic before they propagate to calibration scenarios.
+    </div>
+  </div>
+  <div style="margin-top:.65rem">
+    <strong>Reading the bar chart:</strong> the coloured bar shows the simulated value; the darker shaded region is the ±tolerance empirical band. A bar ending inside the band = PASS. Filter the table with the buttons below to focus on failing or specific types.
+    Regenerate locally: <code style="font-size:.78em">npm run build &amp;&amp; npm run run:validation-dashboard</code>
+  </div>
+</div>
 
 <div class="summary" id="summary"></div>
 

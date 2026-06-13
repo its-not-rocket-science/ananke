@@ -66,12 +66,36 @@
   .hint{color:var(--muted);font-size:.78rem;margin-top:.3rem;margin-bottom:.5rem}
   .section-card{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:1rem 1.25rem;margin-bottom:1rem}
   .tag{display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:3px;color:var(--muted);font-size:.7rem;padding:.1rem .35rem;margin:.1rem}
+  .breadcrumb{font-size:.72rem;color:var(--muted);margin-bottom:.6rem}
+  .breadcrumb a{color:#fbbf24;text-decoration:none}.breadcrumb a:hover{text-decoration:underline}
+  .btn.amber{background:#78530a;border:1px solid #fbbf24;color:#fbbf24}
+  .cta-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.6rem 1rem;margin-bottom:1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+  .cta-bar span{color:var(--muted);font-size:.75rem;margin-right:.25rem}
+  .saved-list{background:var(--surface2);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:inherit;font-size:12px;padding:.2rem .4rem;min-width:160px}
+  .toast{position:fixed;bottom:1rem;right:1rem;background:#1a3d2b;border:1px solid var(--pass);border-radius:4px;color:var(--pass);font-size:.75rem;padding:.4rem .9rem;pointer-events:none;opacity:0;transition:opacity .25s;z-index:100}
+  .toast.show{opacity:1}
 </style>
 </head>
 <body>
 
+<div class="breadcrumb"><a href="../hub/">Hub</a> / Species Forge</div>
 <h1>Species Forge</h1>
 <p class="sub">Design a complete species: body plan, attribute archetype, and narrative bias. Generates a TypeScript pair ready to paste into <code>src/</code>.</p>
+
+<!-- ── Body plan import from localStorage ── -->
+<div class="cta-bar">
+  <span>Body plan:</span>
+  <select class="saved-list" id="bodyPlanList" onchange="importBodyPlan(this.value)">
+    <option value="">— import from Body Plan Editor —</option>
+  </select>
+  <button class="btn sm sec" onclick="refreshBodyPlanList()">↻ Refresh</button>
+  <span style="margin-left:.5rem">Species:</span>
+  <button class="btn sm amber" onclick="saveSpecies()">💾 Save species</button>
+  <select class="saved-list" id="savedSpeciesList" onchange="loadSavedSpecies(this.value)">
+    <option value="">— load saved species —</option>
+  </select>
+  <button class="btn sm sec" onclick="downloadSpecies()">⬇ Download JSON</button>
+</div>
 
 <div class="row">
   <div class="field w200"><label>Species name</label><input id="speciesName" value="MySpecies" oninput="regen()"></div>
@@ -282,8 +306,12 @@
   <textarea id="output" readonly spellcheck="false"></textarea>
   <div class="copy-row">
     <button class="btn sec sm" onclick="copyCode()">Copy to clipboard</button>
+    <button class="btn sm amber" onclick="saveSpecies()">💾 Save species</button>
+    <button class="btn sm sec" onclick="downloadSpecies()">⬇ Download JSON</button>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -701,6 +729,127 @@ function copyCode() {
   navigator.clipboard?.writeText(ta.value).catch(() => { ta.select(); document.execCommand('copy'); });
 }
 
+// ── Persist ────────────────────────────────────────────────────────────────
+const BODY_PLAN_KEY = 'ananke-body-plans';
+const SPECIES_KEY   = 'ananke-species';
+
+function showToast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isErr ? '#2d0a0a' : '#1a3d2b';
+  t.style.borderColor = isErr ? 'var(--fail)' : 'var(--pass)';
+  t.style.color = isErr ? 'var(--fail)' : 'var(--pass)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function refreshBodyPlanList() {
+  try {
+    const plans = JSON.parse(localStorage.getItem(BODY_PLAN_KEY) || '[]');
+    const sel = document.getElementById('bodyPlanList');
+    sel.innerHTML = '<option value="">— import from Body Plan Editor —</option>' +
+      plans.map(p => `<option value="${encodeURIComponent(p.id)}">${p.name} (${p.locomotion?.type ?? '?'})</option>`).join('');
+    if (!plans.length) showToast('No saved plans — use Body Plan Editor to save one', true);
+  } catch { showToast('Could not read localStorage', true); }
+}
+
+function importBodyPlan(encId) {
+  if (!encId) return;
+  const id = decodeURIComponent(encId);
+  try {
+    const plans = JSON.parse(localStorage.getItem(BODY_PLAN_KEY) || '[]');
+    const plan = plans.find(p => p.id === id);
+    if (!plan) { showToast('Plan not found', true); return; }
+    document.getElementById('speciesId').value   = plan.id;
+    document.getElementById('speciesName').value = plan.name;
+    document.getElementById('locomotionType').value = plan.locomotion?.type ?? 'biped';
+    document.getElementById('cnsLayout').value = plan.cnsLayout?.type ?? 'centralized';
+    if (plan.totalMass) document.getElementById('totalMass').value = plan.totalMass;
+    rows = (plan.segments || []).map(s => mkSeg(
+      s.id, s.parent || '', s.massShare, s.exposure,
+      s.locomotionRole || 'none', s.manipulationRole || 'none', s.cnsRole || 'none'
+    ));
+    renderSegTable();
+    regen();
+    showToast(`Body plan "${plan.name}" imported`);
+    document.getElementById('bodyPlanList').value = '';
+  } catch (e) { showToast('Import failed: ' + e.message, true); }
+}
+
+function getSpeciesData() {
+  return {
+    id:         document.getElementById('speciesId').value.trim() || 'my_species',
+    name:       document.getElementById('speciesName').value.trim() || 'MySpecies',
+    locomotion: { type: document.getElementById('locomotionType').value },
+    cnsLayout:  { type: document.getElementById('cnsLayout').value },
+    totalMass:  parseFloat(document.getElementById('totalMass').value) || 70,
+    segments:   rows.map(r => ({
+      id: r.id, parent: r.parent || null, massShare: r.massShare, exposure: r.exposure,
+      locomotionRole: r.locomotion, manipulationRole: r.manipulation, cnsRole: r.cns
+    })),
+    arch: { ...arch },
+    bias: { ...bias },
+    code: document.getElementById('output').value,
+    savedAt: new Date().toISOString(),
+  };
+}
+
+function saveSpecies() {
+  const sp = getSpeciesData();
+  let all = [];
+  try { all = JSON.parse(localStorage.getItem(SPECIES_KEY) || '[]'); } catch {}
+  all = all.filter(s => s.id !== sp.id);
+  all.unshift(sp);
+  localStorage.setItem(SPECIES_KEY, JSON.stringify(all));
+  populateSavedSpeciesList();
+  showToast(`Species "${sp.name}" saved`);
+}
+
+function populateSavedSpeciesList() {
+  let all = [];
+  try { all = JSON.parse(localStorage.getItem(SPECIES_KEY) || '[]'); } catch {}
+  const sel = document.getElementById('savedSpeciesList');
+  sel.innerHTML = '<option value="">— load saved species —</option>' +
+    all.map(s => `<option value="${encodeURIComponent(s.id)}">${s.name} (${s.locomotion?.type ?? '?'})</option>`).join('');
+}
+
+function loadSavedSpecies(encId) {
+  if (!encId) return;
+  const id = decodeURIComponent(encId);
+  let all = [];
+  try { all = JSON.parse(localStorage.getItem(SPECIES_KEY) || '[]'); } catch {}
+  const sp = all.find(s => s.id === id);
+  if (!sp) { showToast('Species not found', true); return; }
+  document.getElementById('speciesId').value = sp.id;
+  document.getElementById('speciesName').value = sp.name;
+  document.getElementById('locomotionType').value = sp.locomotion?.type ?? 'biped';
+  document.getElementById('cnsLayout').value = sp.cnsLayout?.type ?? 'centralized';
+  if (sp.totalMass) document.getElementById('totalMass').value = sp.totalMass;
+  rows = (sp.segments || []).map(s => mkSeg(
+    s.id, s.parent || '', s.massShare, s.exposure,
+    s.locomotionRole || 'none', s.manipulationRole || 'none', s.cnsRole || 'none'
+  ));
+  if (sp.arch) { Object.assign(arch, sp.arch); syncSliders(); }
+  if (sp.bias) { Object.assign(bias, sp.bias); for (const k of BIAS_KEYS) {
+    const sl = document.getElementById('bias-sl-' + k);
+    const sv = document.getElementById('bias-sv-' + k);
+    if (sl) sl.value = bias[k]; if (sv) sv.textContent = bias[k].toFixed(2);
+  }}
+  renderSegTable();
+  regen();
+  showToast(`Species "${sp.name}" loaded`);
+  document.getElementById('savedSpeciesList').value = '';
+}
+
+function downloadSpecies() {
+  const sp = getSpeciesData();
+  const blob = new Blob([JSON.stringify(sp, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `species-${sp.id}.json`;
+  a.click();
+}
+
 // ── Init ────────────────────────────────────────────────────────────────────
 buildBiasGrid();
 loadHumanoidSegs();
@@ -708,6 +857,8 @@ document.getElementById('speciesName').value = 'Humanoid';
 document.getElementById('speciesId').value   = 'humanoid';
 renderSegTable();
 regen();
+refreshBodyPlanList();
+populateSavedSpeciesList();
 </script>
 </body>
 </html>

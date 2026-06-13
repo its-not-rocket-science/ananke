@@ -4,13 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ananke — Body Plan Editor</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
 <style>
   :root {
     --bg:#0f1117;--surface:#1a1d27;--border:#2e3245;--text:#e0e4f0;
     --muted:#7a81a0;--pass:#22c55e;--fail:#ef4444;--accent:#6366f1;--warn:#f59e0b;
+    --amber:#fbbf24;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:ui-monospace,"Cascadia Code",Menlo,monospace;font-size:13px;padding:1.5rem}
+  .breadcrumb{font-size:.72rem;color:var(--muted);margin-bottom:.6rem}
+  .breadcrumb a{color:var(--amber);text-decoration:none}
+  .breadcrumb a:hover{text-decoration:underline}
   h1{font-size:1.3rem;margin-bottom:.25rem}
   .sub{color:var(--muted);font-size:.82rem;margin-bottom:1.5rem}
   .row{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:.75rem;align-items:flex-end}
@@ -34,6 +39,7 @@
   .btn.sm{font-size:11px;padding:.2rem .5rem}
   .btn.danger{background:#7f1d1d;color:#fca5a5}
   .btn.sec{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+  .btn.amber{background:#78530a;border:1px solid var(--amber);color:var(--amber)}
   .stats{background:var(--surface);border:1px solid var(--border);border-radius:6px;display:flex;gap:1.5rem;margin-bottom:1rem;padding:.75rem 1rem;flex-wrap:wrap}
   .stat{display:flex;flex-direction:column;gap:.1rem}
   .stat-val{font-size:1.1rem;font-weight:700}
@@ -44,22 +50,41 @@
   .errors{background:#2d0a0a;border:1px solid var(--fail);border-radius:4px;color:#fca5a5;font-size:12px;margin-bottom:.75rem;padding:.5rem .75rem;display:none}
   .errors ul{margin-left:1rem}
   textarea{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:#a5f3fc;font-family:inherit;font-size:12px;height:340px;line-height:1.5;padding:.5rem;resize:vertical;width:100%}
-  .copy-row{display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end}
+  .copy-row{display:flex;gap:.5rem;margin-top:.5rem;justify-content:flex-end;flex-wrap:wrap}
   hr{border:none;border-top:1px solid var(--border);margin:1.25rem 0}
   .hint{color:var(--muted);font-size:.78rem;margin-top:.3rem}
+  .cta-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:.6rem 1rem;margin-bottom:1rem;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+  .cta-bar span{color:var(--muted);font-size:.75rem;margin-right:.25rem}
+  .saved-list{background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:12px;padding:.2rem .4rem;min-width:160px}
+  .toast{position:fixed;bottom:1rem;right:1rem;background:#1a3d2b;border:1px solid var(--pass);border-radius:4px;color:var(--pass);font-size:.75rem;padding:.4rem .9rem;pointer-events:none;opacity:0;transition:opacity .25s;z-index:100}
+  .toast.show{opacity:1}
 </style>
 </head>
 <body>
 
+<div class="breadcrumb"><a href="../hub/">Hub</a> / Body Plan Editor</div>
 <h1>Body Plan Editor</h1>
-<p class="sub">Author a new species <code>BodyPlan</code> TypeScript literal. No TypeScript knowledge required.</p>
+<p class="sub">Author a new species <code>BodyPlan</code> TypeScript literal. No TypeScript knowledge required. Saved plans are shared with Species Forge.</p>
+
+<!-- ── Persist / share CTAs ── -->
+<div class="cta-bar">
+  <span>Plans:</span>
+  <button class="btn sm amber" onclick="savePlan()">💾 Save plan</button>
+  <select class="saved-list" id="savedList" onchange="onSelectSaved(this.value)">
+    <option value="">— load saved plan —</option>
+  </select>
+  <button class="btn sm sec" onclick="deleteSaved()">✕ Delete</button>
+  <button class="btn sm sec" onclick="downloadJson()">⬇ Download JSON</button>
+  <button class="btn sm sec" onclick="importJsonClick()">⬆ Import JSON</button>
+  <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importJson(this)">
+</div>
 
 <div class="row">
   <div class="field w200"><label>Species name</label><input id="speciesName" value="MySpecies" oninput="regen()"></div>
   <div class="field w160"><label>Plan ID (snake_case)</label><input id="planId" value="my_species" oninput="regen()"></div>
   <div class="field w120"><label>Total body mass (kg)</label><input id="totalMass" type="number" value="70" min="0.1" step="0.1" oninput="regen()"></div>
   <div class="field w120"><label>Locomotion type</label>
-    <select id="locomotionType" onchange="regen()">
+    <select id="locomotionType" onchange="onLocoChange()">
       <option value="biped">biped</option>
       <option value="quadruped">quadruped</option>
       <option value="hexapod">hexapod</option>
@@ -78,11 +103,15 @@
 
 <hr>
 
-<div style="display:flex;gap:.5rem;margin-bottom:.75rem;align-items:center">
+<div style="display:flex;gap:.5rem;margin-bottom:.75rem;align-items:center;flex-wrap:wrap">
   <strong>Segments</strong>
   <button class="btn sm" onclick="addRow()">+ Add segment</button>
-  <button class="btn sm sec" onclick="loadHumanoid()">Load humanoid template</button>
-  <button class="btn sm sec" onclick="loadQuadruped()">Load quadruped template</button>
+  <button class="btn sm sec" onclick="loadTemplate('biped')">Humanoid</button>
+  <button class="btn sm sec" onclick="loadTemplate('quadruped')">Quadruped</button>
+  <button class="btn sm sec" onclick="loadTemplate('hexapod')">Hexapod</button>
+  <button class="btn sm sec" onclick="loadTemplate('flight')">Avian</button>
+  <button class="btn sm sec" onclick="loadTemplate('undulation')">Serpentine</button>
+  <button class="btn sm sec" onclick="loadTemplate('distributed')">Distributed</button>
 </div>
 
 <p class="hint" style="margin-bottom:.5rem">
@@ -110,12 +139,16 @@
 <textarea id="output" readonly spellcheck="false"></textarea>
 <div class="copy-row">
   <button class="btn sec sm" onclick="copyCode()">Copy to clipboard</button>
+  <button class="btn sm amber" onclick="savePlan()">💾 Save plan</button>
+  <button class="btn sm sec" onclick="downloadJson()">⬇ Download JSON</button>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 const SCALE_KG = 1000;
 const SCALE_Q  = 10000;
-const q = x => Math.round(x * SCALE_Q);
+const STORAGE_KEY = 'ananke-body-plans';
 
 let rows = [];
 let nextId = 1;
@@ -124,37 +157,108 @@ function mkRow(id, parent, massShare, exposure, locomotion, manipulation, cns) {
   return { _id: nextId++, id, parent, massShare, exposure, locomotion, manipulation, cns };
 }
 
-function loadHumanoid() {
-  rows = [
-    mkRow("torso",    "",        45, 35, "none",    "none",      "none"),
-    mkRow("head",     "torso",   8,  20, "none",    "none",      "central"),
-    mkRow("leftArm",  "torso",   7,  10, "none",    "primary",   "none"),
-    mkRow("rightArm", "torso",   7,  10, "none",    "primary",   "none"),
-    mkRow("leftLeg",  "torso",   16, 12, "primary", "none",      "none"),
-    mkRow("rightLeg", "torso",   16, 12, "primary", "none",      "none"),
-    mkRow("groin",    "torso",   1,  1,  "none",    "none",      "none"),
-  ];
+// ── Templates ──────────────────────────────────────────────────────────────────
+
+const TEMPLATES = {
+  biped: {
+    name: 'Humanoid', planId: 'humanoid', locoType: 'biped', cnsType: 'centralized', mass: 70,
+    segs: [
+      ['torso',    '',       45, 35, 'none',    'none',      'none'],
+      ['head',     'torso',  8,  20, 'none',    'none',      'central'],
+      ['leftArm',  'torso',  7,  10, 'none',    'primary',   'none'],
+      ['rightArm', 'torso',  7,  10, 'none',    'primary',   'none'],
+      ['leftLeg',  'torso',  16, 12, 'primary', 'none',      'none'],
+      ['rightLeg', 'torso',  16, 12, 'primary', 'none',      'none'],
+      ['groin',    'torso',  1,  1,  'none',    'none',      'none'],
+    ]
+  },
+  quadruped: {
+    name: 'Quadruped', planId: 'quadruped', locoType: 'quadruped', cnsType: 'centralized', mass: 70,
+    segs: [
+      ['torso',       '',       50, 30, 'none',      'none',      'none'],
+      ['head',        'torso',  10, 20, 'none',      'none',      'central'],
+      ['neck',        'torso',  5,  8,  'none',      'none',      'none'],
+      ['frontLeft',   'torso',  8,  10, 'primary',   'secondary', 'none'],
+      ['frontRight',  'torso',  8,  10, 'primary',   'secondary', 'none'],
+      ['backLeft',    'torso',  9,  11, 'primary',   'none',      'none'],
+      ['backRight',   'torso',  9,  11, 'primary',   'none',      'none'],
+      ['tail',        'torso',  1,  0,  'none',      'none',      'none'],
+    ]
+  },
+  hexapod: {
+    name: 'Hexapod', planId: 'hexapod', locoType: 'hexapod', cnsType: 'distributed', mass: 5,
+    segs: [
+      ['thorax',      '',         30, 25, 'none',    'none',      'none'],
+      ['abdomen',     'thorax',   25, 15, 'none',    'none',      'none'],
+      ['head',        'thorax',   10, 25, 'none',    'none',      'central'],
+      ['frontLeft',   'thorax',   5,  7,  'primary', 'secondary', 'none'],
+      ['frontRight',  'thorax',   5,  7,  'primary', 'secondary', 'none'],
+      ['midLeft',     'thorax',   7,  7,  'primary', 'none',      'none'],
+      ['midRight',    'thorax',   7,  7,  'primary', 'none',      'none'],
+      ['backLeft',    'abdomen',  5,  4,  'primary', 'none',      'none'],
+      ['backRight',   'abdomen',  6,  3,  'primary', 'none',      'none'],
+    ]
+  },
+  flight: {
+    name: 'Avian', planId: 'avian', locoType: 'flight', cnsType: 'centralized', mass: 2,
+    segs: [
+      ['torso',       '',         40, 30, 'none',    'none',      'none'],
+      ['head',        'torso',    10, 25, 'none',    'none',      'central'],
+      ['neck',        'torso',    8,  10, 'none',    'none',      'none'],
+      ['leftWing',    'torso',    18, 15, 'primary', 'none',      'none'],
+      ['rightWing',   'torso',    18, 15, 'primary', 'none',      'none'],
+      ['leftLeg',     'torso',    3,  3,  'secondary','none',     'none'],
+      ['rightLeg',    'torso',    3,  2,  'secondary','none',     'none'],
+    ]
+  },
+  undulation: {
+    name: 'Serpentine', planId: 'serpentine', locoType: 'undulation', cnsType: 'distributed', mass: 3,
+    segs: [
+      ['head',        '',         10, 30, 'none',    'none',      'central'],
+      ['neckSection', 'head',     10, 15, 'primary', 'none',      'none'],
+      ['bodyFront',   'neckSection', 25, 20, 'primary', 'none',   'none'],
+      ['bodyMid',     'bodyFront', 25, 20, 'primary', 'none',     'none'],
+      ['bodyRear',    'bodyMid',  20, 12, 'primary', 'none',      'none'],
+      ['tail',        'bodyRear', 10, 3,  'primary', 'none',      'none'],
+    ]
+  },
+  distributed: {
+    name: 'Distributed', planId: 'distributed_organism', locoType: 'distributed', cnsType: 'distributed', mass: 10,
+    segs: [
+      ['nucleus',     '',         20, 20, 'none',    'none',      'central'],
+      ['sectorA',     'nucleus',  20, 20, 'primary', 'primary',   'ganglionic'],
+      ['sectorB',     'nucleus',  20, 20, 'primary', 'primary',   'ganglionic'],
+      ['sectorC',     'nucleus',  20, 20, 'primary', 'primary',   'ganglionic'],
+      ['sectorD',     'nucleus',  20, 20, 'primary', 'primary',   'ganglionic'],
+    ]
+  },
+};
+
+function loadTemplate(type, skipConfirm) {
+  const t = TEMPLATES[type];
+  if (!t) return;
+  if (!skipConfirm && rows.length > 0) {
+    if (!confirm(`Replace current segments with the "${t.name}" template?`)) return;
+  }
+  rows = t.segs.map(s => mkRow(...s));
+  document.getElementById('locomotionType').value = t.locoType;
+  document.getElementById('cnsLayout').value = t.cnsType;
+  document.getElementById('totalMass').value = t.mass;
+  document.getElementById('speciesName').value = t.name;
+  document.getElementById('planId').value = t.planId;
   renderTable();
   regen();
 }
 
-function loadQuadruped() {
-  rows = [
-    mkRow("torso",       "",       50, 30, "none",      "none",    "none"),
-    mkRow("head",        "torso",  10, 20, "none",      "none",    "central"),
-    mkRow("neck",        "torso",  5,  8,  "none",      "none",    "none"),
-    mkRow("frontLeft",   "torso",  8,  10, "primary",   "secondary","none"),
-    mkRow("frontRight",  "torso",  8,  10, "primary",   "secondary","none"),
-    mkRow("backLeft",    "torso",  9,  11, "primary",   "none",    "none"),
-    mkRow("backRight",   "torso",  9,  11, "primary",   "none",    "none"),
-    mkRow("tail",        "torso",  1,  0,  "none",      "none",    "none"),
-  ];
-  renderTable();
-  regen();
+function onLocoChange() {
+  const type = document.getElementById('locomotionType').value;
+  loadTemplate(type);
 }
+
+// ── CRUD ───────────────────────────────────────────────────────────────────────
 
 function addRow() {
-  rows.push(mkRow("newSegment", "", 0, 5, "none", "none", "none"));
+  rows.push(mkRow('newSegment', '', 0, 5, 'none', 'none', 'none'));
   renderTable();
   regen();
 }
@@ -187,6 +291,8 @@ function upd(rid, key, val) {
   if (r) { r[key] = val; regen(); }
 }
 
+// ── Code generation ────────────────────────────────────────────────────────────
+
 function regen() {
   const speciesName = document.getElementById('speciesName').value.trim() || 'MySpecies';
   const planId      = document.getElementById('planId').value.trim() || 'my_species';
@@ -195,9 +301,9 @@ function regen() {
   const cnsType     = document.getElementById('cnsLayout').value;
 
   const errors = [];
-  const totalShare = rows.reduce((s, r) => s + +r.massShare, 0);
-  const hasCentral = rows.some(r => r.cns === 'central');
-  const hasLoco    = rows.some(r => r.locomotion !== 'none');
+  const totalShare    = rows.reduce((s, r) => s + +r.massShare, 0);
+  const hasCentral    = rows.some(r => r.cns === 'central');
+  const hasLoco       = rows.some(r => r.locomotion !== 'none');
   const totalExposure = rows.reduce((s, r) => s + +r.exposure, 0);
 
   if (Math.abs(totalShare - 100) > 0.5) errors.push(`Mass shares sum to ${totalShare.toFixed(1)}% — must be 100%.`);
@@ -207,7 +313,6 @@ function regen() {
   if (!hasLoco && locoType !== 'distributed') errors.push('At least one segment should have locomotionRole = "primary".');
   if (totalExposure === 0) errors.push('Total exposure weight is 0 — add non-zero exposure to segments.');
 
-  // stats
   const statsEl = document.getElementById('stats');
   statsEl.innerHTML = `
     <div class="stat"><div class="stat-val ${Math.abs(totalShare-100)<0.5?'ok':'err'}">${totalShare.toFixed(1)}%</div><div class="stat-label">Mass share total (needs 100%)</div></div>
@@ -225,11 +330,10 @@ function regen() {
     errEl.style.display = 'none';
   }
 
-  // code generation
   const segs = rows.map(r => {
-    const massKg     = Math.round(totalMass * r.massShare / 100 * SCALE_KG);
-    const normExp    = totalExposure > 0 ? r.exposure / totalExposure : 0;
-    const expQ       = Math.round(normExp * SCALE_Q);
+    const massKg  = Math.round(totalMass * r.massShare / 100 * SCALE_KG);
+    const normExp = totalExposure > 0 ? r.exposure / totalExposure : 0;
+    const expQ    = Math.round(normExp * SCALE_Q);
     const parts = [`id: "${r.id}"`, `parent: ${r.parent.trim() ? `"${r.parent.trim()}"` : 'null'}`, `mass_kg: ${massKg}`, `exposureWeight: { kinetic: ${expQ} }`];
     if (r.locomotion !== 'none') parts.push(`locomotionRole: "${r.locomotion}"`);
     if (r.manipulation !== 'none') parts.push(`manipulationRole: "${r.manipulation}"`);
@@ -261,13 +365,126 @@ function copyCode() {
   navigator.clipboard?.writeText(ta.value).catch(() => {
     ta.select(); document.execCommand('copy');
   });
+  showToast('Copied to clipboard');
 }
 
-// initialise
-loadHumanoid();
-document.getElementById('speciesName').value = 'Humanoid';
-document.getElementById('planId').value = 'humanoid';
-regen();
+// ── Persist ────────────────────────────────────────────────────────────────────
+
+function getPlanData() {
+  return {
+    id:         document.getElementById('planId').value.trim() || 'my_species',
+    name:       document.getElementById('speciesName').value.trim() || 'MySpecies',
+    locomotion: { type: document.getElementById('locomotionType').value },
+    cnsLayout:  { type: document.getElementById('cnsLayout').value },
+    totalMass:  parseFloat(document.getElementById('totalMass').value) || 70,
+    segments:   rows.map(r => ({
+      id: r.id, parent: r.parent || null, massShare: r.massShare, exposure: r.exposure,
+      locomotionRole: r.locomotion, manipulationRole: r.manipulation, cnsRole: r.cns
+    })),
+    savedAt: new Date().toISOString(),
+  };
+}
+
+function getAllSaved() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function savePlan() {
+  const plan = getPlanData();
+  const all  = getAllSaved().filter(p => p.id !== plan.id);
+  all.unshift(plan);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  populateSavedList();
+  showToast(`Plan "${plan.name}" saved`);
+}
+
+function populateSavedList() {
+  const all = getAllSaved();
+  const sel = document.getElementById('savedList');
+  sel.innerHTML = '<option value="">— load saved plan —</option>' +
+    all.map(p => `<option value="${encodeURIComponent(p.id)}">${p.name} (${p.locomotion.type})</option>`).join('');
+}
+
+function onSelectSaved(encId) {
+  if (!encId) return;
+  const id  = decodeURIComponent(encId);
+  const all = getAllSaved();
+  const plan = all.find(p => p.id === id);
+  if (!plan) return;
+  loadFromPlanData(plan);
+  showToast(`Loaded "${plan.name}"`);
+  document.getElementById('savedList').value = '';
+}
+
+function deleteSaved() {
+  const sel = document.getElementById('savedList');
+  const encId = sel.value;
+  if (!encId) { showToast('Select a plan to delete', true); return; }
+  const id = decodeURIComponent(encId);
+  const all = getAllSaved().filter(p => p.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+  populateSavedList();
+  showToast('Plan deleted');
+}
+
+function loadFromPlanData(plan) {
+  document.getElementById('planId').value = plan.id;
+  document.getElementById('speciesName').value = plan.name;
+  document.getElementById('totalMass').value = plan.totalMass ?? 70;
+  document.getElementById('locomotionType').value = plan.locomotion?.type ?? 'biped';
+  document.getElementById('cnsLayout').value = plan.cnsLayout?.type ?? 'centralized';
+  rows = (plan.segments || []).map(s => mkRow(
+    s.id, s.parent || '', s.massShare, s.exposure,
+    s.locomotionRole || 'none', s.manipulationRole || 'none', s.cnsRole || 'none'
+  ));
+  renderTable();
+  regen();
+}
+
+function downloadJson() {
+  const plan = getPlanData();
+  const blob = new Blob([JSON.stringify(plan, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `body-plan-${plan.id}.json`;
+  a.click();
+}
+
+function importJsonClick() {
+  document.getElementById('importFile').click();
+}
+
+function importJson(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  file.text().then(raw => {
+    try {
+      const plan = JSON.parse(raw);
+      loadFromPlanData(plan);
+      showToast(`Imported "${plan.name || plan.id}"`);
+    } catch (e) {
+      alert('Failed to parse JSON: ' + e.message);
+    }
+    input.value = '';
+  });
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────────
+
+function showToast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isErr ? '#2d0a0a' : '#1a3d2b';
+  t.style.borderColor = isErr ? 'var(--fail)' : 'var(--pass)';
+  t.style.color = isErr ? 'var(--fail)' : 'var(--pass)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+populateSavedList();
+loadTemplate('biped', true);
 </script>
 </body>
 </html>
