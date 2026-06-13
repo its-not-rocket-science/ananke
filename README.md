@@ -3,66 +3,86 @@
 ![CI](../../actions/workflows/ci.yml/badge.svg)
 ![Determinism](https://img.shields.io/badge/Determinism-%E2%9C%85%2010%2C000%2F10%2C000%20seeds%20passed%20(last%20run%3A%202026--04--03)-brightgreen)
 
-> **Package:** `@its-not-rocket-science/ananke`  
-> **Stable API contract:** [`STABLE_API.md`](STABLE_API.md)
-
-## What it is
+> Package: `@its-not-rocket-science/ananke`  
+> Stable API contract: [`STABLE_API.md`](STABLE_API.md)  
+> Status: active engineering project; stable root API, exploratory submodules
 
 Ananke is a deterministic simulation kernel for host applications.
 
-Core contract:
+It is designed for projects that need a world state to evolve reproducibly while leaving rendering, persistence, networking, content authoring, and deployment under the control of the host application.
 
-- same initial world state
-- same command stream
-- same tick count
-- same engine version
+## Core contract
 
-=> same outcome.
+Given the same:
 
-The package is designed so you can keep rendering, networking, persistence, and tooling in your own stack while delegating deterministic simulation to Ananke.
+- initial world state,
+- command stream,
+- tick count, and
+- engine version,
 
-## Why you would use it
+Ananke should produce the same outcome.
 
-Use Ananke when you need deterministic simulation you can reproduce and verify:
+That makes it useful for replay, debugging, deterministic tests, lockstep-style simulation, audit trails, and host-controlled narrative or game systems.
 
-- lockstep or replayable simulation loops
-- authoritative host control over commands and timing
-- repeatable test fixtures for simulation behavior
-- strict root-import API for long-lived integrations
+## Use Ananke when
 
-Do **not** adopt it if you want a full game engine, visual editor, or turnkey networking/runtime platform.
+- you need a reproducible simulation loop;
+- you want host-owned rendering and persistence;
+- you need deterministic fixtures for tests or replays;
+- you want a stable root import surface for long-lived integrations;
+- you are comfortable treating advanced subpath modules as version-pinned or experimental.
+
+## Do not use Ananke if
+
+- you want a complete game engine;
+- you need a visual editor;
+- you want turnkey networking;
+- you need a no-code simulation builder;
+- you expect every exported internal module to be semver-stable.
 
 ## 10-minute success path
 
-1. Install and build.
+```bash
+npm install
+npm run build
+npm run example:first-hour
+npm run test:first-hour-smoke
+```
 
-   ```bash
-   npm install
-   npm run build
-   ```
+Then follow the first-hour adopter path:
 
-2. Run the guided first-hour example (prints deterministic markers).
+```text
+docs/first-hour-adopter-path.md
+```
 
-   ```bash
-   npm run example:first-hour
-   ```
+## Minimal deterministic loop
 
-3. Run the measurable smoke verification.
-
-   ```bash
-   npm run test:first-hour-smoke
-   ```
-
-4. Follow the first-hour funnel: [`docs/first-hour-adopter-path.md`](docs/first-hour-adopter-path.md).
-
-Minimal deterministic loop:
-
-```ts example
-import { createWorld, q, stepWorld, type CommandMap } from "@its-not-rocket-science/ananke";
+```ts
+import {
+  createWorld,
+  q,
+  stepWorld,
+  type CommandMap,
+} from "@its-not-rocket-science/ananke";
 
 const world = createWorld(1337, [
-  { id: 1, teamId: 1, seed: 10, archetype: "KNIGHT_INFANTRY", weaponId: "wpn_longsword", armourId: "arm_mail", x_m: -1.2 },
-  { id: 2, teamId: 2, seed: 11, archetype: "HUMAN_BASE", weaponId: "wpn_club", x_m: 1.2 },
+  {
+    id: 1,
+    teamId: 1,
+    seed: 10,
+    archetype: "KNIGHT_INFANTRY",
+    weaponId: "wpn_longsword",
+    armourId: "arm_mail",
+    x_m: -1.2,
+  },
+  {
+    id: 2,
+    teamId: 2,
+    seed: 11,
+    archetype: "HUMAN_BASE",
+    weaponId: "wpn_club",
+    x_m: 1.2,
+  },
 ]);
 
 const commands: CommandMap = new Map([
@@ -78,57 +98,53 @@ stepWorld(world, commands, { tractionCoeff: q(0.9) });
 For semver stability, import from the package root only:
 
 ```ts
-import { createWorld, stepWorld, q, type CommandMap } from "@its-not-rocket-science/ananke";
+import {
+  createWorld,
+  stepWorld,
+  q,
+  type CommandMap,
+} from "@its-not-rocket-science/ananke";
 ```
 
-Tier-1 root exports are the stability boundary documented in:
+Tier-1 root exports are documented in:
 
 - [`STABLE_API.md`](STABLE_API.md)
 - [`docs/public-contract.md`](docs/public-contract.md)
 - [`docs/stable-api-manifest.json`](docs/stable-api-manifest.json)
 
-Subpath modules are shipped and supported, but are **not** part of the Tier-1 semver contract unless explicitly called out as stable.
+Subpath modules are shipped and supported, but are not part of the Tier-1 semver contract unless explicitly called out as stable.
 
-For explicit maintainer commitments, enforcement, and adopter responsibilities, see [`docs/support-boundaries.md`](docs/support-boundaries.md) and [`docs/engineering-guarantees.md`](docs/engineering-guarantees.md).
-
-## What is actually stable today
+## What is stable today
 
 Stable today means Tier-1 root exports from `@its-not-rocket-science/ananke`:
 
-- fixed-point primitives and helpers (`q`, `SCALE`, related conversion/math utilities)
-- host-facing types (`Entity`, `WorldState`, `Command`, `CommandMap`, `KernelContext`)
-- deterministic world/scenario entry points (`createWorld`, `loadScenario`, `validateScenario`)
-- deterministic stepping (`stepWorld`)
-- replay helpers (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`)
-- bridge snapshot extraction (`extractRigSnapshots`, `deriveAnimationHints`)
+- fixed-point primitives and helpers (`q`, `SCALE`, related conversion and maths utilities);
+- host-facing types (`Entity`, `WorldState`, `Command`, `CommandMap`, `KernelContext`);
+- deterministic world and scenario entry points (`createWorld`, `loadScenario`, `validateScenario`);
+- deterministic stepping (`stepWorld`);
+- replay helpers (`ReplayRecorder`, `replayTo`, `serializeReplay`, `deserializeReplay`);
+- bridge snapshot extraction (`extractRigSnapshots`, `deriveAnimationHints`).
 
 If you need long-term compatibility, keep production integrations on this root Tier-1 surface.
 
-> Boundaries note: first-hour checks verify setup and basic deterministic behavior only; they do not validate your production integration.
-
 ## What is shipped but not semver-stable
 
-These are available exports but outside the Tier-1 semver promise (unless separately documented):
+These surfaces are available, but outside the Tier-1 stability promise unless separately documented:
 
-- most subpath modules in `package.json#exports` (for example `./combat`, `./character`, `./tier2`, `./tier3`, `./netcode`, `./host-loop`)
-- emerging or advanced modules that may change shape between minor releases
-- exploratory integration helpers and higher-order systems
+- most subpath modules in `package.json#exports`, including `./combat`, `./character`, `./tier2`, `./tier3`, `./netcode`, and `./host-loop`;
+- emerging or advanced modules that may change shape between minor releases;
+- exploratory integration helpers and higher-order systems.
 
-Treat these surfaces as adopt-with-version-pinning.
+Treat these areas as adopt-with-version-pinning.
 
-## Next steps after the first hour
+## Useful next files
 
-- Game/server integrator: [`docs/host-contract.md`](docs/host-contract.md)
-- Renderer integrator: [`docs/bridge-contract.md`](docs/bridge-contract.md)
+- [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md) — plain-English status for visitors
+- [`docs/host-contract.md`](docs/host-contract.md) — host integration contract
+- [`docs/bridge-contract.md`](docs/bridge-contract.md) — renderer bridge contract
+- [`docs/support-boundaries.md`](docs/support-boundaries.md) — maintainer commitments and support boundaries
+- [`docs/engineering-guarantees.md`](docs/engineering-guarantees.md) — explicit engineering guarantees
 
-## What this project is not
+## Boundaries note
 
-Ananke is not:
-
-- a rendering engine or scene graph
-- a complete networking stack
-- a content-authoring GUI
-- a no-code simulation builder
-- a guarantee that every shipped subpath export is semver-stable
-
-Use this package when you need deterministic simulation inside a host-owned stack and can run host-side regression tests on each upgrade.
+First-hour checks verify setup and basic deterministic behaviour. They do not validate your production integration. Host applications should keep their own regression suite and pin versions where deterministic behaviour is part of their product contract.
