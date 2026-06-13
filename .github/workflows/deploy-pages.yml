@@ -63,6 +63,9 @@ jobs:
           [ -d examples/games/tactics-duel/web ]        && cp -r examples/games/tactics-duel/web/.        docs/examples/tactics-duel/
           [ -d examples/games/narrative-campaign/web ]  && cp -r examples/games/narrative-campaign/web/.  docs/examples/narrative-campaign/
           [ -d examples/reference/host-coherence/web ]  && cp -r examples/reference/host-coherence/web/.  docs/examples/host-coherence/
+
+          # Copy standalone WASM browser example
+          [ -f examples/wasm-browser.html ] && cp examples/wasm-browser.html docs/examples/wasm-browser.html
         continue-on-error: true
       
       - name: Generate stub pages

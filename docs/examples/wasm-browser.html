@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <body>
+    <pre id="out"></pre>
+    <script type="module">
+      import { initAnankeWasm } from "../dist/src/wasm/bridge.js";
+      const bridge = await initAnankeWasm();
+      bridge.world_create(7);
+      bridge.world_step(new Int32Array([0, 1, 0]));
+      document.getElementById("out").textContent = JSON.stringify({
+        backend: bridge.backend,
+        first: bridge.world_extractSnapshot()[0]
+      }, null, 2);
+    </script>
+  </body>
+</html>
