@@ -1,224 +1,28 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ananke — Performance Dashboard</title>
-<meta name="description" content="Ticks-per-second benchmark history and adapter comparison for the Ananke simulation kernel.">
-<link rel="icon" type="image/svg+xml" href="../favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../shared.css">
-<style>
-.perf-chart-wrap { background: var(--bg-mid); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem; overflow-x: auto; }
-canvas { display: block; max-width: 100%; }
-.adapter-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.76rem; }
-.adapter-table th { text-align: left; padding: 0.4rem 0.6rem; color: var(--muted); border-bottom: 1px solid var(--border); font-weight: 500; }
-.adapter-table td { padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--border); color: var(--text); }
-.adapter-table tr:last-child td { border-bottom: none; }
-.adapter-table .hi { color: var(--pass); font-weight: 600; }
-.adapter-table .lo { color: var(--fail); }
-.adapter-table .nm { color: var(--accent); }
-.stat-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.25rem; }
-.stat { background: var(--bg-mid); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 0.85rem; }
-.stat-val { font-family: var(--mono); font-size: 1.15rem; color: var(--accent); font-weight: 500; }
-.stat-label { font-size: 0.7rem; color: var(--muted); margin-top: 0.15rem; }
-.stable-pill { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--mono); font-size: 0.68rem; color: var(--pass); background: var(--live-bg); border: 1px solid rgba(52,211,153,0.25); border-radius: 3px; padding: 2px 8px; margin-bottom: 0.75rem; }
-.note { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
-.link-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
-.link-list a { color: var(--accent); font-size: 0.82rem; text-decoration: none; }
-.link-list a:hover { text-decoration: underline; }
-</style>
+<html>
+<head><meta charset="utf-8" /><title>Ananke Performance Dashboard</title>
+<style>body{font-family:Arial;margin:24px} table{border-collapse:collapse;width:100%} td,th{border:1px solid #ddd;padding:8px} .alert{font-weight:700;margin:8px 0}</style>
 </head>
 <body>
-
-<header>
-  <div class="breadcrumb"><a href="../hub/">Hub</a> / Performance</div>
-  <h1 class="page-title">Performance Dashboard</h1>
-  <p class="page-desc">Tracks how many simulation ticks Ananke can advance per second across commits, and compares throughput against alternative approaches.</p>
-</header>
-
-<div class="page-main">
-<div class="content-area">
-
-  <section class="section">
-    <h2 class="section-title">What does "ticks/sec" mean?</h2>
-    <p class="note">
-      One <strong style="color:var(--text)">tick</strong> advances the entire simulation world by one time-step — resolving all physics, combat, conditions, and entity state.
-      The benchmark runs a "large battle" scenario (many entities in active combat) for 10 seconds of wall-clock time and counts how many ticks completed.
-      <br><br>
-      Higher is better. At 100 ticks/sec you can simulate ~100 game-seconds per real second at 1 Hz, or run 6000× real-time at 60 Hz tick rate.
-      The WASM core column shows the raw kernel isolated from JS orchestration overhead — it is not a like-for-like comparison with the TypeScript host.
-      <br><br>
-      Benchmarks run on the CI runner (GitHub Actions, Ubuntu, Node 20). Numbers vary ±5% between runs. Use the trend line, not individual data points.
-    </p>
-  </section>
-
-  <section class="section">
-    <h2 class="section-title">Throughput history</h2>
-    <div class="stable-pill">✓ Stable — 0.0% vs baseline 8911f73</div>
-    <div class="stat-row">
-      <div class="stat">
-        <div class="stat-val" id="currentTicks">—</div>
-        <div class="stat-label">current ticks/sec</div>
-      </div>
-      <div class="stat">
-        <div class="stat-val" id="peakTicks">—</div>
-        <div class="stat-label">peak (last 100 commits)</div>
-      </div>
-      <div class="stat">
-        <div class="stat-val" id="commitCount">—</div>
-        <div class="stat-label">commits tracked</div>
-      </div>
-    </div>
-    <div class="perf-chart-wrap" style="margin-top:.75rem">
-      <canvas id="chart" width="820" height="240"></canvas>
-    </div>
-    <p class="note" style="margin-top:.5rem;font-size:.72rem">x-axis: commits (oldest → newest) &nbsp;·&nbsp; y-axis: ticks/sec &nbsp;·&nbsp; hover for commit SHA</p>
-  </section>
-
-  <section class="section">
-    <h2 class="section-title">Adapter comparison — large battle</h2>
-    <p class="note" style="margin-bottom:.75rem">Compares Ananke against alternative physics/simulation backends on the same scenario. Ratio &gt;1× means Ananke is faster; &lt;1× means the adapter is faster.</p>
-    <table class="adapter-table">
-      <thead><tr><th>Adapter</th><th>Ticks/sec</th><th>Ananke ratio</th><th>Delta vs adapter</th></tr></thead>
-      <tbody>
-        <tr><td class="nm">Ananke (TypeScript)</td><td class="nm">118.8</td><td>1.00×</td><td>0.0%</td></tr>
-        <tr><td>Ananke (WASM core)</td><td class="hi">758 850</td><td>—</td><td class="note" style="font-size:.7rem">raw kernel, no JS host overhead</td></tr>
-        <tr><td>GridSage (public snapshot)</td><td class="lo">n/a</td><td>—</td><td>—</td></tr>
-        <tr><td>Unity DOTS (C#/WASM minimal)</td><td class="lo">n/a</td><td>—</td><td>—</td></tr>
-        <tr><td>Hand-rolled JS O(N²)</td><td>62.3</td><td class="lo">0.52×</td><td class="pass" style="color:var(--pass)">Ananke +90.6%</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="section">
-    <h2 class="section-title">Run the benchmark locally</h2>
-    <pre>git clone https://github.com/its-not-rocket-science/ananke
-cd ananke
-npm install
-npm run perf</pre>
-    <p class="note" style="margin-top:.6rem">Output is written to <code>perf/perf-results.json</code>. CI regenerates <code>perf/index.html</code> on every push to main via <code>scripts/generate-perf-page.js</code>.</p>
-  </section>
-
-</div>
-
-<aside class="sidebar">
-  <section class="section">
-    <h2 class="section-title">Related</h2>
-    <ul class="link-list">
-      <li><a href="../hub/">← Hub</a></li>
-      <li><a href="../dashboard/">Validation dashboard</a></li>
-      <li><a href="https://github.com/its-not-rocket-science/ananke/actions" target="_blank" rel="noopener">CI runs ↗</a></li>
-    </ul>
-  </section>
-  <section class="section">
-    <h2 class="section-title">Methodology</h2>
-    <p class="note">Scenario: 12 entities, mixed weapon loadouts, 60-second simulation at 1 Hz. Runs 5× per commit, median reported. Outliers (&gt;2σ) discarded.</p>
-  </section>
-  <section class="section">
-    <h2 class="section-title">Why WASM so fast?</h2>
-    <p class="note">The WASM core skips the JS event loop and host orchestration. It benchmarks raw kernel throughput — useful for capacity planning but not representative of a real host integration.</p>
-  </section>
-</aside>
-</div>
-
-<footer>
-  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
-  <p><a href="../hub/">← Hub</a></p>
-</footer>
-
+<h1>Ananke Performance Dashboard</h1>
+<p class="alert">✅ Stable (0.0% vs eacca05)</p>
+<canvas id="chart" width="1000" height="280"></canvas>
+<h2>Current vs baseline (large battle)</h2>
+<table><thead><tr><th>Adapter</th><th>Ticks/sec</th><th>Ananke Ratio</th><th>Delta vs Adapter</th></tr></thead><tbody><tr><td>Ananke</td><td>148.8</td><td>1.00x</td><td>0.0%</td></tr>
+<tr><td>Ananke (WASM core)</td><td>717286.8</td><td>0.00x</td><td>-100.0%</td></tr>
+<tr><td>GridSage (public snapshot)</td><td>0.0</td><td>0.00x</td><td>14876.3%</td></tr>
+<tr><td>Unity DOTS (C#/WASM minimal)</td><td>0.0</td><td>0.00x</td><td>14876.3%</td></tr>
+<tr><td>Hand-rolled JS O(N²)</td><td>62.5</td><td>2.38x</td><td>138.0%</td></tr></tbody></table>
 <script>
-const points = [{"commit":"19bbed7","ticks":101.05},{"commit":"5c07c75","ticks":148.73},{"commit":"4b46e82","ticks":142.00},{"commit":"f0c2e24","ticks":142.60},{"commit":"c5eae02","ticks":149.69},{"commit":"8978e9a","ticks":147.89},{"commit":"b443f99","ticks":148.07},{"commit":"ca2bbb0","ticks":144.85},{"commit":"fe8782c","ticks":145.23},{"commit":"a32c50a","ticks":141.67},{"commit":"f834653","ticks":147.51},{"commit":"548b1db","ticks":186.36},{"commit":"cde0e29","ticks":149.28},{"commit":"8911f73","ticks":118.76},{"commit":"8911f73","ticks":118.76}];
-
-const current = points[points.length - 1].ticks;
-const peak    = Math.max(...points.map(p => p.ticks));
-document.getElementById("currentTicks").textContent = current.toFixed(1);
-document.getElementById("peakTicks").textContent    = peak.toFixed(1);
-document.getElementById("commitCount").textContent  = points.length;
-
-const canvas = document.getElementById("chart");
-const ctx    = canvas.getContext("2d");
-const W = canvas.width, H = canvas.height;
-const pad = { top: 20, right: 20, bottom: 30, left: 52 };
-const chartW = W - pad.left - pad.right;
-const chartH = H - pad.top  - pad.bottom;
-
-const minY = 0;
-const maxY = Math.ceil(peak / 50) * 50 + 20;
-const xStep = chartW / Math.max(1, points.length - 1);
-
-function toCanvasX(i)  { return pad.left + i * xStep; }
-function toCanvasY(v)  { return pad.top + chartH - ((v - minY) / (maxY - minY)) * chartH; }
-
-// grid lines
-ctx.strokeStyle = "rgba(30,42,64,1)";
-ctx.lineWidth = 1;
-[0, 50, 100, 150, 200].forEach(v => {
-  if (v > maxY) return;
-  const y = toCanvasY(v);
-  ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + chartW, y); ctx.stroke();
-  ctx.fillStyle = "#6b7fa0"; ctx.font = "10px 'JetBrains Mono',monospace";
-  ctx.fillText(v, 4, y + 4);
-});
-
-// area fill
-ctx.beginPath();
-ctx.moveTo(toCanvasX(0), toCanvasY(0));
-points.forEach((p, i) => ctx.lineTo(toCanvasX(i), toCanvasY(p.ticks)));
-ctx.lineTo(toCanvasX(points.length - 1), toCanvasY(0));
-ctx.closePath();
-ctx.fillStyle = "rgba(251,191,36,0.08)";
-ctx.fill();
-
-// line
-ctx.beginPath();
-ctx.strokeStyle = "#fbbf24";
-ctx.lineWidth = 2;
-points.forEach((p, i) => {
-  const x = toCanvasX(i), y = toCanvasY(p.ticks);
-  i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-});
+const points = [{"commit":"19bbed7","ticks":101.05012594427919},{"commit":"5c07c75","ticks":148.72526104519017},{"commit":"4b46e82","ticks":142.00220317554246},{"commit":"f0c2e24","ticks":142.59984283073123},{"commit":"c5eae02","ticks":149.68721199268256},{"commit":"8978e9a","ticks":147.88608622564365},{"commit":"b443f99","ticks":148.06573141685277},{"commit":"ca2bbb0","ticks":144.85109363884786},{"commit":"fe8782c","ticks":145.22574456478617},{"commit":"a32c50a","ticks":141.6746967442048},{"commit":"f834653","ticks":147.51371738263393},{"commit":"548b1db","ticks":186.3551868055817},{"commit":"cde0e29","ticks":149.27843185497304},{"commit":"8911f73","ticks":118.76128597593289},{"commit":"eacca05","ticks":148.76320382914403},{"commit":"eacca05","ticks":148.76320382914403}];
+const canvas = document.getElementById('chart');
+const ctx = canvas.getContext('2d');
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.strokeStyle='#0055cc'; ctx.lineWidth=2;
+const max = Math.max(...points.map(p=>p.ticks), 1);
+points.forEach((p,i)=>{ const x = 40 + (i*Math.max(1,(canvas.width-60)/Math.max(1,points.length-1))); const y = canvas.height-30-((p.ticks/max)*(canvas.height-60)); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); });
 ctx.stroke();
-
-// dots
-points.forEach((p, i) => {
-  ctx.beginPath();
-  ctx.arc(toCanvasX(i), toCanvasY(p.ticks), 3, 0, Math.PI * 2);
-  ctx.fillStyle = "#fbbf24";
-  ctx.fill();
-});
-
-// x-axis label
-ctx.fillStyle = "#6b7fa0"; ctx.font = "10px 'JetBrains Mono',monospace";
-ctx.fillText("commits (oldest → newest)", pad.left, H - 6);
-
-// tooltip
-const tooltip = document.createElement("div");
-tooltip.style.cssText = "position:fixed;background:#1a2235;border:1px solid #2a3a55;border-radius:4px;padding:4px 8px;font:11px 'JetBrains Mono',monospace;color:#e5e7eb;pointer-events:none;display:none;z-index:50";
-document.body.appendChild(tooltip);
-
-canvas.addEventListener("mousemove", e => {
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const mx = (e.clientX - rect.left) * scaleX;
-  let closest = -1, minDist = Infinity;
-  points.forEach((p, i) => {
-    const d = Math.abs(toCanvasX(i) - mx);
-    if (d < minDist) { minDist = d; closest = i; }
-  });
-  if (closest >= 0 && minDist < 30) {
-    const p = points[closest];
-    tooltip.textContent = `${p.commit} · ${p.ticks.toFixed(1)} ticks/sec`;
-    tooltip.style.display = "block";
-    tooltip.style.left = (e.clientX + 10) + "px";
-    tooltip.style.top  = (e.clientY - 24) + "px";
-  } else {
-    tooltip.style.display = "none";
-  }
-});
-canvas.addEventListener("mouseleave", () => { tooltip.style.display = "none"; });
+ctx.fillStyle='#333'; ctx.fillText('ticks/sec over time (last 100 commits)', 40, 18);
 </script>
 </body>
 </html>
