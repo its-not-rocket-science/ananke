@@ -8623,7 +8623,7 @@ evidencing them.
 
 ---
 
-### PM-1 · First-Party Reference Builds (Proof of Real Use)
+### PM-1 · First-Party Reference Builds (Proof of Real Use) ✅ COMPLETE (v0.5.4)
 
 **Problem:** The platform has rich infrastructure — combat, campaign, species, replay,
 bridge, cookbook, networking — but no end-to-end host apps that prove it all composes
@@ -8648,6 +8648,11 @@ cannot provide.
 
 **Success criterion:** A first-time evaluator can clone the repo, run one reference build
 in under 5 minutes, and see physics-grounded outcomes with no Ananke source reading required.
+
+**Delivered (v0.5.2–v0.5.4):**
+- `examples/reference/tactical-duel/` — keyboard-driven 1v1 arena game; combat, AI, sensory, bridge, replay
+- `examples/reference/campaign-sandbox/` — feudal bonds, polity wars, trade, epidemic spread across 100 days
+- `examples/reference/species-lab/` — 6 species × competence × XP progression × content pack × tournament
 
 ---
 
