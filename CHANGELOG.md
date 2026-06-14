@@ -8,6 +8,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.4] — 2026-06-14
+
+### Added
+
+- **examples/reference/species-lab** — enhanced to cover the full ROADMAP PM-1 scope: `species`, `character`, `generate`, `competence`, `extended-senses`, and content packs.
+  - Section 2 (new): Competence profiles — `resolveCompetence` for 4 tasks (forage herbs, navigate wilderness, craft sword, signal alien species) across all 6 species, showing `quality_Q` and `descriptor` per domain.
+  - Section 3 (new): Character progression — `awardXP` (25 meleeCombat encounters → milestones 0 and 1 at encounters 10 and 18); `applyTrainingSession` (28-day strength plan, diminishing returns toward ceiling per species starting force).
+  - Section 4 (new): Content pack validation — `validatePack` + `loadPack` with a well-formed xenobiology scenario pack; also validates a malformed pack to demonstrate error detection.
+  - Section 1 fix: replaced broken `locomotionModes` speed lookup with `stature_m` column (fantasy species don't define explicit locomotion modes).
+- **examples/reference/species-lab/README.md** — full architecture, competence domain table, sample output, pain points (locomotionModes, pack schema, milestone threshold), extension recipes.
+
 ## [0.5.3] — 2026-06-14
 
 ### Added
