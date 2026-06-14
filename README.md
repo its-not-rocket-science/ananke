@@ -1,7 +1,11 @@
+<img src="ananke-social-preview.png" alt="Ananke — Deterministic Simulation Kernel" width="100%">
+
 # Ananke
 
 ![CI](../../actions/workflows/ci.yml/badge.svg)
 ![Determinism](https://img.shields.io/badge/Determinism-%E2%9C%85%2010%2C000%2F10%2C000%20seeds%20passed%20(last%20run%3A%202026--04--03)-brightgreen)
+![TypeScript](https://img.shields.io/badge/TypeScript-first-7dd3fc)
+![MIT licence](https://img.shields.io/badge/licence-MIT-fbbf24)
 
 > Package: `@its-not-rocket-science/ananke`  
 > Stable API contract: [`STABLE_API.md`](STABLE_API.md)  
