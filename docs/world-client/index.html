@@ -61,6 +61,12 @@
   <span class="day-badge" id="day-badge">Day —</span>
   <div class="conn"><div class="conn-dot" id="conn-dot"></div><span id="conn-label">Connecting…</span></div>
 </header>
+<div style="background:#1c0a07;border-bottom:2px solid #7f1d1d;padding:.55rem 1.25rem;font-size:.73rem;color:#fca5a5;flex-shrink:0">
+  <strong>Server required.</strong> This page connects to a WebSocket server at <code>localhost:3000</code> — it cannot run on GitHub Pages (static hosting only).
+  To run locally: clone the repo, run <code>npx ts-node tools/world-server.ts</code>, then open this page from a local server.
+  For a hosted persistent world, deploy the server to <a href="https://fly.io" target="_blank" rel="noopener" style="color:#fca5a5">Fly.io</a>, <a href="https://railway.app" target="_blank" rel="noopener" style="color:#fca5a5">Railway</a>, or a self-hosted VPS, and update the WebSocket URL in <code>docs/world-client/index.html</code>.
+  See <a href="https://github.com/its-not-rocket-science/ananke/blob/main/docs/host-contract.md" target="_blank" rel="noopener" style="color:#fca5a5">host-contract.md</a> for server implementation requirements.
+</div>
 
 <div class="body">
   <div class="map-col">

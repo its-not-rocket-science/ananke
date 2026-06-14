@@ -109,6 +109,21 @@
 <div class="page-main">
 <div class="content-area">
 
+  <!-- What is world evolution -->
+  <section class="section">
+    <h2 class="section-title">What is world evolution?</h2>
+    <p class="note">Ananke's world evolution system lets a host <strong>branch</strong>, <strong>checkpoint</strong>, and <strong>replay</strong> deterministic world states — think of it as git for simulated history. Because every tick is deterministic (same seed + same commands → same output), any saved checkpoint can be restored and re-simulated from that point forward, producing identical results every time.</p>
+    <p class="note" style="margin-top:.4rem">Key concepts:</p>
+    <ul class="steps" style="margin-top:.3rem">
+      <li><strong>Session</strong> — a live simulation session containing entity state, world state, tick counter, and world seed. Created with <code>createSession(config)</code>, stepped with <code>stepSession(session, commands)</code>.</li>
+      <li><strong>Checkpoint</strong> — a serialized snapshot of a session at a specific tick. Created with <code>serializeSession(session)</code>. Stored by the host as a named point in the branch tree (e.g. <code>"cp-100"</code>). Can be restored with <code>deserializeSession(snapshot)</code>.</li>
+      <li><strong>Fork</strong> — a new session branching from an existing one at a chosen tick. Created with <code>forkSession(session)</code>. The fork shares the same seed and history up to the branch point but diverges from there. Use this for "what-if" alternate histories.</li>
+      <li><strong>Diff</strong> — comparing two serialized sessions field-by-field to see what changed between two branches. Ananke doesn't ship a diff utility (host concerns vary too much), but the serialized format is plain JSON for easy diffing.</li>
+      <li><strong>Replay</strong> — re-running a session from a checkpoint with the same command log produces byte-identical state. This is the foundation for golden fixture testing and determinism validation.</li>
+    </ul>
+    <p class="note" style="margin-top:.4rem"><strong>Typical host workflow:</strong> maintain a checkpoint at each major narrative event → on player choice, fork from the relevant checkpoint → run both branches → expose branch outcomes to the player or AI director → prune abandoned branches to save memory.</p>
+  </section>
+
   <!-- What this uses -->
   <section class="section">
     <h2 class="section-title">What this uses</h2>

@@ -79,6 +79,25 @@ import { ... } from "@its-not-rocket-science/ananke";
 ```
 <!-- CONTRACT:TIER1_SYMBOLS:end -->
 
+## Tier-2 stable (subpath imports with explicit stability claims)
+
+The following subpaths are **Tier 2 stable**: they are fully implemented, thoroughly tested (>90% coverage), and API-stable within the `@minor` version boundary. Breaking changes require at minimum a minor version bump with a CHANGELOG entry. They are not Tier-1 because they are not re-exported from the root entrypoint.
+
+| Subpath | Status | Coverage | Notes |
+|---------|--------|----------|-------|
+| `@its-not-rocket-science/ananke/sim/combat` | **Tier 2 stable** | >95% | `resolveHit`, `computeWeaponEnergy`, `CombatResult` — full pair-based combat resolution |
+| `@its-not-rocket-science/ananke/sim/disease` | **Tier 2 stable** | 100% | `exposeToDisease`, `stepDiseaseForEntity`, `spreadDisease`, all 6 built-in profiles |
+| `@its-not-rocket-science/ananke/sim/hazard` | **Tier 2 stable** | >95% | `computeHazardExposure`, `deriveHazardEffect`, `stepHazardZone`, all 5 built-in zones |
+
+```ts
+// Stable Tier-2 usage:
+import { resolveHit, computeWeaponEnergy } from "@its-not-rocket-science/ananke/sim/combat";
+import { exposeToDisease, spreadDisease }   from "@its-not-rocket-science/ananke/sim/disease";
+import { computeHazardExposure, CAMPFIRE }  from "@its-not-rocket-science/ananke/sim/hazard";
+```
+
+> **Path to Tier-1**: These subpaths will be promoted to Tier-1 (re-exported from root) when the API has been exercised by ≥2 external integrations with documented use cases. Track `ROADMAP.md` for PM-series milestones.
+
 ## Shipped but not Tier-1 (subpath imports)
 
 Everything below is public and shipped through `package.json` exports, but must be treated by the taxonomy as **Shipped but undocumented**, **Experimental**, or **Internal** (never Tier 1 stable unless explicitly labeled).

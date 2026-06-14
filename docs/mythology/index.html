@@ -106,7 +106,7 @@
       <span class="module-tag">src/sim/trace.ts</span>
     </div>
     <p class="note">Mythology is a host-level domain built on simulation event streams. Ananke generates the raw events — DEATH, ROUT, VICTORY, MORALE_BREAK. The host assigns narrative weight to these events, accumulates them into chronicle entries, and promotes high-weight entries into legend and myth over simulation time.</p>
-    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 3 — planned</span>&ensp;A formal mythology/chronicle API is not yet implemented. The event stream and morale modules are stable.</span></p>
+    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 3 — planned</span>&ensp;A formal <code>src/sim/mythology.ts</code> module is not yet implemented. The interactive chronicle log below uses in-browser state only. The underlying primitives (<code>morale.ts</code>, <code>events.ts</code>, <code>collective-activities.ts</code>) are stable Tier 1/2. The planned API design is shown in "Try this" below.</p>
   </section>
 
   <!-- Flow diagram -->
@@ -134,35 +134,37 @@
 
   <!-- Chronicle entry form -->
   <section class="section">
-    <h2 class="section-title">Chronicle entry log — static preview</h2>
-    <div class="preview-badge">static preview</div>
+    <h2 class="section-title">Chronicle entry log</h2>
+    <p class="note" style="margin-bottom:.5rem">Add chronicle entries from your event stream. Entries with weight ≥ 0.6 are candidates for legend promotion. Click ✕ to delete, "↑ Legend" to promote a high-weight entry.</p>
 
-    <div id="chronicle-log">
-      <div class="chronicle-entry">
-        <div class="ce-tick">tick 4582 · session s_42</div>
-        <div class="ce-event">DEATH of Aldric Vane's warhorse in the defence of Ashford Gate<span class="ce-weight">weight: 0.72</span></div>
-      </div>
-      <div class="chronicle-entry">
-        <div class="ce-tick">tick 5901 · session s_42</div>
-        <div class="ce-event">ROUT of the Corsair warband at Thornmere — 34 killed, 8 captured<span class="ce-weight">weight: 0.85</span></div>
-      </div>
-      <div class="chronicle-entry">
-        <div class="ce-tick">tick 7230 · session s_42</div>
-        <div class="ce-event">VICTORY — Aldric Vane defeats the Corsair warlord in single combat (MORALE_BREAK event)<span class="ce-weight">weight: 0.94</span></div>
-      </div>
-    </div>
+    <div id="chronicle-log"></div>
 
     <div style="margin-top:0.85rem;padding-top:0.75rem;border-top:1px solid var(--border)">
-      <div class="form-group">
-        <label>New chronicle entry (from event stream)</label>
-        <input type="text" id="chronicle-input" placeholder="e.g. DEATH of the Harbour Master at siege of Fort Durn">
+      <div class="two-col">
+        <div class="form-group">
+          <label>New chronicle entry (from event stream)</label>
+          <input type="text" id="chronicle-input" placeholder="e.g. DEATH of the Harbour Master at siege of Fort Durn">
+        </div>
+        <div class="form-group">
+          <label>Narrative weight (0–1)</label>
+          <input type="number" id="chronicle-weight" min="0" max="1" step="0.05" value="0.5" style="width:100%">
+        </div>
       </div>
-      <div class="form-group">
-        <label>Narrative weight (0–1)</label>
-        <input type="number" id="chronicle-weight" min="0" max="1" step="0.05" value="0.5" style="width:100%">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.3rem">
+        <button class="btn-primary" onclick="addChronicle()">Add entry</button>
+        <button class="btn-secondary" onclick="saveChronicle()" style="font-size:.8rem">Save to localStorage</button>
+        <button class="btn-secondary" onclick="exportChronicle()" style="font-size:.8rem">Export JSON</button>
+        <button class="btn-secondary" onclick="importChronicle()" style="font-size:.8rem">Import JSON</button>
+        <span id="chr-status" style="font-size:.72rem;color:var(--live);align-self:center"></span>
       </div>
-      <button class="btn-primary" onclick="addChronicle()">Add entry</button>
     </div>
+  </section>
+
+  <!-- Legend panel -->
+  <section class="section">
+    <h2 class="section-title">Legend — promoted entries</h2>
+    <p class="note" style="margin-bottom:.5rem">Chronicle entries promoted to legend (weight ≥ 0.6). These are the raw material for myth formation.</p>
+    <div id="legend-log"><p style="font-size:.75rem;color:var(--muted);font-family:var(--mono)">No entries promoted yet.</p></div>
   </section>
 
   <!-- Myth effects preview -->
@@ -216,18 +218,96 @@
 </footer>
 <script>
 let tick = 8000;
+let chronicles = [
+  { tick: 4582, session: 's_42', text: "DEATH of Aldric Vane's warhorse in the defence of Ashford Gate", weight: 0.72 },
+  { tick: 5901, session: 's_42', text: 'ROUT of the Corsair warband at Thornmere — 34 killed, 8 captured', weight: 0.85 },
+  { tick: 7230, session: 's_42', text: 'VICTORY — Aldric Vane defeats the Corsair warlord in single combat (MORALE_BREAK event)', weight: 0.94 },
+];
+let legends = [];
+
+function renderChronicle() {
+  const log = document.getElementById('chronicle-log');
+  if (chronicles.length === 0) {
+    log.innerHTML = '<p style="font-size:.75rem;color:var(--muted);font-family:var(--mono)">No chronicle entries.</p>';
+    return;
+  }
+  log.innerHTML = chronicles.map((e, i) => `
+    <div class="chronicle-entry" style="display:flex;align-items:flex-start;gap:.5rem">
+      <div style="flex:1">
+        <div class="ce-tick">tick ${e.tick} · session ${e.session}</div>
+        <div class="ce-event">${e.text}<span class="ce-weight">weight: ${e.weight.toFixed(2)}</span></div>
+      </div>
+      ${e.weight >= 0.6 ? `<button onclick="promoteToLegend(${i})" style="font-family:var(--mono);font-size:.62rem;background:rgba(125,211,252,.1);border:1px solid var(--ring);border-radius:3px;color:var(--ring);cursor:pointer;padding:.1rem .4rem;white-space:nowrap">↑ Legend</button>` : ''}
+      <button onclick="deleteChronicle(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.72rem;padding:0">✕</button>
+    </div>`).join('');
+}
+
+function renderLegends() {
+  const log = document.getElementById('legend-log');
+  if (legends.length === 0) {
+    log.innerHTML = '<p style="font-size:.75rem;color:var(--muted);font-family:var(--mono)">No entries promoted yet.</p>';
+    return;
+  }
+  log.innerHTML = legends.map((e, i) => `
+    <div class="chronicle-entry" style="display:flex;align-items:flex-start;gap:.5rem;border-color:rgba(125,211,252,.3)">
+      <div style="flex:1">
+        <div class="ce-tick" style="color:var(--ring)">tick ${e.tick} · legend</div>
+        <div class="ce-event">${e.text}<span class="ce-weight" style="color:var(--ring)">weight: ${e.weight.toFixed(2)}</span></div>
+      </div>
+      <button onclick="deleteLegende(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.72rem;padding:0">✕</button>
+    </div>`).join('');
+}
+
 function addChronicle() {
   const text   = document.getElementById('chronicle-input').value.trim() || '(event)';
-  const weight = parseFloat(document.getElementById('chronicle-weight').value) || 0.5;
-  const log    = document.getElementById('chronicle-log');
-  const entry  = document.createElement('div');
-  entry.className = 'chronicle-entry';
-  entry.innerHTML = `<div class="ce-tick">tick ${tick} · session s_42</div>
-    <div class="ce-event">${text}<span class="ce-weight">weight: ${weight.toFixed(2)}</span></div>`;
-  log.appendChild(entry);
-  tick += Math.floor(Math.random() * 500 + 100);
+  const weight = Math.min(1, Math.max(0, parseFloat(document.getElementById('chronicle-weight').value) || 0.5));
+  chronicles.push({ tick, session: 's_' + Math.floor(tick / 1000), text, weight });
+  tick += 100 + Math.floor(Math.abs(((tick * 1103515245 + 12345) & 0x7fffffff) % 500));
   document.getElementById('chronicle-input').value = '';
+  renderChronicle();
 }
+
+function deleteChronicle(i) { chronicles.splice(i, 1); renderChronicle(); }
+function deleteLegende(i)   { legends.splice(i, 1); renderLegends(); }
+
+function promoteToLegend(i) {
+  const e = chronicles[i];
+  if (!e || e.weight < 0.6) return;
+  legends.push({ ...e });
+  chronicles.splice(i, 1);
+  renderChronicle();
+  renderLegends();
+}
+
+function saveChronicle() {
+  localStorage.setItem('ananke_chronicles', JSON.stringify({ chronicles, legends }));
+  document.getElementById('chr-status').textContent = 'Saved.';
+  setTimeout(() => { document.getElementById('chr-status').textContent = ''; }, 2000);
+}
+
+function exportChronicle() {
+  const blob = new Blob([JSON.stringify({ chronicles, legends }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'chronicles.json'; a.click();
+}
+
+function importChronicle() {
+  const json = prompt('Paste chronicles JSON:');
+  if (!json) return;
+  try {
+    const obj = JSON.parse(json);
+    if (obj.chronicles) chronicles = obj.chronicles;
+    if (obj.legends)    legends    = obj.legends;
+    renderChronicle(); renderLegends();
+    document.getElementById('chr-status').textContent = 'Imported.';
+    setTimeout(() => { document.getElementById('chr-status').textContent = ''; }, 2000);
+  } catch(e) { alert('Invalid JSON: ' + e.message); }
+}
+
+// Load from localStorage if present
+const stored = JSON.parse(localStorage.getItem('ananke_chronicles') || 'null');
+if (stored) { chronicles = stored.chronicles || chronicles; legends = stored.legends || legends; }
+renderChronicle();
+renderLegends();
 </script>
 </body>
 </html>

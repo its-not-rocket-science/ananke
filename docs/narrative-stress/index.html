@@ -102,7 +102,50 @@
       <span class="module-tag doc">docs/use-case-validation.md</span>
     </div>
     <p class="note">Narrative stress measures the gap between what the physics demands and what the story requires. A high-stress beat is one where the simulation outcome is unlikely given the characters' physical state — e.g., a badly wounded character landing a decisive killing blow against a fresh opponent.</p>
-    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 3 — planned</span>&ensp;A formal narrative-stress API is not yet implemented. The concepts below are design-stage. The underlying simulation primitives (morale, shock, conditions) are stable.</p>
+    <p class="note" style="margin-top:0.4rem"><span class="pill-inline exp">Tier 3 — planned</span>&ensp;A formal <code>src/sim/narrative.ts</code> module is not yet implemented. The beat editor and push scale on this page are design-stage tools using only in-browser state. The underlying primitives that would power a real API (<code>morale.ts</code>, <code>condition.ts</code>, <code>wound-aging.ts</code>) are stable Tier 1. Track <code>STABLE_API.md</code> for promotion.</p>
+  </section>
+
+  <!-- Examples from fiction -->
+  <section class="section">
+    <h2 class="section-title">Examples from fiction</h2>
+    <p class="note" style="margin-bottom:.6rem">Recognisable narrative beats calibrate the push scale against stories readers have already accepted. Higher push = more suspended disbelief required.</p>
+    <div style="display:flex;flex-direction:column;gap:.4rem">
+      <div style="background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;padding:.5rem .8rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+          <span style="font-family:var(--mono);font-size:.65rem;background:rgba(52,211,153,0.1);color:var(--live);padding:1px 6px;border-radius:3px">natural · 0.05</span>
+          <span style="font-size:.76rem;font-weight:500;color:var(--text)">Gladiator — Maximus opens fight cautiously</span>
+        </div>
+        <p style="font-size:.7rem;color:var(--muted);margin:0">Fresh combatant, high stamina, clear tactical read. Physics fully supports the outcome.</p>
+      </div>
+      <div style="background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;padding:.5rem .8rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+          <span style="font-family:var(--mono);font-size:.65rem;background:rgba(251,191,36,0.1);color:var(--accent);padding:1px 6px;border-radius:3px">low push · 0.28</span>
+          <span style="font-size:.76rem;font-weight:500;color:var(--text)">The Hobbit — Bilbo escapes goblins through luck and speed</span>
+        </div>
+        <p style="font-size:.7rem;color:var(--muted);margin:0">Unlikely but physically possible — small, fast, and unarmoured vs. disorganised enemies. Acceptable without justification.</p>
+      </div>
+      <div style="background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;padding:.5rem .8rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+          <span style="font-family:var(--mono);font-size:.65rem;background:rgba(245,158,11,0.1);color:var(--warn);padding:1px 6px;border-radius:3px">medium push · 0.52</span>
+          <span style="font-size:.76rem;font-weight:500;color:var(--text)">Kill Bill Vol. 1 — The Bride fights 88 opponents while recovering from coma</span>
+        </div>
+        <p style="font-size:.7rem;color:var(--muted);margin:0">Extreme skill and adrenaline partially justify this, but the physics demand special circumstances (story-native training). Needs in-world grounding.</p>
+      </div>
+      <div style="background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;padding:.5rem .8rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+          <span style="font-family:var(--mono);font-size:.65rem;background:rgba(239,68,68,0.1);color:var(--fail);padding:1px 6px;border-radius:3px">high push · 0.74</span>
+          <span style="font-size:.76rem;font-weight:500;color:var(--text)">Braveheart — Wallace fights on after catastrophic abdominal wound</span>
+        </div>
+        <p style="font-size:.7rem;color:var(--muted);margin:0">Classic plot armour. Severe internal bleeding would cause consciousness loss within minutes. The story accepts it as a mythic finale. Suspension of disbelief required.</p>
+      </div>
+      <div style="background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;padding:.5rem .8rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.2rem">
+          <span style="font-family:var(--mono);font-size:.65rem;background:rgba(192,38,211,0.1);color:#c026d3;padding:1px 6px;border-radius:3px">implausible · 0.92</span>
+          <span style="font-size:.76rem;font-weight:500;color:var(--text)">Dragon Ball Z — Goku fights at full power with multiple fatal wounds</span>
+        </div>
+        <p style="font-size:.7rem;color:var(--muted);margin:0">Explicit genre contract with the audience: physics are suspended. Requires an in-world override (ki, magic, divine intervention). Ananke would assign near-zero probability to every beat in this sequence.</p>
+      </div>
+    </div>
   </section>
 
   <!-- Push scale -->
@@ -117,9 +160,8 @@
 
   <!-- Beat sequence editor -->
   <section class="section">
-    <h2 class="section-title">Beat sequence editor — static preview</h2>
-    <div class="preview-badge">static preview</div>
-    <p class="note" style="margin-bottom:0.75rem">A beat sequence describes a scene's narrative arc. Each beat has a type, description, and estimated narrative push. Aggregate push across the sequence flags high-stress scenes.</p>
+    <h2 class="section-title">Beat sequence editor</h2>
+    <p class="note" style="margin-bottom:0.75rem">A beat sequence describes a scene's narrative arc. Each beat has a type, description, and estimated narrative push. Aggregate push across the sequence flags high-stress scenes. Add beats below, or delete individual beats by clicking ✕.</p>
 
     <div class="beat-list" id="beat-list">
       <div class="beat-row">
@@ -173,7 +215,6 @@
   <!-- Add beat form -->
   <section class="section">
     <h2 class="section-title">Add a beat</h2>
-    <div class="experimental-badge">planned integration</div>
     <div class="two-col">
       <div class="form-group">
         <label>Beat type</label>
@@ -265,12 +306,17 @@ function renderBeats() {
       <span class="beat-type ${typeClass(b.type)}">${b.type}</span>
       <span class="beat-desc">${b.desc}</span>
       <span class="beat-push" style="color:${pushColor(b.push)}">${b.push.toFixed(2)}</span>
+      <button onclick="deleteBeat(${i})" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.75rem;padding:0 0 0 .4rem;flex-shrink:0" title="Delete beat">✕</button>
     </div>`).join('');
-  const avg = beats.reduce((s,b)=>s+b.push,0) / beats.length;
+  const avg = beats.length ? beats.reduce((s,b)=>s+b.push,0) / beats.length : 0;
   document.getElementById('aggregate-bar').style.width = (avg * 100) + '%';
   const lvl = avg < 0.2 ? 'natural' : avg < 0.4 ? 'low push' : avg < 0.65 ? 'medium push' : avg < 0.85 ? 'high push' : 'implausible';
   document.getElementById('aggregate-label').style.color = pushColor(avg);
   document.getElementById('aggregate-label').innerHTML = `aggregate push: <strong>${avg.toFixed(2)}</strong> — ${lvl}`;
+}
+function deleteBeat(i) {
+  beats.splice(i, 1);
+  renderBeats();
 }
 
 function addBeat() {

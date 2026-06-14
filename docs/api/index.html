@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananke — API Reference</title>
+<meta name="description" content="API reference for @its-not-rocket-science/ananke — exports, stability tiers, and usage examples.">
+<meta property="og:type"         content="website">
+<meta property="og:site_name"    content="Ananke">
+<meta property="og:title"        content="Ananke — API Reference">
+<meta property="og:description"  content="API reference for @its-not-rocket-science/ananke — exports, stability tiers, and usage examples.">
+<meta property="og:image"        content="https://its-not-rocket-science.github.io/ananke/dashboard/ANANKE-social-media-preview.png">
+<meta property="og:url"          content="https://its-not-rocket-science.github.io/ananke/api/">
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="Ananke — API Reference">
+<meta name="twitter:description" content="API reference for @its-not-rocket-science/ananke — exports, stability tiers, and usage examples.">
+<meta name="twitter:image"       content="https://its-not-rocket-science.github.io/ananke/dashboard/ANANKE-social-media-preview.png">
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+  .pkg-hero {
+    background: var(--bg-mid);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .pkg-name {
+    font-family: var(--mono);
+    font-size: 1rem;
+    color: var(--accent);
+    font-weight: 700;
+    flex: 1;
+    min-width: 200px;
+  }
+  .pkg-badges { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .badge {
+    font-family: var(--mono);
+    font-size: .62rem;
+    padding: 2px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .badge-green  { background: rgba(74,222,128,.12); color: var(--live); border: 1px solid rgba(74,222,128,.25); }
+  .badge-yellow { background: rgba(251,191,36,.10); color: var(--accent); border: 1px solid var(--accent-dim); }
+  .badge-blue   { background: rgba(99,102,241,.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,.3); }
+  .badge-grey   { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border); }
+  .install-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: .55rem .85rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin: .5rem 0;
+  }
+  .install-cmd { font-family: var(--mono); font-size: .78rem; color: var(--ring); flex: 1; }
+  .copy-btn {
+    font-family: var(--mono);
+    font-size: .62rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px 8px;
+    flex-shrink: 0;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--ring); }
+
+  .export-table { width: 100%; border-collapse: collapse; font-size: .72rem; }
+  .export-table th {
+    font-family: var(--mono);
+    font-size: .62rem;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    text-align: left;
+    padding: .3rem .5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .export-table td {
+    padding: .3rem .5rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .export-table tr:last-child td { border-bottom: none; }
+  .export-table tr:hover td { background: var(--bg-mid); }
+  .sym { font-family: var(--mono); color: var(--ring); }
+  .tier-chip {
+    font-family: var(--mono);
+    font-size: .58rem;
+    padding: 1px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .t1 { background: rgba(251,191,36,.12); color: var(--accent); border: 1px solid var(--accent-dim); }
+  .t2 { background: var(--build-bg); color: var(--build-c); }
+  .t3 { background: var(--surface-2); color: var(--muted); }
+
+  .type-pill {
+    font-family: var(--mono);
+    font-size: .58rem;
+    padding: 1px 5px;
+    border-radius: 10px;
+    background: rgba(99,102,241,.10);
+    color: #a5b4fc;
+    white-space: nowrap;
+  }
+  .fn-pill {
+    background: rgba(34,211,238,.10);
+    color: var(--ring);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="breadcrumb"><a href="../hub/">Hub</a> / API Reference</div>
+  <h1 class="page-title">API Reference</h1>
+  <p class="page-desc">Exports, stability tiers, and usage examples for <code>@its-not-rocket-science/ananke</code>. The generated TypeDoc reference is built at release time — see links below.</p>
+</header>
+
+<div class="page-main">
+<div class="content-area">
+
+  <!-- Package hero -->
+  <section class="section">
+    <div class="pkg-hero">
+      <div>
+        <div class="pkg-name">@its-not-rocket-science/ananke</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.2rem">Physics-first deterministic simulation engine</div>
+      </div>
+      <div class="pkg-badges">
+        <span class="badge badge-green" id="npm-version-badge">v0.5.0</span>
+        <span class="badge badge-yellow">MIT</span>
+        <span class="badge badge-blue">TypeScript</span>
+        <span class="badge badge-grey">ESM + CJS</span>
+      </div>
+    </div>
+
+    <div style="margin-top:.75rem">
+      <div class="install-block">
+        <span class="install-cmd">npm install @its-not-rocket-science/ananke</span>
+        <button class="copy-btn" onclick="copyInstall(this)">Copy</button>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:.5rem">
+      Current published version: <strong id="npm-live-version">checking…</strong>
+      &nbsp;·&nbsp; <a href="https://www.npmjs.com/package/@its-not-rocket-science/ananke" target="_blank" rel="noopener">View on npm ↗</a>
+      &nbsp;·&nbsp; <a href="https://github.com/its-not-rocket-science/ananke/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG ↗</a>
+    </div>
+  </section>
+
+  <!-- Tier 1 exports -->
+  <section class="section">
+    <h2 class="section-title">Tier 1 — root exports</h2>
+    <p class="note">Import from <code>@its-not-rocket-science/ananke</code>. Breaking changes require a major version bump.</p>
+    <table class="export-table">
+      <thead><tr><th>Symbol</th><th>Kind</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="sym">createWorld</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Create a new world state with a seed and initial entities</td></tr>
+        <tr><td class="sym">stepWorld</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Advance world by one tick, dispatching all queued commands</td></tr>
+        <tr><td class="sym">loadScenario</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Load a pre-built scenario into a world state</td></tr>
+        <tr><td class="sym">validateScenario</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Assert a scenario object conforms to AnankeScenario</td></tr>
+        <tr><td class="sym">replayTo</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Fast-forward a replay to a given tick</td></tr>
+        <tr><td class="sym">serializeReplay / deserializeReplay</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Serialise/deserialise replay records</td></tr>
+        <tr><td class="sym">extractRigSnapshots</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Extract animation rig snapshots from a replay</td></tr>
+        <tr><td class="sym">deriveAnimationHints</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Compute animation hints from a rig snapshot</td></tr>
+        <tr><td class="sym">loadPlugin / installPluginFromRegistry</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Plugin loader API</td></tr>
+        <tr><td class="sym">q / qMul / qDiv / clampQ / mulDiv / sqrtQ</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Fixed-point arithmetic helpers</td></tr>
+        <tr><td class="sym">from / to</td><td><span class="tier-chip t1 fn-pill">fn</span></td><td>Unit conversion (SI ↔ internal scales)</td></tr>
+        <tr><td class="sym">SCALE / G_mps2</td><td><span class="type-pill">const</span></td><td>Scale constants and gravitational acceleration</td></tr>
+        <tr><td class="sym">Entity / WorldState / Command / KernelContext</td><td><span class="type-pill">type</span></td><td>Core simulation types</td></tr>
+        <tr><td class="sym">IndividualAttributes / AnankeScenario / AnankeScenarioEntity</td><td><span class="type-pill">type</span></td><td>Entity definition types</td></tr>
+        <tr><td class="sym">Replay / ReplayFrame / ReplayRecorder / RigSnapshot / AnimationHints</td><td><span class="type-pill">type</span></td><td>Replay and animation types</td></tr>
+        <tr><td class="sym">PluginManifest / PluginHooks / PluginModule / PluginRuntimeApi / LoadedPlugin</td><td><span class="type-pill">type</span></td><td>Plugin system types</td></tr>
+        <tr><td class="sym">Q / I32 / CommandMap / EntitySpec / PluginPermission / PluginHookContext</td><td><span class="type-pill">type</span></td><td>Utility and command types</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Tier 2 exports -->
+  <section class="section">
+    <h2 class="section-title">Tier 2 stable — subpath exports</h2>
+    <p class="note">API-stable within <code>@minor</code>. Breaking changes require a minor bump + CHANGELOG entry. Not re-exported from root.</p>
+    <table class="export-table">
+      <thead><tr><th>Subpath</th><th>Tier</th><th>Key exports</th><th>Coverage</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="sym">/sim/combat</td>
+          <td><span class="tier-chip t2">Tier 2</span></td>
+          <td style="color:var(--muted)">resolveHit · computeWeaponEnergy · CombatResult</td>
+          <td style="color:var(--live);">&gt;95%</td>
+        </tr>
+        <tr>
+          <td class="sym">/sim/disease</td>
+          <td><span class="tier-chip t2">Tier 2</span></td>
+          <td style="color:var(--muted)">exposeToDisease · stepDiseaseForEntity · spreadDisease</td>
+          <td style="color:var(--live);">100%</td>
+        </tr>
+        <tr>
+          <td class="sym">/sim/hazard</td>
+          <td><span class="tier-chip t2">Tier 2</span></td>
+          <td style="color:var(--muted)">computeHazardExposure · deriveHazardEffect · stepHazardZone</td>
+          <td style="color:var(--live);">&gt;95%</td>
+        </tr>
+        <tr>
+          <td class="sym">/session</td>
+          <td><span class="tier-chip t1">Tier 1</span></td>
+          <td style="color:var(--muted)">createSession · runSession · serializeSession · forkSession</td>
+          <td style="color:var(--live);">&gt;90%</td>
+        </tr>
+        <tr>
+          <td class="sym">/units</td>
+          <td><span class="tier-chip t1">Tier 1</span></td>
+          <td style="color:var(--muted)">q · SCALE · from · to — re-exported from root and subpath</td>
+          <td style="color:var(--live);">100%</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Quick start -->
+  <section class="section">
+    <h2 class="section-title">Quick start</h2>
+    <pre class="code-block"><code>import { createWorld, stepWorld, q, SCALE } from "@its-not-rocket-science/ananke";
+
+const world = createWorld({ worldSeed: 42, entities: [] });
+const next  = stepWorld(world, []);
+console.log("tick:", next.tick);</code></pre>
+
+    <pre class="code-block" style="margin-top:.5rem"><code>// Tier 2 combat subpath
+import { resolveHit } from "@its-not-rocket-science/ananke/sim/combat";
+import { exposeToDisease } from "@its-not-rocket-science/ananke/sim/disease";
+import { computeHazardExposure, CAMPFIRE } from "@its-not-rocket-science/ananke/sim/hazard";</code></pre>
+  </section>
+
+  <!-- Generated docs note -->
+  <section class="section">
+    <h2 class="section-title">Full TypeDoc reference</h2>
+    <p class="note">Full symbol-level docs are generated from JSDoc comments at release time via TypeDoc.</p>
+    <ol class="steps">
+      <li>Generate locally: <code>npm run docs:api</code> — writes HTML to <code>docs/api/generated/</code></li>
+      <li>Or browse the source: <a href="https://github.com/its-not-rocket-science/ananke/tree/main/src" target="_blank" rel="noopener">src/ on GitHub ↗</a></li>
+      <li>Read <a href="https://github.com/its-not-rocket-science/ananke/blob/main/STABLE_API.md" target="_blank" rel="noopener">STABLE_API.md ↗</a> for the full stability contract</li>
+    </ol>
+  </section>
+
+</div><!-- .content-area -->
+
+<aside class="sidebar">
+  <section class="section">
+    <h2 class="section-title">Related</h2>
+    <ul class="link-list">
+      <li><a href="../hub/">← Hub</a></li>
+      <li><a href="../conformance/">Conformance</a></li>
+      <li><a href="../data-governance/">Data Governance</a></li>
+      <li><a href="../session/">Session API</a></li>
+      <li><a href="../dashboard/">Validation Dashboard</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">External</h2>
+    <ul class="link-list">
+      <li><a href="https://www.npmjs.com/package/@its-not-rocket-science/ananke" target="_blank" rel="noopener">npm ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG ↗</a></li>
+      <li><a href="https://github.com/its-not-rocket-science/ananke/blob/main/STABLE_API.md" target="_blank" rel="noopener">STABLE_API.md ↗</a></li>
+    </ul>
+  </section>
+  <section class="section">
+    <h2 class="section-title">npm status</h2>
+    <div id="npm-status-panel" style="font-size:.7rem;color:var(--muted)">Checking…</div>
+  </section>
+</aside>
+</div><!-- .page-main -->
+
+<footer>
+  <p>Ananke &middot; MIT licence &middot; <a href="https://github.com/its-not-rocket-science/ananke" target="_blank" rel="noopener">GitHub</a></p>
+  <p><a href="../hub/">← Hub</a></p>
+</footer>
+
+<script>
+function copyInstall(btn) {
+  navigator.clipboard.writeText('npm install @its-not-rocket-science/ananke').then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+  });
+}
+
+// Check live npm version via registry API
+fetch('https://registry.npmjs.org/@its-not-rocket-science%2Fananke/latest', { cache: 'no-store' })
+  .then(r => r.ok ? r.json() : null)
+  .then(data => {
+    if (!data) { throw new Error('registry unavailable'); }
+    const ver = data.version;
+    document.getElementById('npm-live-version').textContent = 'v' + ver;
+    document.getElementById('npm-status-panel').innerHTML =
+      '<span style="color:var(--live)">✓ Published</span><br>' +
+      '<span class="badge badge-green" style="display:inline-block;margin-top:.3rem">v' + ver + '</span><br>' +
+      '<span style="font-size:.65rem;color:var(--muted);margin-top:.3rem;display:block">Latest on npm registry</span>';
+  })
+  .catch(() => {
+    document.getElementById('npm-live-version').textContent = '(offline)';
+    document.getElementById('npm-status-panel').innerHTML =
+      '<span style="color:var(--muted)">Registry unreachable in this browser. Run <code>npm view @its-not-rocket-science/ananke version</code> to check.</span>';
+  });
+</script>
+</body>
+</html>

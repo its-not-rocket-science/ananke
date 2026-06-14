@@ -8,6 +8,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-06-14
+
+### Added
+
+- **STABLE_API.md** — new "Tier-2 stable" section promoting `sim/combat`, `sim/disease`, and `sim/hazard` subpaths to explicit API-stable status (`@minor`-bounded, no breaking changes without a CHANGELOG entry). Includes stable usage examples and a "Path to Tier-1" note.
+- **docs/api/index.html** — new styled API reference landing page: Tier-1/Tier-2 export tables, install CTA with copy button, live npm registry version check, links to TypeDoc generation instructions.
+- **docs/map/index.html** — explanation banner describing the 180-day world simulation; new "Polity Tools" panel for adding custom polities (name, position, colour), linking trade or war routes between any two polities, and clearing custom overlays.
+- **docs/mythology/index.html** — complete JS for chronicle/legend system: `renderChronicle`, `renderLegends`, `addChronicle`, `deleteChronicle`, `promoteToLegend`, `saveChronicle` (localStorage `ananke_chronicles`), `exportChronicle` (JSON download), `importChronicle` (paste JSON), delete and promote buttons per entry.
+
+### Changed
+
+- **docs/conformance/index.html** — combat, disease, and hazard subpaths now shown as "Tier 2 stable ✓" with key exports and coverage detail cards.
+- **docs/editors/scenario-builder.html** — added editor CTA links, Generated TypeScript CTAs (Copy, Download, Save to localStorage, Load), Empirical Reference explanation with 11-dataset dropdown.
+- **docs/data-governance/index.html** — added "What is data governance?" section explaining the three layers: physics provenance, API stability, and release integrity.
+- **docs/world-evolution/index.html** — added "What is world evolution?" section covering Session, Checkpoint, Fork, Diff, and Replay with code references and a typical host workflow walkthrough.
+- **docs/narrative-stress/index.html** — added real-film/book push-scale examples (Gladiator → Dragon Ball Z), completed the beat sequence editor (add + delete beats, live average push display), updated Tier-3 note.
+- **docs/combat/index.html** — added "Your saved archetypes" panel reading `ananke_species`/`ananke_bodyplan` from localStorage; import JSON and clear CTAs; PR contribution instructions.
+- **docs/zoo/index.html** — added three new scenarios (Acid Pool Exposure, Cavalry Charge vs Infantry, Untreated Wound Infection); save/download/import scenario CTAs; contribute sidebar panel.
+- **docs/arena/index.html** — auto-populates fighter selects from saved archetypes; Generate run plan + Execute plan CTAs; import archetype JSON.
+- **docs/environment/index.html** — expanded all five hazard type cards with full effect rows; added three new weather conditions (Hurricane, Extreme Humidity, Rarified Atmosphere); custom hazard creator form (save to localStorage `ananke_hazards`, download `.ts` snippet, import JSON); PR instructions.
+- **docs/epidemiology/index.html** — custom disease profile form (save to `ananke_diseases`, download `.ts` snippet, import JSON) with all DiseaseProfile fields.
+- **docs/economy/index.html** — custom catalogue item form (save to `ananke_items`, download JSON, import JSON).
+- **docs/world-client/index.html** and **docs/world-client/replication-client.html** — added server-requirement banners explaining WebSocket server setup (local `ts-node`, Fly.io/Railway for deployment).
+
 ## [0.5.0] — 2026-04-23
 
 ### Added

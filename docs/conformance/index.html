@@ -131,19 +131,28 @@
     <div class="export-card">
       <span class="export-path">@its-not-rocket-science/ananke/sim/combat</span>
       <span class="export-tier tier-2">Tier 2</span>
-      <span class="export-status" style="color:var(--build-c)">experimental</span>
+      <span class="export-status" style="color:var(--live)">stable ✓</span>
+    </div>
+    <div class="export-card" style="font-size:.65rem;color:var(--muted);padding:.3rem .8rem .3rem 2rem;margin-top:-.35rem">
+      <code>resolveHit · computeWeaponEnergy · CombatResult</code> — full pair-based resolution, >95% coverage
     </div>
     <div class="export-card">
       <span class="export-path">@its-not-rocket-science/ananke/sim/disease</span>
       <span class="export-tier tier-2">Tier 2</span>
-      <span class="export-status" style="color:var(--build-c)">experimental</span>
+      <span class="export-status" style="color:var(--live)">stable ✓</span>
+    </div>
+    <div class="export-card" style="font-size:.65rem;color:var(--muted);padding:.3rem .8rem .3rem 2rem;margin-top:-.35rem">
+      <code>exposeToDisease · stepDiseaseForEntity · spreadDisease</code> — 6 built-in profiles, 100% coverage
     </div>
     <div class="export-card">
       <span class="export-path">@its-not-rocket-science/ananke/sim/hazard</span>
       <span class="export-tier tier-2">Tier 2</span>
-      <span class="export-status" style="color:var(--build-c)">experimental</span>
+      <span class="export-status" style="color:var(--live)">stable ✓</span>
     </div>
-    <p class="note" style="margin-top:0.6rem">Tier 1 exports are covered by the semantic versioning contract — no breaking changes without a major version bump. Tier 2/3 surfaces may change between minor versions. Always check <code>STABLE_API.md</code> before upgrading.</p>
+    <div class="export-card" style="font-size:.65rem;color:var(--muted);padding:.3rem .8rem .3rem 2rem;margin-top:-.35rem">
+      <code>computeHazardExposure · deriveHazardEffect · stepHazardZone</code> — 5 built-in zones, >95% coverage
+    </div>
+    <p class="note" style="margin-top:0.6rem">Tier 1 exports have no breaking changes without a major version bump. <strong>Tier 2 stable</strong> exports are API-stable within <code>@minor</code> — breaking changes require a minor bump + CHANGELOG entry. See <code>STABLE_API.md</code> for the full contract.</p>
   </section>
 
   <!-- Try this -->

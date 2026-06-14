@@ -78,7 +78,6 @@
   <!-- Config form -->
   <section class="section">
     <h2 class="section-title">Run configuration</h2>
-    <div class="preview-badge">static preview</div>
     <div class="two-col">
       <div>
         <div class="form-group">
@@ -97,6 +96,7 @@
             <option>arming_sword</option>
             <option>spear</option>
             <option>halberd</option>
+            <option>None</option>
           </select>
         </div>
       </div>
@@ -117,6 +117,7 @@
             <option>longsword</option>
             <option>dagger</option>
             <option>axe</option>
+            <option>None</option>
           </select>
         </div>
       </div>
@@ -136,8 +137,14 @@
         <input type="number" id="seed-start" value="1" style="width:100%">
       </div>
     </div>
-    <button class="btn-primary" onclick="runArena()">Generate run plan</button>
-    <div class="status-msg" id="arena-status"></div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+      <button class="btn-primary" onclick="generatePlan()">Generate run plan</button>
+      <button class="btn-secondary" id="execute-btn" onclick="executePlan()" style="display:none">Execute plan ▶</button>
+      <button class="btn-secondary" onclick="importArchetypeArena()" style="font-size:.8rem">Import archetype JSON</button>
+      <span style="font-size:.72rem;color:var(--muted)">or load from <a href="../editors/species-forge.html" style="color:var(--accent);text-decoration:none">Species Forge ↗</a></span>
+    </div>
+    <div class="status-msg" id="arena-status" style="margin-top:.4rem"></div>
+    <div id="arena-plan" style="display:none;margin-top:.75rem;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;padding:.65rem .85rem;font-family:var(--mono);font-size:.72rem;color:var(--text)"></div>
   </section>
 
   <!-- Static report preview -->
@@ -225,17 +232,95 @@
 </footer>
 
 <script>
-function runArena() {
+let _savedPlan = null;
+
+function generatePlan() {
   const fA     = document.getElementById('f-a').value;
   const fB     = document.getElementById('f-b').value;
   const wA     = document.getElementById('w-a').value;
   const wB     = document.getElementById('w-b').value;
-  const trials = document.getElementById('trials').value;
-  const seed   = document.getElementById('seed-start').value;
-  const status = document.getElementById('arena-status');
-  status.className = 'status-msg status-info visible';
-  status.textContent = `Plan: ${fA}(${wA}) vs ${fB}(${wB}), ${trials} trials, seeds ${seed}–${parseInt(seed)+parseInt(trials)-1}. Run via: npm run run:validation (arena CLI not yet implemented — use validation.ts as base).`;
+  const trials = parseInt(document.getElementById('trials').value);
+  const seed   = parseInt(document.getElementById('seed-start').value);
+
+  // Check localStorage for saved archetypes
+  const savedSpecies = JSON.parse(localStorage.getItem('ananke_species') || 'null');
+  const savedBodyPlan = JSON.parse(localStorage.getItem('ananke_bodyplan') || 'null');
+  const savedNote = savedSpecies
+    ? ` (custom species "${savedSpecies.name || 'unknown'}" in localStorage — reference it in your runner)`
+    : savedBodyPlan
+    ? ` (custom body plan "${savedBodyPlan.name || 'unknown'}" in localStorage — reference it in your runner)`
+    : '';
+
+  _savedPlan = { fA, fB, wA, wB, trials, seed, savedNote };
+
+  const planEl = document.getElementById('arena-plan');
+  planEl.style.display = 'block';
+  planEl.innerHTML = [
+    '<span style="color:var(--muted)">// Arena run plan</span>',
+    `<span style="color:var(--live)">Fighter A:</span> ${fA} + ${wA}`,
+    `<span style="color:var(--warn)">Fighter B:</span> ${fB} + ${wB}`,
+    `<span style="color:var(--muted)">Trials:</span> ${trials}  |  <span style="color:var(--muted)">Seeds:</span> ${seed}–${seed + trials - 1}`,
+    savedNote ? `<span style="color:var(--ring)">Note:</span>${savedNote}` : '',
+    '',
+    '<span style="color:var(--muted)">// To execute locally:</span>',
+    `<span style="color:var(--accent)">npm run run:validation</span>  <span style="color:var(--muted)"># closest existing runner</span>`,
+    '<span style="color:var(--muted)">// Or author a custom runner in tools/ using:</span>',
+    `import { createSession, runSession } from '@its-not-rocket-science/ananke';`,
+    `for (let s = ${seed}; s < ${seed + trials}; s++) {`,
+    `  const session = createSession({ worldSeed: s, archetype_a: '${fA}', weapon_a: '${wA}', archetype_b: '${fB}', weapon_b: '${wB}' });`,
+    `  const result = runSession(session);`,
+    `  // collect result.winner, result.finalTick`,
+    `}`,
+  ].filter(Boolean).join('\n');
+
+  document.getElementById('execute-btn').style.display = 'inline-block';
+  document.getElementById('arena-status').className = 'status-msg status-info visible';
+  document.getElementById('arena-status').textContent = 'Run plan ready. Click "Execute plan" to run in the browser (static preview only), or copy the snippet above to a local runner.';
 }
+
+function executePlan() {
+  if (!_savedPlan) return;
+  const status = document.getElementById('arena-status');
+  status.className = 'status-msg status-warn visible';
+  status.textContent = 'Browser execution not available — the full Ananke engine runs on Node.js. Copy the generated snippet to tools/ and run: npx ts-node tools/my-arena.ts';
+}
+
+function importArchetypeArena() {
+  const json = prompt('Paste archetype JSON (species or body plan) to add to Fighter A/B selects:');
+  if (!json) return;
+  try {
+    const obj = JSON.parse(json);
+    const name = obj.name || obj.id || 'custom';
+    ['f-a','f-b'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel.querySelector('[value="' + name + '"]')) {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name + ' (imported)';
+        sel.appendChild(opt);
+      }
+    });
+    if (obj.cognition || obj.physical) localStorage.setItem('ananke_species', json);
+    else localStorage.setItem('ananke_bodyplan', json);
+  } catch(e) { alert('Invalid JSON: ' + e.message); }
+}
+
+// Populate selects with persisted archetypes on load
+(function() {
+  const s = JSON.parse(localStorage.getItem('ananke_species') || 'null');
+  const b = JSON.parse(localStorage.getItem('ananke_bodyplan') || 'null');
+  [s, b].forEach(obj => {
+    if (!obj) return;
+    const name = obj.name || obj.id || 'saved';
+    ['f-a','f-b'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel && !sel.querySelector('[value="' + name + '"]')) {
+        const opt = document.createElement('option');
+        opt.value = name; opt.textContent = name + ' (saved)';
+        sel.appendChild(opt);
+      }
+    });
+  });
+})();
 </script>
 </body>
 </html>

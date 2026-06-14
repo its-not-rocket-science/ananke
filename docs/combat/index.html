@@ -129,10 +129,23 @@
     <p class="note" style="margin-top:0.65rem">Each tick advances all entities simultaneously. There is no turn order — simultaneous resolution is inherent to the fixed-point tick model at 20 Hz by default. Adjust <code>tickRateHz</code> in session config for tactical vs real-time resolution.</p>
   </section>
 
+  <!-- Saved archetypes from localStorage -->
+  <section class="section">
+    <h2 class="section-title">Your saved archetypes</h2>
+    <p class="note" style="margin-bottom:.5rem">Archetypes created in the <a href="../editors/body-plan-editor.html" style="color:var(--accent);text-decoration:none">Body Plan Editor</a> or <a href="../editors/species-forge.html" style="color:var(--accent);text-decoration:none">Species Forge</a> are persisted to <code>localStorage</code> and shown here. Import a saved archetype to inspect its combat parameters, or create a new one.</p>
+    <div id="saved-archetypes-panel" style="margin-bottom:.6rem"></div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <a href="../editors/body-plan-editor.html" class="archetype-btn" style="text-decoration:none;padding:.4rem .75rem;font-size:.75rem;display:inline-block">+ Body Plan Editor</a>
+      <a href="../editors/species-forge.html" class="archetype-btn" style="text-decoration:none;padding:.4rem .75rem;font-size:.75rem;display:inline-block">+ Species Forge</a>
+      <button class="archetype-btn" onclick="importArchetypeJson()" style="padding:.4rem .75rem;font-size:.75rem">Import JSON</button>
+      <button class="archetype-btn" onclick="clearSavedArchetypes()" style="padding:.4rem .75rem;font-size:.75rem;color:var(--fail)">Clear saved</button>
+    </div>
+    <p class="note" style="margin-top:.4rem;font-size:.7rem">To add a new archetype to the codebase: export as JSON from Species Forge, add it to <code>src/archetypes.ts</code>, write a test in <code>test/archetypes.test.ts</code>, then <a href="https://github.com/its-not-rocket-science/ananke/pulls" target="_blank" rel="noopener" style="color:var(--accent)">open a pull request ↗</a> with the title <code>feat: add [NAME] archetype</code>.</p>
+  </section>
+
   <!-- Explorer -->
   <section class="section">
-    <h2 class="section-title">Archetype explorer — static preview</h2>
-    <div class="preview-badge">static preview</div>
+    <h2 class="section-title">Archetype explorer — built-in profiles</h2>
     <p class="note" style="margin-bottom:0.75rem">Select an archetype to view typical combat parameters. Values derived from built-in archetypes. For a live 1v1 duel, see the <a href="../playground/" style="color:var(--accent);text-decoration:none">Playground →</a></p>
 
     <div class="archetype-grid">
@@ -227,13 +240,61 @@ function selectArchetype(id, el) {
   el.classList.add('selected');
   const a = ARCHETYPES[id];
   ['strength','speed','skill','armour'].forEach(k => {
-    const v = k === 'armour' ? a[k] : a[k];
-    document.getElementById('bar-' + k).style.width = v + '%';
-    document.getElementById('val-' + k).textContent = 'q(' + (v/100).toFixed(2) + ')';
+    document.getElementById('bar-' + k).style.width = a[k] + '%';
+    document.getElementById('val-' + k).textContent = 'q(' + (a[k]/100).toFixed(2) + ')';
   });
   const tbody = document.getElementById('archetype-table');
   tbody.innerHTML = a.rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
 }
+
+function renderSavedArchetypes() {
+  const panel = document.getElementById('saved-archetypes-panel');
+  const species = JSON.parse(localStorage.getItem('ananke_species') || 'null');
+  const bodyPlan = JSON.parse(localStorage.getItem('ananke_bodyplan') || 'null');
+  const items = [];
+  if (species) items.push({ label: species.name || 'Saved Species', src: 'Species Forge', data: species });
+  if (bodyPlan) items.push({ label: bodyPlan.name || 'Saved Body Plan', src: 'Body Plan Editor', data: bodyPlan });
+  if (items.length === 0) {
+    panel.innerHTML = '<p style="font-size:.75rem;color:var(--muted);font-family:var(--mono)">No saved archetypes in localStorage. Create one in Body Plan Editor or Species Forge.</p>';
+    return;
+  }
+  panel.innerHTML = items.map((it, i) => `
+    <div style="display:flex;align-items:center;gap:.6rem;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;padding:.4rem .7rem;margin-bottom:.3rem">
+      <span style="font-family:var(--mono);font-size:.75rem;color:var(--text);flex:1">${it.label}</span>
+      <span style="font-family:var(--mono);font-size:.62rem;color:var(--muted)">${it.src}</span>
+      <button onclick='showSavedArchetype(${i})' style="font-family:var(--mono);font-size:.68rem;background:var(--accent-glow);border:1px solid var(--accent-dim);border-radius:3px;color:var(--accent);cursor:pointer;padding:.15rem .5rem">Inspect</button>
+    </div>`).join('');
+  window._savedArchetypeItems = items;
+}
+
+function showSavedArchetype(i) {
+  const item = (window._savedArchetypeItems || [])[i];
+  if (!item) return;
+  alert(JSON.stringify(item.data, null, 2));
+}
+
+function importArchetypeJson() {
+  const json = prompt('Paste archetype JSON (species or body plan):');
+  if (!json) return;
+  try {
+    const obj = JSON.parse(json);
+    if (obj.cognition || obj.physical) {
+      localStorage.setItem('ananke_species', json);
+    } else {
+      localStorage.setItem('ananke_bodyplan', json);
+    }
+    renderSavedArchetypes();
+  } catch(e) { alert('Invalid JSON: ' + e.message); }
+}
+
+function clearSavedArchetypes() {
+  if (!confirm('Clear all saved archetypes from localStorage?')) return;
+  localStorage.removeItem('ananke_species');
+  localStorage.removeItem('ananke_bodyplan');
+  renderSavedArchetypes();
+}
+
+renderSavedArchetypes();
 </script>
 </body>
 </html>

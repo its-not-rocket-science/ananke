@@ -80,12 +80,17 @@
       <div class="weather-card" onclick="setWeather('fog',this)"><div class="wc-icon">🌫</div><div class="wc-name">Dense Fog</div><div class="wc-temp">+5°C</div></div>
       <div class="weather-card" onclick="setWeather('blizzard',this)"><div class="wc-icon">❄</div><div class="wc-name">Blizzard</div><div class="wc-temp">−15°C</div></div>
       <div class="weather-card" onclick="setWeather('extreme_heat',this)"><div class="wc-icon">🔆</div><div class="wc-name">Extreme Heat</div><div class="wc-temp">+42°C</div></div>
+      <div class="weather-card" onclick="setWeather('hurricane',this)"><div class="wc-icon">🌀</div><div class="wc-name">Hurricane</div><div class="wc-temp">+22°C</div></div>
+      <div class="weather-card" onclick="setWeather('extreme_humidity',this)"><div class="wc-icon">💧</div><div class="wc-name">Extreme Humidity</div><div class="wc-temp">+35°C</div></div>
+      <div class="weather-card" onclick="setWeather('rarified_atmosphere',this)"><div class="wc-icon">⛰</div><div class="wc-name">Rarified Atmosphere</div><div class="wc-temp">−5°C</div></div>
     </div>
     <div id="weather-effects">
       <div class="effect-row"><span class="effect-key">thermalDelta_Q/s</span><div class="effect-bar"><div class="effect-fill" id="ef-thermal" style="width:20%;background:var(--ring)"></div></div><span class="effect-val" id="ev-thermal">−200</span></div>
       <div class="effect-row"><span class="effect-key">fatigueInc_Q/s</span><div class="effect-bar"><div class="effect-fill" id="ef-fatigue" style="width:10%;background:var(--warn)"></div></div><span class="effect-val" id="ev-fatigue">q(0.001)</span></div>
       <div class="effect-row"><span class="effect-key">sensorPenalty_Q</span><div class="effect-bar"><div class="effect-fill" id="ef-sensor" style="width:30%;background:var(--muted)"></div></div><span class="effect-val" id="ev-sensor">q(0.30)</span></div>
     </div>
+    <p id="weather-note" class="note" style="margin-top:.5rem;font-size:.72rem">Diffuse cloud cover. Slight temperature drop; minor sensor attenuation from reduced contrast.</p>
+    <p class="note" style="margin-top:.35rem;font-size:.7rem">To add a custom weather condition: define it in <code>src/sim/weather.ts</code>, write a test in <code>test/sim/weather.test.ts</code>, then <a href="https://github.com/its-not-rocket-science/ananke/pulls" target="_blank" rel="noopener" style="color:var(--accent)">open a pull request ↗</a> with the title <code>feat: add [NAME] weather condition</code>.</p>
   </section>
 
   <!-- Hazard zone browser -->
@@ -94,23 +99,86 @@
     <div id="hazard-cards">
       <div class="hazard-card active" onclick="selectHazard('fire',this)">
         <div class="hazard-header"><span class="hazard-icon">🔥</span><span class="hazard-name">CAMPFIRE</span><span class="hazard-type">fire · 3 m · 1 h</span></div>
-        <div class="effect-row"><span class="effect-key">fatigue/s</span><div class="effect-bar"><div class="effect-fill" style="width:40%;background:var(--warn)"></div></div><span class="effect-val">q(0.020)</span></div>
-        <div class="effect-row"><span class="effect-key">thermalDelta_Q</span><div class="effect-bar"><div class="effect-fill" style="width:50%;background:var(--fail)"></div></div><span class="effect-val">+1000 ≈ +5.4°C</span></div>
-        <div class="effect-row"><span class="effect-key">surfaceDamage/s</span><div class="effect-bar"><div class="effect-fill" style="width:10%;background:var(--fail)"></div></div><span class="effect-val">q(0.005)</span></div>
+        <div class="effect-row"><span class="effect-key">fatigueInc_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:40%;background:var(--warn)"></div></div><span class="effect-val">q(0.020)</span></div>
+        <div class="effect-row"><span class="effect-key">thermalDelta_Q</span><div class="effect-bar"><div class="effect-fill" style="width:50%;background:var(--fail)"></div></div><span class="effect-val">+1000 ≈ +5.4°C/s at full</span></div>
+        <div class="effect-row"><span class="effect-key">surfaceDamageInc_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:10%;background:var(--fail)"></div></div><span class="effect-val">q(0.005)</span></div>
+        <div class="effect-row"><span class="effect-key">diseaseExposureId</span><div class="effect-bar"></div><span class="effect-val" style="color:var(--muted)">none</span></div>
+        <p style="font-size:.7rem;color:var(--muted);margin-top:.35rem">Campfire-sized heat source. At full intensity (centre), drains 2% fatigue per second, pushes surface temperature +5.4°C/s, and inflicts minor skin damage. Effects fall off linearly to zero at radius edge.</p>
       </div>
       <div class="hazard-card" onclick="selectHazard('radiation',this)">
         <div class="hazard-header"><span class="hazard-icon">☢</span><span class="hazard-name">RADIATION_ZONE</span><span class="hazard-type">radiation · 50 m · permanent</span></div>
+        <div class="effect-row"><span class="effect-key">fatigueInc_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:0%;background:var(--warn)"></div></div><span class="effect-val">none</span></div>
+        <div class="effect-row"><span class="effect-key">radiationDose_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:20%;background:#a855f7"></div></div><span class="effect-val">q(0.010)</span></div>
+        <div class="effect-row"><span class="effect-key">thermalDelta_Q</span><div class="effect-bar"><div class="effect-fill" style="width:0%;background:var(--ring)"></div></div><span class="effect-val">none</span></div>
+        <div class="effect-row"><span class="effect-key">diseaseExposureId</span><div class="effect-bar"></div><span class="effect-val" style="color:var(--muted)">none</span></div>
+        <p style="font-size:.7rem;color:var(--muted);margin-top:.35rem">Permanent contaminated zone (e.g. reactor core, ancient curse site). Accumulates radiation dose at 1% Q/s at centre. Host applies cumulative dose effects (nausea, fatigue, long-term organ damage) separately. No thermal or immediate surface damage.</p>
       </div>
       <div class="hazard-card" onclick="selectHazard('gas',this)">
         <div class="hazard-header"><span class="hazard-icon">☁</span><span class="hazard-name">MUSTARD_GAS</span><span class="hazard-type">toxic_gas · 20 m · 30 min</span></div>
+        <div class="effect-row"><span class="effect-key">fatigueInc_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:20%;background:var(--warn)"></div></div><span class="effect-val">q(0.010)</span></div>
+        <div class="effect-row"><span class="effect-key">thermalDelta_Q</span><div class="effect-bar"><div class="effect-fill" style="width:0%;background:var(--ring)"></div></div><span class="effect-val">none</span></div>
+        <div class="effect-row"><span class="effect-key">radiationDose_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:0%;background:#a855f7"></div></div><span class="effect-val">none</span></div>
+        <div class="effect-row"><span class="effect-key">diseaseExposureId</span><div class="effect-bar"></div><span class="effect-val" style="color:var(--ring)">marsh_fever</span></div>
+        <p style="font-size:.7rem;color:var(--muted);margin-top:.35rem">Heavier-than-air toxic gas cloud. Drains fatigue at 1%/s at centre, falls off with distance. Critically: exposes entities to <code>marsh_fever</code> disease — entities inside the zone on each tick have a chance to contract it via <code>deriveHazardEffect.diseaseExposureId</code>. Duration 30 min then dispersed.</p>
       </div>
       <div class="hazard-card" onclick="selectHazard('acid',this)">
         <div class="hazard-header"><span class="hazard-icon">⚗</span><span class="hazard-name">ACID_POOL</span><span class="hazard-type">acid · 2 m · 2 h</span></div>
+        <div class="effect-row"><span class="effect-key">fatigueInc_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:10%;background:var(--warn)"></div></div><span class="effect-val">q(0.005)</span></div>
+        <div class="effect-row"><span class="effect-key">surfaceDamageInc_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:30%;background:var(--fail)"></div></div><span class="effect-val">q(0.015)</span></div>
+        <div class="effect-row"><span class="effect-key">thermalDelta_Q</span><div class="effect-bar"><div class="effect-fill" style="width:0%;background:var(--ring)"></div></div><span class="effect-val">none</span></div>
+        <div class="effect-row"><span class="effect-key">diseaseExposureId</span><div class="effect-bar"></div><span class="effect-val" style="color:var(--muted)">none</span></div>
+        <p style="font-size:.7rem;color:var(--muted);margin-top:.35rem">Small caustic pool (industrial spill, alchemist's lab, volcanic acid lake). Primarily causes surface damage (1.5%/s at full) — much higher than campfire. Also drains fatigue from chemical burn pain. Very small 2 m radius: step in and step out quickly or suffer permanent scarring.</p>
       </div>
       <div class="hazard-card" onclick="selectHazard('cold',this)">
         <div class="hazard-header"><span class="hazard-icon">🌨</span><span class="hazard-name">BLIZZARD_ZONE</span><span class="hazard-type">extreme_cold · 100 m · 6 h</span></div>
+        <div class="effect-row"><span class="effect-key">fatigueInc_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:16%;background:var(--warn)"></div></div><span class="effect-val">q(0.008)</span></div>
+        <div class="effect-row"><span class="effect-key">thermalDelta_Q</span><div class="effect-bar"><div class="effect-fill" style="width:40%;background:var(--ring)"></div></div><span class="effect-val">−2000 ≈ −10.8°C/s at full</span></div>
+        <div class="effect-row"><span class="effect-key">surfaceDamageInc_Q/s</span><div class="effect-bar"><div class="effect-fill" style="width:0%;background:var(--fail)"></div></div><span class="effect-val">none</span></div>
+        <div class="effect-row"><span class="effect-key">diseaseExposureId</span><div class="effect-bar"></div><span class="effect-val" style="color:var(--muted)">none</span></div>
+        <p style="font-size:.7rem;color:var(--muted);margin-top:.35rem">Mountain blizzard or arctic exposure. Large 100 m radius represents the storm envelope. Rapidly drops body temperature: −10.8°C/s at centre pushes entities into hypothermia within seconds unless clothed. Fatigue drain models shivering and wind-chill exertion. 6-hour duration covers a full storm event.</p>
       </div>
     </div>
+  </section>
+
+  <!-- Custom hazard CTA -->
+  <section class="section">
+    <h2 class="section-title">Create / import custom hazards</h2>
+    <p class="note">Define a custom hazard zone and save it to <code>localStorage</code>, or export it as a TypeScript snippet to add to <code>src/sim/hazard.ts</code> via pull request.</p>
+    <div class="two-col" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem">
+      <div class="form-group">
+        <label>Hazard name (const name)</label>
+        <input type="text" id="hz-name" value="MY_HAZARD" style="width:100%;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem;padding:.3rem .5rem">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="hz-type" style="width:100%;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem;padding:.3rem .5rem">
+          <option>fire</option><option>radiation</option><option>toxic_gas</option><option>acid</option><option>extreme_cold</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Radius (m)</label>
+        <input type="number" id="hz-radius" value="10" min="1" style="width:100%;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem;padding:.3rem .5rem">
+      </div>
+      <div class="form-group">
+        <label>Duration (s, −1 = permanent)</label>
+        <input type="number" id="hz-duration" value="3600" style="width:100%;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem;padding:.3rem .5rem">
+      </div>
+      <div class="form-group">
+        <label>Intensity (0.0–1.0)</label>
+        <input type="number" id="hz-intensity" value="1.0" min="0" max="1" step="0.1" style="width:100%;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem;padding:.3rem .5rem">
+      </div>
+      <div class="form-group">
+        <label>Disease exposure ID (optional)</label>
+        <input type="text" id="hz-disease" placeholder="e.g. marsh_fever" style="width:100%;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:var(--mono);font-size:.8rem;padding:.3rem .5rem">
+      </div>
+    </div>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem">
+      <button class="btn-secondary" onclick="saveHazard()" style="font-size:.75rem;padding:.3rem .75rem;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer">Save to localStorage</button>
+      <button class="btn-secondary" onclick="downloadHazard()" style="font-size:.75rem;padding:.3rem .75rem;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer">Download .ts snippet</button>
+      <button class="btn-secondary" onclick="importHazard()" style="font-size:.75rem;padding:.3rem .75rem;background:var(--bg-mid);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer">Import JSON</button>
+      <span id="hz-status" style="font-size:.72rem;color:var(--live);align-self:center"></span>
+    </div>
+    <p class="note">To add a custom hazard to the codebase: download the <code>.ts snippet</code>, add it to <code>src/sim/hazard.ts</code>, write a test in <code>test/sim/hazard.test.ts</code>, then <a href="https://github.com/its-not-rocket-science/ananke/pulls" target="_blank" rel="noopener" style="color:var(--accent)">open a pull request ↗</a> with the title <code>feat: add [NAME] hazard profile</code>.</p>
   </section>
 
   <!-- Try this -->
@@ -154,12 +222,15 @@
 </footer>
 <script>
 const WEATHER = {
-  clear:       { thermal: 5,  fatigue: 0.000, sensor: 0,    thermalStr: '+500', fatigueStr: 'none', sensorStr: 'none' },
-  overcast:    { thermal: -2, fatigue: 0.001, sensor: 0.10, thermalStr: '−200', fatigueStr: 'q(0.001)', sensorStr: 'q(0.10)' },
-  rain:        { thermal:-5,  fatigue: 0.003, sensor: 0.25, thermalStr: '−500', fatigueStr: 'q(0.003)', sensorStr: 'q(0.25)' },
-  fog:         { thermal:-2,  fatigue: 0.001, sensor: 0.55, thermalStr: '−200', fatigueStr: 'q(0.001)', sensorStr: 'q(0.55)' },
-  blizzard:    { thermal:-20, fatigue: 0.015, sensor: 0.70, thermalStr: '−2000', fatigueStr: 'q(0.015)', sensorStr: 'q(0.70)' },
-  extreme_heat:{ thermal: 20, fatigue: 0.012, sensor: 0.20, thermalStr: '+2000', fatigueStr: 'q(0.012)', sensorStr: 'q(0.20)' },
+  clear:              { thermal: 5,  fatigue: 0.000, sensor: 0,    thermalStr: '+500',  fatigueStr: 'none',      sensorStr: 'none',     note: 'Baseline sunny day. Mild thermal gain from solar radiation; no fatigue or sensor penalty.' },
+  overcast:           { thermal:-2,  fatigue: 0.001, sensor: 0.10, thermalStr: '−200',  fatigueStr: 'q(0.001)', sensorStr: 'q(0.10)',  note: 'Diffuse cloud cover. Slight temperature drop; minor sensor attenuation from reduced contrast.' },
+  rain:               { thermal:-5,  fatigue: 0.003, sensor: 0.25, thermalStr: '−500',  fatigueStr: 'q(0.003)', sensorStr: 'q(0.25)',  note: 'Heavy rainfall. Evaporative cooling drops surface temp. Fatigue from wet clothing and reduced grip. Significant visual and acoustic sensor penalty.' },
+  fog:                { thermal:-2,  fatigue: 0.001, sensor: 0.55, thermalStr: '−200',  fatigueStr: 'q(0.001)', sensorStr: 'q(0.55)',  note: 'Dense ground fog. Primarily a sensor hazard: visibility drops to <20 m equivalent, suppressing ranged weapons and scouting. Mild cold and damp.' },
+  blizzard:           { thermal:-20, fatigue: 0.015, sensor: 0.70, thermalStr: '−2000', fatigueStr: 'q(0.015)', sensorStr: 'q(0.70)',  note: 'Arctic blizzard. Fastest thermal drain of all weather conditions. Whiteout conditions make sensor score near-null. Fatigue from constant shivering and wind resistance.' },
+  extreme_heat:       { thermal: 20, fatigue: 0.012, sensor: 0.20, thermalStr: '+2000', fatigueStr: 'q(0.012)', sensorStr: 'q(0.20)',  note: 'Desert sun or volcanic proximity. Rapid core temperature rise risks heat stroke. Fatigue from sweating and cardiovascular strain. Light shimmer penalises distant observation.' },
+  hurricane:          { thermal:-3,  fatigue: 0.018, sensor: 0.80, thermalStr: '−300',  fatigueStr: 'q(0.018)', sensorStr: 'q(0.80)',  note: 'Category 4–5 tropical hurricane. Highest fatigue drain of all conditions: constant wind resistance (up to 70 m/s) costs enormous energy to move, stand, or fight. Near-total sensor blackout. Projectiles unusable. Movement speed halved.' },
+  extreme_humidity:   { thermal: 8,  fatigue: 0.009, sensor: 0.15, thermalStr: '+800',  fatigueStr: 'q(0.009)', sensorStr: 'q(0.15)',  note: 'Tropical wet season or jungle floor. High humidity suppresses evaporative cooling: despite moderate temperature, heat dissipation is impaired and fatigue accumulates as if in hotter conditions. Disease transmission rates increase (see Epidemiology).' },
+  rarified_atmosphere:{ thermal:-8,  fatigue: 0.014, sensor: 0.05, thermalStr: '−800',  fatigueStr: 'q(0.014)', sensorStr: 'q(0.05)',  note: 'High-altitude mountain pass or thin-atmosphere environment (>4000 m). Fatigue accumulates rapidly due to oxygen deficit — exertion that would cost q(0.005)/s at sea level costs q(0.014)/s here. Mild temperature drop. Sensor penalty minimal (clear air), but entities with low endurance become exhausted within minutes.' },
 };
 function setWeather(id, el) {
   document.querySelectorAll('.weather-card').forEach(c => c.classList.remove('active'));
@@ -173,10 +244,54 @@ function setWeather(id, el) {
   document.getElementById('ev-fatigue').textContent  = w.fatigueStr;
   document.getElementById('ef-sensor').style.width   = (w.sensor * 100) + '%';
   document.getElementById('ev-sensor').textContent   = w.sensor > 0 ? 'q(' + w.sensor.toFixed(2) + ')' : 'none';
+  const noteEl = document.getElementById('weather-note');
+  if (noteEl) noteEl.textContent = w.note || '';
 }
 function selectHazard(id, el) {
   document.querySelectorAll('.hazard-card').forEach(c => c.classList.remove('active'));
   el.classList.add('active');
+}
+function saveHazard() {
+  const h = buildHazardObj();
+  const saved = JSON.parse(localStorage.getItem('ananke_hazards') || '[]');
+  saved.push(h);
+  localStorage.setItem('ananke_hazards', JSON.stringify(saved));
+  document.getElementById('hz-status').textContent = 'Saved (' + saved.length + ' total)';
+  setTimeout(() => { document.getElementById('hz-status').textContent = ''; }, 2500);
+}
+function buildHazardObj() {
+  return {
+    id: document.getElementById('hz-name').value.trim().toLowerCase().replace(/\s+/g,'_') || 'custom_hazard',
+    name: document.getElementById('hz-name').value.trim() || 'Custom Hazard',
+    type: document.getElementById('hz-type').value,
+    radius_m: parseFloat(document.getElementById('hz-radius').value) || 10,
+    durationSeconds: parseFloat(document.getElementById('hz-duration').value) || 3600,
+    intensity: parseFloat(document.getElementById('hz-intensity').value) || 1.0,
+    diseaseExposureId: document.getElementById('hz-disease').value.trim() || null,
+  };
+}
+function downloadHazard() {
+  const h = buildHazardObj();
+  const intQ = v => 'q(' + v.toFixed(3) + ')';
+  const diseaseField = h.diseaseExposureId ? `\n  diseaseExposureId: '${h.diseaseExposureId}',` : '';
+  const snippet = `// Add to src/sim/hazard.ts\nexport const ${h.name.toUpperCase().replace(/\s+/g,'_')}: HazardZone = {\n  id: '${h.id}',\n  type: '${h.type}',\n  x_Sm: 0,\n  y_Sm: 0,\n  radius_Sm: ${Math.round(h.radius_m * 10000)},\n  intensity_Q: ${Math.round(h.intensity * 10000)},\n  durationSeconds: ${h.durationSeconds},${diseaseField}\n};\n`;
+  const blob = new Blob([snippet], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = h.id + '.ts.snippet'; a.click();
+}
+function importHazard() {
+  const json = prompt('Paste hazard JSON:');
+  if (!json) return;
+  try {
+    const h = JSON.parse(json);
+    document.getElementById('hz-name').value     = h.name || h.id || '';
+    document.getElementById('hz-type').value     = h.type || 'fire';
+    document.getElementById('hz-radius').value   = h.radius_m || (h.radius_Sm ? h.radius_Sm / 10000 : 10);
+    document.getElementById('hz-duration').value = h.durationSeconds != null ? h.durationSeconds : 3600;
+    document.getElementById('hz-intensity').value= h.intensity != null ? h.intensity : (h.intensity_Q ? h.intensity_Q / 10000 : 1.0);
+    document.getElementById('hz-disease').value  = h.diseaseExposureId || '';
+    document.getElementById('hz-status').textContent = 'Imported.';
+    setTimeout(() => { document.getElementById('hz-status').textContent = ''; }, 2000);
+  } catch(e) { alert('Invalid JSON: ' + e.message); }
 }
 </script>
 </body>

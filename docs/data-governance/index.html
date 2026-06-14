@@ -74,6 +74,19 @@
 <div class="page-main">
 <div class="content-area">
 
+  <!-- What is data governance -->
+  <section class="section">
+    <h2 class="section-title">What is data governance?</h2>
+    <p class="note">Ananke models physics with numbers drawn from the real world — bone fracture thresholds, fire heat flux, plague mortality rates. <strong>Data governance</strong> is the system that tracks where those numbers came from, how well they've been validated, and how trustworthy each API surface is as the library evolves.</p>
+    <p class="note" style="margin-top:.4rem">Three layers work together:</p>
+    <ul class="steps" style="margin-top:.3rem">
+      <li><strong>Physics provenance</strong> — every physics constant in <code>src/</code> is traceable to a peer-reviewed dataset or engineering standard. Validation reports in <code>docs/validation-*.md</code> document each source and the expected range the simulation must hit.</li>
+      <li><strong>API stability</strong> — <code>STABLE_API.md</code> classifies every exported symbol as Tier 1 (stable, semver-guarded), Tier 2 (experimental, may change without major bump), or Tier 3 (planned, not yet implemented). Hosts can decide what risk level they accept.</li>
+      <li><strong>Release integrity</strong> — each npm publish is signed via GitHub Actions OIDC provenance attestation. The <code>CHANGELOG.md</code> records every change. Content packs carry <code>provenance.sha256</code> checksums for tamper detection.</li>
+    </ul>
+    <p class="note" style="margin-top:.4rem">Use the provenance checklist below to assess readiness of any release before integrating it into a production pipeline.</p>
+  </section>
+
   <!-- What this uses -->
   <section class="section">
     <h2 class="section-title">What this uses</h2>

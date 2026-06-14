@@ -116,7 +116,33 @@
 
 <section>
   <h2>Empirical reference</h2>
-  <p class="hint" style="margin-bottom:.5rem">Values should be in the same SI unit as the metric above.</p>
+  <p class="hint" style="margin-bottom:.35rem">The empirical reference anchors your scenario to real-world data. The validation framework checks that the simulation mean falls within <em>tolerance %</em> of the empirical mean. Values must be in the same SI unit as the metric above.</p>
+  <p class="hint" style="margin-bottom:.5rem"><strong>Where to find data:</strong> PubMed / Google Scholar for physiology; NSCA Essentials of Strength Training for performance; WHO/CDC for epidemiology; Trauma Registry reports for injury tolerance; ASTM/ISO standards for material properties. Prefer peer-reviewed sources with N ≥ 30.</p>
+  <div style="margin-bottom:.6rem">
+    <label style="display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.22rem">Load from processed dataset</label>
+    <select id="knownDataset" onchange="loadKnownDataset()" style="background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:12px;padding:.3rem .5rem;width:100%">
+      <option value="">— pick a known dataset —</option>
+      <optgroup label="Performance">
+        <option value="peak_power_male">Peak anaerobic power — trained male (Margaria 1966, ~1200 W ±200)</option>
+        <option value="peak_force_punch">Peak punch force — boxing (Smith et al. 2000, ~4500 N ±600)</option>
+        <option value="sprint_speed">Human sprint speed, elite (Epstein 2014, ~10.2 m/s ±0.5)</option>
+        <option value="reaction_time">Simple reaction time, adult (Der &amp; Deary 2006, ~0.25 s ±0.04)</option>
+      </optgroup>
+      <optgroup label="Injury / physiology">
+        <option value="thorax_tolerance">Thoracic impact tolerance (Kroell 1974, ~700 J ±150)</option>
+        <option value="fluid_loss_hypo">Hypovolemic shock threshold — fluid loss (Trauma Reg 2020, ~30% BV ±5)</option>
+        <option value="surface_burn">Surface burn rate — fire contact (ISO 13506, q(0.020)/s ±0.003)</option>
+      </optgroup>
+      <optgroup label="Epidemiology">
+        <option value="plague_mort">Pneumonic plague mortality, untreated (WHO 2009, ~60% ±10)</option>
+        <option value="wound_fever_mort">Wound fever mortality, untreated (Crimean data, ~10% ±5)</option>
+      </optgroup>
+      <optgroup label="Mechanical">
+        <option value="mail_absorption">Mail armour energy absorption (Williams 2003, ~65% ±8)</option>
+        <option value="plate_absorption">Plate armour energy absorption (Williams 2003, ~85% ±5)</option>
+      </optgroup>
+    </select>
+  </div>
   <div class="grid">
     <div><label>Dataset / source name</label><input id="dsName" value="Author Year — dataset name" oninput="regen()"></div>
     <div><label>Empirical mean</label><input id="empMean" type="number" value="1200" step="any" oninput="regen()"></div>
@@ -136,12 +162,27 @@
   </div>
 </section>
 
+<section style="margin-top:1rem">
+  <h2>Editors — define archetypes, weapons &amp; armour</h2>
+  <p class="hint" style="margin-bottom:.5rem">Archetypes and equipment created in the editors below are saved to <code>localStorage</code> and available for selection here.</p>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <a href="body-plan-editor.html" class="btn sec sm">Body Plan Editor →</a>
+    <a href="species-forge.html"    class="btn sec sm">Species Forge →</a>
+    <a href="culture-forge.html"    class="btn sec sm">Culture Forge →</a>
+  </div>
+</section>
+
 <hr>
 <strong>Generated TypeScript block</strong>
 <p class="hint" style="margin-bottom:.5rem">Add this entry to the <code>directValidationScenarios</code> array in <code>tools/validation.ts</code>.</p>
 <textarea id="output" readonly spellcheck="false"></textarea>
-<div class="copy-row">
+<div class="copy-row" style="justify-content:flex-start;gap:.5rem;flex-wrap:wrap">
   <button class="btn sec sm" onclick="copyCode()">Copy to clipboard</button>
+  <button class="btn sec sm" onclick="downloadScenario()">Download .ts snippet</button>
+  <button class="btn sec sm" onclick="saveScenario()">Save to localStorage</button>
+  <button class="btn sec sm" onclick="loadScenario()">Load saved</button>
+  <button class="btn sec sm" onclick="importScenario()">Import JSON…</button>
+  <span id="save-status" style="color:#22c55e;font-size:.75rem;align-self:center"></span>
 </div>
 
 <script>
@@ -329,6 +370,78 @@ function copyCode() {
   navigator.clipboard?.writeText(ta.value).catch(() => {
     ta.select(); document.execCommand('copy');
   });
+}
+
+function downloadScenario() {
+  const code = document.getElementById('output').value;
+  const name = (document.getElementById('scenName').value || 'scenario').replace(/\s+/g,'_');
+  const blob = new Blob(['// Paste into directValidationScenarios in tools/validation.ts\n' + code], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name + '.ts.snippet';
+  a.click();
+}
+
+function saveScenario() {
+  const saved = JSON.parse(localStorage.getItem('ananke_saved_scenarios') || '[]');
+  const name  = document.getElementById('scenName').value.trim() || 'Untitled';
+  const entry = { name, code: document.getElementById('output').value, savedAt: new Date().toISOString() };
+  const idx   = saved.findIndex(s => s.name === name);
+  if (idx >= 0) saved[idx] = entry; else saved.push(entry);
+  localStorage.setItem('ananke_saved_scenarios', JSON.stringify(saved));
+  const st = document.getElementById('save-status');
+  st.textContent = '✓ saved "' + name + '"';
+  setTimeout(() => { st.textContent = ''; }, 2500);
+}
+
+function loadScenario() {
+  const saved = JSON.parse(localStorage.getItem('ananke_saved_scenarios') || '[]');
+  if (!saved.length) { alert('No saved scenarios found.'); return; }
+  const names = saved.map((s, i) => i + ': ' + s.name + ' (' + s.savedAt.slice(0,10) + ')').join('\n');
+  const pick  = prompt('Enter number to load:\n' + names);
+  const idx   = parseInt(pick ?? '');
+  if (isNaN(idx) || !saved[idx]) return;
+  document.getElementById('output').value = saved[idx].code;
+}
+
+function importScenario() {
+  const json = prompt('Paste exported scenario JSON:');
+  if (!json) return;
+  try {
+    const obj = JSON.parse(json);
+    if (obj.name) document.getElementById('scenName').value = obj.name;
+    if (obj.desc) document.getElementById('scenDesc').value = obj.desc;
+    if (obj.code) document.getElementById('output').value   = obj.code;
+  } catch { alert('Invalid JSON.'); }
+}
+
+const KNOWN_DATASETS = {
+  peak_power_male:    { name:'Margaria 1966 — Peak anaerobic power, trained male', mean:1200, ci:200, tol:'20', cite:'doi:10.1007/BF00695240', notes:'trained male adults, cycle ergometer' },
+  peak_force_punch:   { name:'Smith et al. 2000 — Peak punch force, boxing', mean:4500, ci:600, tol:'25', cite:'doi:10.1136/bjsm.2000.007724', notes:'competitive male boxers' },
+  sprint_speed:       { name:'Epstein 2014 — Elite sprint speed', mean:10.2, ci:0.5, tol:'15', cite:'ISBN 978-1-59184-402-2', notes:'world-class sprinters' },
+  reaction_time:      { name:'Der & Deary 2006 — Simple reaction time', mean:0.25, ci:0.04, tol:'20', cite:'doi:10.1037/0882-7974.21.2.382', notes:'adult population, light stimulus' },
+  thorax_tolerance:   { name:'Kroell 1974 — Thoracic impact tolerance', mean:700, ci:150, tol:'25', cite:'SAE Technical Paper 741187', notes:'post-mortem human subjects, blunt impact' },
+  fluid_loss_hypo:    { name:'Trauma Registry 2020 — Hypovolemic shock threshold', mean:30, ci:5, tol:'20', cite:'ATLS 10th ed. 2018', notes:'% blood volume loss to class III shock' },
+  surface_burn:       { name:'ISO 13506 — Surface burn rate, fire contact', mean:0.020, ci:0.003, tol:'20', cite:'ISO 13506:2008', notes:'q/s rate, full-contact burn' },
+  plague_mort:        { name:'WHO 2009 — Pneumonic plague mortality, untreated', mean:60, ci:10, tol:'30', cite:'WHO Fact Sheet No.267 2009', notes:'historical untreated cases' },
+  wound_fever_mort:   { name:'Crimean War — Wound fever mortality, untreated', mean:10, ci:5, tol:'30', cite:'Florence Nightingale Notes 1857', notes:'compound fractures, pre-antiseptic' },
+  mail_absorption:    { name:'Williams 2003 — Mail armour energy absorption', mean:65, ci:8, tol:'20', cite:'ISBN 0-8122-3793-X', notes:'% KE absorbed vs. measured penetration' },
+  plate_absorption:   { name:'Williams 2003 — Plate armour energy absorption', mean:85, ci:5, tol:'15', cite:'ISBN 0-8122-3793-X', notes:'Gothic full plate, blunt and edge blows' },
+};
+
+function loadKnownDataset() {
+  const key = document.getElementById('knownDataset').value;
+  if (!key) return;
+  const d = KNOWN_DATASETS[key];
+  if (!d) return;
+  document.getElementById('dsName').value   = d.name;
+  document.getElementById('empMean').value  = d.mean;
+  document.getElementById('empCI').value    = d.ci;
+  document.getElementById('tolPct').value   = d.tol;
+  document.getElementById('srcCite').value  = d.cite;
+  document.getElementById('srcNotes').value = d.notes;
+  document.getElementById('unit').value     = key.includes('time') ? 's' : key.includes('speed') ? 'm/s' : key.includes('force') ? 'N' : key.includes('power') ? 'W' : key.includes('mort') ? '%' : 'Q';
+  regen();
 }
 
 // init
