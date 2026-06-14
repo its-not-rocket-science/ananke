@@ -8,6 +8,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.3] — 2026-06-14
+
+### Added
+
+- **examples/reference/campaign-sandbox** — enhanced with feudal system and military campaigns (PM-1 reference build). Now demonstrates the full ROADMAP PM-1 scope: `polity`, `feudal`, `diplomacy`, `migration`, `demography`, `epidemic`, save/reload.
+  - Feudal layer: Sparta as Rome's voluntary vassal via `createVassalBond`; daily `applyDailyTribute` + `stepBondStrength`; `isRebellionRisk` warnings as loyalty decays 65% → 11% over 180 days.
+  - Military campaign: `declareWar` (Rome → Carthage, day 30), 40-day war auto-resolved each tick by `stepPolityDay` via `resolveWarOutcome`, `makePeace` with territory transfer shown.
+  - `computeLevyStrength` shown at war declaration: Sparta's levy contribution to Rome's effective military strength.
+  - Feudal bond state persisted in `stampSnapshot` round-trip.
+- **examples/reference/campaign-sandbox/README.md** — full architecture, day-by-day flow, performance envelope, pain points, extension recipes.
+
 ## [0.5.2] — 2026-06-14
 
 ### Added
